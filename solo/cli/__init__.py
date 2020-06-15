@@ -12,13 +12,14 @@ import os
 
 import click
 import usb.core
+from pygments.console import colorize
 
 import solo
 import solo.operations
 from solo.cli.fido2 import fido2
-from solo.cli.start import start
 from solo.cli.monitor import monitor
 from solo.cli.program import program
+from solo.cli.start import start
 
 from . import _patches  # noqa  (since otherwise "unused")
 
@@ -157,6 +158,5 @@ def ls():
 
 solo_cli.add_command(ls)
 
-from pygments.console import colorize
 
 print(f'*** {colorize("red", "Nitrokey tool for Nitrokey FIDO2 & Nitrokey Start")}')

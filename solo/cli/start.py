@@ -8,26 +8,19 @@
 # copied, modified, or distributed except according to those terms.
 
 import sys
-from time import sleep, time
 from subprocess import check_output
+from time import sleep, time
 
 import click
+from usb.core import USBError
 
 from solo.start.gnuk_token import get_gnuk_device
-from solo.start.usb_strings import get_devices as get_devices_strings
-
-from solo.start.upgrade_by_passwd import (
-    validate_gnuk,
-    validate_regnual,
-    logger,
-    start_update,
-    DEFAULT_WAIT_FOR_REENUMERATION,
-    DEFAULT_PW3,
-    IS_LINUX,
-)
 from solo.start.threaded_log import ThreadLog
-
-from usb.core import USBError
+from solo.start.upgrade_by_passwd import (DEFAULT_PW3,
+                                          DEFAULT_WAIT_FOR_REENUMERATION,
+                                          IS_LINUX, logger, start_update,
+                                          validate_gnuk, validate_regnual)
+from solo.start.usb_strings import get_devices as get_devices_strings
 
 
 # https://pocoo-click.readthedocs.io/en/latest/commands/#nested-handling-and-contexts

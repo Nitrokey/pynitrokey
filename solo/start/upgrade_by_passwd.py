@@ -45,8 +45,8 @@ import binascii
 import hashlib
 import logging
 import os
+import platform
 import time
-from sys import platform
 from collections import defaultdict
 from datetime import datetime
 from enum import Enum
@@ -54,20 +54,15 @@ from functools import lru_cache
 from getpass import getpass
 from struct import pack
 from subprocess import check_output
-import platform
-import requests
+from sys import platform
 
+import requests
 from click import BadParameter
 
 import solo.start.rsa as rsa
-from solo.start.gnuk_token import (
-    get_gnuk_device,
-    gnuk_devices_by_vidpid,
-    regnual,
-    SHA256_OID_PREFIX,
-    crc32,
-    parse_kdf_data,
-)
+from solo.start.gnuk_token import (SHA256_OID_PREFIX, crc32, get_gnuk_device,
+                                   gnuk_devices_by_vidpid, parse_kdf_data,
+                                   regnual)
 from solo.start.kdf_calc import kdf_calc
 from solo.start.threaded_log import ThreadLog
 from solo.start.usb_strings import get_devices, print_device

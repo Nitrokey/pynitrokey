@@ -20,11 +20,13 @@ License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-import logging
-from struct import *
 import binascii
-import usb, time
+import logging
+import time
 from array import array
+from struct import *
+
+import usb
 
 # Possible Gnuk Token products
 USB_PRODUCT_LIST = [
