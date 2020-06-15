@@ -16,8 +16,15 @@ import click
 from solo.start.gnuk_token import get_gnuk_device
 from solo.start.usb_strings import get_devices as get_devices_strings
 
-from solo.start.upgrade_by_passwd import validate_gnuk, validate_regnual, logger, \
-    start_update, DEFAULT_WAIT_FOR_REENUMERATION, DEFAULT_PW3, IS_LINUX
+from solo.start.upgrade_by_passwd import (
+    validate_gnuk,
+    validate_regnual,
+    logger,
+    start_update,
+    DEFAULT_WAIT_FOR_REENUMERATION,
+    DEFAULT_PW3,
+    IS_LINUX,
+)
 from solo.start.threaded_log import ThreadLog
 
 from usb.core import USBError
@@ -61,52 +68,91 @@ def set_identity(identity):
                 sys.exit(0)
 
         except ValueError as e:
-            if 'No ICC present' in str(e):
+            if "No ICC present" in str(e):
                 print("Could not connect to device, trying to close scdaemon")
-                result = check_output(["gpg-connect-agent",
-                                       "SCD KILLSCD", "SCD BYE",
-                                       "/bye"])  # gpgconf --kill all might be better?
+                result = check_output(
+                    ["gpg-connect-agent", "SCD KILLSCD", "SCD BYE", "/bye"]
+                )  # gpgconf --kill all might be better?
                 sleep(3)
             else:
-                print('*** Found error: {}'.format(str(e)))
+                print("*** Found error: {}".format(str(e)))
 
 
 @click.command()
 @click.option(
-    '--regnual', default=None, callback=validate_regnual, help='path to regnual binary'
+    "--regnual", default=None, callback=validate_regnual, help="path to regnual binary"
 )
 @click.option(
-    '--gnuk', default=None, callback=validate_gnuk, help='path to gnuk binary'
+    "--gnuk", default=None, callback=validate_gnuk, help="path to gnuk binary"
 )
-@click.option('-f', 'default_password', is_flag=True, default=False,
-  help=f'use default Admin PIN: {DEFAULT_PW3}')
-@click.option('-p', 'password', help='use provided Admin PIN')
-@click.option('-e', 'wait_e', default=DEFAULT_WAIT_FOR_REENUMERATION, type=int,
-    help='time to wait for device to enumerate, after regnual was executed on device')
-@click.option('-k', 'keyno', default=0, type=int, help='selected key index')
-@click.option('-v', 'verbose', default=0, type=int, help='verbosity level')
-@click.option('-y', 'yes', default=False, is_flag=True, help='agree to everything')
-@click.option('-b', 'skip_bootloader', default=False, is_flag=True,
-    help='Skip bootloader upload (e.g. when done so already)')
 @click.option(
-    '--green-led', is_flag=True, default=False,
-    help='Use firmware for early "Nitrokey Start" key hardware revisions'
+    "-f",
+    "default_password",
+    is_flag=True,
+    default=False,
+    help=f"use default Admin PIN: {DEFAULT_PW3}",
 )
-def update(regnual, gnuk, default_password, password, wait_e, keyno, verbose, yes,
-           skip_bootloader, green_led):
+@click.option("-p", "password", help="use provided Admin PIN")
+@click.option(
+    "-e",
+    "wait_e",
+    default=DEFAULT_WAIT_FOR_REENUMERATION,
+    type=int,
+    help="time to wait for device to enumerate, after regnual was executed on device",
+)
+@click.option("-k", "keyno", default=0, type=int, help="selected key index")
+@click.option("-v", "verbose", default=0, type=int, help="verbosity level")
+@click.option("-y", "yes", default=False, is_flag=True, help="agree to everything")
+@click.option(
+    "-b",
+    "skip_bootloader",
+    default=False,
+    is_flag=True,
+    help="Skip bootloader upload (e.g. when done so already)",
+)
+@click.option(
+    "--green-led",
+    is_flag=True,
+    default=False,
+    help='Use firmware for early "Nitrokey Start" key hardware revisions',
+)
+def update(
+    regnual,
+    gnuk,
+    default_password,
+    password,
+    wait_e,
+    keyno,
+    verbose,
+    yes,
+    skip_bootloader,
+    green_led,
+):
     """update device's firmware"""
 
-    args = (regnual, gnuk, default_password, password, wait_e, keyno, verbose, yes,
-           skip_bootloader, green_led)
+    args = (
+        regnual,
+        gnuk,
+        default_password,
+        password,
+        wait_e,
+        keyno,
+        verbose,
+        yes,
+        skip_bootloader,
+        green_led,
+    )
 
     if green_led and (regnual is None or gnuk is None):
-        print("You selected the --green-led option, please provide '--regnual' and "
-              "'--gnuk' in addition to proceed. ")
+        print(
+            "You selected the --green-led option, please provide '--regnual' and "
+            "'--gnuk' in addition to proceed. "
+        )
         print("use on from: https://github.com/Nitrokey/nitrokey-start-firmware)")
         sys.exit(1)
 
     if IS_LINUX:
-        with ThreadLog(logger.getChild('dmesg'), 'dmesg -w'):
+        with ThreadLog(logger.getChild("dmesg"), "dmesg -w"):
             start_update(*args)
     else:
         start_update(*args)

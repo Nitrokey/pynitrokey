@@ -56,11 +56,8 @@ def find_all():
     solo_devices = [
         d
         for d in hid_devices
-        if (d.descriptor["vendor_id"], d.descriptor["product_id"]) in [
-                    (1155, 41674),
-                    (0x20A0, 0x42B3),
-                    (0x20A0, 0x42B1),
-        ]
+        if (d.descriptor["vendor_id"], d.descriptor["product_id"])
+        in [(1155, 41674), (0x20A0, 0x42B3), (0x20A0, 0x42B1),]
     ]
     return [find(raw_device=device) for device in solo_devices]
 
@@ -345,7 +342,7 @@ class SoloClient:
                 #         print("using signature version", v)
                 #         sig = parseField(firmware_file_data["versions"][v]["signature"])
                 #         break
-                sig = parseField(firmware_file_data["versions"]['>2.5.3']["signature"])
+                sig = parseField(firmware_file_data["versions"][">2.5.3"]["signature"])
 
                 if sig is None:
                     raise RuntimeError(
@@ -396,7 +393,7 @@ class SoloClient:
         if self.do_reboot:
             try:
                 print("bootloader is verifying signature...")
-                print(f'Trying with {sig.hex()}')
+                print(f"Trying with {sig.hex()}")
                 self.verify_flash(sig)
                 print("...pass!")
                 success = True

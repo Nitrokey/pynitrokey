@@ -33,6 +33,7 @@ def rng():
     """Access TRNG on key, see subcommands."""
     pass
 
+
 @click.command()
 def list():
     """List all 'Nitrokey FIDO2' devices"""
@@ -44,6 +45,7 @@ def list():
             print(f"{descriptor['serial_number']}: {descriptor['product_string']}")
         else:
             print(f"{descriptor['path']}: {descriptor['product_string']}")
+
 
 @click.command()
 @click.option("--count", default=8, help="How many bytes to generate (defaults to 8)")
@@ -66,6 +68,7 @@ def raw(serial):
         r = p.get_rng(255)
         sys.stdout.buffer.write(r)
 
+
 @click.command()
 @click.option("-s", "--serial", help="Serial number of Solo to use")
 @click.option("-b", "--blink", is_flag=True, help="Blink in the meantime")
@@ -78,8 +81,8 @@ def status(serial, blink: bool):
             p.wink()
         r = p.get_status()
         for b in r:
-            print('{:#02d} '.format(b), end='')
-        print('')
+            print("{:#02d} ".format(b), end="")
+        print("")
         sleep(0.3)
 
 
@@ -257,6 +260,7 @@ def probe(serial, udp, hash_type, filename):
         print(f"verified? {verified}")
     # print(fido2.cbor.loads(result))
 
+
 @click.command()
 @click.option("-s", "--serial", help="Serial number of Solo to use")
 def reset(serial):
@@ -321,15 +325,15 @@ def verify(pin, serial, udp):
         raise
 
     hashdb = {
-        b'd7a23679007fe799aeda4388890f33334aba4097bb33fee609c8998a1ba91bd3': "Nitrokey FIDO2 1.x",
-        b'6d586c0b00b94148df5b54f4a866acd93728d584c6f47c845ac8dade956b12cb': "Nitrokey FIDO2 2.x",
-        b'e1f40563be291c30bc3cc381a7ef46b89ef972bdb048b716b0a888043cf9072a': "Nitrokey FIDO2 Dev 2.x ",
+        b"d7a23679007fe799aeda4388890f33334aba4097bb33fee609c8998a1ba91bd3": "Nitrokey FIDO2 1.x",
+        b"6d586c0b00b94148df5b54f4a866acd93728d584c6f47c845ac8dade956b12cb": "Nitrokey FIDO2 2.x",
+        b"e1f40563be291c30bc3cc381a7ef46b89ef972bdb048b716b0a888043cf9072a": "Nitrokey FIDO2 Dev 2.x ",
     }
 
     dev_fingerprint = cert.fingerprint(hashes.SHA256())
     a_hex = binascii.b2a_hex(dev_fingerprint)
     if a_hex in hashdb:
-        print('Found device: {}'.format(hashdb[a_hex]))
+        print("Found device: {}".format(hashdb[a_hex]))
     else:
         print("Unknown fingerprint! ", a_hex)
 
@@ -371,6 +375,7 @@ def wink(serial, udp):
 
     solo.client.find(serial, udp=udp).wink()
 
+
 @click.command()
 @click.option("-s", "--serial", help="Serial number of Solo to use")
 @click.option(
@@ -378,13 +383,14 @@ def wink(serial, udp):
 )
 def reboot(serial, udp):
     """Send reboot command to key (development command)"""
-    print('Reboot')
+    print("Reboot")
     CTAP_REBOOT = 0x53
     dev = solo.client.find(serial, udp=udp).dev
     try:
-        dev.call(CTAP_REBOOT ^ 0x80, b'')
+        dev.call(CTAP_REBOOT ^ 0x80, b"")
     except OSError:
         pass
+
 
 fido2.add_command(rng)
 fido2.add_command(reboot)

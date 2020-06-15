@@ -25,17 +25,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 from solo.start.gnuk_token import *
 import usb, sys
 
-field = ['Vendor', 'Product', 'Serial', 'Revision', 'Config', 'Sys', 'Board']
+field = ["Vendor", "Product", "Serial", "Revision", "Config", "Sys", "Board"]
 
 
 def get_dict_for_device(dev: usb.Device) -> dict:
     res = {}
     handle = dev.open()
-    res['name'] = dev.filename
-    for i,f in enumerate(field):
+    res["name"] = dev.filename
+    for i, f in enumerate(field):
         try:
-            s = handle.getString(i+1, 512)
-            res[f] = s.decode('UTF-8')
+            s = handle.getString(i + 1, 512)
+            res[f] = s.decode("UTF-8")
         except:
             res[f] = None
     return res
@@ -48,11 +48,13 @@ def get_devices() -> list:
     return res
 
 
-def print_device(dev: usb.Device, n:int=8) -> None:
-    print("Device: %s" % dev['name'])
+def print_device(dev: usb.Device, n: int = 8) -> None:
+    print("Device: %s" % dev["name"])
     for i, f in enumerate(field):
-        if i > n: break
-        if not dev[f]: continue
+        if i > n:
+            break
+        if not dev[f]:
+            continue
         print("%10s: %s" % (f, dev[f]))
 
 
@@ -60,12 +62,12 @@ def main(n: int) -> None:
     for dev in get_devices():
         print_device(dev, n)
     else:
-        print('No devices found')
+        print("No devices found")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     if len(sys.argv) > 1:
         n = int(sys.argv[1])
     else:
-        n = 8                   # Gnuk has eight strings
+        n = 8  # Gnuk has eight strings
     main(n)
