@@ -27,6 +27,8 @@ import usb, time
 from array import array
 
 # Possible Gnuk Token products
+from pynitrokey.start.usb_strings import get_dict_for_device
+
 USB_PRODUCT_LIST=[
     { 'vendor' : 0x234b, 'product' : 0x0000 }, # FSIJ Gnuk Token
     { 'vendor' : 0x20a0, 'product' : 0x4211 }, # Nitrokey Start
@@ -661,9 +663,11 @@ def get_gnuk_device(verbose=True, logger: logging.Logger=None):
             if logger:
                 logger.debug('{} {} {}'.format(dev.filename, config.value, intf.interfaceNumber))
             if verbose:
-                print("Device: %s" % dev.filename)
-                print("Configuration: %d" % config.value)
-                print("Interface: %d" % intf.interfaceNumber)
+                try:
+                    d = get_dict_for_device(dev)
+                    print(f'Device: {d["Product"]} {d["Serial"]}')
+                except:
+                    print(f'Device: name: "{dev.filename}", c/i: {config.value}/{intf.interfaceNumber}')
             break
         except:
             pass

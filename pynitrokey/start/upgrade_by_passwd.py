@@ -25,6 +25,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 import tempfile
+from pprint import pprint
 
 IMPORT_ERROR_HELP = """
 Some required modules are missing from this environment.
@@ -351,6 +352,53 @@ def download_file_or_exit(url):
     firmware_data = resp.content
     return firmware_data
 
+
+def show_kdf_details(passwd):
+    gnuk = None
+    try:
+        gnuk = get_gnuk_device(logger=logger, verbose=True)
+    except ValueError as e:
+        if 'No ICC present' in str(e):
+            print('Cannot connect to device. Closing other open connections.')
+            kill_smartcard_services()
+            return
+        else:
+            raise
+    gnuk.cmd_select_openpgp()
+    # Compute passwd data
+    try:
+        kdf_data = gnuk.cmd_get_data(0x00, 0xf9).tobytes()
+    except:
+        kdf_data = b""
+    if kdf_data == b"":
+        print('KDF not set')
+        # passwd_data = passwd.encode('UTF-8')
+    else:
+        algo, subalgo, iters, salt_user, salt_reset, salt_admin, \
+        hash_user, hash_admin = parse_kdf_data(kdf_data)
+        if salt_admin:
+            salt = salt_admin
+        else:
+            salt = salt_user
+        d = {
+            'algo': algo,
+            'subalgo': subalgo,
+            'iters': iters,
+            'salt_user': binascii.b2a_hex(salt_user),
+            'salt_reset': binascii.b2a_hex(salt_reset),
+            'salt_admin': binascii.b2a_hex(salt_admin),
+            'hash_user': binascii.b2a_hex(hash_user),
+            'hash_admin': binascii.b2a_hex(hash_admin),
+        }
+        pprint(d, width=100)
+        if passwd:
+            try:
+                passwd_data = kdf_calc(passwd, salt, iters)
+                print(f'passwd_data: {binascii.b2a_hex(passwd_data)}')
+            except ValueError as e:
+                print(str(e))
+        else:
+            print('Provide password to calculate final hash')
 
 def start_update(regnual, gnuk, default_password, password, wait_e, keyno, verbose, yes,
         skip_bootloader, green_led):
