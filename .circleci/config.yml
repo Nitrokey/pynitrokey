@@ -6,7 +6,7 @@ orbs:
 
 jobs:
   build-and-test:
-    executor: python/default
+    executor: win/default
     steps:
       - checkout
       - run: pip install -r dev-requirements.txt
