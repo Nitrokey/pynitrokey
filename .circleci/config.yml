@@ -13,7 +13,7 @@ jobs:
       - run: python win_setup.py bdist_msi
 
   build-linux:
-    executor: linux/default
+    executor: python/default
     steps:
       - checkout
       - run: make init
