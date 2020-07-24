@@ -6,3 +6,14 @@ flake8
 flit
 ipython
 isort
+click>=7.0
+cryptography
+ecdsa
+fido2==0.7.3
+intelhex
+pyserial
+pyusb
+requests
+pygments
+cffi
+
