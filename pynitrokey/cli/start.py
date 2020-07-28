@@ -17,7 +17,7 @@ from pynitrokey.start.gnuk_token import get_gnuk_device
 from pynitrokey.start.usb_strings import get_devices as get_devices_strings
 
 from pynitrokey.start.upgrade_by_passwd import validate_gnuk, validate_regnual, logger, \
-    start_update, DEFAULT_WAIT_FOR_REENUMERATION, DEFAULT_PW3, IS_LINUX
+    start_update, DEFAULT_WAIT_FOR_REENUMERATION, DEFAULT_PW3, IS_LINUX, show_kdf_details
 from pynitrokey.start.threaded_log import ThreadLog
 
 from usb.core import USBError
@@ -112,9 +112,18 @@ def update(regnual, gnuk, default_password, password, wait_e, keyno, verbose, ye
         start_update(*args)
 
 
+@click.command()
+@click.option(
+    '--passwd', default='', help='password'
+)
+def kdf_details(passwd):
+    return show_kdf_details(passwd)
+
+
 start.add_command(list)
 start.add_command(set_identity)
 start.add_command(update)
+start.add_command(kdf_details)
 # start.add_command(rng)
 # start.add_command(reboot)
 # rng.add_command(hexbytes)
