@@ -634,7 +634,13 @@ def gnuk_devices():
 
 
 def gnuk_devices_by_vidpid():
-    busses = usb.busses()
+    try:
+        busses = usb.busses()
+    except usb.core.NoBackendError:
+        print("Warning: no backend was found to use for communication. "
+              "Please refer to documentation how to install additional libraries.")
+        return []
+
     for bus in busses:
         devices = bus.devices
         for dev in devices:
