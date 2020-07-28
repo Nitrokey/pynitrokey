@@ -3,13 +3,12 @@
 A command line interface for the Nitrokey FIDO2 and Nitrokey Start.
 
 ## Current state
-Project is in alpha stage, not meant yet to be used by end-users (not everything was tested), although almost all features should work out-of-the-box. The strings referring to the device were not changed yet as well.
+Update to latest firmware versions on the Nitrokey Start and Nitrokey FIDO2 devices was tested. Windows support is for Nitrokey Start is not added yet.
 
-Differences:
+Additional features:
 - handle `status` command for displaying touch button status (2.0.0 firmware and later);
 - firmware signing adjusted for Nitrokey FIDO2 bootloader
 - monitor command with timestamps
-- disabled automatic update (however manual update works)
 
 ## Installation
 
@@ -21,10 +20,14 @@ pip3 install --user pynitrokey
 ```
 
 ### Windows
+Note: support for Nitrokey Start under Windows 10 is not working without installing libusb libraries (to be described).
 
 1. Download the latest `.msi` installer from the [releases](https://github.com/Nitrokey/pynitrokey/releases/)
 1. Double-click the installer and click through (`Next` and `Finish`)
-1. Open the windows start menu and type `cmd` and press enter
+1. Open the command console in the administrator mode (Windows 10: press the right mouse button on the Menu Start and select "Windows PowerShell (Admin)" from the menu).
+1. Enter `nitropy`
+
+Without administrator privileges tool might not be able to communicate to device.
 
 ## Nitrokey FIDO2
 ### Firmware Update
