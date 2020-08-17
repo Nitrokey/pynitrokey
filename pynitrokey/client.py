@@ -13,8 +13,8 @@ import struct
 import sys
 import tempfile
 import time
+from threading import Event, Timer
 
-import pynitrokey.exceptions
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from fido2.attestation import Attestation
@@ -23,14 +23,14 @@ from fido2.ctap import CtapError
 from fido2.ctap1 import CTAP1
 from fido2.ctap2 import CTAP2
 from fido2.hid import CTAPHID, CtapHidDevice
-from fido2.utils import Timeout
 from intelhex import IntelHex
+
+import pynitrokey.exceptions
 from pynitrokey import helpers
 from pynitrokey.commands import SoloBootloader, SoloExtension
 
 
 def find(solo_serial=None, retries=5, raw_device=None, udp=False):
-
     if udp:
         pynitrokey.fido2.force_udp_backend()
 
@@ -135,7 +135,7 @@ class SoloClient:
     def send_data_hid(self, cmd, data):
         if not isinstance(data, bytes):
             data = struct.pack("%dB" % len(data), *[ord(x) for x in data])
-        with Timeout(1.0) as event:
+        with helpers.Timeout(1.0) as event:
             return self.dev.call(cmd, data, event)
 
     def exchange_hid(self, cmd, addr=0, data=b"A" * 16):
