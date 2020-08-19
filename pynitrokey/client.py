@@ -218,13 +218,18 @@ class SoloClient:
     def reset(self,):
         self.ctap2.reset()
 
+    # @todo: unneeded, remove this...
     def make_credential(self, pin=None):
         rp = {"id": self.host, "name": "example site"}
         user = {"id": self.user_id, "name": "example user"}
         challenge = "Y2hhbGxlbmdl"
-        attest, data = self.client.make_credential(
-            rp, user, challenge, exclude_list=[], pin=pin
-        )
+        attest, data = self.client.make_credential({
+            "rp": rp,
+            "user": user,
+            "challenge": challenge.encode("utf8"),
+            "pubKeyCredParams": [{"type": "public-key", "alg": -7}],
+        }, pin=pin)
+
         try:
             attest.verify(data.hash)
         except AttributeError:
