@@ -39,3 +39,4 @@ LOG_FORMAT_STDOUT = '%(asctime)-15s %(levelname)6s %(name)10s %(message)s'
 LOG_FORMAT = '%(relativeCreated)-8d %(levelname)6s %(name)10s %(message)s'
 
 GH_ISSUES_URL = "https://github.com/Nitrokey/pynitrokey/issues/"
+SUPPORT_EMAIL = "support@nitrokey.com"

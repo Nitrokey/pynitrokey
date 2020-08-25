@@ -15,7 +15,8 @@ from threading import Event, Timer
 from typing import List
 from getpass import getpass
 
-from pynitrokey.confconsts import LOG_FN, LOG_FORMAT, GH_ISSUES_URL, VERBOSE, Verbosity
+from pynitrokey.confconsts import LOG_FN, LOG_FORMAT, GH_ISSUES_URL, SUPPORT_EMAIL
+from pynitrokey.confconsts import VERBOSE, Verbosity
 
 def to_websafe(data):
     data = data.replace("+", "-")
@@ -104,6 +105,7 @@ def local_critical(*messages, support_hint=True, ret_code=1, **kwargs):
             "Critical error occurred, exiting now",
             "Unexpected? Is this a bug? Do you would like to get support/help?",
             f"- You can report issues at: {GH_ISSUES_URL}",
+            f"- Writing an e-mail to: {SUPPORT_EMAIL} is also possible",
             f"- Please attach the log: '{LOG_FN}' with any support/help request!",
             "-" * 80, "")
     sys.exit(ret_code)
