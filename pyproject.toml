@@ -20,7 +20,9 @@ requires = [
   "pyusb",
   "requests",
   "pygments",
-	"cffi"
+	"cffi",
+	"cbor",
+	"nacl"
 ]
 classifiers=[
     "License :: OSI Approved :: MIT License",
