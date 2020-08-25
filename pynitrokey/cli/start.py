@@ -8,7 +8,7 @@
 # copied, modified, or distributed except according to those terms.
 
 
-from time import sleep, time
+from time import sleep
 from subprocess import check_output
 
 import click
@@ -62,7 +62,8 @@ def set_identity(identity):
             try:
                 gnuk.cmd_set_identity(identity)
             except USBError:
-                local_print("device has reset, and should now have the new identity")
+                local_print(f"reset done - now having the new identity: {identity}")
+                break
 
         except ValueError as e:
             if "No ICC present" in str(e):
@@ -74,7 +75,6 @@ def set_identity(identity):
             else:
                 local_critical(e)
 
-
 @click.command()
 @click.option(
     "--regnual", default=None, callback=validate_regnual, help="path to regnual binary"
@@ -83,7 +83,7 @@ def set_identity(identity):
     "--gnuk", default=None, callback=validate_gnuk, help="path to gnuk binary"
 )
 @click.option("-f", "default_password", is_flag=True, default=False,
-  help=f"use default Admin PIN: {DEFAULT_PW3}")
+    help=f"use default Admin PIN: {DEFAULT_PW3}")
 @click.option("-p", "password", help="use provided Admin PIN")
 @click.option("-e", "wait_e", default=DEFAULT_WAIT_FOR_REENUMERATION, type=int,
     help="time to wait for device to enumerate, after regnual was executed on device")
@@ -107,7 +107,7 @@ def update(regnual, gnuk, default_password, password, wait_e, keyno, verbose, ye
         local_critical(
             "You selected the --green-led option, please provide '--regnual' and "
               "'--gnuk' in addition to proceed. ",
-            "use on from: https://github.com/Nitrokey/nitrokey-start-firmware)")
+            "use one from: https://github.com/Nitrokey/nitrokey-start-firmware)")
 
     if IS_LINUX:
         with ThreadLog(logger.getChild("dmesg"), "dmesg -w"):

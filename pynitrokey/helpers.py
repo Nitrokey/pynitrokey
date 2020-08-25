@@ -106,7 +106,7 @@ def local_critical(*messages, support_hint=True, **kwargs):
     sys.exit(1)
 
 
-# @fixme: consider exchanging/wrapping click.confirm() instead of this...
+# @fixme: consider using/wrapping click.confirm() instead of this...
 class AskUser:
     """
     Asking user for input:

@@ -67,6 +67,10 @@ function teststart
 	run start set-identity 2
 	run start set-identity 0
 	run start update
+	run start set-identity 0
+	run start set-identity 1
+	run start set-identity 2
+	run start set-identity 0
 
 }
 
