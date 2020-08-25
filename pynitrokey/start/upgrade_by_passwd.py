@@ -427,7 +427,7 @@ def start_update(regnual, gnuk, default_password, password, wait_e, keyno, verbo
 
     if password:
         passwd = password
-    elif default_password:  # F for Factory setting
+    elif default_password:
         passwd = DEFAULT_PW3
     if not passwd:
         try:

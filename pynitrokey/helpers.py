@@ -32,7 +32,7 @@ class Timeout(object):
     :ivar event: The Event associated with the Timeout.
     :ivar timer: The Timer associated with the Timeout, if any.
     """
-    
+
     def __init__(self, time_or_event):
         if isinstance(time_or_event, Number):
             self.event = Event()
