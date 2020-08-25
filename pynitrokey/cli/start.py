@@ -7,20 +7,24 @@
 # http://opensource.org/licenses/MIT>, at your option. This file may not be
 # copied, modified, or distributed except according to those terms.
 
-import sys
+
 from time import sleep, time
 from subprocess import check_output
 
 import click
 
+from usb.core import USBError
+
 from pynitrokey.start.gnuk_token import get_gnuk_device
 from pynitrokey.start.usb_strings import get_devices as get_devices_strings
 
-from pynitrokey.start.upgrade_by_passwd import validate_gnuk, validate_regnual, logger, \
-    start_update, DEFAULT_WAIT_FOR_REENUMERATION, DEFAULT_PW3, IS_LINUX, show_kdf_details
+from pynitrokey.start.upgrade_by_passwd import validate_gnuk, validate_regnual, logger,\
+    start_update, DEFAULT_WAIT_FOR_REENUMERATION, DEFAULT_PW3, IS_LINUX, \
+    show_kdf_details
+
 from pynitrokey.start.threaded_log import ThreadLog
 
-from usb.core import USBError
+from pynitrokey.helpers import local_print, local_critical
 
 
 # https://pocoo-click.readthedocs.io/en/latest/commands/#nested-handling-and-contexts
@@ -33,9 +37,10 @@ def start():
 @click.command()
 def list():
     """list connected devices"""
-    print(":: 'Nitrokey Start' keys:")
+    local_print(":: 'Nitrokey Start' keys:")
     for dct in get_devices_strings():
-        print(f"{dct['Serial']}: {dct['Vendor']} {dct['Product']} ({dct['Revision']})")
+        local_print(f"{dct['Serial']}: {dct['Vendor']} "
+                    f"{dct['Product']} ({dct['Revision']})")
 
 
 @click.command()
@@ -43,13 +48,13 @@ def list():
 def set_identity(identity):
     """set given identity (one of: 0, 1, 2)"""
     if not identity.isdigit():
-        print("identity number must be a digit")
-        sys.exit(1)
+        local_critical("identity number must be a digit")
+
     identity = int(identity)
     if identity < 0 or identity > 2:
-        print("identity must be 0, 1 or 2")
-        sys.exit(1)
-    print(f"Trying to set identity to {identity}")
+        local_print("identity must be 0, 1 or 2")
+
+    local_print(f"Setting identity to {identity}")
     for x in range(3):
         try:
             gnuk = get_gnuk_device()
@@ -57,40 +62,39 @@ def set_identity(identity):
             try:
                 gnuk.cmd_set_identity(identity)
             except USBError:
-                print("device has reset, and should now have the new identity")
-                sys.exit(0)
+                local_print("device has reset, and should now have the new identity")
 
         except ValueError as e:
-            if 'No ICC present' in str(e):
-                print("Could not connect to device, trying to close scdaemon")
+            if "No ICC present" in str(e):
+                local_print("Could not connect to device, trying to close scdaemon")
                 result = check_output(["gpg-connect-agent",
                                        "SCD KILLSCD", "SCD BYE",
                                        "/bye"])  # gpgconf --kill all might be better?
                 sleep(3)
             else:
-                print('*** Found error: {}'.format(str(e)))
+                local_critical(e)
 
 
 @click.command()
 @click.option(
-    '--regnual', default=None, callback=validate_regnual, help='path to regnual binary'
+    "--regnual", default=None, callback=validate_regnual, help="path to regnual binary"
 )
 @click.option(
-    '--gnuk', default=None, callback=validate_gnuk, help='path to gnuk binary'
+    "--gnuk", default=None, callback=validate_gnuk, help="path to gnuk binary"
 )
-@click.option('-f', 'default_password', is_flag=True, default=False,
-  help=f'use default Admin PIN: {DEFAULT_PW3}')
-@click.option('-p', 'password', help='use provided Admin PIN')
-@click.option('-e', 'wait_e', default=DEFAULT_WAIT_FOR_REENUMERATION, type=int,
-    help='time to wait for device to enumerate, after regnual was executed on device')
-@click.option('-k', 'keyno', default=0, type=int, help='selected key index')
-@click.option('-v', 'verbose', default=0, type=int, help='verbosity level')
-@click.option('-y', 'yes', default=False, is_flag=True, help='agree to everything')
-@click.option('-b', 'skip_bootloader', default=False, is_flag=True,
-    help='Skip bootloader upload (e.g. when done so already)')
+@click.option("-f", "default_password", is_flag=True, default=False,
+  help=f"use default Admin PIN: {DEFAULT_PW3}")
+@click.option("-p", "password", help="use provided Admin PIN")
+@click.option("-e", "wait_e", default=DEFAULT_WAIT_FOR_REENUMERATION, type=int,
+    help="time to wait for device to enumerate, after regnual was executed on device")
+@click.option("-k", "keyno", default=0, type=int, help="selected key index")
+@click.option("-v", "verbose", default=0, type=int, help="verbosity level")
+@click.option("-y", "yes", default=False, is_flag=True, help="agree to everything")
+@click.option("-b", "skip_bootloader", default=False, is_flag=True,
+    help="Skip bootloader upload (e.g. when done so already)")
 @click.option(
-    '--green-led', is_flag=True, default=False,
-    help='Use firmware for early "Nitrokey Start" key hardware revisions'
+    "--green-led", is_flag=True, default=False,
+    help="Use firmware for early 'Nitrokey Start' key hardware revisions"
 )
 def update(regnual, gnuk, default_password, password, wait_e, keyno, verbose, yes,
            skip_bootloader, green_led):
@@ -100,22 +104,20 @@ def update(regnual, gnuk, default_password, password, wait_e, keyno, verbose, ye
            skip_bootloader, green_led)
 
     if green_led and (regnual is None or gnuk is None):
-        print("You selected the --green-led option, please provide '--regnual' and "
-              "'--gnuk' in addition to proceed. ")
-        print("use on from: https://github.com/Nitrokey/nitrokey-start-firmware)")
-        sys.exit(1)
+        local_critical(
+            "You selected the --green-led option, please provide '--regnual' and "
+              "'--gnuk' in addition to proceed. ",
+            "use on from: https://github.com/Nitrokey/nitrokey-start-firmware)")
 
     if IS_LINUX:
-        with ThreadLog(logger.getChild('dmesg'), 'dmesg -w'):
+        with ThreadLog(logger.getChild("dmesg"), "dmesg -w"):
             start_update(*args)
     else:
         start_update(*args)
 
 
 @click.command()
-@click.option(
-    '--passwd', default='', help='password'
-)
+@click.option("--passwd", default="", help="password")
 def kdf_details(passwd):
     return show_kdf_details(passwd)
 

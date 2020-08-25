@@ -62,10 +62,10 @@ function teststart
 
 	run ls
 	run start list
+	run start set-identity 0
 	run start set-identity 1
 	run start set-identity 2
-	run start set-identity 3
-	run start set-identity 1
+	run start set-identity 0
 	run start update
 
 }

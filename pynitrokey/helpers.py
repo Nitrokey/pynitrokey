@@ -164,9 +164,10 @@ class AskUser:
                     return self.data
             else:
                 short_opts = {c[0].lower(): c for c in self.options}
-                self.data = short_opts.get(answer[0].lower())
+                if len(answer) > 0:
+                    self.data = short_opts.get(answer[0].lower())
                 if self.data:
-                    local_print("choosing: {short_opts[short_answer]}")
+                    local_print(f"choosing: {self.data}")
                     return self.data
 
             answer = input(self.question).strip()
