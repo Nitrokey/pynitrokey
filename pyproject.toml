@@ -22,7 +22,6 @@ requires = [
   "pygments",
 	"cffi",
 	"cbor",
-	"nacl"
 ]
 classifiers=[
     "License :: OSI Approved :: MIT License",
