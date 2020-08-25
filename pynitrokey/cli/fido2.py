@@ -19,7 +19,7 @@ import json
 import click
 import pynitrokey
 
-# @fixme: 1st layer `nkfido2` lower layer `fido2` not to be used here ?
+# @fixme: 1st layer `nkfido2` lower layer `fido2` not to be used here !
 import pynitrokey.fido2 as nkfido2
 
 
@@ -32,12 +32,14 @@ from pynitrokey.cli.monitor import monitor
 from pynitrokey.cli.program import program
 import pynitrokey.fido2.operations
 
+from pynitrokey.helpers import AskUser, local_print, local_critical
+
+
 # https://pocoo-click.readthedocs.io/en/latest/commands/#nested-handling-and-contexts
 @click.group()
 def fido2():
     """Interact with Nitrokey FIDO2 keys, see subcommands."""
     pass
-
 
 
 @click.group()
@@ -46,8 +48,7 @@ def util():
     pass
 
 
-
-
+# @todo: is this working as intended
 @click.command()
 @click.option("--input-seed-file")
 @click.argument("output_pem_file")
@@ -63,31 +64,33 @@ def genkey(input_seed_file, output_pem_file):
 
     vk = pynitrokey.operations.genkey(output_pem_file, input_seed_file=input_seed_file)
 
-    print("Public key in various formats:")
-    print()
-    print([c for c in vk.to_string()])
-    print()
-    print("".join(["%02x" % c for c in vk.to_string()]))
-    print()
-    print('"\\x' + "\\x".join(["%02x" % c for c in vk.to_string()]) + '"')
-    print()
+    local_print(
+        "Public key in various formats:",
+        None,
+        [c for c in vk.to_string()],
+        None,
+        "".join(["%02x" % c for c in vk.to_string()]),
+        None,
+        '"\\x' + "\\x".join(["%02x" % c for c in vk.to_string()]) + '"',
+        None)
 
 
-
-
+# @todo: is this working as intended
 @click.command()
 @click.argument("verifying-key")
 @click.argument("app-hex")
 @click.argument("output-json")
-@click.option("--end_page", help="Set APPLICATION_END_PAGE. Should be in sync with firmware settings.", default=20, type=int)
+@click.option("--end_page",
+              help="Set APPLICATION_END_PAGE. Shall be in sync with firmware settings",
+              default=20, type=int)
 def sign(verifying_key, app_hex, output_json, end_page):
-    """Signs a firmware hex file, outputs a .json file that can be used for signed update."""
+    """Signs a fw-hex file, outputs a .json file that can be used for signed update."""
 
-    msg = pynitrokey.operations.sign_firmware(verifying_key, app_hex, APPLICATION_END_PAGE=end_page)
-    print("Saving signed firmware to", output_json)
+    msg = pynitrokey.operations.sign_firmware(
+        verifying_key, app_hex, APPLICATION_END_PAGE=end_page)
+    local_print(f"Saving signed firmware to: {output_json}")
     with open(output_json, "wb+") as fh:
         fh.write(json.dumps(msg).encode())
-
 
 
 @click.command()
@@ -126,63 +129,60 @@ def mergehex(
     )
 
 
-
-
-
-
-
 @click.group()
 def rng():
     """Access TRNG on key, see subcommands."""
     pass
 
+
 @click.command()
 def list():
     """List all 'Nitrokey FIDO2' devices"""
-    solos = nkfido2.client.find_all()
-    print(":: 'Nitrokey FIDO2' keys")
+    solos = nkfido2.find_all()
+    local_print(":: 'Nitrokey FIDO2' keys")
     for c in solos:
-        descriptor = c.dev.descriptor
-        if "serial_number" in descriptor:
-            print(f"{descriptor['serial_number']}: {descriptor['product_string']}")
+        devdata = c.dev.descriptor
+        if "serial_number" in devdata:
+            local_print(f"{devdata['serial_number']}: {devdata['product_string']}")
         else:
-            print(f"{descriptor['path']}: {descriptor['product_string']}")
+            local_print(f"{devdata['path']}: {devdata['product_string']}")
+
 
 @click.command()
 @click.option("--count", default=8, help="How many bytes to generate (defaults to 8)")
 @click.option("-s", "--serial", help="Serial number of Nitrokey to use")
 def hexbytes(count, serial):
     """Output COUNT number of random bytes, hex-encoded."""
-    if not 0 <= count <= 255:
-        print(f"Number of bytes must be between 0 and 255, you passed {count}")
-        sys.exit(1)
 
-    print(nkfido2.client.find(serial).get_rng(count).hex())
+    if not 0 <= count <= 255:
+        local_critical(f"Number of bytes must be between 0 and 255, you passed {count}")
+    local_print(nkfido2.find(serial).get_rng(count).hex())
 
 
 @click.command()
 @click.option("-s", "--serial", help="Serial number of Nitrokey to use")
 def raw(serial):
     """Output raw entropy endlessly."""
-    p = nkfido2.client.find(serial)
+    p = nkfido2.find(serial)
     while True:
         r = p.get_rng(255)
         sys.stdout.buffer.write(r)
+
 
 @click.command()
 @click.option("-s", "--serial", help="Serial number of Nitrokey to use")
 @click.option("-b", "--blink", is_flag=True, help="Blink in the meantime")
 def status(serial, blink: bool):
     """Print device's status"""
-    p = nkfido2.client.find(serial)
+    p = nkfido2.find(serial)
     t0 = time()
     while True:
         if time() - t0 > 5 and blink:
             p.wink()
         r = p.get_status()
         for b in r:
-            print('{:#02d} '.format(b), end='')
-        print('')
+            local_print('{:#02d} '.format(b), end='')
+        local_print("")
         sleep(0.3)
 
 
@@ -193,14 +193,12 @@ def feedkernel(count, serial):
     """Feed random bytes to /dev/random."""
 
     if os.name != "posix":
-        print("This is a Linux-specific command!")
-        sys.exit(1)
+        local_critical("This is a Linux-specific command!")
 
     if not 0 <= count <= 255:
-        print(f"Number of bytes must be between 0 and 255, you passed {count}")
-        sys.exit(1)
+        local_critical(f"Number of bytes must be between 0 and 255, you passed {count}")
 
-    p = nkfido2.client.find(serial)
+    p = nkfido2.find(serial)
 
     import struct
     import fcntl
@@ -230,12 +228,13 @@ def feedkernel(count, serial):
     #       entropy count, and buf is the buffer of size buf_size which gets
     #       added to the entropy pool.
 
-    entropy_bits_per_byte = 2  # maximum 8, tend to be pessimistic
+    # maximum 8, tend to be pessimistic
+    entropy_bits_per_byte = 2
     t = struct.pack(f"ii{count}s", count * entropy_bits_per_byte, count, r)
 
     with open("/dev/random", mode="wb") as fh:
         fcntl.ioctl(fh, RNDADDENTROPY, t)
-    print(f"Entropy after:  0x{open(entropy_info_file).read().strip()}")
+    local_print(f"Entropy after:  0x{open(entropy_info_file).read().strip()}")
 
 
 @click.command()
@@ -258,9 +257,6 @@ def make_credential(serial, host, user, udp, prompt):
 
     Pass `--prompt ""` to output only the `credential_id` as hex.
     """
-
-
-
 
     nkfido2.hmac_secret.make_credential(
         host=host, user_id=user, serial=serial, output=True, prompt=prompt, udp=udp
@@ -329,20 +325,21 @@ def probe(serial, udp, hash_type, filename):
     # so 6kb is conservative
     assert len(data) <= 6 * 1024
 
-    p = nkfido2.client.find(serial, udp=udp)
+    p = nkfido2.find(serial, udp=udp)
+
     import fido2
 
     serialized_command = fido2.cbor.dumps({"subcommand": hash_type, "data": data})
-    from pynitrokey.commands import SoloBootloader
+    from pynitrokey.fido2.commands import SoloBootloader
 
     result = p.send_data_hid(SoloBootloader.HIDCommandProbe, serialized_command)
     result_hex = result.hex()
-    print(result_hex)
+    local_print(result_hex)
     if hash_type == "Ed25519":
-        print(f"content: {result[64:]}")
+        local_print(f"content: {result[64:]}")
         # print(f"content from hex: {bytes.fromhex(result_hex[128:]).decode()}")
-        print(f"content from hex: {bytes.fromhex(result_hex[128:])}")
-        print(f"signature: {result[:128]}")
+        local_print(f"content from hex: {bytes.fromhex(result_hex[128:])}")
+        local_print(f"signature: {result[:128]}")
         import nacl.signing
 
         # verify_key = nacl.signing.VerifyKey(bytes.fromhex("c69995185efa20bf7a88139f5920335aa3d3e7f20464345a2c095c766dfa157a"))
@@ -356,19 +353,17 @@ def probe(serial, udp, hash_type, filename):
             verified = True
         except nacl.exceptions.BadSignatureError:
             verified = False
-        print(f"verified? {verified}")
+        local_print(f"verified? {verified}")
     # print(fido2.cbor.loads(result))
 
 @click.command()
 @click.option("-s", "--serial", help="Serial number of Nitrokey to use")
 def reset(serial):
     """Reset key - wipes all credentials!!!"""
-    if click.confirm(
-        "Warning: Your credentials will be lost!!! Do you wish to continue?"
-    ):
-        print("Press the button to confirm -- again, your credentials will be lost!!!")
-        nkfido2.client.find(serial).reset()
-        click.echo("....aaaand they're gone")
+    if AskUser.yes_no("Warning: Your credentials will be lost!!! continue?"):
+        local_print("Press key to confirm -- again, your credentials will be lost!!!")
+        nkfido2.find(serial).reset()
+        local_print("....aaaand they're gone")
 
 
 @click.command()
@@ -380,13 +375,13 @@ def change_pin(serial):
     new_pin = getpass.getpass("Please enter new pin: ")
     confirm_pin = getpass.getpass("Please confirm new pin: ")
     if new_pin != confirm_pin:
-        click.echo("New pin are mismatched. Please try again!")
+        local_print("New pin are mismatched. Please try again!")
         return
     try:
-        nkfido2.client.find(serial).change_pin(old_pin, new_pin)
-        click.echo("Done. Please use new pin to verify key")
+        nkfido2.find(serial).change_pin(old_pin, new_pin)
+        local_print("Done. Please use new pin to verify key")
     except Exception as e:
-        print(e)
+        local_critical(e)
 
 
 @click.command()
@@ -397,13 +392,13 @@ def set_pin(serial):
     new_pin = getpass.getpass("Please enter new pin: ")
     confirm_pin = getpass.getpass("Please confirm new pin: ")
     if new_pin != confirm_pin:
-        click.echo("New pin are mismatched. Please try again!")
+        local_print("New pin are mismatched. Please try again!")
         return
     try:
-        nkfido2.client.find(serial).set_pin(new_pin)
-        click.echo("Done. Please use new pin to verify key")
+        nkfido2.find(serial).set_pin(new_pin)
+        local_print("Done. Please use new pin to verify key")
     except Exception as e:
-        print(e)
+        local_critical(e)
 
 
 @click.command()
@@ -416,14 +411,14 @@ def verify(pin, serial, udp):
     """Verify key is valid Nitrokey 'Start' or 'FIDO2' key."""
 
     # Any longer and this needs to go in a submodule
-    print("Please press the button on your Nitrokey key")
+    local_print("Please press the button on your Nitrokey key")
     try:
-        cert = nkfido2.client.find(serial, udp=udp).make_credential(pin=pin)
+        cert = nkfido2.find(serial, udp=udp).make_credential(pin=pin)
     except ValueError as e:
         # python-fido2 library pre-emptively returns `ValueError('PIN required!')`
         # instead of trying, and returning  `CTAP error: 0x36 - PIN_REQUIRED`
         if "PIN required" in str(e):
-            print("Your key has a PIN set. Please pass it using `--pin <your PIN>`")
+            local_print("Your key has a PIN set. Please pass it using `--pin <your PIN>`")
             sys.exit(1)
         raise
 
@@ -431,31 +426,29 @@ def verify(pin, serial, udp):
         cause = str(e.cause)
         # error 0x31
         if "PIN_INVALID" in cause:
-            print("Your key has a different PIN. Please try to remember it :)")
-            sys.exit(1)
+            local_critical("Your key has a different PIN. Please try to remember it :)",
+                           e)
+
         # error 0x34 (power cycle helps)
         if "PIN_AUTH_BLOCKED" in cause:
-            print(
-                "Your key's PIN authentication is blocked due to too many incorrect attempts."
-            )
-            print("Please plug it out and in again, then again!")
-            print(
-                "Please be careful, after too many incorrect attempts, the key will fully block."
-            )
-            sys.exit(1)
+            local_critical(
+                "Your key's PIN auth is blocked due to too many incorrect attempts.",
+                "Please plug it out and in again, then again!",
+                "Please be careful, after too many incorrect attempts, ",
+                "   the key will fully block.", e)
+
         # error 0x32 (only reset helps)
         if "PIN_BLOCKED" in cause:
-            print(
-                "Your key's PIN is blocked. To use it again, you need to fully reset it."
-            )
-            print("You can do this using: `nitropy fido2 reset`")
-            sys.exit(1)
+            local_critical(
+                "Your key's PIN is blocked. ",
+                "To use it again, you need to fully reset it.",
+                "You can do this using: `nitropy fido2 reset`", e)
+
         # error 0x01
         if "INVALID_COMMAND" in cause:
-            print("Error getting credential, is your key in bootloader mode?")
-            print("Try: `nitropy fido2 util program aux leave-bootloader`")
-            sys.exit(1)
-        raise
+            local_critical(
+                "Error getting credential, is your key in bootloader mode?",
+                "Try: `nitropy fido2 util program aux leave-bootloader`", e)
 
     hashdb = {
         b'd7a23679007fe799aeda4388890f33334aba4097bb33fee609c8998a1ba91bd3': "Nitrokey FIDO2 1.x",
@@ -466,9 +459,9 @@ def verify(pin, serial, udp):
     dev_fingerprint = cert.fingerprint(hashes.SHA256())
     a_hex = binascii.b2a_hex(dev_fingerprint)
     if a_hex in hashdb:
-        print('Found device: {}'.format(hashdb[a_hex]))
+        local_print('Found device: {}'.format(hashdb[a_hex]))
     else:
-        print("Unknown fingerprint! ", a_hex)
+        local_print("Unknown fingerprint! ", a_hex)
 
 
 @click.command()
@@ -480,7 +473,7 @@ def version(serial, udp):
     """Version of firmware on key."""
 
     try:
-        res = nkfido2.client.find(serial, udp=udp).solo_version()
+        res = nkfido2.find(serial, udp=udp).solo_version()
         major, minor, patch = res[:3]
         locked = ""
         if len(res) > 3:
@@ -488,14 +481,16 @@ def version(serial, udp):
                 locked = "locked"
             else:
                 locked = "unlocked"
-        print(f"{major}.{minor}.{patch} {locked}")
+        local_print(f"{major}.{minor}.{patch} {locked}")
 
     except pynitrokey.exceptions.NoSoloFoundError:
-        print("No Nitrokey found.")
-        print("If you are on Linux, are your udev rules up to date?")
+        local_critical("No Nitrokey found.",
+                       "If you are on Linux, are your udev rules up to date?")
+
+    # unused ???
     except (pynitrokey.exceptions.NoSoloFoundError, ApduError):
-        # Older
-        print("Firmware is out of date (key does not know the NITROKEY_VERSION command).")
+        local_critical(
+            "Firmware is out of date (key does not know the NITROKEY_VERSION command).")
 
 
 @click.command()
@@ -506,7 +501,7 @@ def version(serial, udp):
 def wink(serial, udp):
     """Send wink command to key (blinks LED a few times)."""
 
-    nkfido2.client.find(serial, udp=udp).wink()
+    nkfido2.find(serial, udp=udp).wink()
 
 @click.command()
 @click.option("-s", "--serial", help="Serial number of Nitrokey to use")
@@ -517,11 +512,12 @@ def reboot(serial, udp):
     """Send reboot command to key (development command)"""
     print('Reboot')
     CTAP_REBOOT = 0x53
-    dev = nkfido2.client.find(serial, udp=udp).dev
+    dev = nkfido2.find(serial, udp=udp).dev
     try:
         dev.call(CTAP_REBOOT ^ 0x80, b'')
     except OSError:
         pass
+
 
 fido2.add_command(rng)
 fido2.add_command(reboot)

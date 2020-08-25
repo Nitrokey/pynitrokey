@@ -29,42 +29,7 @@ from pynitrokey import helpers
 from pynitrokey.fido2.commands import SoloBootloader, SoloExtension
 
 
-def find(solo_serial=None, retries=5, raw_device=None, udp=False):
-    if udp:
-        pynitrokey.fido2.force_udp_backend()
-
-    # TODO: change `p` (for programmer) throughout
-    p = SoloClient()
-
-    # This... is not the right way to do it yet
-    p.use_u2f()
-
-    for i in range(retries):
-        try:
-            p.find_device(dev=raw_device, solo_serial=solo_serial)
-            return p
-        except RuntimeError:
-            time.sleep(0.2)
-
-    # return None
-    raise pynitrokey.exceptions.NoSoloFoundError("no Nitrokey found")
-
-
-def find_all():
-    hid_devices = list(CtapHidDevice.list_devices())
-    solo_devices = [
-        d
-        for d in hid_devices
-        if (d.descriptor["vendor_id"], d.descriptor["product_id"]) in [
-                    (1155, 41674),
-                    (0x20A0, 0x42B3),
-                    (0x20A0, 0x42B1),
-        ]
-    ]
-    return [find(raw_device=device) for device in solo_devices]
-
-
-class SoloClient:
+class NKFido2Client:
     def __init__(self,):
         self.origin = "https://example.org"
         self.host = "example.org"
@@ -138,7 +103,7 @@ class SoloClient:
             return self.dev.call(cmd, data, event)
 
     def exchange_hid(self, cmd, addr=0, data=b"A" * 16):
-        req = SoloClient.format_request(cmd, addr, data)
+        req = NKFido2Client.format_request(cmd, addr, data)
 
         data = self.send_data_hid(SoloBootloader.HIDCommandBoot, req)
 
@@ -152,7 +117,7 @@ class SoloClient:
         appid = b"A" * 32
         chal = b"B" * 32
 
-        req = SoloClient.format_request(cmd, addr, data)
+        req = NKFido2Client.format_request(cmd, addr, data)
 
         res = self.ctap1.authenticate(chal, appid, req)
 
@@ -165,7 +130,7 @@ class SoloClient:
     def exchange_fido2(self, cmd, addr=0, data=b"A" * 16):
         chal = b"B" * 32
 
-        req = SoloClient.format_request(cmd, addr, data)
+        req = NKFido2Client.format_request(cmd, addr, data)
 
         assertion = self.ctap2.get_assertion(
             self.host, chal, [{"id": req, "type": "public-key"}]
@@ -284,7 +249,7 @@ class SoloClient:
         soloboot = self.is_solo_bootloader()
 
         if soloboot or self.exchange == self.exchange_u2f:
-            req = SoloClient.format_request(SoloBootloader.st_dfu)
+            req = NKFido2Client.format_request(SoloBootloader.st_dfu)
             self.send_only_hid(SoloBootloader.HIDCommandBoot, req)
         else:
             self.send_only_hid(SoloBootloader.HIDCommandEnterSTBoot, "")

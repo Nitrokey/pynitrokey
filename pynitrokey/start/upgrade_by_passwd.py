@@ -69,7 +69,8 @@ from pynitrokey.start.threaded_log import ThreadLog
 from pynitrokey.start.usb_strings import get_devices, print_device
 from pynitrokey.start.rsa_pub_key import rsa_key_data
 
-from pynitrokey.helpers import local_print, UPGRADE_LOG_FN, LOG_FORMAT_STDOUT
+from pynitrokey.confconsts import LOG_FN, LOG_FORMAT_STDOUT
+from pynitrokey.helpers import local_print
 
 
 # This should be event driven, not guessing some period, or polling.
@@ -408,7 +409,7 @@ def start_update(regnual, gnuk, default_password, password, wait_e, keyno, verbo
     local_print('Platform: {}'.format(platform.platform()))
     local_print('System: {}, is_linux: {}'.format(platform.system(), IS_LINUX))
     local_print('Python: {}'.format(platform.python_version()))
-    local_print('Saving run log to: {}'.format(UPGRADE_LOG_FN))
+    local_print('Saving run log to: {}'.format(LOG_FN))
 
     arg_descs = ["regnual", "gnuk", "default_password", "password", "wait_e", "keyno",
             "verbose", "yes", "skip_bootloader", "green_led"]
@@ -538,5 +539,5 @@ def start_update(regnual, gnuk, default_password, password, wait_e, keyno, verbo
         local_print('Device could be removed from the USB slot.')
     logger.debug('Final device strings: {}'.format(dev_strings_upgraded))
     logger.debug('Finishing session {}'.format(datetime.now()))
-    local_print('Log saved to: {}'.format(UPGRADE_LOG_FN))
+    local_print('Log saved to: {}'.format(LOG_FN))
 

@@ -7,14 +7,11 @@
 # http://opensource.org/licenses/MIT>, at your option. This file may not be
 # copied, modified, or distributed except according to those terms.
 
-
 import binascii
 import hashlib
 import secrets
 
 from fido2.extensions import HmacSecretExtension
-
-
 
 def make_credential(
     host="nitrokeys.dev",
@@ -26,8 +23,8 @@ def make_credential(
     udp=False,
 ):
     user_id = user_id.encode()
-    from pynitrokey.fido2 import client as _client
-    client = _client.find(solo_serial=serial, udp=udp).client
+    from pynitrokey.fido2 import find
+    client = find(solo_serial=serial, udp=udp).client
 
 
     rp = {"id": host, "name": "Example RP"}
@@ -72,8 +69,8 @@ def simple_secret(
 ):
     user_id = user_id.encode()
 
-    from pynitrokey.fido2 import client
-    client = client.find(solo_serial=serial, udp=udp).client
+    from pynitrokey.fido2 import find
+    client = find(solo_serial=serial, udp=udp).client
     hmac_ext = HmacSecretExtension(client.ctap2)
 
     # rp = {"id": host, "name": "Example RP"}
@@ -99,8 +96,7 @@ def simple_secret(
         "challenge": challenge.encode("utf8"),
         "allowCredentials": allow_list,
         "extensions": hmac_ext.get_dict(salt),
-    },
-    pin=pin)
+    }, pin=pin)
 
     assertion = assertions[0]  # Only one cred in allowList, only one response.
     response = hmac_ext.results_for(assertion.auth_data)[0]
