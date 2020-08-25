@@ -26,6 +26,8 @@ from pynitrokey.start.threaded_log import ThreadLog
 
 from pynitrokey.helpers import local_print, local_critical
 
+# @fixme: add 'version' for consistency with fido2
+
 
 # https://pocoo-click.readthedocs.io/en/latest/commands/#nested-handling-and-contexts
 @click.group()
@@ -62,7 +64,8 @@ def set_identity(identity):
             try:
                 gnuk.cmd_set_identity(identity)
             except USBError:
-                local_print(f"reset done - now having the new identity: {identity}")
+                local_print(f"reset done - now active identity: {identity}")
+                break
 
         except ValueError as e:
             if "No ICC present" in str(e):
@@ -73,9 +76,9 @@ def set_identity(identity):
                 sleep(3)
             else:
                 local_critical(e)
-
         except Exception as e:
             local_critical(e)
+
 
 @click.command()
 @click.option(

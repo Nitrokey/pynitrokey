@@ -35,6 +35,10 @@ import pynitrokey.fido2.operations
 from pynitrokey.helpers import AskUser, local_print, local_critical
 
 
+# @todo: in version 0.4 UDP & anything earlier inside fido2.__init__ is broken/removed
+#        - check if/what is needed here
+#        - revive UDP support
+
 # https://pocoo-click.readthedocs.io/en/latest/commands/#nested-handling-and-contexts
 @click.group()
 def fido2():
@@ -48,7 +52,7 @@ def util():
     pass
 
 
-# @todo: is this working as intended
+# @todo: is this working as intended?
 @click.command()
 @click.option("--input-seed-file")
 @click.argument("output_pem_file")
@@ -75,7 +79,7 @@ def genkey(input_seed_file, output_pem_file):
         None)
 
 
-# @todo: is this working as intended
+# @todo: is this working as intended ?
 @click.command()
 @click.argument("verifying-key")
 @click.argument("app-hex")
@@ -159,6 +163,7 @@ def hexbytes(count, serial):
     local_print(nkfido2.find(serial).get_rng(count).hex())
 
 
+# @todo: not really useful like this? endless output only on request (--count ?)
 @click.command()
 @click.option("-s", "--serial", help="Serial number of Nitrokey to use")
 def raw(serial):
@@ -169,6 +174,7 @@ def raw(serial):
         sys.stdout.buffer.write(r)
 
 
+# @todo: also review, endless output only on request (--count ?)
 @click.command()
 @click.option("-s", "--serial", help="Serial number of Nitrokey to use")
 @click.option("-b", "--blink", is_flag=True, help="Blink in the meantime")
@@ -206,7 +212,7 @@ def feedkernel(count, serial):
     RNDADDENTROPY = 0x40085203
 
     entropy_info_file = "/proc/sys/kernel/random/entropy_avail"
-    print(f"Entropy before: 0x{open(entropy_info_file).read().strip()}")
+    print(f"entropy before: 0x{open(entropy_info_file).read().strip()}")
 
     r = p.get_rng(count)
 
@@ -232,9 +238,15 @@ def feedkernel(count, serial):
     entropy_bits_per_byte = 2
     t = struct.pack(f"ii{count}s", count * entropy_bits_per_byte, count, r)
 
-    with open("/dev/random", mode="wb") as fh:
-        fcntl.ioctl(fh, RNDADDENTROPY, t)
-    local_print(f"Entropy after:  0x{open(entropy_info_file).read().strip()}")
+    try:
+        with open("/dev/random", mode="wb") as fh:
+            fcntl.ioctl(fh, RNDADDENTROPY, t)
+
+    except PermissionError as e:
+        local_critical("insufficient permissions to use `fnctl.ioctl` on '/dev/random'",
+                       "please run 'nitropy' with proper permissions", e)
+
+    local_print(f"entropy after:  0x{open(entropy_info_file).read().strip()}")
 
 
 @click.command()
@@ -305,6 +317,11 @@ def challenge_response(serial, host, user, prompt, credential_id, challenge, udp
     )
 
 
+
+######
+###### @fixme: - excluded 'probe' for now, as command:
+######           SoloBootloader.HIDCommandProbe => 0x70 returns "INVALID_COMMAND"
+######         - decide its future asap...
 @click.command()
 @click.option("-s", "--serial", help="Serial number of Nitrokey use")
 @click.option(
@@ -313,47 +330,59 @@ def challenge_response(serial, host, user, prompt, credential_id, challenge, udp
 @click.argument("hash-type")
 @click.argument("filename")
 def probe(serial, udp, hash_type, filename):
-    """Calculate HASH."""
+    """Calculate HASH"""
 
-    # hash_type = hash_type.upper()
-    assert hash_type in ("SHA256", "SHA512", "RSA2048", "Ed25519")
+    import cbor
+    from pynitrokey.fido2.commands import SoloBootloader
+
+    # @todo: move to constsconf.py
+    #all_hash_types = ("SHA256", "SHA512", "RSA2048", "Ed25519")
+    all_hash_types = ("SHA256", "SHA512", "RSA2048")
+    # @fixme: Ed25519 needs `nacl` dependency, which is not available currently?!
+
+    if hash_type.upper() not in all_hash_types:
+        local_critical(f"invalid [HASH_TYPE] provided: {hash_type}",
+                       f"use one of: {', '.join(all_hash_types)}")
 
     data = open(filename, "rb").read()
+
     # < CTAPHID_BUFFER_SIZE
-    # https://fidoalliance.org/specs/fido-v2.0-id-20180227/fido-client-to-authenticator-protocol-v2.0-id-20180227.html#usb-message-and-packet-structure
+    # https://fidoalliance.org/specs/fido-v2.0-id-20180227/
+    #             fido-client-to-authenticator-protocol-v2.0-id-20180227.html
+    #             #usb-message-and-packet-structure
     # also account for padding (see data below....)
     # so 6kb is conservative
+
+    # @todo: proper error/exception + cut in chunks?
     assert len(data) <= 6 * 1024
 
     p = nkfido2.find(serial, udp=udp)
 
-    import fido2
-
-    serialized_command = fido2.cbor.dumps({"subcommand": hash_type, "data": data})
-    from pynitrokey.fido2.commands import SoloBootloader
-
+    serialized_command = cbor.dumps({"subcommand": hash_type, "data": data})
     result = p.send_data_hid(SoloBootloader.HIDCommandProbe, serialized_command)
     result_hex = result.hex()
     local_print(result_hex)
+
+    # @todo: unreachable
     if hash_type == "Ed25519":
-        local_print(f"content: {result[64:]}")
-        # print(f"content from hex: {bytes.fromhex(result_hex[128:]).decode()}")
-        local_print(f"content from hex: {bytes.fromhex(result_hex[128:])}")
-        local_print(f"signature: {result[:128]}")
+        # @fixme: mmmh, where to get `nacl` (python-libnacl? python-pynacl?)
         import nacl.signing
 
+        # print(f"content from hex: {bytes.fromhex(result_hex[128:]).decode()}")
+        local_print(f"content: {result[64:]}",
+                    f"content from hex: {bytes.fromhex(result_hex[128:])}",
+                    f"signature: {result[:128]}")
+
         # verify_key = nacl.signing.VerifyKey(bytes.fromhex("c69995185efa20bf7a88139f5920335aa3d3e7f20464345a2c095c766dfa157a"))
-        verify_key = nacl.signing.VerifyKey(
-            bytes.fromhex(
-                "c69995185efa20bf7a88139f5920335aa3d3e7f20464345a2c095c766dfa157a"
-            )
-        )
+        # @fixme: where does this 'magic-number' come from!?
+        verify_key = nacl.signing.VerifyKey(bytes.fromhex(
+            "c69995185efa20bf7a88139f5920335aa3d3e7f20464345a2c095c766dfa157a"))
         try:
             verify_key.verify(result)
-            verified = True
+            local_print("verified!")
         except nacl.exceptions.BadSignatureError:
-            verified = False
-        local_print(f"verified? {verified}")
+            local_print("failed verification!")
+
     # print(fido2.cbor.loads(result))
 
 @click.command()
@@ -366,39 +395,48 @@ def reset(serial):
         local_print("....aaaand they're gone")
 
 
+# @fixme: lacking functionality? remove? implement?
 @click.command()
 @click.option("-s", "--serial", help="Serial number of Nitrokey to use")
 # @click.option("--new-pin", help="change current pin")
 def change_pin(serial):
     """Change pin of current key"""
-    old_pin = getpass.getpass("Please enter old pin: ")
-    new_pin = getpass.getpass("Please enter new pin: ")
-    confirm_pin = getpass.getpass("Please confirm new pin: ")
-    if new_pin != confirm_pin:
-        local_print("New pin are mismatched. Please try again!")
-        return
-    try:
-        nkfido2.find(serial).change_pin(old_pin, new_pin)
-        local_print("Done. Please use new pin to verify key")
-    except Exception as e:
-        local_critical(e)
 
+    old_pin = AskUser.hidden("Please enter old pin: ")
+    new_pin = AskUser.hidden("Please enter new pin: ")
+    confirm_pin = AskUser.hidden("Please confirm new pin: ")
+
+    if new_pin != confirm_pin:
+        local_critical("new pin does not match confirm-pin",
+                       "please try again!", support_hint=False)
+    try:
+        # @fixme: move this (function) into own fido2-client-class
+        nkfido2.find(serial).client.pin_protocol.change_pin(old_pin, new_pin)
+        local_print("done - please use new pin to verify key")
+
+    except Exception as e:
+        local_critical("failed changing to new pin!",
+                       "did you set one already? or is it wrong?", e)
 
 @click.command()
 @click.option("-s", "--serial", help="Serial number of Nitrokey to use")
 # @click.option("--new-pin", help="change current pin")
 def set_pin(serial):
     """Set pin of current key"""
-    new_pin = getpass.getpass("Please enter new pin: ")
-    confirm_pin = getpass.getpass("Please confirm new pin: ")
+    new_pin = AskUser.hidden("Please enter new pin: ")
+    confirm_pin = AskUser.hidden("Please confirm new pin: ")
     if new_pin != confirm_pin:
-        local_print("New pin are mismatched. Please try again!")
-        return
+        local_critical("new pin does not match confirm-pin",
+                       "please try again!", support_hint=False)
     try:
-        nkfido2.find(serial).set_pin(new_pin)
-        local_print("Done. Please use new pin to verify key")
+        # @fixme: move this (function) into own fido2-client-class
+        nkfido2.find(serial).client.pin_protocol.set_pin(new_pin)
+        local_print("done - please use new pin to verify key")
+
     except Exception as e:
-        local_critical(e)
+        local_critical("failed setting new pin, maybe it's already set?",
+                       "to change an already set pin, please use:",
+                       "$ nitropy fido2 change-pin", e)
 
 
 @click.command()
@@ -411,44 +449,48 @@ def verify(pin, serial, udp):
     """Verify key is valid Nitrokey 'Start' or 'FIDO2' key."""
 
     # Any longer and this needs to go in a submodule
-    local_print("Please press the button on your Nitrokey key")
+    local_print("please press the button on your Nitrokey key")
+
+    cert = None
     try:
         cert = nkfido2.find(serial, udp=udp).make_credential(pin=pin)
-    except ValueError as e:
-        # python-fido2 library pre-emptively returns `ValueError('PIN required!')`
-        # instead of trying, and returning  `CTAP error: 0x36 - PIN_REQUIRED`
-        if "PIN required" in str(e):
-            local_print("Your key has a PIN set. Please pass it using `--pin <your PIN>`")
-            sys.exit(1)
-        raise
 
     except Fido2ClientError as e:
         cause = str(e.cause)
         # error 0x31
         if "PIN_INVALID" in cause:
-            local_critical("Your key has a different PIN. Please try to remember it :)",
+            local_critical("your key has a different PIN. Please try to remember it :)",
                            e)
 
         # error 0x34 (power cycle helps)
         if "PIN_AUTH_BLOCKED" in cause:
             local_critical(
-                "Your key's PIN auth is blocked due to too many incorrect attempts.",
-                "Please plug it out and in again, then again!",
-                "Please be careful, after too many incorrect attempts, ",
+                "your key's PIN auth is blocked due to too many incorrect attempts.",
+                "please plug it out and in again, then again!",
+                "please be careful, after too many incorrect attempts, ",
                 "   the key will fully block.", e)
 
         # error 0x32 (only reset helps)
         if "PIN_BLOCKED" in cause:
             local_critical(
-                "Your key's PIN is blocked. ",
-                "To use it again, you need to fully reset it.",
-                "You can do this using: `nitropy fido2 reset`", e)
+                "your key's PIN is blocked. ",
+                "to use it again, you need to fully reset it.",
+                "you can do this using: `nitropy fido2 reset`", e)
 
         # error 0x01
         if "INVALID_COMMAND" in cause:
             local_critical(
-                "Error getting credential, is your key in bootloader mode?",
-                "Try: `nitropy fido2 util program aux leave-bootloader`", e)
+                "error getting credential, is your key in bootloader mode?",
+                "try: `nitropy fido2 util program aux leave-bootloader`", e)
+
+        # pin required error
+        if "PIN required" in str(e):
+            local_critical("your key has a PIN set - pass it using `--pin <PIN>`", e)
+
+        local_critical("unexpected Fido2Client (CTAP) error", e)
+
+    except Exception as e:
+        local_critical("unexpected error", e)
 
     hashdb = {
         b'd7a23679007fe799aeda4388890f33334aba4097bb33fee609c8998a1ba91bd3': "Nitrokey FIDO2 1.x",
@@ -459,9 +501,9 @@ def verify(pin, serial, udp):
     dev_fingerprint = cert.fingerprint(hashes.SHA256())
     a_hex = binascii.b2a_hex(dev_fingerprint)
     if a_hex in hashdb:
-        local_print('Found device: {}'.format(hashdb[a_hex]))
+        local_print(f"found device: {hashdb[a_hex]}")
     else:
-        local_print("Unknown fingerprint! ", a_hex)
+        local_print(f"unknown fingerprint! {a_hex}")
 
 
 @click.command()
@@ -522,20 +564,28 @@ def reboot(serial, udp):
 fido2.add_command(rng)
 fido2.add_command(reboot)
 fido2.add_command(list)
+
 rng.add_command(hexbytes)
 rng.add_command(raw)
 rng.add_command(feedkernel)
+
 fido2.add_command(make_credential)
 fido2.add_command(challenge_response)
 fido2.add_command(reset)
 fido2.add_command(status)
 fido2.add_command(update)
-fido2.add_command(probe)
+
+# see above....
+#fido2.add_command(probe)
 # key.add_command(sha256sum)
 # key.add_command(sha512sum)
+
 fido2.add_command(version)
 fido2.add_command(verify)
 fido2.add_command(wink)
+
+fido2.add_command(set_pin)
+fido2.add_command(change_pin)
 
 fido2.add_command(util)
 util.add_command(monitor)

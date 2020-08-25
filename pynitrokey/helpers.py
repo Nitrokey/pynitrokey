@@ -65,7 +65,7 @@ logger = logging.getLogger()
 #        + logfile-only
 def local_print(*messages, **kwargs):
     """
-    Convenience logging function
+    application-wide logging function
     `messages`:   `str`         -> log single string
                   `Exception`   -> log exception
                   `list of ...` -> list of either `str` or `Exception` handle serialized
