@@ -133,8 +133,8 @@ def update(serial, yes):
 
     # ask for permission
     if not yes:
-        if not AskUser.strict_yes_no("Do you want to continue? [yes/no]: ",
-                title="This will update your Nitrokey FIDO2"):
+        local_print("This will update your Nitrokey FIDO2")
+        if not AskUser.strict_yes_no("Do you want to continue?"):
             local_critical("exiting due to user input...", support_hint=False)
 
     # Ensure we are in bootloader mode

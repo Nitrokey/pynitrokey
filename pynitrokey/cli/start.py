@@ -63,7 +63,6 @@ def set_identity(identity):
                 gnuk.cmd_set_identity(identity)
             except USBError:
                 local_print(f"reset done - now having the new identity: {identity}")
-                break
 
         except ValueError as e:
             if "No ICC present" in str(e):
@@ -74,6 +73,9 @@ def set_identity(identity):
                 sleep(3)
             else:
                 local_critical(e)
+
+        except Exception as e:
+            local_critical(e)
 
 @click.command()
 @click.option(
@@ -106,7 +108,7 @@ def update(regnual, gnuk, default_password, password, wait_e, keyno, verbose, ye
     if green_led and (regnual is None or gnuk is None):
         local_critical(
             "You selected the --green-led option, please provide '--regnual' and "
-              "'--gnuk' in addition to proceed. ",
+            "'--gnuk' in addition to proceed. ",
             "use one from: https://github.com/Nitrokey/nitrokey-start-firmware)")
 
     if IS_LINUX:

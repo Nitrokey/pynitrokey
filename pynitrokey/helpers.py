@@ -13,8 +13,9 @@ import sys
 from numbers import Number
 from threading import Event, Timer
 from typing import List
+from getpass import getpass
 
-from pynitrokey.confconsts import LOG_FN, LOG_FORMAT, ISSUES_URL, VERBOSE, Verbosity
+from pynitrokey.confconsts import LOG_FN, LOG_FORMAT, GH_ISSUES_URL, VERBOSE, Verbosity
 
 def to_websafe(data):
     data = data.replace("+", "-")
@@ -59,7 +60,9 @@ class Timeout(object):
 logging.basicConfig(format=LOG_FORMAT, level=logging.DEBUG, filename=LOG_FN)
 logger = logging.getLogger()
 
-
+# @todo: introduce granularization: dbg, info, err (warn?)
+#        + machine-readable
+#        + logfile-only
 def local_print(*messages, **kwargs):
     """
     Convenience logging function
@@ -70,10 +73,11 @@ def local_print(*messages, **kwargs):
     passed_exc = None
 
     for item in messages:
-        # append exception print to last message
+        # handle exception in order as, if it is a regular message
         if isinstance(item, Exception):
-            logger.exception("EXCEPTION", exc_info=item)
+            logger.exception(item)
             passed_exc = item
+            item = repr(item)
 
         # just a newline, don't log to file...
         elif item is None or item == "":
@@ -91,64 +95,85 @@ def local_print(*messages, **kwargs):
         raise passed_exc
 
 
-def local_critical(*messages, support_hint=True, **kwargs):
-    messages = ["ERROR:"] + list(messages)
+def local_critical(*messages, support_hint=True, ret_code=1, **kwargs):
+    messages = ["Critical error:"] + list(messages)
     local_print(*messages, **kwargs)
     if support_hint:
-        local_print("",
-             "#" * 40,
-             "Critical error occurred, exiting now",
-             "Unexpected? Is this a bug? Do you would like to get support/help?",
-             f"- You can report issues at: {ISSUES_URL}",
-             f"- Please attach the log: '{LOG_FN}' with any support/help request!",
-             "#" * 40, ""
-        )
-    sys.exit(1)
+        local_print(
+            "", "-" * 80,
+            "Critical error occurred, exiting now",
+            "Unexpected? Is this a bug? Do you would like to get support/help?",
+            f"- You can report issues at: {GH_ISSUES_URL}",
+            f"- Please attach the log: '{LOG_FN}' with any support/help request!",
+            "-" * 80, "")
+    sys.exit(ret_code)
 
 
 # @fixme: consider using/wrapping click.confirm() instead of this...
 class AskUser:
     """
     Asking user for input:
-        `question`:     printed user question
-        `options`:      `None`        -> we want some data input
-                        `iter of str` -> only allow items inside iterable
-        `title`:        additionally print this string before the question
-        `strict`:       if `options` are used, force full match
-        `repeat`:       ask questions up to `repeat` times if `options` and not matched
+        `question`:       printed user question
+        `options`:        `None`        -> we want some data input
+                          `iter of str` -> only allow items inside iterable
+        `strict`:         if `options` are used, force full match
+        `repeat`:         ask `question` up to `repeat` times, if `options` are provided
+        `adapt_question`: adapt user-provided `question` (add options, whitespace...),
+                          set to `False`, if strictly `question` shall be used
+        `hide_input`:     use 'getpass' instead of regular `input`
     """
     def __init__(self, question: str,
                  options: List[str]=None,
-                 title: str=None,
                  strict: bool=False,
-                 repeat: int=3):
+                 repeat: int=3,
+                 adapt_question=True,
+                 hide_input=False):
 
         self.data = None
 
         self.question = question
+        self.adapt_question = adapt_question
+        self.final_question = question
+        if self.adapt_question:
+            _q = self.final_question
+            # strip ending colon(s) ':' or whitespace(s) ' '
+            _q = _q.strip(" ").strip(":").strip(" ").strip(":")
+            if options:
+                _q += f" [{'/'.join(options)}]" if strict else \
+                      f" [{'/'.join(f'({o[0]}){o[1:]}' for o in options)}]"
+            _q += ": "
+            self.final_question = _q
+
         self.options = options
-        self.title = title
         self.strict = strict
         self.repeat = repeat or 1
+        self.hide_input = hide_input
 
     @classmethod
-    def yes_no(cls, what: str, title: str=None, strict: bool=False):
+    def yes_no(cls, what: str, strict: bool=False):
         opts = ["yes", "no"]
-        return cls(what, options=opts, title=title, strict=strict).ask() == opts[0]
+        return cls(what, options=opts, strict=strict).ask() == opts[0]
 
     @classmethod
-    def strict_yes_no(cls, what: str, title: str=None):
-        return cls.yes_no(what, title=title, strict=True)
+    def strict_yes_no(cls, what: str):
+        return cls.yes_no(what, strict=True)
 
     @classmethod
-    def plain(cls, what, title=None):
-        return cls(what, title=title).ask()
+    def plain(cls, what):
+        return cls(what).ask()
+
+    @classmethod
+    def hidden(cls, what):
+        return cls(what, hide_input=True).ask()
+
+    def get_input(self, pre_str=None, hide_input=None):
+        pre_input_string = pre_str or self.final_question
+        hide_input = hide_input if hide_input is not None else self.hide_input
+        return input(pre_input_string).strip() if not hide_input \
+            else getpass(pre_input_string)
 
     def ask(self):
-        if self.title:
-            local_print(self.title)
-
-        answer = input(self.question).strip()
+        answer = self.get_input()
 
         # handle plain input request first
         if not self.options:
@@ -158,19 +183,20 @@ class AskUser:
         # now `options` based
         retries = self.repeat
         while retries:
-            if self.strict:
-                if answer in self.options:
-                    self.data = answer
-                    return self.data
-            else:
+            if answer in self.options:
+                self.data = answer
+                return self.data
+
+            if not self.strict:
                 short_opts = {c[0].lower(): c for c in self.options}
                 if len(answer) > 0:
                     self.data = short_opts.get(answer[0].lower())
+
                 if self.data:
                     local_print(f"choosing: {self.data}")
                     return self.data
 
-            answer = input(self.question).strip()
+            answer = self.get_input()
             retries -= 1
 
         if retries == 0:
