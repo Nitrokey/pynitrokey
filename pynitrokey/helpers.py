@@ -85,7 +85,7 @@ def local_print(*messages, **kwargs):
 
         # logfile debug output
         else:
-            logger.debug(f"print: {item.strip()}")
+            logger.debug(f"print: {str(item).strip()}")
 
         # to stdout
         print(item, **kwargs)

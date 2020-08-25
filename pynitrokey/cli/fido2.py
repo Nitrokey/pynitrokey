@@ -66,7 +66,7 @@ def genkey(input_seed_file, output_pem_file):
     * You may optionally supply a file to seed the RNG for key generating.
     """
 
-    vk = pynitrokey.operations.genkey(output_pem_file, input_seed_file=input_seed_file)
+    vk = pynitrokey.fido2.operations.genkey(output_pem_file, input_seed_file=input_seed_file)
 
     local_print(
         "Public key in various formats:",
@@ -90,7 +90,7 @@ def genkey(input_seed_file, output_pem_file):
 def sign(verifying_key, app_hex, output_json, end_page):
     """Signs a fw-hex file, outputs a .json file that can be used for signed update."""
 
-    msg = pynitrokey.operations.sign_firmware(
+    msg = pynitrokey.fido2.operations.sign_firmware(
         verifying_key, app_hex, APPLICATION_END_PAGE=end_page)
     local_print(f"Saving signed firmware to: {output_json}")
     with open(output_json, "wb+") as fh:
@@ -123,7 +123,7 @@ def mergehex(
     If no attestation key is passed, uses default Solo Hacker one.
     Note that later hex files replace data of earlier ones, if they overlap.
     """
-    pynitrokey.operations.mergehex(
+    pynitrokey.fido2.operations.mergehex(
         input_hex_files,
         output_hex_file,
         attestation_key=attestation_key,
