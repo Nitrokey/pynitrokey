@@ -13,7 +13,6 @@ import struct
 import sys
 import tempfile
 import time
-from threading import Event, Timer
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
@@ -27,7 +26,7 @@ from intelhex import IntelHex
 
 import pynitrokey.exceptions
 from pynitrokey import helpers
-from pynitrokey.commands import SoloBootloader, SoloExtension
+from pynitrokey.fido2.commands import SoloBootloader, SoloExtension
 
 
 def find(solo_serial=None, retries=5, raw_device=None, udp=False):

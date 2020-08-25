@@ -12,7 +12,7 @@
 
 import pathlib
 
-from . import client, commands, dfu, helpers, operations
+#from fido2 import client, commands, dfu, helpers, operations
 
 __version__ = open(pathlib.Path(__file__).parent / "VERSION").read().strip()
 

@@ -14,7 +14,7 @@ import pynitrokey.exceptions
 import usb._objfinalizer
 import usb.core
 import usb.util
-from pynitrokey.commands import DFU, STM32L4
+from pynitrokey.fido2.commands import DFU, STM32L4
 
 
 def find(dfu_serial=None, attempts=8, raw_device=None, altsetting=1):

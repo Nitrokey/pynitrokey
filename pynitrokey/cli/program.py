@@ -14,7 +14,7 @@ import click
 import pynitrokey
 import usb
 from fido2.ctap import CtapError
-from pynitrokey.dfu import hot_patch_windows_libusb
+from pynitrokey.fido2.dfu import hot_patch_windows_libusb
 
 
 

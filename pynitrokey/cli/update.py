@@ -44,9 +44,10 @@ def update(serial, yes):
     local_print("")
     local_print("Starting update procedure for Nitrokey FIDO2")
 
+    from pynitrokey.fido2 import client as _client
     # Determine target key
     try:
-        client = pynitrokey.client.find(serial)
+        client = _client.find(serial)
 
     except pynitrokey.exceptions.NoSoloFoundError as e:
         print()
@@ -103,7 +104,8 @@ def update(serial, yes):
     local_print(f"Downloaded firmware version: {github_release_data['tag_name']}")
 
     def get_dev_details():
-        c = pynitrokey.client.find_all()[0]
+        from pynitrokey.fido2 import client as _client
+        c = _client.find_all()[0]
         descriptor = c.dev.descriptor
         local_print(f'Device connected:')
         if "serial_number" in descriptor:
@@ -145,7 +147,8 @@ def update(serial, yes):
 
     # reconnect and actually flash it...
     try:
-        client = pynitrokey.client.find(serial)
+        from pynitrokey.fido2 import client as _client
+        client = _client.find(serial)
         client.use_hid()
         client.program_file(fw_fn)
     except Exception as e:

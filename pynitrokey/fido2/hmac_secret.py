@@ -12,8 +12,8 @@ import binascii
 import hashlib
 import secrets
 
-import pynitrokey.client
 from fido2.extensions import HmacSecretExtension
+
 
 
 def make_credential(
@@ -26,8 +26,8 @@ def make_credential(
     udp=False,
 ):
     user_id = user_id.encode()
-
-    client = pynitrokey.client.find(solo_serial=serial, udp=udp).client
+    from pynitrokey.fido2 import client as _client
+    client = _client.find(solo_serial=serial, udp=udp).client
 
 
     rp = {"id": host, "name": "Example RP"}
@@ -72,7 +72,8 @@ def simple_secret(
 ):
     user_id = user_id.encode()
 
-    client = pynitrokey.client.find(solo_serial=serial, udp=udp).client
+    from pynitrokey.fido2 import client
+    client = client.find(solo_serial=serial, udp=udp).client
     hmac_ext = HmacSecretExtension(client.ctap2)
 
     # rp = {"id": host, "name": "Example RP"}
