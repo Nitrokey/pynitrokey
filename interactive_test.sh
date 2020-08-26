@@ -15,14 +15,13 @@ function make_title
 
 	if [[ "$2" != "" ]]; then
 		echo "## $2"
-    echo -n ">> press enter to continue... "; read foo
+    [[ "$NO_WAIT" = "" ]] && echo -n ">> press enter to continue... " && read foo
 	fi
 }
 
 function askout
 {
-	echo -n "<<<<<<<<<<< stop? "
-	read inp
+	[[ "$NO_WAIT" = "" ]] && echo -n "<<<<<<<<<<< stop? " && read inp
 
 	if [[ "$inp" = "y" ]]; then
 		exit 1;
@@ -59,8 +58,8 @@ function testfido2
 	make_title "reboot, version, verify, update, verify, reset, version"
 
 	run fido2 reboot
-	echo "sleeping for 10secs..."
-	sleep 10
+	echo "sleeping for 5secs..."
+	sleep 5
 
 	run fido2 version
 	run fido2 verify
@@ -70,7 +69,7 @@ function testfido2
 	run fido2 version
 
 
-	make_title "rnd subcommand(s)"
+	make_title "rng	subcommand(s)"
 
 	run fido2 rng hexbytes
 	run fido2 rng hexbytes --count 12
@@ -100,6 +99,37 @@ function testfido2
 	make_title "finally one more reset and then verify"
 	run fido2 reset
 	run fido2 verify
+
+	make_title "get .hex firmware, gen sign-key, sign, (skipped: flash bad fw), flash good fw"
+	wget "https://github.com/Nitrokey/nitrokey-fido2-firmware/releases/download/2.0.0.nitrokey/nitrokey-fido2-firmware-2.0.0-app-to_sign.hex"
+	run fido2 util genkey test_key.pem
+	run fido2 util sign test_key.pem nitrokey-fido2-firmware-2.0.0-app-to_sign.hex output.json
+	
+	#echo "###>>>> THIS ONE WILL FAIL, EXPECTED FAIL:"
+	#run fido2 util program bootloader output.json
+	#sleep 1
+	
+	wget "https://github.com/Nitrokey/nitrokey-fido2-firmware/releases/download/2.0.0.nitrokey/nitrokey-fido2-firmware-2.0.0.json"
+	echo "###>>>> THIS ONE MUST WORK - if not: brick!? :D"
+	run fido2 util program bootloader nitrokey-fido2-firmware-2.0.0.json
+	sleep 1
+
+	make_title "util program aux enter-bootloader, show version, leave + lists & reboots after each"
+	run fido2 util program aux enter-bootloader
+	sleep 1
+	run fido2 list
+	run fido2 util program aux bootloader-version
+	run fido2 util program aux reboot
+	echo "longer sleep"
+	sleep 5
+	run fido2 list
+  run fido2 util program aux leave-bootloader
+	sleep 5
+	run fido2 list
+	run fido2 reboot
+	sleep 1
+	run fido2 list
+
 
 }
 

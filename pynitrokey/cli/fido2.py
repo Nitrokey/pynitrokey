@@ -552,7 +552,7 @@ def wink(serial, udp):
 )
 def reboot(serial, udp):
     """Send reboot command to key (development command)"""
-    print('Reboot')
+    local_print("Reboot")
     CTAP_REBOOT = 0x53
     dev = nkfido2.find(serial, udp=udp).dev
     try:
@@ -562,6 +562,8 @@ def reboot(serial, udp):
 
 
 fido2.add_command(rng)
+
+# @fixme: this one exists twice, once here, once in "util program aux"
 fido2.add_command(reboot)
 fido2.add_command(list)
 
@@ -575,11 +577,6 @@ fido2.add_command(reset)
 fido2.add_command(status)
 fido2.add_command(update)
 
-# see above....
-#fido2.add_command(probe)
-# key.add_command(sha256sum)
-# key.add_command(sha512sum)
-
 fido2.add_command(version)
 fido2.add_command(verify)
 fido2.add_command(wink)
@@ -588,8 +585,19 @@ fido2.add_command(set_pin)
 fido2.add_command(change_pin)
 
 fido2.add_command(util)
-util.add_command(monitor)
+
 util.add_command(program)
+
+# used for fw-signing... (does not seem to work @fixme)
 util.add_command(sign)
 util.add_command(genkey)
-util.add_command(mergehex)
+
+
+# @fixme: removed for now, are these applicable for nk-fido2?
+#util.add_command(mergehex)
+#util.add_command(monitor)
+
+# see above -> @fixme: likely to be removed?!
+#fido2.add_command(probe)
+# key.add_command(sha256sum)
+# key.add_command(sha512sum)
