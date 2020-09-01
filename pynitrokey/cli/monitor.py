@@ -8,8 +8,6 @@
 # copied, modified, or distributed except according to those terms.
 
 
-# @fixme: remove this file towards 0.5
-
 import sys
 import time
 

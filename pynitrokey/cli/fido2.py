@@ -591,11 +591,9 @@ util.add_command(program)
 # used for fw-signing... (does not seem to work @fixme)
 util.add_command(sign)
 util.add_command(genkey)
+util.add_command(mergehex)
+util.add_command(monitor)
 
-
-# @fixme: removed for now, are these applicable for nk-fido2?
-#util.add_command(mergehex)
-#util.add_command(monitor)
 
 # see above -> @fixme: likely to be removed?!
 #fido2.add_command(probe)

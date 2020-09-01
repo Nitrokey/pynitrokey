@@ -15,6 +15,10 @@ from fido2.ctap import CtapError
 
 from pynitrokey.helpers import local_print, local_critical
 
+from pynitrokey.fido2 import hot_patch_windows_libusb
+
+
+
 @click.group()
 def program():
     """Program a key."""
@@ -56,7 +60,6 @@ def bootloader(serial, firmware):
     Enter bootloader mode using `nitropy fido2 util program aux enter-bootloader` first.
     """
 
-    from pynitrokey.fido2 import find
     p = find(serial)
     try:
         p.use_hid()
