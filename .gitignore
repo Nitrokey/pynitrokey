@@ -13,3 +13,4 @@ firmware-*.json
 .tags*
 .idea/
 *.log
+tmp/

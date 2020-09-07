@@ -11,10 +11,8 @@ import os
 
 import click
 
-import json
-
 import pynitrokey
-import pynitrokey.operations
+import pynitrokey.fido2.operations
 from pynitrokey.cli.fido2 import fido2
 from pynitrokey.cli.start import start
 
@@ -62,6 +60,8 @@ def ls():
     start.commands["list"].callback()
 
 nitropy.add_command(ls)
+
+
 
 from pygments.console import colorize
 print(f'*** {colorize("red", "Nitrokey tool for Nitrokey FIDO2 & Nitrokey Start")}')

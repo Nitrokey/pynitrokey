@@ -7,14 +7,11 @@
 # http://opensource.org/licenses/MIT>, at your option. This file may not be
 # copied, modified, or distributed except according to those terms.
 
-
 import binascii
 import hashlib
 import secrets
 
-import pynitrokey.client
 from fido2.extensions import HmacSecretExtension
-
 
 def make_credential(
     host="nitrokeys.dev",
@@ -26,7 +23,9 @@ def make_credential(
     udp=False,
 ):
     user_id = user_id.encode()
-    client = pynitrokey.client.find(solo_serial=serial, udp=udp).client
+    from pynitrokey.fido2 import find
+    client = find(solo_serial=serial, udp=udp).client
+
 
     rp = {"id": host, "name": "Example RP"}
     client.host = host
@@ -39,9 +38,15 @@ def make_credential(
         print(prompt)
 
     hmac_ext = HmacSecretExtension(client.ctap2)
-    attestation_object, client_data = client.make_credential(
-        rp, user, challenge, extensions=hmac_ext.create_dict(), pin=pin
-    )
+
+    attestation_object, client_data = client.make_credential({
+        "rp": rp,
+        "user": user,
+        "challenge": challenge.encode("utf8"),
+        "pubKeyCredParams": [{"type": "public-key", "alg": -7}],
+        "extensions": hmac_ext.create_dict(),
+    }, pin=pin)
+
 
     credential = attestation_object.auth_data.credential_data
     credential_id = credential.credential_id
@@ -58,13 +63,14 @@ def simple_secret(
     user_id="they",
     serial=None,
     pin=None,
-    prompt="Touch your authenticator to generate a reponse...",
+    prompt="Touch your authenticator to generate a response...",
     output=True,
     udp=False,
 ):
     user_id = user_id.encode()
 
-    client = pynitrokey.client.find(solo_serial=serial, udp=udp).client
+    from pynitrokey.fido2 import find
+    client = find(solo_serial=serial, udp=udp).client
     hmac_ext = HmacSecretExtension(client.ctap2)
 
     # rp = {"id": host, "name": "Example RP"}
@@ -85,9 +91,12 @@ def simple_secret(
     if prompt:
         print(prompt)
 
-    assertions, client_data = client.get_assertion(
-        host, challenge, allow_list, extensions=hmac_ext.get_dict(salt), pin=pin
-    )
+    assertions, client_data = client.get_assertion({
+        "rpId": host,
+        "challenge": challenge.encode("utf8"),
+        "allowCredentials": allow_list,
+        "extensions": hmac_ext.get_dict(salt),
+    }, pin=pin)
 
     assertion = assertions[0]  # Only one cred in allowList, only one response.
     response = hmac_ext.results_for(assertion.auth_data)[0]

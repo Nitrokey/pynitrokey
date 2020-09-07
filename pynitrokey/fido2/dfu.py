@@ -14,7 +14,10 @@ import pynitrokey.exceptions
 import usb._objfinalizer
 import usb.core
 import usb.util
-from pynitrokey.commands import DFU, STM32L4
+from pynitrokey.fido2.commands import DFU, STM32L4
+
+# @fixme: remove for 0.5
+# hotpatch windows stuff extracted to __init__
 
 
 def find(dfu_serial=None, attempts=8, raw_device=None, altsetting=1):
@@ -38,19 +41,6 @@ def find(dfu_serial=None, attempts=8, raw_device=None, altsetting=1):
 def find_all():
     st_dfus = usb.core.find(idVendor=0x0483, idProduct=0xDF11, find_all=True)
     return [find(raw_device=st_dfu) for st_dfu in st_dfus]
-
-
-def hot_patch_windows_libusb():
-    # hot patch for windows libusb backend
-    olddel = usb._objfinalizer._AutoFinalizedObjectBase.__del__
-
-    def newdel(self):
-        try:
-            olddel(self)
-        except OSError:
-            pass
-
-    usb._objfinalizer._AutoFinalizedObjectBase.__del__ = newdel
 
 
 class DFUDevice:

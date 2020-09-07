@@ -22,7 +22,6 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from pynitrokey.start.gnuk_token import *
 import usb, sys
 
 field = ['Vendor', 'Product', 'Serial', 'Revision', 'Config', 'Sys', 'Board']
@@ -42,6 +41,7 @@ def get_dict_for_device(dev: usb.Device) -> dict:
 
 
 def get_devices() -> list:
+    from pynitrokey.start.gnuk_token import gnuk_devices_by_vidpid
     res = []
     for dev in gnuk_devices_by_vidpid():
         res.append(get_dict_for_device(dev=dev))
