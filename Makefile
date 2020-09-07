@@ -16,10 +16,10 @@ check: lint
 fix: black isort
 
 black:
-	$(VENV)/bin/python3 -m black $(PACKAGE_NAME)/
+	$(VENV)/bin/python3 -m black -t py35 $(PACKAGE_NAME)/
 
 isort:
-	$(VENV)/bin/python3 -m isort -y --recursive $(PACKAGE_NAME)/
+	$(VENV)/bin/python3 -m isort --py 35 $(PACKAGE_NAME)/
 
 lint:
 	$(VENV)/bin/python3 -m flake8 $(PACKAGE_NAME)/
