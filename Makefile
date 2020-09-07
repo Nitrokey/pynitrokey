@@ -10,7 +10,7 @@ init: update-venv
 # ensure this passes before commiting
 check: lint
 	$(VENV)/bin/python3 -m black --check $(PACKAGE_NAME)/
-	$(VENV)/bin/python3 -m isort --check-only --recursive $(PACKAGE_NAME)/
+	$(VENV)/bin/python3 -m isort --check-only $(PACKAGE_NAME)/
 
 # automatic code fixes
 fix: black isort
@@ -47,7 +47,7 @@ build-forced:
 build: check
 	$(VENV)/bin/python3 -m flit build
 
-publish: check
+publish:
 	$(VENV)/bin/python3 -m flit --repository pypi publish
 
 $(VENV):
