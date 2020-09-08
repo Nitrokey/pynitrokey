@@ -11,6 +11,9 @@ import binascii
 import hashlib
 import secrets
 
+from pynitrokey.helpers import AskUser
+
+
 from fido2.extensions import HmacSecretExtension
 
 def make_credential(
@@ -33,6 +36,9 @@ def make_credential(
     client.user_id = user_id
     user = {"id": user_id, "name": "A. User"}
     challenge = secrets.token_hex(32)
+
+    if not pin:
+        pin = AskUser("PIN required: ", repeat=0, hide_input=True).ask()
 
     if prompt:
         print(prompt)
@@ -87,6 +93,9 @@ def simple_secret(
     h = hashlib.sha256()
     h.update(secret_input.encode())
     salt = h.digest()
+
+    if not pin:
+        pin = AskUser("PIN required: ", repeat=0, hide_input=True).ask()
 
     if prompt:
         print(prompt)
