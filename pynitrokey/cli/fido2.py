@@ -441,13 +441,16 @@ def set_pin(serial):
 
 
 @click.command()
-@click.option("--pin", help="PIN for to access key")
+@click.option("--pin", help="PIN for to access key", default=None)
 @click.option("-s", "--serial", help="Serial number of Nitrokey to use")
 @click.option(
     "--udp", is_flag=True, default=False, help="Communicate over UDP with software key"
 )
 def verify(pin, serial, udp):
     """Verify key is valid Nitrokey 'Start' or 'FIDO2' key."""
+
+    if not pin:
+        pin = AskUser("PIN required: ", repeat=0, hide_input=True).ask()
 
     # Any longer and this needs to go in a submodule
     local_print("please press the button on your Nitrokey key")
