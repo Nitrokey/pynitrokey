@@ -4,7 +4,7 @@ npy=venv/bin/nitropy
 
 function make_title
 {
-	if [[ "$2" = "" ]]; then 
+	if [[ "$2" = "" ]]; then
 		echo "------------------------------------------------------------------------"
 		echo "-> $1"
 	else
@@ -30,7 +30,7 @@ function askout
 
 function run
 {
-	echo 
+	echo
 	echo ">>>>>>>>>>> " $npy "$@"
 	$npy "$@"
 	askout
@@ -47,7 +47,7 @@ function testfido2
 
 
 	make_title "create a credential + challenge-response using it"
-	
+
 	run fido2 make-credential
 	echo "press again..."
 	out=`${npy} fido2 make-credential | tail -n 1`
@@ -95,7 +95,7 @@ function testfido2
 	echo "make sure pin is finally: 123456"
 	run fido2 change-pin
 	run fido2 verify --pin 123456
-	
+
 	make_title "finally one more reset and then verify"
 	run fido2 reset
 	run fido2 verify
@@ -104,14 +104,15 @@ function testfido2
 	wget "https://github.com/Nitrokey/nitrokey-fido2-firmware/releases/download/2.0.0.nitrokey/nitrokey-fido2-firmware-2.0.0-app-to_sign.hex"
 	run fido2 util genkey test_key.pem
 	run fido2 util sign test_key.pem nitrokey-fido2-firmware-2.0.0-app-to_sign.hex output.json
-	
+
 	#echo "###>>>> THIS ONE WILL FAIL, EXPECTED FAIL:"
 	#run fido2 util program bootloader output.json
 	#sleep 1
-	
-	wget "https://github.com/Nitrokey/nitrokey-fido2-firmware/releases/download/2.0.0.nitrokey/nitrokey-fido2-firmware-2.0.0.json"
+
+	wget "https://github.com/Nitrokey/nitrokey-fido2-firmware/releases/download/2.1.0.nitrokey/nitrokey-fido2-firmware-2.1.0.json"
+
 	echo "###>>>> THIS ONE MUST WORK - if not: brick!? :D"
-	run fido2 util program bootloader nitrokey-fido2-firmware-2.0.0.json
+	run fido2 util program bootloader nitrokey-fido2-firmware-2.1.0.json
 	sleep 1
 
 	make_title "util program aux enter-bootloader, show version, leave + lists & reboots after each"
@@ -140,17 +141,17 @@ function teststart
 
 
 	make_title "Simple listing of devices"
-	
+
 	run ls
 	run start list
-	
+
 	make_title "setting identity 0, 1, 2, 0"
 
 	run start set-identity 0
 	run start set-identity 1
 	run start set-identity 2
 	run start set-identity 0
-	
+
 
 	make_title "updating with latest firmware"
 
