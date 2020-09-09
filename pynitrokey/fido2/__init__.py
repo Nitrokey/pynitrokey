@@ -3,11 +3,13 @@ import time
 import socket
 import usb
 
-import pynitrokey.fido2.hmac_secret as hmac_secret
 
 import fido2._pyu2f
 import fido2._pyu2f.base
 
+import pynitrokey.fido2.hmac_secret as hmac_secret
+from pynitrokey.fido2.client import NKFido2Client
+from pynitrokey.exceptions import NoSoloFoundError
 
 
 def hot_patch_windows_libusb():
@@ -82,8 +84,7 @@ def find(solo_serial=None, retries=5, raw_device=None, udp=False):
     if udp:
         force_udp_backend()
 
-    from pynitrokey.fido2.client import NKFido2Client
-    from pynitrokey.exceptions import NoSoloFoundError
+
 
     p = NKFido2Client()
 

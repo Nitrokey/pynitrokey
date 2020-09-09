@@ -14,15 +14,15 @@ from time import sleep, time
 import getpass
 import os
 import sys
-
 import json
 import click
-import pynitrokey
+import cbor
+import struct
+import fcntl
 
 # @fixme: 1st layer `nkfido2` lower layer `fido2` not to be used here !
+import pynitrokey
 import pynitrokey.fido2 as nkfido2
-
-
 from cryptography.hazmat.primitives import hashes
 from fido2.client import ClientError as Fido2ClientError
 from fido2.ctap1 import ApduError
@@ -31,6 +31,8 @@ from pynitrokey.cli.update import update
 from pynitrokey.cli.monitor import monitor
 from pynitrokey.cli.program import program
 import pynitrokey.fido2.operations
+
+from pynitrokey.fido2.commands import SoloBootloader
 
 from pynitrokey.helpers import AskUser, local_print, local_critical
 
@@ -206,9 +208,6 @@ def feedkernel(count, serial):
 
     p = nkfido2.find(serial)
 
-    import struct
-    import fcntl
-
     RNDADDENTROPY = 0x40085203
 
     entropy_info_file = "/proc/sys/kernel/random/entropy_avail"
@@ -335,8 +334,7 @@ def challenge_response(serial, pin, host, user, prompt, credential_id, challenge
 def probe(serial, udp, hash_type, filename):
     """Calculate HASH"""
 
-    import cbor
-    from pynitrokey.fido2.commands import SoloBootloader
+
 
     # @todo: move to constsconf.py
     #all_hash_types = ("SHA256", "SHA512", "RSA2048", "Ed25519")
