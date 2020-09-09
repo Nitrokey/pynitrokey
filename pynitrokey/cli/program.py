@@ -15,6 +15,7 @@ from fido2.ctap import CtapError
 
 from pynitrokey.helpers import local_print, local_critical
 
+from pynitrokey.fido2 import find
 from pynitrokey.fido2 import hot_patch_windows_libusb
 
 
@@ -67,6 +68,7 @@ def bootloader(serial, firmware):
     except CtapError as e:
         if e.code == CtapError.ERR.INVALID_COMMAND:
             local_print("Not in bootloader mode.  Attempting to switch...")
+            local_print("Please confirm with button on key!")
         else:
             local_critical(e)
 
