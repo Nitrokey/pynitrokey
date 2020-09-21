@@ -29,6 +29,13 @@ jobs:
       - run: make system-pip-install-test
       - run: make system-pip-uninstall
 
+  install-with-older-fido:
+    executor: python/default
+    steps:
+      - checkout
+      - run: python -m pip install fido==0.7.2
+      - run: python -m pip install pynitrokey
+      - run: nitropy 
 
 workflows:
   main:
@@ -36,3 +43,4 @@ workflows:
       - build-msi-win
       - build-linux
       - install-test-pip
+      - install-with-older-fido
