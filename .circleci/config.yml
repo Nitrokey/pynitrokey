@@ -19,8 +19,20 @@ jobs:
       - run: make init
       - run: make CI
 
+  install-test-pip:
+    executor: python/default
+    steps:
+      - checkout
+      - run: make system-pip-install-test
+      - run: make system-pip-uninstall
+      - run: make system-pip-install-test
+      - run: make system-pip-install-test
+      - run: make system-pip-uninstall
+
+
 workflows:
   main:
     jobs:
       - build-msi-win
       - build-linux
+      - install-test-pip

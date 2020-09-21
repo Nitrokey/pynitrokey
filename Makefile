@@ -50,6 +50,14 @@ build: check
 publish:
 	$(VENV)/bin/python3 -m flit --repository pypi publish
 
+system-pip-install-test:
+	python -m pip install -U pynitrokey
+	which nitropy
+	nitropy
+
+system-pip-uninstall:
+	python -m pip uninstall pynitrokey
+  
 $(VENV):
 	python3 -m venv $(VENV)
 	$(VENV)/bin/python3 -m pip install -U pip
