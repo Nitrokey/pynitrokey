@@ -56,7 +56,7 @@ system-pip-install-test:
 	nitropy
 
 system-pip-uninstall:
-	python -m pip uninstall pynitrokey
+	python -m pip uninstall pynitrokey -y
   
 $(VENV):
 	python3 -m venv $(VENV)
