@@ -571,13 +571,17 @@ def wink(serial, udp):
 )
 def reboot(serial, udp):
     """Send reboot command to key (development command)"""
-    local_print("Reboot")
+    local_print("Reboot", "Press key to confirm!")
+
     CTAP_REBOOT = 0x53
     dev = nkfido2.find(serial, udp=udp).dev
     try:
         dev.call(CTAP_REBOOT ^ 0x80, b'')
+
     except OSError:
-        pass
+        local_print("...done")
+    except CtapError as e:
+        local_critical(f"...failed ({str(e)})")
 
 
 fido2.add_command(rng)
