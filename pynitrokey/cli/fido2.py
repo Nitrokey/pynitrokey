@@ -32,6 +32,7 @@ from cryptography.hazmat.primitives import hashes
 from fido2.client import ClientError as Fido2ClientError
 from fido2.ctap1 import ApduError
 from fido2.ctap import CtapError
+from fido2.ctap2 import PinProtocolV1 as PIN
 
 from pynitrokey.cli.update import update
 
@@ -427,7 +428,8 @@ def change_pin(serial):
                        "please try again!", support_hint=False)
     try:
         # @fixme: move this (function) into own fido2-client-class
-        nkfido2.find(serial).client.pin_protocol.change_pin(old_pin, new_pin)
+        client = nkfido2.find(serial).client
+        PIN(client.ctap2).change_pin(old_pin, new_pin)
         local_print("done - please use new pin to verify key")
 
     except Exception as e:
@@ -446,7 +448,8 @@ def set_pin(serial):
                        "please try again!", support_hint=False)
     try:
         # @fixme: move this (function) into own fido2-client-class
-        nkfido2.find(serial).client.pin_protocol.set_pin(new_pin)
+        client = nkfido2.find(serial).client
+        PIN(client.ctap2).set_pin(new_pin)
         local_print("done - please use new pin to verify key")
 
     except Exception as e:
