@@ -13,7 +13,8 @@
 import pathlib
 
 
-__version__ = open(pathlib.Path(__file__).parent / "VERSION").read().strip()
+__version_path__ = pathlib.Path(__file__).parent.resolve().absolute() / "VERSION"
+__version__ = open(__version_path__).read().strip()
 
 
 del pathlib
