@@ -262,7 +262,7 @@ def feedkernel(count, serial):
     "--host", help="Relying party's host", default="nitrokeys.dev", show_default=True
 )
 @click.option("--user", help="User ID", default="they", show_default=True)
-@click.option("--pin", help="provide PIN instead of asking the user", default=None)
+#@click.option("--pin", help="provide PIN instead of asking the user", default=None)
 @click.option(
     "--udp", is_flag=True, default=False, help="Communicate over UDP with software key"
 )
@@ -272,20 +272,21 @@ def feedkernel(count, serial):
     default="Touch your authenticator to generate a credential...",
     show_default=True,
 )
-def make_credential(serial, pin, host, user, udp, prompt):
-    """Generate a credential.
+def make_credential(serial, host, user, udp, prompt):
+    """(EXPERIMENTAL) Generate a credential.
 
     Pass `--prompt ""` to output only the `credential_id` as hex.
     """
 
-    nkfido2.hmac_secret.make_credential(pin=pin,
+    local_print("EXPERIMENTAL: use with care, not a fully supported function")
+    nkfido2.hmac_secret.make_credential(
         host=host, user_id=user, serial=serial, output=True, prompt=prompt, udp=udp
     )
 
 
 @click.command()
 @click.option("-s", "--serial", help="Serial number of Nitrokey use")
-@click.option("--pin", help="provide PIN instead of asking the user", default=None)
+#@click.option("--pin", help="provide PIN instead of asking the user", default=None)
 @click.option("--host", help="Relying party's host", default="nitrokeys.dev")
 @click.option("--user", help="User ID", default="they")
 @click.option(
@@ -299,8 +300,8 @@ def make_credential(serial, pin, host, user, udp, prompt):
 )
 @click.argument("credential-id")
 @click.argument("challenge")
-def challenge_response(serial, pin, host, user, prompt, credential_id, challenge, udp):
-    """Uses `hmac-secret` to implement a challenge-response mechanism.
+def challenge_response(serial, host, user, prompt, credential_id, challenge, udp):
+    """(EXPERIMENTAL)  Uses `hmac-secret` to implement a challenge-response mechanism.
 
     We abuse hmac-secret, which gives us `HMAC(K, hash(challenge))`, where `K`
     is a secret tied to the `credential_id`. We hash the challenge first, since
@@ -314,6 +315,9 @@ def challenge_response(serial, pin, host, user, prompt, credential_id, challenge
     The prompt can be suppressed using `--prompt ""`.
     """
 
+    local_print("EXPERIMENTAL: Currently disabled: challenge-response")
+    return
+
     nkfido2.hmac_secret.simple_secret(
         credential_id,
         challenge,
@@ -322,8 +326,7 @@ def challenge_response(serial, pin, host, user, prompt, credential_id, challenge
         serial=serial,
         prompt=prompt,
         output=True,
-        udp=udp,
-        pin=pin
+        udp=udp
     )
 
 
@@ -467,15 +470,16 @@ def set_pin(serial):
 def verify(pin, serial, udp):
     """Verify key is valid Nitrokey 'Start' or 'FIDO2' key."""
 
-    if not pin:
-        pin = AskUser("PIN required: ", repeat=0, hide_input=True).ask()
+    #if not pin:
+    #    pin = AskUser("PIN required: ", repeat=0, hide_input=True).ask()
 
     # Any longer and this needs to go in a submodule
     local_print("please press the button on your Nitrokey key")
 
     cert = None
     try:
-        cert = nkfido2.find(serial, udp=udp).make_credential(pin=pin)
+        cert = nkfido2.find(serial, udp=udp).make_credential()
+        #nkfido2.hmac_secret.make_credential()
 
     except Fido2ClientError as e:
         cause = str(e.cause)

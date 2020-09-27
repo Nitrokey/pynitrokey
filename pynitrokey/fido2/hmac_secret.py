@@ -11,16 +11,12 @@ import binascii
 import hashlib
 import secrets
 
-from pynitrokey.helpers import AskUser
-
-
 from fido2.extensions import HmacSecretExtension
 
 def make_credential(
     host="nitrokeys.dev",
     user_id="they",
     serial=None,
-    pin=None,
     prompt="Touch your authenticator to generate a credential...",
     output=True,
     udp=False,
@@ -29,16 +25,12 @@ def make_credential(
     from pynitrokey.fido2 import find
     client = find(solo_serial=serial, udp=udp).client
 
-
     rp = {"id": host, "name": "Example RP"}
     client.host = host
     client.origin = f"https://{client.host}"
     client.user_id = user_id
     user = {"id": user_id, "name": "A. User"}
     challenge = secrets.token_hex(32)
-
-    if not pin:
-        pin = AskUser("PIN required: ", repeat=0, hide_input=True).ask()
 
     if prompt:
         print(prompt)
@@ -51,8 +43,7 @@ def make_credential(
         "challenge": challenge.encode("utf8"),
         "pubKeyCredParams": [{"type": "public-key", "alg": -7}],
         "extensions": hmac_ext.create_dict(),
-    }, pin=pin)
-
+    })
 
     credential = attestation_object.auth_data.credential_data
     credential_id = credential.credential_id
@@ -68,7 +59,6 @@ def simple_secret(
     host="nitrokeys.dev",
     user_id="they",
     serial=None,
-    pin=None,
     prompt="Touch your authenticator to generate a response...",
     output=True,
     udp=False,
@@ -94,9 +84,6 @@ def simple_secret(
     h.update(secret_input.encode())
     salt = h.digest()
 
-    if not pin:
-        pin = AskUser("PIN required: ", repeat=0, hide_input=True).ask()
-
     if prompt:
         print(prompt)
 
@@ -105,7 +92,7 @@ def simple_secret(
         "challenge": challenge.encode("utf8"),
         "allowCredentials": allow_list,
         "extensions": hmac_ext.get_dict(salt),
-    }, pin=pin)
+    })
 
     assertion = assertions[0]  # Only one cred in allowList, only one response.
     response = hmac_ext.results_for(assertion.auth_data)[0]
