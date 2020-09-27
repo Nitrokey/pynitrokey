@@ -26,9 +26,13 @@ if "linux" in platform.platform().lower():
 # @fixme: 1st layer `nkfido2` lower layer `fido2` not to be used here !
 import pynitrokey
 import pynitrokey.fido2 as nkfido2
+
 from cryptography.hazmat.primitives import hashes
+
 from fido2.client import ClientError as Fido2ClientError
 from fido2.ctap1 import ApduError
+from fido2.ctap import CtapError
+
 from pynitrokey.cli.update import update
 
 from pynitrokey.cli.monitor import monitor
@@ -389,13 +393,21 @@ def probe(serial, udp, hash_type, filename):
 
     # print(fido2.cbor.loads(result))
 
+
 @click.command()
 @click.option("-s", "--serial", help="Serial number of Nitrokey to use")
 def reset(serial):
     """Reset key - wipes all credentials!!!"""
+    local_print("Reset is only possible 10secs after plugging in the device.",
+                "Please (re-)plug in your Nitrokey FIDO2 now!")
     if AskUser.yes_no("Warning: Your credentials will be lost!!! continue?"):
         local_print("Press key to confirm -- again, your credentials will be lost!!!")
-        nkfido2.find(serial).reset()
+        try:
+            nkfido2.find(serial).reset()
+        except CtapError as e:
+            local_critical(f"Reset failed ({str(e)})",
+                           "Did you confirm with a key-press 10secs after plugging in?",
+                           "Please re-try...")
         local_print("....aaaand they're gone")
 
 
