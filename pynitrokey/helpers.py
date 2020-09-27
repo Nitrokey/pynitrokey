@@ -18,6 +18,8 @@ from getpass import getpass
 from pynitrokey.confconsts import LOG_FN, LOG_FORMAT, GH_ISSUES_URL, SUPPORT_EMAIL
 from pynitrokey.confconsts import VERBOSE, Verbosity
 
+STDOUT_PRINT = True
+
 def to_websafe(data):
     data = data.replace("+", "-")
     data = data.replace("/", "_")
@@ -63,7 +65,7 @@ logger = logging.getLogger()
 
 # @todo: introduce granularization: dbg, info, err (warn?)
 #        + machine-readable
-#        + logfile-only
+#        + logfile-only (partly solved)
 def local_print(*messages, **kwargs):
     """
     application-wide logging function
@@ -86,10 +88,12 @@ def local_print(*messages, **kwargs):
 
         # logfile debug output
         else:
-            logger.debug(f"print: {str(item).strip()}")
+            whereto = "print: " if STDOUT_PRINT else ""
+            logger.debug(f"{whereto}{str(item).strip()}")
 
         # to stdout
-        print(item, **kwargs)
+        if STDOUT_PRINT:
+            print(item, **kwargs)
 
     # handle `passed_exc`: re-raise on debug verbosity!
     if VERBOSE == Verbosity.debug and passed_exc:
@@ -97,9 +101,19 @@ def local_print(*messages, **kwargs):
 
 
 def local_critical(*messages, support_hint=True, ret_code=1, **kwargs):
+    global STDOUT_PRINT
     messages = ["Critical error:"] + list(messages)
     local_print(*messages, **kwargs)
     if support_hint:
+
+        # list all connected devices to logfile
+        # @fixme: not the best solution
+        STDOUT_PRINT = False
+        local_print("listing all connected devices:")
+        from pynitrokey.cli import nitropy
+        nitropy.commands["ls"].callback()
+        STDOUT_PRINT = True
+
         local_print(
             "", "-" * 80,
             "Critical error occurred, exiting now",
