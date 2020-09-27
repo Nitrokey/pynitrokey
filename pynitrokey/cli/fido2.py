@@ -18,7 +18,10 @@ import json
 import click
 import cbor
 import struct
-import fcntl
+import platform
+
+if "linux" in platform.platform().lower():
+    import fcntl
 
 # @fixme: 1st layer `nkfido2` lower layer `fido2` not to be used here !
 import pynitrokey
