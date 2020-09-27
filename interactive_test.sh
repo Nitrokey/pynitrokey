@@ -45,6 +45,18 @@ function testfido2
 	run ls
 	run fido2 list
 
+	make_title "resetting and set pin"
+	# hrm ...
+	#echo -ne "1234\n1234\n" > set_pin.txt
+	#echo -ne "1234\n123456\n123456\n" > change_pin.txt
+
+	run fido2 reset
+	run fido2 set-pin
+	echo "make sure pin is finally: 123456"
+	run fido2 change-pin
+	run fido2 verify
+	#--pin 123456
+
 
 	make_title "create a credential + challenge-response using it"
 
@@ -86,15 +98,6 @@ function testfido2
 	run fido2 reboot
 	sleep 5
 
-	# hrm ...
-	#echo -ne "1234\n1234\n" > set_pin.txt
-	#echo -ne "1234\n123456\n123456\n" > change_pin.txt
-
-	run fido2 reset
-	run fido2 set-pin
-	echo "make sure pin is finally: 123456"
-	run fido2 change-pin
-	run fido2 verify --pin 123456
 
 	make_title "finally one more reset and then verify"
 	run fido2 reset
