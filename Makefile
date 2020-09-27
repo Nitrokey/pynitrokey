@@ -36,6 +36,7 @@ clean: semi-clean
 
 VERSION_FILE := "$(PACKAGE_NAME)/VERSION"
 VERSION := $(shell cat $(VERSION_FILE))
+
 tag:
 	git tag -a $(VERSION) -m"v$(VERSION)"
 	git push origin $(VERSION)
@@ -50,14 +51,24 @@ build: check
 publish:
 	$(VENV)/bin/python3 -m flit --repository pypi publish
 
-system-pip-install-test:
+system-pip-install-upgrade:
 	python -m pip install -U pynitrokey
-	which nitropy
-	nitropy
+
+system-pip-install-last-version:
+	python -m pip install pynitrokey== 2>&1 | grep -oE ", ([^,]+), ([^,]+)\)$$" | cut -d "," -f 2 | xargs > LAST_VERSION
+	python -m pip install pynitrokey==`cat LAST_VERSION | xargs`
+
+system-pip-install:
+	python -m pip install pynitrokey
 
 system-pip-uninstall:
 	python -m pip uninstall pynitrokey -y
-  
+
+system-nitropy-test-simple:
+	which nitropy
+	nitropy
+
+
 $(VENV):
 	python3 -m venv $(VENV)
 	$(VENV)/bin/python3 -m pip install -U pip

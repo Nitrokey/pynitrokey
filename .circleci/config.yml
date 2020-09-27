@@ -23,10 +23,13 @@ jobs:
     executor: python/default
     steps:
       - checkout
-      - run: make system-pip-install-test
+      - run: make system-pip-install
+      - run: make system-nitropy-test-simple
       - run: make system-pip-uninstall
-      - run: make system-pip-install-test
-      - run: make system-pip-install-test
+      - run: make system-pip-install
+      - run: make system-nitropy-test-simple
+      - run: make system-pip-install
+      - run: make system-nitropy-test-simple
       - run: make system-pip-uninstall
 
   install-with-older-fido:
@@ -34,8 +37,36 @@ jobs:
     steps:
       - checkout
       - run: python -m pip install fido2==0.7.2
-      - run: python -m pip install pynitrokey
-      - run: nitropy 
+      - run: make system-pip-install
+      - run: make system-nitropy-test-simple
+
+  install-last-version-and-no-upgrade-install:
+    executor: python/default
+    steps:
+      - checkout
+      - run: make system-pip-install-last-version
+      - run: make system-nitropy-test-simple
+      - run: make system-pip-install
+      - run: make system-nitropy-test-simple
+  
+  install-last-version-uninstall-no-upgrade-install:
+    executor: python/default
+    steps:
+      - checkout
+      - run: make system-pip-install-last-version
+      - run: make system-nitropy-test-simple
+      - run: make system-pip-uninstall
+      - run: make system-pip-install
+      - run: make system-nitropy-test-simple
+  
+  install-last-version-upgrade-install:
+    executor: python/default
+    steps:
+      - checkout
+      - run: make system-pip-install-last-version
+      - run: make system-nitropy-test-simple
+      - run: make system-pip-install-upgrade
+      - run: make system-nitropy-test-simple
 
 workflows:
   main:
@@ -44,3 +75,6 @@ workflows:
       - build-linux
       - install-test-pip
       - install-with-older-fido
+      - install-last-version-upgrade-install
+      - install-last-version-uninstall-no-upgrade-install
+      - install-last-version-and-no-upgrade-install
