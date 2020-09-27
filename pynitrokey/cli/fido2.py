@@ -462,12 +462,12 @@ def set_pin(serial):
 
 
 @click.command()
-@click.option("--pin", help="PIN for to access key", default=None)
+#@click.option("--pin", help="PIN for to access key", default=None)
 @click.option("-s", "--serial", help="Serial number of Nitrokey to use")
 @click.option(
     "--udp", is_flag=True, default=False, help="Communicate over UDP with software key"
 )
-def verify(pin, serial, udp):
+def verify(serial, udp):
     """Verify key is valid Nitrokey 'Start' or 'FIDO2' key."""
 
     #if not pin:
@@ -479,7 +479,6 @@ def verify(pin, serial, udp):
     cert = None
     try:
         cert = nkfido2.find(serial, udp=udp).make_credential()
-        #nkfido2.hmac_secret.make_credential()
 
     except Fido2ClientError as e:
         cause = str(e.cause)
