@@ -7,7 +7,7 @@ import usb
 import fido2._pyu2f
 import fido2._pyu2f.base
 
-import pynitrokey.fido2.hmac_secret as hmac_secret
+from pynitrokey.fido2 import hmac_secret
 from pynitrokey.fido2.client import NKFido2Client
 from pynitrokey.exceptions import NoSoloFoundError
 
