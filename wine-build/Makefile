@@ -95,6 +95,8 @@ exe: $(PYNK_EXE)
 $(PYNK_EXE): $(CACHE_DIR)/Nitrokey/pynitrokey.git
 	cp nitropy.spec $<
 	cd $< && ( \
+		$(PY) -m pip install pyusb && \
+		cp /build/$(LIBUSB) /build/$(PY_HOME)/Lib/site-packages/usb/backend/ && \
 		$(PY) -m pip install --no-warn-script-location -r dev-requirements.txt && \
 		$(PY) -m pip install --no-warn-script-location -r ci-requirements.txt && \
 		$(PY) -m flit install && \

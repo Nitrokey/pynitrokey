@@ -2,3 +2,5 @@
 
 cd /build
 make
+
+bash
