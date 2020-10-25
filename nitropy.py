@@ -6,7 +6,7 @@ if sys.platform.startswith("win32"):
     from pathlib import Path
     usb_dll_path = Path(usb.__file__).parent / "backend"
     import os
-    os.environ["PATH"] = os.environ["PATH"] + ";{usb_dll_path}"
+    os.environ["PATH"] = os.environ["PATH"] + f";{usb_dll_path}"
     print (os.environ["PATH"])
 
 
