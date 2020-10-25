@@ -1,6 +1,7 @@
 #!/bin/sh
 
 cd /build
-make
+
+bash build-wine-docker.sh
 
 bash

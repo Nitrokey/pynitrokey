@@ -1,4 +1,4 @@
-pwd=$(shell pwd)
+WINEPREFIX=/build/wine_base wine c:/python3.7.7/python.exepwd=$(shell pwd)
 WINEPREFIX=wine_base
 WINE=WINEPREFIX=$(pwd)/$(WINEPREFIX) wine
 
