@@ -8,6 +8,9 @@
 # copied, modified, or distributed except according to those terms.
 
 
+class BasePyNKException(Exception):
+    pass
+
 class NonUniqueDeviceError(Exception):
     """When specifying a potentially destructive command...
 

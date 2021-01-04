@@ -15,6 +15,7 @@ import pynitrokey
 import pynitrokey.fido2.operations
 from pynitrokey.cli.fido2 import fido2
 from pynitrokey.cli.start import start
+from pynitrokey.cli.storage import storage
 
 from . import _patches  # noqa  (since otherwise "unused")
 
@@ -39,6 +40,7 @@ def nitropy():
 
 nitropy.add_command(fido2)
 nitropy.add_command(start)
+nitropy.add_command(storage)
 
 
 @click.command()
