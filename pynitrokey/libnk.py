@@ -20,6 +20,7 @@ along with libnitrokey. If not, see <http://www.gnu.org/licenses/>.
 SPDX-License-Identifier: LGPL-3.0
 """
 
+import sys
 from pathlib import Path
 from random import randint
 from time import time as timestamp
@@ -59,7 +60,8 @@ def _get_c_library():
     #lib_paths = [p.absolute().as_posix() for p in lib_paths if p.exists()]
     libs = list(Path("/usr/lib").glob("libnitrokey.so.*")) \
         + list(Path("/usr/local/lib").glob("libnitrokey.so.*")) \
-        + list(Path("/lib").glob("libnitrokey.so.*"))
+        + list(Path("/lib").glob("libnitrokey.so.*")) \
+        + list(Path("/usr/lib/x86_64-linux-gnu").glob("libnitrokey.so.*"))
 
     load_lib = None
     load_header = None
@@ -70,7 +72,9 @@ def _get_c_library():
                 load_header = (header_parent_path / header.format(ver)).as_posix()
 
     if load_lib is None:
-        print("libnk errror: cannot find libnitrokey library & headers")
+        print("libnk errror: cannot find libnitrokey library & headers - CRITICAL")
+        print("exiting....")
+        sys.exit(1)
 
     c_code = []
     with open(load_header, "r") as fd:
@@ -96,7 +100,6 @@ def _get_c_library():
 
     # currently 90 (inc. enums, structs, func-sigs)
     assert cnt > 85
-
 
     return ffi.dlopen(load_lib)
 
