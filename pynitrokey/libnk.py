@@ -98,8 +98,7 @@ def _get_c_library():
             ffi.cdef(line, override=True)
             cnt += 1
 
-    # currently 90 (inc. enums, structs, func-sigs)
-    assert cnt > 85
+    assert cnt > 60
 
     return ffi.dlopen(load_lib)
 
