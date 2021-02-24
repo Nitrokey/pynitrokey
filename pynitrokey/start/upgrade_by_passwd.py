@@ -185,7 +185,7 @@ def main(wait_e, keyno, passwd, data_regnual, data_upgrade, skip_bootloader, ver
         local_print("Executing flash upgrade...")
 
         for i in range(conn_retries):
-            time.sleep(1.5 * (i + 1))
+            time.sleep(1)
             try:
                 gnuk.execute(mem_info[0] + len(data_regnual) - 4)
                 break
@@ -219,7 +219,8 @@ def main(wait_e, keyno, passwd, data_regnual, data_upgrade, skip_bootloader, ver
                         local_print("Device: {dev.filename}")
                     break
                 except Exception as e:
-                    local_print(f"failed - trying again - retry: {i+1}")
+                    local_print(f"failed - trying again - retry: {i+1} ({dev}: {str(e)})")
+                    dev.open().reset()
                     # @todo: log exception to file: e
 
         local_print("", "")

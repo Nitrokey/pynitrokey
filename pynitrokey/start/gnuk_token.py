@@ -21,6 +21,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 import logging
+from typing import List
+
 from struct import *
 import binascii
 import usb, time
@@ -507,14 +509,27 @@ class gnuk_token(object):
 
 class regnual(object):
     def __init__(self, dev):
+        self.logger = logging.getLogger('regnual')
+        self.connect_device(dev)
+
+    def connect_device(self, dev):
         conf = dev.configurations[0]
         intf_alt = conf.interfaces[0]
         intf = intf_alt[0]
         if intf.interfaceClass != 0xff:
-            raise ValueError("Wrong interface class")
+            raise ValueError(f"Wrong interface class (current: {intf.interfaceClass})")
         self.__devhandle = dev.open()
         self.__devhandle.claimInterface(intf)
-        self.logger = logging.getLogger('regnual')
+
+    def reconnect(self) -> bool:
+        usb.util.dispose_resources(self.__devhandle)
+        for dev in gnuk_devices_by_vidpid():
+            try:
+                self.connect_device(dev)
+                return True
+            except Exception as e:
+                pass
+        return False
 
     def set_logger(self, logger: logging.Logger):
         self.logger = logger.getChild('regnual')
@@ -524,13 +539,29 @@ class regnual(object):
         if verbose:
             print(message)
 
+    def wait(self, t):
+        for i in range(t):
+            time.sleep(1)
+            print('.', end='', flush=True)
+
     def mem_info(self):
-        mem = self.__devhandle.controlMsg(requestType = 0xc0, request = 0,
-                                          buffer = 8, value = 0, index = 0,
-                                          timeout = 10000)
-        start = ((mem[3]*256 + mem[2])*256 + mem[1])*256 + mem[0]
-        end = ((mem[7]*256 + mem[6])*256 + mem[5])*256 + mem[4]
-        return (start, end)
+        for i in range(3):
+            try:
+                mem = self.__devhandle.controlMsg(requestType = 0xc0, request = 0,
+                                                  buffer = 8, value = 0, index = 0,
+                                                  timeout = 10000)
+                start = ((mem[3] * 256 + mem[2]) * 256 + mem[1]) * 256 + mem[0]
+                end = ((mem[7] * 256 + mem[6]) * 256 + mem[5]) * 256 + mem[4]
+                return (start, end)
+            except usb.core.USBError as e:
+                if 'Pipe error' in str(e):
+                    self.reset_device()
+                    self.wait(10)
+                    self.reconnect()
+                else:
+                    raise
+        raise RuntimeError("Cannot connect to the GNUK bootloader")
+
 
     def download(self, start, data, verbose=False, progress_func = None):
         addr = start
@@ -635,7 +666,7 @@ def gnuk_devices():
                             yield dev, config, alt
 
 
-def gnuk_devices_by_vidpid():
+def gnuk_devices_by_vidpid() -> List[usb.legacy.Device]:
     try:
         busses = usb.busses()
     except usb.core.NoBackendError:
