@@ -400,11 +400,12 @@ def probe(serial, udp, hash_type, filename):
 
 @click.command()
 @click.option("-s", "--serial", help="Serial number of Nitrokey to use")
-def reset(serial):
+@click.option("-y", "--yes", help="Agree to all questions", is_flag=True)
+def reset(serial, yes):
     """Reset key - wipes all credentials!!!"""
     local_print("Reset is only possible 10secs after plugging in the device.",
                 "Please (re-)plug in your Nitrokey FIDO2 now!")
-    if AskUser.yes_no("Warning: Your credentials will be lost!!! continue?"):
+    if yes or AskUser.yes_no("Warning: Your credentials will be lost!!! continue?"):
         local_print("Press key to confirm -- again, your credentials will be lost!!!")
         try:
             nkfido2.find(serial).reset()
