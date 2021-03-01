@@ -3,7 +3,7 @@
 A command line interface for the Nitrokey FIDO2 and Nitrokey Start.
 
 ## Current state
-Update to latest firmware versions on the Nitrokey Start and Nitrokey FIDO2 devices was tested. Windows support is for Nitrokey Start is not added yet.
+Update to the latest firmware versions on the Nitrokey Start and Nitrokey FIDO2 devices was tested. Windows support for Nitrokey Start is not added yet.
 
 Additional features:
 - handle `status` command for displaying touch button status (2.0.0 firmware and later);
@@ -20,7 +20,7 @@ pip3 install --user pynitrokey
 ```
 
 ### Windows
-*Generally Windows support and the installer are experimental, please use with caution.*
+*Generally Windows support and the installer are experimental - please use with caution.*
 
 Known issues:
 * Support for Nitrokey Start under Windows 10 is not working without installing libusb libraries (to be described).
@@ -75,6 +75,10 @@ nitropy start set-identity [0,1,2]
 ```
 
 Where 0, 1 and 2 are the available IDs.
+
+## Maintainers
+
+Current maintainers can be found in [MAINTAINERS.MD](MAINTAINERS.MD) file.
 
 ## License
 
