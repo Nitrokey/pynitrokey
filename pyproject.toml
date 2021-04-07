@@ -20,6 +20,8 @@ requires = [
   "pyusb",
   "requests",
   "pygments",
+  "python-dateutil",
+  "urllib3",
 	"cffi",
 	"cbor",
 ]
