@@ -1,0 +1,2782 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "NetHSM",
+    "description": "All endpoints expect exactly the specified JSON. Additional properties will cause a Bad Request Error (400). All HTTP errors contain a JSON structure with an explanation of type string. All <a href=\"https://tools.ietf.org/html/rfc4648#section-4\">base64</a> encoded values are Big Endian.",
+    "version": "v1"
+  },
+  "host": "nethsmdemo.nitrokey.com",
+  "basePath": "/api/v1",
+  "x-amf-baseUriParameters": {
+    "host": {
+      "description": "NetHSM hostname or IP address. For TLS certificate validation to succeed this should be the same as the <i>commonName</i> set in <a href=\"#config_tls_csr_pem_post\">/config/tls/csr.pem</a>. In an <i>Unprovisioned</i> state, this is always 192.168.1.1.",
+      "default": "nethsmdemo.nitrokey.com"
+    }
+  },
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "schemes": [
+    "https"
+  ],
+  "paths": {
+    "/info": {
+      "x-amf-description": "Public",
+      "get": {
+        "description": "Information about the vendor and product.",
+        "responses": {
+          "200": {
+            "description": "",
+            "x-amf-mediaType": "application/json",
+            "schema": {
+              "$ref": "#/definitions/InfoData"
+            }
+          }
+        },
+        "x-state": [
+          "Locked",
+          "Operational",
+          "Unprovisioned"
+        ],
+        "x-role": [
+          "Public"
+        ]
+      }
+    },
+    "/health": {
+      "x-amf-description": "Public"
+    },
+    "/health/alive": {
+      "get": {
+        "description": "Retrieve wether NetHSM is alive (powered up). This corresponds to the state <i>Locked</i> or <i>Unprovisioned</i>.",
+        "responses": {
+          "200": {
+            "description": "Yes, it is alive."
+          },
+          "412": {
+            "description": "Not locked or unprovisioned (in operational state)."
+          }
+        },
+        "x-role": [
+          "Public"
+        ],
+        "x-state": [
+          "Locked",
+          "Unprovisioned"
+        ]
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "description": "Retrieve wether NetHSM is alive and ready to take traffic. This corresponds to the state <i>Operational</i>.",
+        "responses": {
+          "200": {
+            "description": "Yes, it is alive and ready."
+          },
+          "412": {
+            "description": "Not alive and ready (not in operational state)."
+          }
+        },
+        "x-role": [
+          "Public"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      }
+    },
+    "/health/state": {
+      "get": {
+        "description": "Retrieve the state of NetHSM.",
+        "responses": {
+          "200": {
+            "description": "",
+            "x-amf-mediaType": "application/json",
+            "schema": {
+              "$ref": "#/definitions/HealthStateData"
+            }
+          }
+        },
+        "x-role": [
+          "Public"
+        ],
+        "x-state": [
+          "Locked",
+          "Operational",
+          "Unprovisioned"
+        ]
+      }
+    },
+    "/metrics": {
+      "x-amf-description": "Role: <b>R-Metrics</b>",
+      "get": {
+        "description": "Get metrics. Precondition: NetHSM is <i>Operational</i> and a <b>R-Metrics</b> can be authenticated.",
+        "responses": {
+          "200": {
+            "description": "",
+            "x-amf-mediaType": "application/json",
+            "schema": {
+              "$ref": "#/definitions/MetricsData"
+            }
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Metrics"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      }
+    },
+    "/provision": {
+      "x-amf-description": "Public",
+      "post": {
+        "description": "Initial provisioning, only available in <i>Unprovisioned</i> state.",
+        "parameters": [
+          {
+            "x-amf-mediaType": "application/json",
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/ProvisionRequestData"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Provisioning was successful, NetHSM is <i>Operational</i> now."
+          },
+          "400": {
+            "description": "Malformed request data (e.g. malformed time, weak passphrase)."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Unprovisioned</i>)."
+          }
+        },
+        "x-role": [
+          "Public"
+        ],
+        "x-state": [
+          "Unprovisioned"
+        ]
+      }
+    },
+    "/unlock": {
+      "x-amf-description": "Public",
+      "post": {
+        "description": "Brings a <i>Locked</i> NetHSM into <i>Operational</i> state.",
+        "parameters": [
+          {
+            "x-amf-mediaType": "application/json",
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/UnlockRequestData"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Unlock was successful, NetHSM is <i>Operational</i> now."
+          },
+          "403": {
+            "description": "Unlock failed (access denied)."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Locked</i>)."
+          }
+        },
+        "x-role": [
+          "Public"
+        ],
+        "x-state": [
+          "Locked"
+        ]
+      }
+    },
+    "/lock": {
+      "x-amf-description": "Administrator",
+      "post": {
+        "description": "Brings an <i>Operational</i> NetHSM into <i>Locked</i> state.",
+        "responses": {
+          "204": {
+            "description": "Lock was successful, NetHSM is <i>Locked</i> now."
+          },
+          "403": {
+            "description": "Lock failed (access denied)."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      }
+    },
+    "/random": {
+      "x-amf-description": "Role: <b>R-Operator</b>",
+      "post": {
+        "description": "Retrieve cryptographically strong random bytes from NetHSM. Precondition: NetHSM is <i>Operational</i> and a <b>R-Operator</b> can be authenticated.",
+        "parameters": [
+          {
+            "x-amf-mediaType": "application/json",
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/RandomRequestData"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful request for <i>length</i> random bytes.",
+            "x-amf-mediaType": "application/json",
+            "schema": {
+              "$ref": "#/definitions/RandomData"
+            }
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Operator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      }
+    },
+    "/keys": {
+      "x-amf-description": "Role: <b>R-Operator</b> can GET keys. <b>R-Administrator</b> can GET and POST keys, and also POST /generate.",
+      "get": {
+        "description": "Get a list of the identifiers of all keys that are currently stored in NetHSM. Separate requests need to be made to request the individual key data.",
+        "responses": {
+          "200": {
+            "description": "Successful request for the list of keys.",
+            "x-amf-mediaType": "application/json",
+            "schema": {
+              "$ref": "#/definitions/KeyList"
+            }
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator",
+          "Operator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      },
+      "post": {
+        "description": "Import a private key into NetHSM and let NetHSM generate a KeyID. The public key will be automatically derived.",
+        "parameters": [
+          {
+            "name": "mechanisms",
+            "required": false,
+            "in": "query",
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/KeyMechanism"
+            }
+          },
+          {
+            "x-amf-mediaType": "application/json",
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/PrivateKey"
+            }
+          }
+        ],
+        "x-amf-requestPayloads": [
+          {
+            "mediaType": "application/x-pem-file",
+            "schema": {
+              "$ref": "#/definitions/PemPrivateKey"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful import of a private key. The response contains a Location header, e.g. \"https://nethsm.local/v1/keys/I8mhHYJ1T3uk2lXrwXehVaw9KZzg7K\".",
+            "x-amf-mediaType": "application/json",
+            "schema": {
+              "$ref": "#/definitions/KeyItem"
+            }
+          },
+          "400": {
+            "description": "Bad request (specified properties are invalid)."
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      }
+    },
+    "/keys/generate": {
+      "x-amf-description": "Role: <b>R-Administrator</b>",
+      "post": {
+        "description": "Generate a pair of public and private key and store it in NetHSM. KeyID is optional as a parameter and will be generated by NetHSM if not present.",
+        "parameters": [
+          {
+            "x-amf-mediaType": "application/json",
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/KeyGenerateRequestData"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful creation of new public and private key pair. Set Location header to the new KeyID."
+          },
+          "400": {
+            "description": "Bad request (specified properties are invalid)."
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      }
+    },
+    "/keys/{KeyID}": {
+      "x-amf-description": "Role: <b>R-Operator</b> can GET, <b>R-Administrator</b> can GET, PUT and DELETE. Also, <b>R-Operator</b> can POST /sign and /decrypt.",
+      "parameters": [
+        {
+          "name": "KeyID",
+          "required": true,
+          "in": "path",
+          "type": "string"
+        }
+      ],
+      "get": {
+        "description": "Retrieve the public key.",
+        "responses": {
+          "200": {
+            "description": "",
+            "x-amf-mediaType": "application/json",
+            "schema": {
+              "$ref": "#/definitions/PublicKey"
+            }
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          },
+          "404": {
+            "description": "Key for KeyID not found."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator",
+          "Operator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      },
+      "put": {
+        "description": "Import a private key into NetHSM and store it under the <i>KeyID</i> path. The public key will be automatically derived.",
+        "parameters": [
+          {
+            "x-amf-mediaType": "application/json",
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/PrivateKey"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful import of a private key."
+          },
+          "400": {
+            "description": "Bad request (specified properties are invalid)."
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          },
+          "409": {
+            "description": "Conflict, key already exists for this keyID."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      },
+      "delete": {
+        "description": "Delete a pair of public and private key.",
+        "responses": {
+          "204": {
+            "description": "Key was successfully deleted."
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          },
+          "404": {
+            "description": "Key for KeyID not found."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      }
+    },
+    "/keys/{KeyID}/public.pem": {
+      "parameters": [
+        {
+          "name": "KeyID",
+          "required": true,
+          "in": "path",
+          "type": "string"
+        }
+      ],
+      "get": {
+        "description": "Retrieve public key in PEM format.",
+        "responses": {
+          "200": {
+            "description": "",
+            "x-amf-mediaType": "application/x-pem-file",
+            "schema": {
+              "$ref": "#/definitions/PemPublicKey"
+            }
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          },
+          "404": {
+            "description": "Key for KeyID not found."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator",
+          "Operator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      }
+    },
+    "/keys/{KeyID}/csr.pem": {
+      "parameters": [
+        {
+          "name": "KeyID",
+          "required": true,
+          "in": "path",
+          "type": "string"
+        }
+      ],
+      "post": {
+        "description": "Retrieve a certificate signing request in PEM format.",
+        "parameters": [
+          {
+            "x-amf-mediaType": "application/json",
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/DistinguishedName"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful generation of certificate signing request.",
+            "x-amf-mediaType": "application/x-pem-file",
+            "schema": {
+              "$ref": "#/definitions/PemCSR"
+            }
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          },
+          "404": {
+            "description": "Key for KeyID not found."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator",
+          "Operator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      }
+    },
+    "/keys/{KeyID}/decrypt": {
+      "parameters": [
+        {
+          "name": "KeyID",
+          "required": true,
+          "in": "path",
+          "type": "string"
+        }
+      ],
+      "post": {
+        "description": "Decrypt an encrypted message with the secret key.",
+        "parameters": [
+          {
+            "x-amf-mediaType": "application/json",
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/DecryptRequestData"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "x-amf-mediaType": "application/json",
+            "schema": {
+              "$ref": "#/definitions/DecryptData"
+            }
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          },
+          "404": {
+            "description": "Key for KeyID not found."
+          },
+          "400": {
+            "description": "Bad Request, e.g. invalid encryption mode."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Operator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      }
+    },
+    "/keys/{KeyID}/sign": {
+      "parameters": [
+        {
+          "name": "KeyID",
+          "required": true,
+          "in": "path",
+          "type": "string"
+        }
+      ],
+      "post": {
+        "description": "Sign a message with the secret key.",
+        "parameters": [
+          {
+            "x-amf-mediaType": "application/json",
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/SignRequestData"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "x-amf-mediaType": "application/json",
+            "schema": {
+              "$ref": "#/definitions/SignData"
+            }
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          },
+          "404": {
+            "description": "Key for KeyID not found."
+          },
+          "400": {
+            "description": "Bad Request, e.g. invalid signing mode."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Operator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      }
+    },
+    "/keys/{KeyID}/cert": {
+      "x-amf-description": "Role: <b>R-Operator</b> can GET, <b>R-Administrator</b> can GET, PUT and DELETE.",
+      "parameters": [
+        {
+          "name": "KeyID",
+          "required": true,
+          "in": "path",
+          "type": "string"
+        }
+      ],
+      "get": {
+        "description": "Retrieve stored certificate. The content-type header will display the media type of the stored data.",
+        "responses": {
+          "200": {
+            "description": "",
+            "x-amf-mediaType": "application/x-pem-file",
+            "schema": {
+              "$ref": "#/definitions/PemCert"
+            },
+            "x-amf-responsePayloads": [
+              {
+                "mediaType": "application/x-x509-ca-cert"
+              },
+              {
+                "mediaType": "application/pgp-keys",
+                "schema": {
+                  "$ref": "#/definitions/PGPPrivateKey"
+                }
+              }
+            ]
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          },
+          "404": {
+            "description": "Certificate for KeyID not found."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator",
+          "Operator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      },
+      "put": {
+        "description": "Store a certificate. Maximum size 1MB. The content-type header provides the media type. Only application/json, application/x-pem-file, application/x-x509-ca-cert, application/octet-stream, text/plain and application/pgp-keys is allowed.",
+        "parameters": [
+          {
+            "x-amf-mediaType": "application/x-pem-file",
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/PemCert"
+            }
+          }
+        ],
+        "x-amf-requestPayloads": [
+          {
+            "mediaType": "application/x-x509-ca-cert"
+          },
+          {
+            "mediaType": "application/pgp-keys",
+            "schema": {
+              "$ref": "#/definitions/PGPPrivateKey"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful import of a certificate."
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          },
+          "409": {
+            "description": "Conflict, certificate already exists for this KeyID."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      },
+      "delete": {
+        "description": "Delete the certificate.",
+        "responses": {
+          "204": {
+            "description": "Successful deletion of a certificate."
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          },
+          "404": {
+            "description": "Certificate with this KeyID not found."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      }
+    },
+    "/users": {
+      "x-amf-description": "Role: <b>R-Administrator</b> can GET, POST",
+      "get": {
+        "description": "Get a list of all user ids that have accounts on NetHSM.",
+        "responses": {
+          "200": {
+            "description": "",
+            "x-amf-mediaType": "application/json",
+            "schema": {
+              "$ref": "#/definitions/UserList"
+            }
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      },
+      "post": {
+        "description": "Create a new user on NetHSM. The user-ID is generated by NetHSM.",
+        "parameters": [
+          {
+            "x-amf-mediaType": "application/json",
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/UserPostData"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful creation of user. The response contains a Location header, e.g. \"https://nethsm.local/v1/users/I8mhHYJ1T3uk2lXrwXehVaw9KZzg7K\"."
+          },
+          "400": {
+            "description": "Bad request (specified properties are invalid, e.g. weak passphrase)."
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      }
+    },
+    "/users/{UserID}": {
+      "x-amf-description": "Role: <b>R-Operator</b> can GET users, and POST their own passphrase, <b>R-Administrator</b> can GET, PUT and DELETE, and POST the passphrase for everyone.",
+      "parameters": [
+        {
+          "name": "UserID",
+          "required": true,
+          "in": "path",
+          "type": "string"
+        }
+      ],
+      "get": {
+        "description": "Get user info: name and role.",
+        "responses": {
+          "200": {
+            "description": "",
+            "x-amf-mediaType": "application/json",
+            "schema": {
+              "$ref": "#/definitions/UserData"
+            }
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          },
+          "404": {
+            "description": "User for UserID not found."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator",
+          "Operator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      },
+      "put": {
+        "description": "Create a user on keyfender.",
+        "parameters": [
+          {
+            "x-amf-mediaType": "application/json",
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/UserPostData"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful creation of user."
+          },
+          "400": {
+            "description": "Bad request (specified properties are invalid, e.g. weak passphrase)."
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          },
+          "409": {
+            "description": "Conflict - user already exists for this user-ID."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      },
+      "delete": {
+        "description": "Delete a user from keyfender.",
+        "responses": {
+          "204": {
+            "description": "Successful deletion of user."
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          },
+          "404": {
+            "description": "User not found for this user-ID."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      }
+    },
+    "/users/{UserID}/passphrase": {
+      "parameters": [
+        {
+          "name": "UserID",
+          "required": true,
+          "in": "path",
+          "type": "string"
+        }
+      ],
+      "post": {
+        "description": "Update the passphrase.",
+        "parameters": [
+          {
+            "x-amf-mediaType": "application/json",
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/UserPassphrasePostData"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful change of passphrase."
+          },
+          "400": {
+            "description": "Bad request - weak passphrase."
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          },
+          "404": {
+            "description": "User not found for this user-ID."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator",
+          "Operator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      }
+    },
+    "/config": {
+      "x-amf-description": "Role: <b>R-Administrator</b>"
+    },
+    "/config/unlock-passphrase": {
+      "put": {
+        "description": "Update the unlock passphrase.",
+        "parameters": [
+          {
+            "x-amf-mediaType": "application/json",
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/UnlockPassphraseConfig"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful change of passphrase."
+          },
+          "400": {
+            "description": "Bad request - weak passphrase."
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      }
+    },
+    "/config/unattended-boot": {
+      "get": {
+        "description": "Read unattended boot configuration: is it on or off?",
+        "responses": {
+          "200": {
+            "description": "Successful read of unattended boot configuration.",
+            "x-amf-mediaType": "application/json",
+            "schema": {
+              "$ref": "#/definitions/UnattendedBootConfig"
+            }
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      },
+      "put": {
+        "description": "Configure unattended boot: switch it on or off (flip the switch).",
+        "parameters": [
+          {
+            "x-amf-mediaType": "application/json",
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/UnattendedBootConfig"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful change of unattended boot mode."
+          },
+          "400": {
+            "description": "Bad request - invalid status setting."
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      }
+    },
+    "/config/tls": {},
+    "/config/tls/public.pem": {
+      "get": {
+        "description": "Get public key for NetHSMs https API.",
+	"produces": ["application/x-pem-file"],
+        "responses": {
+          "200": {
+            "description": "Successful retrieval of public key.",
+            "x-amf-mediaType": "application/x-pem-file",
+            "schema": {
+              "$ref": "#/definitions/PemPublicKey"
+            }
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      }
+    },
+    "/config/tls/cert.pem": {
+      "get": {
+        "description": "Get certificate for NetHSMs https API.",
+	"produces": ["application/x-pem-file"],
+        "responses": {
+          "200": {
+            "description": "Successful retrieval of certificate.",
+            "x-amf-mediaType": "application/x-pem-file",
+            "schema": {
+              "$ref": "#/definitions/PemCert"
+            }
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      },
+      "put": {
+        "description": "Set certificate for NetHSMs https API e.g. to replace self-signed intital certificate.",
+        "parameters": [
+          {
+            "x-amf-mediaType": "application/x-pem-file",
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/PemCert"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successfully set certificate."
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      }
+    },
+    "/config/tls/csr.pem": {
+      "put": {
+        "description": "Get NetHSM certificate signing request e.g. to replace self-signed intital certificate.",
+        "parameters": [
+          {
+            "x-amf-mediaType": "application/json",
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/DistinguishedName"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful generation of certificate signing request.",
+            "x-amf-mediaType": "application/x-pem-file",
+            "schema": {
+              "$ref": "#/definitions/PemCSR"
+            }
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      }
+    },
+    "/config/network": {
+      "get": {
+        "description": "Get network configuration. IP address, netmask, router.",
+        "responses": {
+          "200": {
+            "description": "Successful retrieval of network configuration.",
+            "x-amf-mediaType": "application/json",
+            "schema": {
+              "$ref": "#/definitions/NetworkConfig"
+            }
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      },
+      "put": {
+        "description": "Configure network.",
+        "parameters": [
+          {
+            "x-amf-mediaType": "application/json",
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/NetworkConfig"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Succesful update of network configuration."
+          },
+          "400": {
+            "description": "Bad request - invalid input format."
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      }
+    },
+    "/config/logging": {
+      "get": {
+        "description": "Get logging configuration. Protocol is always syslog over UDP. Configurable are IP adress and port, log level.",
+        "responses": {
+          "200": {
+            "description": "Successful retrieval of logging configuration.",
+            "x-amf-mediaType": "application/json",
+            "schema": {
+              "$ref": "#/definitions/LoggingConfig"
+            }
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      },
+      "put": {
+        "description": "Configure log level and destination.",
+        "parameters": [
+          {
+            "x-amf-mediaType": "application/json",
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/LoggingConfig"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Succesful update of logging configuration."
+          },
+          "400": {
+            "description": "Bad request - invalid input format."
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      }
+    },
+    "/config/backup-passphrase": {
+      "put": {
+        "description": "Update the backup passphrase.",
+        "parameters": [
+          {
+            "x-amf-mediaType": "application/json",
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/BackupPassphraseConfig"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful change of passphrase."
+          },
+          "400": {
+            "description": "Bad request - weak passphrase."
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      }
+    },
+    "/config/time": {
+      "get": {
+        "description": "Get system time.",
+        "responses": {
+          "200": {
+            "description": "Successful retrieval of system time.",
+            "x-amf-mediaType": "application/json",
+            "schema": {
+              "$ref": "#/definitions/TimeConfig"
+            }
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      },
+      "put": {
+        "description": "Configure system time.",
+        "parameters": [
+          {
+            "x-amf-mediaType": "application/json",
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/TimeConfig"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Succesful update of system time."
+          },
+          "400": {
+            "description": "Bad request - invalid input format."
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      }
+    },
+    "/system": {
+      "x-amf-description": "Role: <b>R-Administrator</b>"
+    },
+    "/system/info": {
+      "get": {
+        "description": "Get detailed system information, including firmware version, system software version, hardware version.",
+        "responses": {
+          "200": {
+            "description": "Successful retrieval of system information.",
+            "x-amf-mediaType": "application/json",
+            "schema": {
+              "$ref": "#/definitions/SystemInfo"
+            }
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      }
+    },
+    "/system/reboot": {
+      "post": {
+        "description": "Reboot NetHSM.",
+        "responses": {
+          "204": {
+            "description": "About to reboot NetHSM."
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      }
+    },
+    "/system/shutdown": {
+      "post": {
+        "description": "Shut down NetHSM.",
+        "responses": {
+          "204": {
+            "description": "About to shut down NetHSM."
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      }
+    },
+    "/system/reset": {
+      "post": {
+        "description": "Reset NetHSM to factory settings.",
+        "responses": {
+          "204": {
+            "description": "About to reset NetHSM."
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      }
+    },
+    "/system/update": {
+      "post": {
+        "description": "Update NetHSM software.",
+        "parameters": [
+          {
+            "x-amf-mediaType": "application/octet-stream",
+            "in": "body",
+            "name": "body",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully verified update image (authenticity, integrity, and version number).",
+            "x-amf-mediaType": "application/json",
+            "schema": {
+              "$ref": "#/definitions/SystemUpdateData"
+            }
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          },
+          "409": {
+            "description": "Conflict - Major version downgrade is not allowed."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      }
+    },
+    "/system/commit-update": {
+      "post": {
+        "description": "Commit update of NetHSM software.",
+        "responses": {
+          "204": {
+            "description": "About to update NetHSM."
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i> or update image is not present - call /update first)."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      }
+    },
+    "/system/cancel-update": {
+      "post": {
+        "description": "Cancel update of NetHSM software.",
+        "responses": {
+          "204": {
+            "description": "Update successfully cancelled."
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i> or update image is not present - call /update first)."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      }
+    },
+    "/system/backup": {
+      "post": {
+        "description": "Back up the key store to a backup file.",
+        "responses": {
+          "200": {
+            "description": "Successful retrieval of backup data.",
+            "x-amf-mediaType": "application/octet-stream"
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i> or <i>Backup Passphrase</i> was not set)."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Backup"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      }
+    },
+    "/system/restore": {
+      "post": {
+        "description": "Restore the key store from a backup file. Only available in <i>Unprovisioned</i> state.",
+        "parameters": [
+          {
+            "name": "backupPassphrase",
+            "required": true,
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "systemTime",
+            "required": true,
+            "in": "query",
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "x-amf-mediaType": "application/octet-stream",
+            "in": "body",
+            "name": "body",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful restore from backup data."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Unprovisioned</i>)."
+          },
+          "400": {
+            "description": "Bad request - restore did not apply."
+          }
+        },
+        "x-role": [
+          "Public"
+        ],
+        "x-state": [
+          "Unprovisioned"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "KeyPublicData": {
+      "type": "object",
+      "properties": {
+        "modulus": {
+          "type": "string"
+        },
+        "publicExponent": {
+          "type": "string"
+        },
+        "data": {
+          "type": "string"
+        }
+      }
+    },
+    "KeyMechanism": {
+      "enum": [
+        "RSA_Decryption_RAW",
+        "RSA_Decryption_PKCS1",
+        "RSA_Decryption_OAEP_MD5",
+        "RSA_Decryption_OAEP_SHA1",
+        "RSA_Decryption_OAEP_SHA224",
+        "RSA_Decryption_OAEP_SHA256",
+        "RSA_Decryption_OAEP_SHA384",
+        "RSA_Decryption_OAEP_SHA512",
+        "RSA_Signature_PKCS1",
+        "RSA_Signature_PSS_MD5",
+        "RSA_Signature_PSS_SHA1",
+        "RSA_Signature_PSS_SHA224",
+        "RSA_Signature_PSS_SHA256",
+        "RSA_Signature_PSS_SHA384",
+        "RSA_Signature_PSS_SHA512",
+        "ED25519_Signature",
+        "ECDSA_P224_Signature",
+        "ECDSA_P256_Signature",
+        "ECDSA_P384_Signature",
+        "ECDSA_P521_Signature"
+      ],
+      "type": "string"
+    },
+    "ID": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9]+$",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "UnlockPassphraseConfig": {
+      "example": {
+        "passphrase": "This is my unlock passphrase"
+      },
+      "type": "object",
+      "required": [
+        "passphrase"
+      ],
+      "properties": {
+        "passphrase": {
+          "$ref": "#/definitions/Passphrase"
+        }
+      }
+    },
+    "SignRequestData": {
+      "example": {
+        "mode": "PKCS1",
+        "message": "nhrfotu32409ru0rgert45z54z099u23r03498uhtr=="
+      },
+      "type": "object",
+      "required": [
+        "mode",
+        "message"
+      ],
+      "properties": {
+        "mode": {
+          "$ref": "#/definitions/SignMode"
+        },
+        "message": {
+          "$ref": "#/definitions/Base64"
+        }
+      }
+    },
+    "MetricsData": {
+      "example": {
+        "keyOperations": 1132412,
+        "someOtherMetric": 2222
+      },
+      "type": "object"
+    },
+    "SystemUpdateData": {
+      "example": {
+        "releaseNotes": "Some new feature is available."
+      },
+      "type": "object",
+      "required": [
+        "releaseNotes"
+      ],
+      "properties": {
+        "releaseNotes": {
+          "type": "string"
+        }
+      }
+    },
+    "DecryptData": {
+      "example": {
+        "decrypted": "IBCS8Sc4NkG/O+kqInz7mq/+Pr+5eJUJ/QpfwMp7pPjLn02U7ggyUrxJfN97MChHGekvGEK4Q1LCJ2juHTgjxJ94/QoEAN0dWZ7x3NxjlUgw7yBm7ylldVvToum3lWOVo3wPm5ozSGxpslrqgz2Rid9+uH5ytV8//CrkMOlqlUoj0DWMYbp/sUbYDGwG8lcfvKua67AxT3X/exSKCAwBuxPBr2p3DCTHepdmZCyexL809ZvBRopOQ41ve9X1jXqKzihrCPeoCwEok06EGYhPt3/EKFoer401S0MYtz5J1BvO1cv7ITDOYUCG4Ze8aXEjtnt6MMRx4jY7IqssYO8GrA=="
+      },
+      "type": "object",
+      "required": [
+        "decrypted"
+      ],
+      "properties": {
+        "decrypted": {
+          "$ref": "#/definitions/Base64"
+        }
+      }
+    },
+    "SystemInfo": {
+      "example": {
+        "firmwareVersion": "N/A",
+        "softwareVersion": "1.7",
+        "hardwareVersion": "N/A",
+        "buildTag": "TAG-NN-g1234567-dirty"
+      },
+      "type": "object",
+      "required": [
+        "firmwareVersion",
+        "softwareVersion",
+        "hardwareVersion",
+        "buildTag"
+      ],
+      "properties": {
+        "firmwareVersion": {
+          "type": "string"
+        },
+        "softwareVersion": {
+          "type": "string"
+        },
+        "hardwareVersion": {
+          "type": "string"
+        },
+        "buildTag": {
+          "type": "string"
+        }
+      }
+    },
+    "UserPassphrasePostData": {
+      "example": {
+        "passphrase": "Some cool new passphrase"
+      },
+      "type": "object",
+      "required": [
+        "passphrase"
+      ],
+      "properties": {
+        "passphrase": {
+          "$ref": "#/definitions/Passphrase"
+        }
+      }
+    },
+    "UserItem": {
+      "type": "object",
+      "required": [
+        "user"
+      ],
+      "properties": {
+        "user": {
+          "$ref": "#/definitions/ID"
+        }
+      }
+    },
+    "PemPrivateKey": {
+      "example": "",
+      "type": "string"
+    },
+    "NetworkConfig": {
+      "example": {
+        "ipAddress": "192.168.1.1",
+        "netmask": "255.255.255.0",
+        "gateway": "0.0.0.0"
+      },
+      "type": "object",
+      "required": [
+        "ipAddress",
+        "netmask",
+        "gateway"
+      ],
+      "properties": {
+        "ipAddress": {
+          "type": "string"
+        },
+        "netmask": {
+          "type": "string"
+        },
+        "gateway": {
+          "type": "string"
+        }
+      }
+    },
+    "KeyAlgorithm": {
+      "enum": [
+        "RSA",
+        "ED25519",
+        "ECDSA_P224",
+        "ECDSA_P256",
+        "ECDSA_P384",
+        "ECDSA_P521"
+      ],
+      "type": "string"
+    },
+    "ProvisionRequestData": {
+      "example": {
+        "unlockPassphrase": "UnlockPassphrase",
+        "adminPassphrase": "Administrator",
+        "systemTime": "2018-10-30T11:20:50Z"
+      },
+      "type": "object",
+      "required": [
+        "unlockPassphrase",
+        "adminPassphrase",
+        "systemTime"
+      ],
+      "properties": {
+        "unlockPassphrase": {
+          "$ref": "#/definitions/Passphrase"
+        },
+        "adminPassphrase": {
+          "$ref": "#/definitions/Passphrase"
+        },
+        "systemTime": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "UserData": {
+      "example": {
+        "realName": "Jane User",
+        "role": "Administrator"
+      },
+      "type": "object",
+      "required": [
+        "realName",
+        "role"
+      ],
+      "properties": {
+        "realName": {
+          "type": "string"
+        },
+        "role": {
+          "$ref": "#/definitions/UserRole"
+        }
+      }
+    },
+    "KeyList": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/KeyItem"
+      }
+    },
+    "TimeConfig": {
+      "example": {
+        "time": "2018-10-30T11:20:50Z"
+      },
+      "type": "object",
+      "required": [
+        "time"
+      ],
+      "properties": {
+        "time": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "KeyItem": {
+      "type": "object",
+      "required": [
+        "key"
+      ],
+      "properties": {
+        "key": {
+          "$ref": "#/definitions/ID"
+        }
+      }
+    },
+    "LogLevel": {
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "error"
+      ],
+      "type": "string"
+    },
+    "UnlockRequestData": {
+      "example": {
+        "passphrase": "UnlockPassphrase"
+      },
+      "type": "object",
+      "required": [
+        "passphrase"
+      ],
+      "properties": {
+        "passphrase": {
+          "$ref": "#/definitions/Passphrase"
+        }
+      }
+    },
+    "PrivateKey": {
+      "example": {
+        "mechanisms": [
+          "RSA_Signature_PSS_SHA256"
+        ],
+        "algorithm": "RSA",
+        "key": {
+          "primeP": "frtz7u89gft89uz",
+          "primeQ": "FhJQl11CiY0ifRHXeAqFh4rdSl6",
+          "publicExponent": "w367rg90jhj0asdf98gz"
+        }
+      },
+      "type": "object",
+      "required": [
+        "mechanisms",
+        "algorithm",
+        "key"
+      ],
+      "properties": {
+        "mechanisms": {
+          "$ref": "#/definitions/KeyMechanisms"
+        },
+        "algorithm": {
+          "$ref": "#/definitions/KeyAlgorithm"
+        },
+        "key": {
+          "$ref": "#/definitions/KeyPrivateData"
+        }
+      }
+    },
+    "PemCSR": {
+      "example": "-----BEGIN CERTIFICATE REQUEST-----\nMIICpzCCAY8CAQAwYjFgMAkGA1UEBgwCREUwDQYDVQQHDAZCZXJsaW4wDwYDVQQK\nDAhOaXRyb2tleTATBgNVBAMMDG5ldGhzbS5sb2NhbDAeBgkqhkiG9w0BCQEMEWlu\nZm9Abml0cm9rZXkuY29tMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA\nx7ghfro+VEepYmy2V7HPn5PSRdmGzxewcpmzxTtrZ10BygbEqhPsAr4fWI9pG7iR\nXzeza7DMjrQptzKsfSy6dBFmSEZer+hJxuOdhBG/FX6pjwRrZpbOQxyr+aTlE3jm\n2XP12Cqx0wsYGIoJlWHbGb90IAx9zpdYQgHoJZ4x5ims5vo7h3puPEyVycJH5fMB\nB9h+2Bxc4BxaPKMm15JR1B7ToB3g16SJY2B1t/aqNmqSBZC4HP1fCuSbBm83OgqR\nhdk1P6r/vqOVKrxVupDqKkdcf/dRBiQalJ9tQbVbs9OOYfQ6n25GvJTvGtqOEugg\nit32tV16JXCZjnYePAvtNwIDAQABoAAwDQYJKoZIhvcNAQELBQADggEBAGTXJciq\nFMdQeobMDjGgnzR30HC77rJ/Bdu9rqpAtjUcL05K2ufma/gXvPCl1WYEr8JJ3aiA\nr2ebitcvm+qwXLsBe68o5bSXxMe6PigyuB0lSijB6MeItMxsVFPbKvDk7Hj4ad2P\nM6aaAixRcJi9eIA93yKmpPXyUcycW0wjQU6CeV/aMN9kLLbxzEgf0it5QXY7nexu\n2no32GHFbLiI8GoMvuPEgeks3qBtrxKwTOdKWAFDAgEiXZ8m4zN0V66J3zurMzzr\ntJ6G/JEFGy1sITUatqSxqR4A5eGsV9ktFWZbtwRihuCNIVIQ8d9Up5CWFLWExwNS\nZxGNJ4YEMwKYf6s=\n-----END CERTIFICATE REQUEST-----\n",
+      "type": "string"
+    },
+    "DecryptRequestData": {
+      "example": {
+        "mode": "RAW",
+        "encrypted": "nhrfotu32409ru0rgert45z54z099u23r03498uhtr=="
+      },
+      "type": "object",
+      "required": [
+        "mode",
+        "encrypted"
+      ],
+      "properties": {
+        "mode": {
+          "$ref": "#/definitions/DecryptMode"
+        },
+        "encrypted": {
+          "$ref": "#/definitions/Base64"
+        }
+      }
+    },
+    "SignMode": {
+      "enum": [
+        "PKCS1",
+        "PSS_MD5",
+        "PSS_SHA1",
+        "PSS_SHA224",
+        "PSS_SHA256",
+        "PSS_SHA384",
+        "PSS_SHA512",
+        "ED25519",
+        "ECDSA_P224",
+        "ECDSA_P256",
+        "ECDSA_P384",
+        "ECDSA_P521"
+      ],
+      "type": "string"
+    },
+    "UserPostData": {
+      "example": {
+        "realName": "Jane User",
+        "role": "Administrator",
+        "passphrase": "My cool passphrase"
+      },
+      "type": "object",
+      "required": [
+        "realName",
+        "role",
+        "passphrase"
+      ],
+      "properties": {
+        "realName": {
+          "type": "string"
+        },
+        "role": {
+          "$ref": "#/definitions/UserRole"
+        },
+        "passphrase": {
+          "$ref": "#/definitions/Passphrase"
+        }
+      }
+    },
+    "PemCert": {
+      "example": "-----BEGIN CERTIFICATE-----\nMIIEvDCCAqQCCQCZ9VKHZSKydDANBgkqhkiG9w0BAQsFADAgMQ4wDAYDVQQIDAVo\nZWxsbzEOMAwGA1UEBwwFaGVsbG8wHhcNMTgxMDMwMTI0MDQ3WhcNMTkxMDMwMTI0\nMDQ3WjAgMQ4wDAYDVQQIDAVoZWxsbzEOMAwGA1UEBwwFaGVsbG8wggIiMA0GCSqG\nSIb3DQEBAQUAA4ICDwAwggIKAoICAQC8WRImgeu4U6Yg5q0/SvoieQL5JwPHaCrN\n6Cc0mj8pnzTBu/f0QYNentcnu0EclD99kla6/gdiJnt0b/IT23o37+t2n0BvEgVQ\nMJxJ/BjIqSZCykq4SWHKia1OS7tJKE2Q/hgGq/RQJ0zecWKA9SuafXDt0plw0saz\nP8ZosFyToMYnPB54SzXj4qeD5t2L2dOamTTyziw/GJDGdwssImEDfeWyMRRyHcIa\nu9HNGaTxjCdBGzCR+PEX3ZHhGzl5iMlgtZUICgXMgAvFZHHEYNtyCW9ZzUB2ZKE2\nnMbu8hbl7GXRCdJaAqlJfKiGp/WvbmrLhCzcwqhu4UnqGXOxeEQryrkPAbiLafqb\nfPLHB7dr8OEGlUzp1SCHR1JxwdBVohuO2lL+O5nMD3ZVdVnh2F5Et6I9lO4w9+5n\naI6pmO4oy9PsqKvUjxVnEeo1Ee1n9o/4T6fe6XBIQLPqEmy2IXynZP0eJn1Yu9SF\nTkTSmJ+jRiU7EMaagQrM4Ds5seVNVWKOvUjDQCV+QRZaaPcrkMoFtjLCVMhLgy7M\n/Dfl63qCcdVkPwdbI/apjfG8qMrez4k3qAZDYgS3fujyuq9wv7xbq2+o0Ck4Ono2\nmMAA6JDSZr8XwR3ac/UK1KGv+weh1fOVO+c6mSN9M+W1MtkJS+i4/Aj2yDCJzVk3\nGZpd5/E6WwIDAQABMA0GCSqGSIb3DQEBCwUAA4ICAQAB+8+1dk20P6R+RvDRs1mo\ne1CegaPH2bl9t1WVuXJIUkrIGDceVr5f19pcaNQRYwZuoQd8VQXCZUpWbo//TWxl\nItS3prQgcrfcTi7gCzp1+q1bZk6H21tzESDJTXPFp019/ypdUB4Jsty7qQL73sE3\nnj67DH+srPCknAhfFag0dPOOjAY19IrIomtBMlvYNpb5XupEUAQFCjk6VdLVAzzl\nM5Swj+kmLA0OUHTF2zAwj2k+B9RAkbetu/lXLwUiiQNG00j8YP03lErxDd29m2jl\nNFlSn8YYsgzmihF5fUFTJXP5tS7lF4FnLNbw9pfdeVZBT1uTOcckmFv6n6edttZS\nFhC70hBB8tFFtemGFquZ0N7w8O7DmIYI936n283rzxyuWdi+JqOUQ0KzpGbFOP3t\nAOdVcx/JW8kjDdWRcRDr85M4MnkG6HEzW4uzGBtxBplL7KH0L8LX+lx6ySjIrbRD\nQtwBxwZGtHZJAqskO6vobzzybCKuVUaQwkPrQsK5iLA6Nn1Yxu6XmtlvoPeNIc63\nPa3ix8vNFbBTtS6iBdbOPse5qgRV0DC94ocedzKw4QzQRa5REIniJ2X8hVoVAcBh\n3nQKyZApl2I/pZMlbZ0Cg5yxjhBaxKwci7jyoMerMMo2EdbZN87gP+2x6tKuY1MO\n35mqzHn+FjWq0eAtpzhO5Q==\n-----END CERTIFICATE-----\n",
+      "type": "string"
+    },
+    "KeyMechanisms": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/KeyMechanism"
+      }
+    },
+    "DecryptMode": {
+      "enum": [
+        "RAW",
+        "PKCS1",
+        "OAEP_MD5",
+        "OAEP_SHA1",
+        "OAEP_SHA224",
+        "OAEP_SHA256",
+        "OAEP_SHA384",
+        "OAEP_SHA512"
+      ],
+      "type": "string"
+    },
+    "PemPublicKey": {
+      "example": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAx7ghfro+VEepYmy2V7HP\nn5PSRdmGzxewcpmzxTtrZ10BygbEqhPsAr4fWI9pG7iRXzeza7DMjrQptzKsfSy6\ndBFmSEZer+hJxuOdhBG/FX6pjwRrZpbOQxyr+aTlE3jm2XP12Cqx0wsYGIoJlWHb\nGb90IAx9zpdYQgHoJZ4x5ims5vo7h3puPEyVycJH5fMBB9h+2Bxc4BxaPKMm15JR\n1B7ToB3g16SJY2B1t/aqNmqSBZC4HP1fCuSbBm83OgqRhdk1P6r/vqOVKrxVupDq\nKkdcf/dRBiQalJ9tQbVbs9OOYfQ6n25GvJTvGtqOEuggit32tV16JXCZjnYePAvt\nNwIDAQAB\n-----END PUBLIC KEY-----\n",
+      "type": "string"
+    },
+    "LoggingConfig": {
+      "example": {
+        "ipAddress": "0.0.0.0",
+        "port": 514,
+        "logLevel": "info"
+      },
+      "type": "object",
+      "required": [
+        "ipAddress",
+        "port",
+        "logLevel"
+      ],
+      "properties": {
+        "ipAddress": {
+          "type": "string"
+        },
+        "port": {
+          "type": "integer"
+        },
+        "logLevel": {
+          "$ref": "#/definitions/LogLevel"
+        }
+      }
+    },
+    "SystemState": {
+      "enum": [
+        "Unprovisioned",
+        "Locked",
+        "Operational"
+      ],
+      "type": "string"
+    },
+    "KeyPrivateData": {
+      "type": "object",
+      "properties": {
+        "primeP": {
+          "type": "string"
+        },
+        "primeQ": {
+          "type": "string"
+        },
+        "publicExponent": {
+          "type": "string"
+        },
+        "data": {
+          "type": "string"
+        }
+      }
+    },
+    "UserList": {
+      "example": [
+        {
+          "user": "admin"
+        },
+        {
+          "user": "backup"
+        },
+        {
+          "user": "metrics"
+        },
+        {
+          "user": "operator"
+        }
+      ],
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/UserItem"
+      }
+    },
+    "DistinguishedName": {
+      "example": {
+        "countryName": "DE",
+        "stateOrProvinceName": "",
+        "localityName": "Berlin",
+        "organizationName": "Nitrokey",
+        "organizationalUnitName": "",
+        "commonName": "nethsm.local",
+        "emailAddress": "info@nitrokey.com"
+      },
+      "type": "object",
+      "required": [
+        "countryName",
+        "stateOrProvinceName",
+        "localityName",
+        "organizationName",
+        "organizationalUnitName",
+        "commonName",
+        "emailAddress"
+      ],
+      "properties": {
+        "countryName": {
+          "type": "string"
+        },
+        "stateOrProvinceName": {
+          "type": "string"
+        },
+        "localityName": {
+          "type": "string"
+        },
+        "organizationName": {
+          "type": "string"
+        },
+        "organizationalUnitName": {
+          "type": "string"
+        },
+        "commonName": {
+          "type": "string"
+        },
+        "emailAddress": {
+          "type": "string"
+        }
+      }
+    },
+    "BackupPassphraseConfig": {
+      "example": {
+        "passphrase": "This is my backup passphrase"
+      },
+      "type": "object",
+      "required": [
+        "passphrase"
+      ],
+      "properties": {
+        "passphrase": {
+          "$ref": "#/definitions/Passphrase"
+        }
+      }
+    },
+    "HealthStateData": {
+      "example": {
+        "state": "Unprovisioned"
+      },
+      "type": "object",
+      "required": [
+        "state"
+      ],
+      "properties": {
+        "state": {
+          "$ref": "#/definitions/SystemState"
+        }
+      }
+    },
+    "Passphrase": {
+      "type": "string",
+      "minLength": 1
+    },
+    "RandomRequestData": {
+      "example": {
+        "length": 5
+      },
+      "type": "object",
+      "required": [
+        "length"
+      ],
+      "properties": {
+        "length": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1024
+        }
+      }
+    },
+    "UserRole": {
+      "enum": [
+        "Administrator",
+        "Operator",
+        "Metrics",
+        "Backup"
+      ],
+      "type": "string"
+    },
+    "PGPPrivateKey": {
+      "example": "",
+      "type": "string"
+    },
+    "PublicKey": {
+      "example": {
+        "mechanisms": [
+          "RSA_Signature_PSS_SHA256"
+        ],
+        "algorithm": "RSA",
+        "key": {
+          "modulus": "FhJQl11CiY0ifRHXeAqFh4rdSl6",
+          "publicExponent": "FhJQl11CiY0ifRHXeAqFh4rdSl6"
+        },
+        "operations": 242
+      },
+      "type": "object",
+      "required": [
+        "mechanisms",
+        "algorithm",
+        "key",
+        "operations"
+      ],
+      "properties": {
+        "mechanisms": {
+          "$ref": "#/definitions/KeyMechanisms"
+        },
+        "algorithm": {
+          "$ref": "#/definitions/KeyAlgorithm"
+        },
+        "key": {
+          "$ref": "#/definitions/KeyPublicData"
+        },
+        "operations": {
+          "type": "integer"
+        }
+      }
+    },
+    "UnattendedBootConfig": {
+      "example": {
+        "status": "off"
+      },
+      "type": "object",
+      "required": [
+        "status"
+      ],
+      "properties": {
+        "status": {
+          "$ref": "#/definitions/Switch"
+        }
+      }
+    },
+    "SignData": {
+      "example": {
+        "signature": "n4geMX1g8zcfipfcmn+XjM1ccWZULemAa0cuYoh1aXG9UhbE6f54NMp4NjboLf63SQyieJYjjV8q+/o1rFlkZCtKtHAheds+g90zdjOMmXFlXyBTKMhGOSHuleGz0c99x7Alg19KN9wB3Jj2niwweBOR/F4Qv0mdBUv+oO8uPl6vM1fS4tX/VJoCZkDnZzL8duKRNFT0SNQZ+ryLiqQMG53fEPhTplK/wK0Cco8JAYCMh9cxSzpBoCEO+9woxoBGehAjHuLxs6ed6q08W67leuibxZ8c6Q6upmwDlca/gSw0y4w1VIxxts2PORZdNsTWcr3lojcNgWXJcfAqF9/n4A=="
+      },
+      "type": "object",
+      "required": [
+        "signature"
+      ],
+      "properties": {
+        "signature": {
+          "$ref": "#/definitions/Base64"
+        }
+      }
+    },
+    "Base64": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9+/]+={0,3}$"
+    },
+    "KeyGenerateRequestData": {
+      "example": {
+        "mechanisms": [
+          "RSA_Signature_PSS_SHA256"
+        ],
+        "algorithm": "RSA",
+        "length": 2048,
+        "id": "myKey2"
+      },
+      "type": "object",
+      "required": [
+        "mechanisms",
+        "algorithm"
+      ],
+      "properties": {
+        "mechanisms": {
+          "$ref": "#/definitions/KeyMechanisms"
+        },
+        "algorithm": {
+          "$ref": "#/definitions/KeyAlgorithm"
+        },
+        "length": {
+          "type": "integer",
+          "minimum": 1024,
+          "maximum": 8192
+        },
+        "id": {
+          "type": "string"
+        }
+      }
+    },
+    "Switch": {
+      "enum": [
+        "on",
+        "off"
+      ],
+      "type": "string"
+    },
+    "RandomData": {
+      "example": {
+        "random": "VGhlIHE="
+      },
+      "type": "object",
+      "required": [
+        "random"
+      ],
+      "properties": {
+        "random": {
+          "$ref": "#/definitions/Base64"
+        }
+      }
+    },
+    "InfoData": {
+      "example": {
+        "vendor": "Nitrokey GmbH",
+        "product": "NetHSM"
+      },
+      "type": "object",
+      "required": [
+        "vendor",
+        "product"
+      ],
+      "properties": {
+        "vendor": {
+          "type": "string"
+        },
+        "product": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "x-amf-annotationTypes": {
+    "state": {
+      "schema": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/SystemState"
+        }
+      }
+    },
+    "role": {
+      "schema": {
+        "type": "array",
+        "items": {
+          "enum": [
+            "Administrator",
+            "Operator",
+            "Metrics",
+            "Backup",
+            "Public"
+          ],
+          "type": "string"
+        }
+      }
+    }
+  },
+  "securityDefinitions": {
+    "basic": {
+      "type": "basic",
+      "description": "NetHSM supports Basic Authentication.\n"
+    }
+  }
+}

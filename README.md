@@ -1,6 +1,6 @@
 # pynitrokey
 
-A command line interface for the Nitrokey FIDO2 and Nitrokey Start.
+A command line interface for the Nitrokey FIDO2, Nitrokey Start and NetHSM.
 
 ## Current state
 Update to the latest firmware versions on the Nitrokey Start and Nitrokey FIDO2 devices was tested. Windows support for Nitrokey Start is not added yet.

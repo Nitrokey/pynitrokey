@@ -14,6 +14,7 @@ import click
 import pynitrokey
 import pynitrokey.fido2.operations
 from pynitrokey.cli.fido2 import fido2
+from pynitrokey.cli.nethsm import nethsm
 from pynitrokey.cli.start import start
 from pynitrokey.cli.storage import storage
 
@@ -39,6 +40,7 @@ def nitropy():
 
 
 nitropy.add_command(fido2)
+nitropy.add_command(nethsm)
 nitropy.add_command(start)
 nitropy.add_command(storage)
 
@@ -66,4 +68,4 @@ nitropy.add_command(ls)
 
 
 from pygments.console import colorize
-print(f'*** {colorize("red", "Nitrokey tool for Nitrokey FIDO2 & Nitrokey Start")}')
+print(f'*** {colorize("red", "Nitrokey tool for Nitrokey FIDO2, Nitrokey Start & NetHSM")}')

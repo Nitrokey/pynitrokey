@@ -22,7 +22,8 @@ isort:
 	$(VENV)/bin/python3 -m isort --py 35 $(PACKAGE_NAME)/
 
 lint:
-	$(VENV)/bin/python3 -m flake8 $(PACKAGE_NAME)/
+	$(VENV)/bin/python3 -m flake8 $(PACKAGE_NAME)/ \
+		--extend-exclude pynitrokey/nethsm/client
 
 semi-clean:
 	rm -rf **/__pycache__
@@ -98,3 +99,21 @@ build-CI-test:
 .PHONY: CI-test
 CI-test:
 	sudo docker run -it --rm -v $(PWD):/app nitro-python-ci make CI VENV=venv-ci
+
+OPENAPI_OUTPUT_DIR=${PWD}/tmp/openapi-client
+
+# Generates the OpenAPI client for the NetHSM REST API
+.PHONY: nethsm-client
+nethsm-client: nethsm-scheme.json
+	mkdir -p "${OPENAPI_OUTPUT_DIR}"
+	cp nethsm-scheme.json "${OPENAPI_OUTPUT_DIR}/scheme.json"
+	docker run --rm -ti -v "${OPENAPI_OUTPUT_DIR}:/out" \
+		openapitools/openapi-generator-cli generate \
+		-i=/out/scheme.json \
+		-g=python -o=/out/python --package-name=pynitrokey.nethsm.client
+	cp -r "${OPENAPI_OUTPUT_DIR}/python/pynitrokey/nethsm/client" pynitrokey/nethsm
+
+	# TODO: We would like to use the upstream scheme definition, but it currently
+	# misses proper mime type definitions for operations that return other data
+	# than JSON
+		# -i=https://nethsmdemo.nitrokey.com/api_docs/gen_nethsm_api_oas20.json \
