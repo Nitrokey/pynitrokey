@@ -17,6 +17,24 @@ import pynitrokey.nethsm
 DATETIME_TYPE = click.DateTime(formats=["%Y-%m-%dT%H:%M:%S%z"])
 
 
+def print_row(values, widths):
+    row = [value.ljust(width) for (value, width) in zip(values, widths)]
+    print(*row, sep="\t")
+
+
+def print_table(headers, data):
+    widths = [len(header) for header in headers]
+    for row in data:
+        for i in range(len(widths)):
+            row[i] = str(row[i])
+            widths[i] = max(widths[i], len(row[i]))
+
+    print_row(headers, widths)
+    print_row(["-" * width for width in widths], widths)
+    for row in data:
+        print_row(row, widths)
+
+
 @click.group()
 @click.option(
     "-h", "--host", "host", required=True, help="Set the host of the NetHSM API"
@@ -125,3 +143,34 @@ def provision(ctx, unlock_passphrase, admin_passphrase, system_time):
     with connect(ctx, require_auth=False) as nethsm:
         nethsm.provision(unlock_passphrase, admin_passphrase, system_time)
         print(f"NetHSM {nethsm.host} provisioned")
+
+
+@nethsm.command()
+@click.option(
+    "--details/--no-details",
+    default=True,
+    help="Also query the real name and role of the user",
+)
+@click.pass_context
+def list_users(ctx, details):
+    """List all users on the NetHSM.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    with connect(ctx) as nethsm:
+        user_ids = nethsm.list_users()
+
+        print(f"Users on NetHSM {nethsm.host}:")
+        print()
+
+        headers = ["User ID"]
+        if details:
+            headers += ["Real name", "Role"]
+            data = []
+            for user_id in user_ids:
+                user = nethsm.get_user(user_id=user_id.value)
+                data.append([user_id, user.real_name, user.role.value])
+        else:
+            data = [[user_id] for user_id in user_ids]
+
+        print_table(headers, data)

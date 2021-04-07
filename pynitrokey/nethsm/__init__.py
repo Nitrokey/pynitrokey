@@ -21,11 +21,29 @@ class Role(enum.Enum):
     METRICS = "Metrics"
     BACKUP = "Backup"
 
+    @staticmethod
+    def from_model(model_role):
+        return Role.from_string(model_role.value)
+
+    @staticmethod
+    def from_string(s):
+        for role in Role:
+            if role.value == s:
+                return role
+        raise ValueError(f"Unsupported user role {s}")
+
 
 class State(enum.Enum):
     UNPROVISIONED = "Unprovisioned"
     LOCKED = "Locked"
     OPERATIONAL = "Operational"
+
+
+class User:
+    def __init__(self, user_id, real_name, role):
+        self.user_id = user_id
+        self.real_name = real_name
+        self.role = role
 
 
 def _handle_api_exception(e, messages={}, roles=[], state=None):
@@ -113,6 +131,38 @@ class NetHSM:
                 state=State.UNPROVISIONED,
                 messages={
                     400: "Malformed request data -- e. g. weak passphrase",
+                },
+            )
+
+    def list_users(self):
+        try:
+            data = self.get_api().users_get()
+            return [item["user"] for item in data.value]
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR],
+                messages={
+                    401: "Invalid user name and/or password",
+                },
+            )
+
+    def get_user(self, user_id):
+        try:
+            user = self.get_api().users_user_id_get(user_id=user_id)
+            return User(
+                user_id=user_id,
+                real_name=user.real_name,
+                role=Role.from_model(user.role),
+            )
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR, Role.OPERATOR],
+                message={
+                    404: f"User {user_id} not found",
                 },
             )
 
