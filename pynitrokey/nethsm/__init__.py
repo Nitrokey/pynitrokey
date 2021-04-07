@@ -12,6 +12,7 @@ import enum
 
 from . import client
 from .client import ApiException
+from .client.model.passphrase import Passphrase
 
 
 class Role(enum.Enum):
@@ -70,7 +71,6 @@ class NetHSM:
         return DefaultApi(self.client)
 
     def unlock(self, passphrase):
-        from .client.model.passphrase import Passphrase
         from .client.model.unlock_request_data import UnlockRequestData
 
         body = UnlockRequestData(Passphrase(passphrase))
@@ -95,6 +95,25 @@ class NetHSM:
                 state=State.OPERATIONAL,
                 roles=[Role.ADMINISTRATOR],
                 messages={401: "Access denied"},
+            )
+
+    def provision(self, unlock_passphrase, admin_passphrase, system_time):
+        from .client.model.provision_request_data import ProvisionRequestData
+
+        body = ProvisionRequestData(
+            unlock_passphrase=Passphrase(unlock_passphrase),
+            admin_passphrase=Passphrase(admin_passphrase),
+            system_time=system_time,
+        )
+        try:
+            self.get_api().provision_post(body=body)
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.UNPROVISIONED,
+                messages={
+                    400: "Malformed request data -- e. g. weak passphrase",
+                },
             )
 
 

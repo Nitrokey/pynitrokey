@@ -8,10 +8,13 @@
 # copied, modified, or distributed except according to those terms.
 
 import contextlib
+import datetime
 
 import click
 
 import pynitrokey.nethsm
+
+DATETIME_TYPE = click.DateTime(formats=["%Y-%m-%dT%H:%M:%S%z"])
 
 
 @click.group()
@@ -85,3 +88,40 @@ def lock(ctx):
     with connect(ctx) as nethsm:
         nethsm.lock()
         print(f"NetHSM {nethsm.host} locked")
+
+
+@nethsm.command()
+@click.option(
+    "-u",
+    "--unlock-passphrase",
+    hide_input=True,
+    confirmation_prompt=True,
+    prompt=True,
+    help="The unlock passphrase to set",
+)
+@click.option(
+    "-a",
+    "--admin-passphrase",
+    hide_input=True,
+    confirmation_prompt=True,
+    prompt=True,
+    help="The admin passphrase to set",
+)
+@click.option(
+    "-t",
+    "--system-time",
+    type=DATETIME_TYPE,
+    help="The system time to set (default: the time of this system)",
+)
+@click.pass_context
+def provision(ctx, unlock_passphrase, admin_passphrase, system_time):
+    """Initial provisioning of a NetHSM.
+
+    If the unlock or admin passphrases are not set, they have to be entered
+    interactively.  If the system time is not set, the current system time is
+    used."""
+    if not system_time:
+        system_time = datetime.datetime.now()
+    with connect(ctx, require_auth=False) as nethsm:
+        nethsm.provision(unlock_passphrase, admin_passphrase, system_time)
+        print(f"NetHSM {nethsm.host} provisioned")
