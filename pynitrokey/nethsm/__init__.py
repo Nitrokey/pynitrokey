@@ -38,6 +38,17 @@ class State(enum.Enum):
     LOCKED = "Locked"
     OPERATIONAL = "Operational"
 
+    @staticmethod
+    def from_model(model_state):
+        return State.from_string(model_state.value)
+
+    @staticmethod
+    def from_string(s):
+        for state in State:
+            if state.value == s:
+                return state
+        raise ValueError(f"Unsupported system state {s}")
+
 
 class User:
     def __init__(self, user_id, real_name, role):
@@ -228,6 +239,13 @@ class NetHSM:
         try:
             data = self.get_api().info_get()
             return (data.vendor, data.product)
+        except ApiException as e:
+            _handle_api_exception(e)
+
+    def get_state(self):
+        try:
+            data = self.get_api().health_state_get()
+            return State.from_model(data.state)
         except ApiException as e:
             _handle_api_exception(e)
 

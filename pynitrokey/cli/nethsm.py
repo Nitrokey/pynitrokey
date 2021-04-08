@@ -270,3 +270,12 @@ def info(ctx):
         print(f"Host:    {nethsm.host}")
         print(f"Vendor:  {vendor}")
         print(f"Product: {product}")
+
+
+@nethsm.command()
+@click.pass_context
+def state(ctx):
+    """Query the state of a NetHSM."""
+    with connect(ctx, require_auth=False) as nethsm:
+        state = nethsm.get_state()
+        print(f"NetHSM {nethsm.host} is {state.value}")
