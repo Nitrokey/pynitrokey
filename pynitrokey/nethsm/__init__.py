@@ -303,6 +303,54 @@ class NetHSM:
                 },
             )
 
+    def get_config_logging(self):
+        try:
+            return self.get_api().config_logging_get()
+        except ApiException as e:
+            _handle_api_exception(
+                e, state=State.OPERATIONAL, roles=[Role.ADMINISTRATOR]
+            )
+
+    def get_config_network(self):
+        try:
+            return self.get_api().config_network_get()
+        except ApiException as e:
+            _handle_api_exception(
+                e, state=State.OPERATIONAL, roles=[Role.ADMINISTRATOR]
+            )
+
+    def get_config_time(self):
+        try:
+            return self.get_api().config_time_get().time
+        except ApiException as e:
+            _handle_api_exception(
+                e, state=State.OPERATIONAL, roles=[Role.ADMINISTRATOR]
+            )
+
+    def get_config_unattended_boot(self):
+        try:
+            return self.get_api().config_unattended_boot_get().status
+        except ApiException as e:
+            _handle_api_exception(
+                e, state=State.OPERATIONAL, roles=[Role.ADMINISTRATOR]
+            )
+
+    def get_public_key(self):
+        try:
+            return self.get_api().config_tls_public_pem_get()
+        except ApiException as e:
+            _handle_api_exception(
+                e, state=State.OPERATIONAL, roles=[Role.ADMINISTRATOR]
+            )
+
+    def get_certificate(self):
+        try:
+            return self.get_api().config_tls_cert_pem_get()
+        except ApiException as e:
+            _handle_api_exception(
+                e, state=State.OPERATIONAL, roles=[Role.ADMINISTRATOR]
+            )
+
 
 @contextlib.contextmanager
 def connect(host, version, username, password):

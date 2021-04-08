@@ -335,3 +335,60 @@ def list_keys(ctx, details):
             data = [[key_id] for key_id in key_ids]
 
         print_table(headers, data)
+
+
+@nethsm.command()
+@click.option("--logging", is_flag=True, help="Query the logging configuration")
+@click.option("--network", is_flag=True, help="Query the network configuration")
+@click.option("--time", is_flag=True, help="Query the system time")
+@click.option(
+    "--unattended-boot", is_flag=True, help="Query the unattended boot configuration"
+)
+@click.option("--public-key", is_flag=True, help="Query the public key")
+@click.option("--certificate", is_flag=True, help="Query the certificate")
+@click.pass_context
+def get_config(ctx, **kwargs):
+    """Query the configuration of a NetHSM.
+
+    Only the configuration items selected with the corresponding option are
+    queried.  If no option is set, all items are queried.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    with connect(ctx) as nethsm:
+        print(f"Configuration for NetHSM {nethsm.host}:")
+        show_all = not any(kwargs.values())
+
+        if show_all or kwargs["logging"]:
+            data = nethsm.get_config_logging()
+            print("  Logging:")
+            print("    IP address:   ", data.ip_address)
+            print("    Port:         ", data.port)
+            print("    Log level:    ", data.log_level)
+
+        if show_all or kwargs["network"]:
+            data = nethsm.get_config_network()
+            print("  Network:")
+            print("    IP address:   ", data.ip_address)
+            print("    Netmask:      ", data.netmask)
+            print("    Gateway:      ", data.gateway)
+
+        if show_all or kwargs["time"]:
+            time = nethsm.get_config_time()
+            print("  Time:           ", time)
+
+        if show_all or kwargs["unattended_boot"]:
+            unattended_boot = nethsm.get_config_unattended_boot()
+            print("  Unattended boot:", unattended_boot)
+
+        if show_all or kwargs["public_key"]:
+            public_key = nethsm.get_public_key()
+            print("  Public key:")
+            for line in public_key.splitlines():
+                print(f"    {line}")
+
+        if show_all or kwargs["certificate"]:
+            certificate = nethsm.get_certificate()
+            print("  Certificate:")
+            for line in certificate.splitlines():
+                print(f"    {line}")
