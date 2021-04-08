@@ -259,3 +259,14 @@ def set_passphrase(ctx, user_id, passphrase):
             user_id = nethsm.username
         nethsm.set_passphrase(user_id, passphrase)
         print(f"Updated the passphrase for user {user_id} on NetHSM {nethsm.host}")
+
+
+@nethsm.command()
+@click.pass_context
+def info(ctx):
+    """Query the vendor and product information for a NetHSM."""
+    with connect(ctx, require_auth=False) as nethsm:
+        (vendor, product) = nethsm.get_info()
+        print(f"Host:    {nethsm.host}")
+        print(f"Vendor:  {vendor}")
+        print(f"Product: {product}")

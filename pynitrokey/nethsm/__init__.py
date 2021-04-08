@@ -224,6 +224,13 @@ class NetHSM:
                 },
             )
 
+    def get_info(self):
+        try:
+            data = self.get_api().info_get()
+            return (data.vendor, data.product)
+        except ApiException as e:
+            _handle_api_exception(e)
+
 
 @contextlib.contextmanager
 def connect(host, version, username, password):
