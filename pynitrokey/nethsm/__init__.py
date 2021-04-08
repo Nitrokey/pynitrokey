@@ -57,6 +57,14 @@ class User:
         self.role = role
 
 
+class Key:
+    def __init__(self, key_id, mechanisms, algorithm, operations):
+        self.key_id = key_id
+        self.mechanisms = mechanisms
+        self.algorithm = algorithm
+        self.operations = operations
+
+
 def _handle_api_exception(e, messages={}, roles=[], state=None):
     if e.status == 403 and roles:
         roles = [role.value for role in roles]
@@ -264,6 +272,36 @@ class NetHSM:
             return self.get_api().metrics_get()
         except ApiException as e:
             _handle_api_exception(e, state=State.OPERATIONAL, roles=[Role.METRICS])
+
+    def list_keys(self):
+        try:
+            data = self.get_api().keys_get()
+            return [item["key"] for item in data.value]
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR, Role.OPERATOR],
+            )
+
+    def get_key(self, key_id):
+        try:
+            key = self.get_api().keys_key_id_get(key_id=key_id)
+            return Key(
+                key_id=key_id,
+                mechanisms=[mechanism.value for mechanism in key.mechanisms.value],
+                algorithm=key.algorithm.value,
+                operations=key.operations,
+            )
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR, Role.OPERATOR],
+                message={
+                    404: f"Key {key_id} not found",
+                },
+            )
 
 
 @contextlib.contextmanager

@@ -302,3 +302,36 @@ def metrics(ctx):
         headers = ["Metric", "Value"]
         data = nethsm.get_metrics()
         print_table(headers, [list(row) for row in sorted(data.items())])
+
+
+@nethsm.command()
+@click.option(
+    "--details/--no-details",
+    default=True,
+    help="Also query the key data",
+)
+@click.pass_context
+def list_keys(ctx, details):
+    """List all keys on the NetHSM.
+
+    This command requires authentication as a user with the Administrator or
+    Operator role."""
+    with connect(ctx) as nethsm:
+        key_ids = nethsm.list_keys()
+
+        print(f"Keys on NetHSM {nethsm.host}:")
+        print()
+
+        headers = ["Key ID"]
+        if details:
+            headers += ["Algorithm", "Mechanisms", "Operations"]
+            data = []
+            for key_id in key_ids:
+                key = nethsm.get_key(key_id=key_id.value)
+                data.append(
+                    [key_id, key.algorithm, ", ".join(key.mechanisms), key.operations]
+                )
+        else:
+            data = [[key_id] for key_id in key_ids]
+
+        print_table(headers, data)
