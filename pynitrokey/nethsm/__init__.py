@@ -351,6 +351,22 @@ class NetHSM:
                 e, state=State.OPERATIONAL, roles=[Role.ADMINISTRATOR]
             )
 
+    def set_backup_passphrase(self, passphrase):
+        from .client.model.backup_passphrase_config import BackupPassphraseConfig
+
+        body = BackupPassphraseConfig(passphrase=Passphrase(passphrase))
+        try:
+            self.get_api().config_backup_passphrase_put(body=body)
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR],
+                messages={
+                    400: "Bad request -- e. g. weak passphrase",
+                },
+            )
+
 
 @contextlib.contextmanager
 def connect(host, version, username, password):
