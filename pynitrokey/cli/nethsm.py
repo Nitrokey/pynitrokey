@@ -174,3 +174,18 @@ def list_users(ctx, details):
             data = [[user_id] for user_id in user_ids]
 
         print_table(headers, data)
+
+
+@nethsm.command()
+@click.argument("user-id")
+@click.pass_context
+def get_user(ctx, user_id):
+    """Query the real name and role for a user ID on the NetHSM.
+
+    This command requires authentication as a user with the Administrator or
+    Operator role."""
+    with connect(ctx) as nethsm:
+        user = nethsm.get_user(user_id=user_id)
+        print(f"User {user_id} on NetHSM {nethsm.host}")
+        print(f"Real name:  {user.real_name}")
+        print(f"Role:       {user.role.value}")
