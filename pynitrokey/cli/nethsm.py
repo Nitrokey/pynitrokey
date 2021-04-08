@@ -222,3 +222,16 @@ def add_user(ctx, real_name, role, passphrase, user_id):
     with connect(ctx) as nethsm:
         user_id = nethsm.add_user(real_name, role, passphrase, user_id)
         print(f"User {user_id} added to NetHSM {nethsm.host}")
+
+
+@nethsm.command()
+@click.argument("user-id")
+@click.pass_context
+def delete_user(ctx, user_id):
+    """Delete the user with the given user ID on the NetHSM.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    with connect(ctx) as nethsm:
+        nethsm.delete_user(user_id)
+        print(f"User {user_id} deleted on NetHSM {nethsm.host}")

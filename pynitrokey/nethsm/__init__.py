@@ -194,6 +194,19 @@ class NetHSM:
                 },
             )
 
+    def delete_user(self, user_id):
+        try:
+            self.get_api().users_user_id_delete(user_id=user_id)
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR],
+                messages={
+                    404: f"User {user_id} not found",
+                },
+            )
+
 
 @contextlib.contextmanager
 def connect(host, version, username, password):
