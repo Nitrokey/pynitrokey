@@ -235,3 +235,27 @@ def delete_user(ctx, user_id):
     with connect(ctx) as nethsm:
         nethsm.delete_user(user_id)
         print(f"User {user_id} deleted on NetHSM {nethsm.host}")
+
+
+@nethsm.command()
+@click.option("-u", "--user-id", help="The user ID of the user")
+@click.option(
+    "-p",
+    "--passphrase",
+    prompt=True,
+    hide_input=True,
+    confirmation_prompt=True,
+    help="The new passphrase of the user",
+)
+@click.pass_context
+def set_passphrase(ctx, user_id, passphrase):
+    """Set the passphrase for the user with the given ID (or the current user).
+
+    This command requires authentication as a user with the Administrator or
+    Operator role.  Users with the Operator role can only change their own
+    passphrase."""
+    with connect(ctx) as nethsm:
+        if not user_id:
+            user_id = nethsm.username
+        nethsm.set_passphrase(user_id, passphrase)
+        print(f"Updated the passphrase for user {user_id} on NetHSM {nethsm.host}")

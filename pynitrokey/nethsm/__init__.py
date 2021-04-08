@@ -49,8 +49,8 @@ class User:
 def _handle_api_exception(e, messages={}, roles=[], state=None):
     if e.status == 403 and roles:
         roles = [role.value for role in roles]
-        message = "Access denied -- this operation requires the role " + roles.join(
-            " or "
+        message = "Access denied -- this operation requires the role " + " or ".join(
+            roles
         )
     elif e.status == 412 and state:
         message = f"Precondition failed -- this operation can only be used on a NetHSM in the state {state.value}"
@@ -203,6 +203,23 @@ class NetHSM:
                 state=State.OPERATIONAL,
                 roles=[Role.ADMINISTRATOR],
                 messages={
+                    404: f"User {user_id} not found",
+                },
+            )
+
+    def set_passphrase(self, user_id, passphrase):
+        from .client.model.user_passphrase_post_data import UserPassphrasePostData
+
+        body = UserPassphrasePostData(passphrase=Passphrase(passphrase))
+        try:
+            self.get_api().users_user_id_passphrase_post(user_id=user_id, body=body)
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR, Role.OPERATOR],
+                messages={
+                    400: "Bad request -- e. g. weak passphrase",
                     404: f"User {user_id} not found",
                 },
             )
