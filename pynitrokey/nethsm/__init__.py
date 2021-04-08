@@ -259,6 +259,12 @@ class NetHSM:
         except ApiException as e:
             _handle_api_exception(e, state=State.OPERATIONAL, roles=[Role.OPERATOR])
 
+    def get_metrics(self):
+        try:
+            return self.get_api().metrics_get()
+        except ApiException as e:
+            _handle_api_exception(e, state=State.OPERATIONAL, roles=[Role.METRICS])
+
 
 @contextlib.contextmanager
 def connect(host, version, username, password):
