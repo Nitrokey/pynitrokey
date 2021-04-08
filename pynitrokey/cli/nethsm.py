@@ -279,3 +279,14 @@ def state(ctx):
     with connect(ctx, require_auth=False) as nethsm:
         state = nethsm.get_state()
         print(f"NetHSM {nethsm.host} is {state.value}")
+
+
+@nethsm.command()
+@click.argument("length", type=int)
+@click.pass_context
+def random(ctx, length):
+    """Retrieve random bytes from the NetHSM as a Base64 string.
+
+    This command requires authentication as a user with the Operator role."""
+    with connect(ctx) as nethsm:
+        print(nethsm.get_random_data(length))

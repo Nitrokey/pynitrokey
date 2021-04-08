@@ -249,6 +249,16 @@ class NetHSM:
         except ApiException as e:
             _handle_api_exception(e)
 
+    def get_random_data(self, n):
+        from .client.model.random_request_data import RandomRequestData
+
+        body = RandomRequestData(length=n)
+        try:
+            data = self.get_api().random_post(body=body)
+            return data.random
+        except ApiException as e:
+            _handle_api_exception(e, state=State.OPERATIONAL, roles=[Role.OPERATOR])
+
 
 @contextlib.contextmanager
 def connect(host, version, username, password):
