@@ -15,13 +15,15 @@ import click
 import pynitrokey.nethsm
 
 def make_enum_type(enum_cls):
-    click.Choice([variant.value for variant in enum_cls], case_sensitive=False)
+    return click.Choice([variant.value for variant in enum_cls], case_sensitive=False)
 
 
 DATETIME_TYPE = click.DateTime(formats=["%Y-%m-%dT%H:%M:%S%z"])
 ROLE_TYPE = make_enum_type(pynitrokey.nethsm.Role)
 LOG_LEVEL_TYPE = make_enum_type(pynitrokey.nethsm.LogLevel)
 UNATTENDED_BOOT_STATUS_TYPE = make_enum_type(pynitrokey.nethsm.UnattendedBootStatus)
+ALGORITHM_TYPE = make_enum_type(pynitrokey.nethsm.KeyAlgorithm)
+MECHANISM_TYPE = make_enum_type(pynitrokey.nethsm.KeyMechanism)
 
 
 def print_row(values, widths):
@@ -338,6 +340,78 @@ def list_keys(ctx, details):
             data = [[key_id] for key_id in key_ids]
 
         print_table(headers, data)
+
+
+@nethsm.command()
+@click.option(
+    "-a",
+    "--algorithm",
+    type=ALGORITHM_TYPE,
+    prompt=True,
+    help="The algorithm for the generated key",
+)
+@click.option(
+    "-m",
+    "--mechanism",
+    "mechanisms",
+    type=MECHANISM_TYPE,
+    multiple=True,
+    help="The mechanisms for the generated key",
+)
+@click.option(
+    "-l",
+    "--length",
+    type=int,
+    prompt=True,
+    help="The length of the generated key",
+)
+@click.option(
+    "-k",
+    "--key-id",
+    help="The ID of the generated key",
+)
+@click.pass_context
+def generate_key(ctx, algorithm, mechanisms, length, key_id):
+    """Generate a key pair on the NetHSM.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    mechanisms = list(mechanisms)
+    if not mechanisms:
+        available_mechanisms = []
+        print("Supported mechanisms for this algorithm:")
+        for mechanism in pynitrokey.nethsm.KeyMechanism:
+            if mechanism.value.startswith(algorithm):
+                available_mechanisms.append(mechanism.value)
+                print(f"  {mechanism.value}")
+
+        print("Please enter at least one mechanism.  Enter an empty string to "
+              "finish the list of mechanisms.")
+
+        mechanism_type = click.Choice(available_mechanisms, case_sensitive=False)
+        cont = True
+        while cont:
+            default = None
+            prompt = "Add mechanism"
+            if mechanisms:
+                prompt += " (or empty string to continue)"
+                default = ""
+            mechanism = click.prompt(
+                prompt,
+                type=mechanism_type,
+                default=default,
+                show_choices=False,
+                show_default=False,
+            )
+            if mechanism:
+                mechanisms.append(mechanism)
+            else:
+                cont = False
+    if not mechanisms:
+        raise click.ClickException("No key mechanisms selected!")
+    with connect(ctx) as nethsm:
+        key_id = nethsm.generate_key(algorithm, mechanisms, length, key_id)
+        print(f"Key {key_id} generated on NetHSM {nethsm.host}")
 
 
 @nethsm.command()
