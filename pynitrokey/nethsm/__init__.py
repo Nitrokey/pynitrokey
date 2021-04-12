@@ -105,6 +105,14 @@ class KeyMechanism(enum.Enum):
     ECDSA_P521_SIGNATURE = "ECDSA_P521_Signature"
 
 
+class SystemInfo:
+    def __init__(self, firmware_version, software_version, hardware_version, build_tag):
+        self.firmware_version = firmware_version
+        self.software_version = software_version
+        self.hardware_version = hardware_version
+        self.build_tag = build_tag
+
+
 class User:
     def __init__(self, user_id, real_name, role):
         self.user_id = user_id
@@ -530,6 +538,22 @@ class NetHSM:
                 messages={
                     400: "Bad request -- invalid status setting",
                 },
+            )
+
+    def get_system_info(self):
+        try:
+            data = self.get_api().system_info_get()
+            return SystemInfo(
+                firmware_version=data.firmware_version,
+                software_version=data.software_version,
+                hardware_version=data.hardware_version,
+                build_tag=data.build_tag,
+            )
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR],
             )
 
 

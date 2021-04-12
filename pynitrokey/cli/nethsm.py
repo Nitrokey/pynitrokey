@@ -608,3 +608,19 @@ def set_unattended_boot(ctx, status):
     with connect(ctx) as nethsm:
         nethsm.set_unattended_boot(status)
         print(f"Updated the unattended boot configuration for NetHSM {nethsm.host}")
+
+
+@nethsm.command()
+@click.pass_context
+def system_info(ctx):
+    """Get system information for a NetHSM instance.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    with connect(ctx) as nethsm:
+        info = nethsm.get_system_info()
+        print(f"Host:             {nethsm.host}")
+        print(f"Firmware version: {info.firmware_version}")
+        print(f"Software version: {info.software_version}")
+        print(f"Hardware version: {info.hardware_version}")
+        print(f"Build tag:        {info.build_tag}")
