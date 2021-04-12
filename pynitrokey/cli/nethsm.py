@@ -145,7 +145,7 @@ def provision(ctx, unlock_passphrase, admin_passphrase, system_time):
     interactively.  If the system time is not set, the current system time is
     used."""
     if not system_time:
-        system_time = datetime.datetime.now()
+        system_time = datetime.datetime.now(datetime.timezone.utc)
     with connect(ctx, require_auth=False) as nethsm:
         nethsm.provision(unlock_passphrase, admin_passphrase, system_time)
         print(f"NetHSM {nethsm.host} provisioned")
@@ -476,3 +476,24 @@ def set_network_config(ctx, ip_address, netmask, gateway):
     with connect(ctx) as nethsm:
         nethsm.set_network_config(ip_address, netmask, gateway)
         print(f"Updated the network configuration for NetHSM {nethsm.host}")
+
+
+@nethsm.command()
+@click.argument(
+    "time",
+    type=DATETIME_TYPE,
+    required=False,
+)
+@click.pass_context
+def set_time(ctx, time):
+    """Set the system time of a NetHSM.
+
+    If the time is not given as an argument, the system time of this system is used.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    if not time:
+        time = datetime.datetime.now(datetime.timezone.utc)
+    with connect(ctx) as nethsm:
+        nethsm.set_time(time)
+        print(f"Updated the system time for NetHSM {nethsm.host}")

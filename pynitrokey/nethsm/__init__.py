@@ -418,6 +418,22 @@ class NetHSM:
                 },
             )
 
+    def set_time(self, time):
+        from .client.model.time_config import TimeConfig
+
+        body = TimeConfig(time=time)
+        try:
+            self.get_api().config_time_put(body=body)
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR],
+                messages={
+                    400: "Bad request -- invalid input data",
+                },
+            )
+
 
 @contextlib.contextmanager
 def connect(host, version, username, password):
