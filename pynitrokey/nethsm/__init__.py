@@ -68,6 +68,11 @@ class LogLevel(enum.Enum):
         raise ValueError(f"Unsupported log level {s}")
 
 
+class UnattendedBootStatus(enum.Enum):
+    ON = "on"
+    OFF = "off"
+
+
 class User:
     def __init__(self, user_id, real_name, role):
         self.user_id = user_id
@@ -431,6 +436,23 @@ class NetHSM:
                 roles=[Role.ADMINISTRATOR],
                 messages={
                     400: "Bad request -- invalid input data",
+                },
+            )
+
+    def set_unattended_boot(self, status):
+        from .client.model.switch import Switch
+        from .client.model.unattended_boot_config import UnattendedBootConfig
+
+        body = UnattendedBootConfig(status=Switch(status))
+        try:
+            self.get_api().config_unattended_boot_put(body=body)
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR],
+                messages={
+                    400: "Bad request -- invalid status setting",
                 },
             )
 

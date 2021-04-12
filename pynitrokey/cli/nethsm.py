@@ -21,6 +21,7 @@ def make_enum_type(enum_cls):
 DATETIME_TYPE = click.DateTime(formats=["%Y-%m-%dT%H:%M:%S%z"])
 ROLE_TYPE = make_enum_type(pynitrokey.nethsm.Role)
 LOG_LEVEL_TYPE = make_enum_type(pynitrokey.nethsm.LogLevel)
+UNATTENDED_BOOT_STATUS_TYPE = make_enum_type(pynitrokey.nethsm.UnattendedBootStatus)
 
 
 def print_row(values, widths):
@@ -497,3 +498,19 @@ def set_time(ctx, time):
     with connect(ctx) as nethsm:
         nethsm.set_time(time)
         print(f"Updated the system time for NetHSM {nethsm.host}")
+
+
+@nethsm.command()
+@click.argument(
+    "status",
+    type=UNATTENDED_BOOT_STATUS_TYPE,
+)
+@click.pass_context
+def set_unattended_boot(ctx, status):
+    """Set the unattended boot configuration of a NetHSM.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    with connect(ctx) as nethsm:
+        nethsm.set_unattended_boot(status)
+        print(f"Updated the unattended boot configuration for NetHSM {nethsm.host}")
