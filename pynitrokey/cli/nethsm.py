@@ -624,3 +624,39 @@ def system_info(ctx):
         print(f"Software version: {info.software_version}")
         print(f"Hardware version: {info.hardware_version}")
         print(f"Build tag:        {info.build_tag}")
+
+
+@nethsm.command()
+@click.pass_context
+def reboot(ctx):
+    """Reboot a NetHSM instance.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    with connect(ctx) as nethsm:
+        nethsm.reboot()
+        print(f"NetHSM {nethsm.host} is about to reboot")
+
+
+@nethsm.command()
+@click.pass_context
+def shutdown(ctx):
+    """Shutdown a NetHSM instance.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    with connect(ctx) as nethsm:
+        nethsm.shutdown()
+        print(f"NetHSM {nethsm.host} is about to shutdown")
+
+
+@nethsm.command()
+@click.pass_context
+def reset(ctx):
+    """Reset a NetHSM instance.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    with connect(ctx) as nethsm:
+        nethsm.reset()
+        print(f"NetHSM {nethsm.host} is about to reset")

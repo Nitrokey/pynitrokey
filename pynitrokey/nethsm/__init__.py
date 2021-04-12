@@ -556,6 +556,36 @@ class NetHSM:
                 roles=[Role.ADMINISTRATOR],
             )
 
+    def reboot(self):
+        try:
+            self.get_api().system_reboot_post()
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR],
+            )
+
+    def shutdown(self):
+        try:
+            self.get_api().system_shutdown_post()
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR],
+            )
+
+    def reset(self):
+        try:
+            self.get_api().system_reset_post()
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR],
+            )
+
 
 @contextlib.contextmanager
 def connect(host, version, username, password):
