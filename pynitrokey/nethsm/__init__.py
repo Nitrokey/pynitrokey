@@ -390,6 +390,22 @@ class NetHSM:
                 },
             )
 
+    def set_unlock_passphrase(self, passphrase):
+        from .client.model.unlock_passphrase_config import UnlockPassphraseConfig
+
+        body = UnlockPassphraseConfig(passphrase=Passphrase(passphrase))
+        try:
+            self.get_api().config_unlock_passphrase_put(body=body)
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR],
+                messages={
+                    400: "Bad request -- e. g. weak passphrase",
+                },
+            )
+
     def set_logging_config(self, ip_address, port, log_level):
         from .client.model.log_level import LogLevel
         from .client.model.logging_config import LoggingConfig

@@ -419,6 +419,26 @@ def set_backup_passphrase(ctx, passphrase):
 
 @nethsm.command()
 @click.option(
+    "-p",
+    "--passphrase",
+    hide_input=True,
+    confirmation_prompt=True,
+    prompt=True,
+    help="The new unlock passphrase",
+)
+@click.pass_context
+def set_unlock_passphrase(ctx, passphrase):
+    """Set the unlock passphrase of a NetHSM.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    with connect(ctx) as nethsm:
+        nethsm.set_unlock_passphrase(passphrase)
+        print(f"Updated the unlock passphrase for NetHSM {nethsm.host}")
+
+
+@nethsm.command()
+@click.option(
     "-a",
     "--ip-address",
     help="The IP address of the new logging destination",
