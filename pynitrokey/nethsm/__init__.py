@@ -50,6 +50,24 @@ class State(enum.Enum):
         raise ValueError(f"Unsupported system state {s}")
 
 
+class LogLevel(enum.Enum):
+    DEBUG = "debug"
+    INFO = "info"
+    WARNING = "warning"
+    ERROR = "error"
+
+    @staticmethod
+    def from_model(model_log_level):
+        return LogLevel.from_string(model_log_level.value)
+
+    @staticmethod
+    def from_string(s):
+        for log_level in LogLevel:
+            if log_level.value == s:
+                return log_level
+        raise ValueError(f"Unsupported log level {s}")
+
+
 class User:
     def __init__(self, user_id, real_name, role):
         self.user_id = user_id
@@ -364,6 +382,23 @@ class NetHSM:
                 roles=[Role.ADMINISTRATOR],
                 messages={
                     400: "Bad request -- e. g. weak passphrase",
+                },
+            )
+
+    def set_logging_config(self, ip_address, port, log_level):
+        from .client.model.log_level import LogLevel
+        from .client.model.logging_config import LoggingConfig
+
+        body = LoggingConfig(ip_address=ip_address, port=port, log_level=LogLevel(log_level))
+        try:
+            self.get_api().config_logging_put(body=body)
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR],
+                messages={
+                    400: "Bad request -- invalid input data",
                 },
             )
 

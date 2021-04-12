@@ -14,11 +14,13 @@ import click
 
 import pynitrokey.nethsm
 
+def make_enum_type(enum_cls):
+    click.Choice([variant.value for variant in enum_cls], case_sensitive=False)
+
+
 DATETIME_TYPE = click.DateTime(formats=["%Y-%m-%dT%H:%M:%S%z"])
-ROLE_TYPE = click.Choice(
-    [role.value for role in pynitrokey.nethsm.Role],
-    case_sensitive=False,
-)
+ROLE_TYPE = make_enum_type(pynitrokey.nethsm.Role)
+LOG_LEVEL_TYPE = make_enum_type(pynitrokey.nethsm.LogLevel)
 
 
 def print_row(values, widths):
@@ -412,3 +414,35 @@ def set_backup_passphrase(ctx, passphrase):
     with connect(ctx) as nethsm:
         nethsm.set_backup_passphrase(passphrase)
         print(f"Updated the backup passphrase for NetHSM {nethsm.host}")
+
+
+@nethsm.command()
+@click.option(
+    "-a",
+    "--ip-address",
+    help="The IP address of the new logging destination",
+    required=True,
+)
+@click.option(
+    "-p",
+    "--port",
+    type=int,
+    help="The port of the new logging destination",
+    required=True,
+)
+@click.option(
+    "-l",
+    "--log-level",
+    type=LOG_LEVEL_TYPE,
+    help="The new log level",
+    required=True,
+)
+@click.pass_context
+def set_logging_config(ctx, ip_address, port, log_level):
+    """Set the logging configuration of a NetHSM.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    with connect(ctx) as nethsm:
+        nethsm.set_logging_config(ip_address, port, log_level)
+        print(f"Updated the logging configuration for NetHSM {nethsm.host}")
