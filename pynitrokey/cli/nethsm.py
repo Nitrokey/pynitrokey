@@ -446,3 +446,33 @@ def set_logging_config(ctx, ip_address, port, log_level):
     with connect(ctx) as nethsm:
         nethsm.set_logging_config(ip_address, port, log_level)
         print(f"Updated the logging configuration for NetHSM {nethsm.host}")
+
+
+@nethsm.command()
+@click.option(
+    "-a",
+    "--ip-address",
+    help="The new IP address",
+    required=True,
+)
+@click.option(
+    "-n",
+    "--netmask",
+    help="The new netmask",
+    required=True,
+)
+@click.option(
+    "-g",
+    "--gateway",
+    help="The new gateway",
+    required=True,
+)
+@click.pass_context
+def set_network_config(ctx, ip_address, netmask, gateway):
+    """Set the network configuration of a NetHSM.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    with connect(ctx) as nethsm:
+        nethsm.set_network_config(ip_address, netmask, gateway)
+        print(f"Updated the network configuration for NetHSM {nethsm.host}")

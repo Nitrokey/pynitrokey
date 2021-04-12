@@ -402,6 +402,22 @@ class NetHSM:
                 },
             )
 
+    def set_network_config(self, ip_address, netmask, gateway):
+        from .client.model.network_config import NetworkConfig
+
+        body = NetworkConfig(ip_address=ip_address, netmask=netmask, gateway=gateway)
+        try:
+            self.get_api().config_network_put(body=body)
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR],
+                messages={
+                    400: "Bad request -- invalid input data",
+                },
+            )
+
 
 @contextlib.contextmanager
 def connect(host, version, username, password):
