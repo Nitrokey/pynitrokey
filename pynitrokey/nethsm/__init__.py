@@ -121,11 +121,13 @@ class User:
 
 
 class Key:
-    def __init__(self, key_id, mechanisms, algorithm, operations):
+    def __init__(self, key_id, mechanisms, algorithm, operations, modulus, public_exponent):
         self.key_id = key_id
         self.mechanisms = mechanisms
         self.algorithm = algorithm
         self.operations = operations
+        self.modulus = modulus
+        self.public_exponent = public_exponent
 
 
 def _handle_api_exception(e, messages={}, roles=[], state=None):
@@ -244,7 +246,7 @@ class NetHSM:
                 e,
                 state=State.OPERATIONAL,
                 roles=[Role.ADMINISTRATOR, Role.OPERATOR],
-                message={
+                messages={
                     404: f"User {user_id} not found",
                 },
             )
@@ -356,13 +358,15 @@ class NetHSM:
                 mechanisms=[mechanism.value for mechanism in key.mechanisms.value],
                 algorithm=key.algorithm.value,
                 operations=key.operations,
+                modulus=key.key.modulus,
+                public_exponent=key.key.public_exponent,
             )
         except ApiException as e:
             _handle_api_exception(
                 e,
                 state=State.OPERATIONAL,
                 roles=[Role.ADMINISTRATOR, Role.OPERATOR],
-                message={
+                messages={
                     404: f"Key {key_id} not found",
                 },
             )

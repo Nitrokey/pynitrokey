@@ -351,6 +351,25 @@ def list_keys(ctx, details):
 
 
 @nethsm.command()
+@click.argument("key_id")
+@click.pass_context
+def get_key(ctx, key_id):
+    """Get information about a key on the NetHSM.
+
+    This command requires authentication as a user with the Administrator or
+    Operator role."""
+    with connect(ctx) as nethsm:
+        key = nethsm.get_key(key_id)
+        mechanisms = ", ".join(key.mechanisms)
+        print(f"Key {key_id} on NetHSM {nethsm.host}:")
+        print(f"Algorithm:       {key.algorithm}")
+        print(f"Mechanisms:      {mechanisms}")
+        print(f"Operations:      {key.operations}")
+        print(f"Modulus:         {key.modulus}")
+        print(f"Public exponent: {key.public_exponent}")
+
+
+@nethsm.command()
 @click.option(
     "-a",
     "--algorithm",
