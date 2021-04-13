@@ -9,6 +9,7 @@
 
 import contextlib
 import enum
+import json
 import re
 
 from . import client
@@ -154,6 +155,14 @@ def _handle_api_exception(e, messages={}, roles=[], state=None):
         message = messages[e.status]
     else:
         message = f"Unexpected API error {e.status}: {e.reason}"
+
+    if e.body:
+        try:
+            body = json.loads(e.body)
+            if "message" in body:
+                message += "\n" + body["message"]
+        except json.JSONDecodeError:
+            pass
 
     raise NetHSMError(message)
 
