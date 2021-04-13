@@ -57,8 +57,13 @@ def print_table(headers, data):
 )
 @click.option("-u", "--username", "username", help="The NetHSM user name")
 @click.option("-p", "--password", "password", help="The NetHSM password")
+@click.option(
+    "--verify-tls/--no-verify-tls",
+    default=True,
+    help="Whether to verify the TLS certificate of the NetHSM",
+)
 @click.pass_context
-def nethsm(ctx, host, version, username, password):
+def nethsm(ctx, host, version, username, password, verify_tls):
     """Interact with NetHSM, see subcommands."""
     ctx.ensure_object(dict)
 
@@ -66,6 +71,7 @@ def nethsm(ctx, host, version, username, password):
     ctx.obj["NETHSM_VERSION"] = version
     ctx.obj["NETHSM_USERNAME"] = username
     ctx.obj["NETHSM_PASSWORD"] = password
+    ctx.obj["NETHSM_VERIFY_TLS"] = verify_tls
 
 
 @contextlib.contextmanager
@@ -74,6 +80,8 @@ def connect(ctx, require_auth=True):
     version = ctx.obj["NETHSM_VERSION"]
     username = None
     password = None
+    verify_tls = ctx.obj["NETHSM_VERIFY_TLS"]
+
     if require_auth:
         username = ctx.obj["NETHSM_USERNAME"]
         password = ctx.obj["NETHSM_PASSWORD"]
@@ -84,7 +92,7 @@ def connect(ctx, require_auth=True):
                 f"[auth] Password for user {username} on NetHSM {host}", hide_input=True
             )
 
-    with pynitrokey.nethsm.connect(host, version, username, password) as nethsm:
+    with pynitrokey.nethsm.connect(host, version, username, password, verify_tls) as nethsm:
         try:
             yield nethsm
         except pynitrokey.nethsm.NetHSMError as e:

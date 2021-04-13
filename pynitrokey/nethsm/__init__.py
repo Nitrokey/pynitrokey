@@ -150,7 +150,7 @@ class NetHSMError(Exception):
 
 
 class NetHSM:
-    def __init__(self, host, version, username, password):
+    def __init__(self, host, version, username, password, verify_tls=True):
         self.host = host
         self.version = version
         self.username = username
@@ -160,6 +160,7 @@ class NetHSM:
         config = client.Configuration(
             host=base_url, username=username, password=password
         )
+        config.verify_ssl = verify_tls
         self.client = client.ApiClient(configuration=config)
 
     def close(self):
@@ -588,8 +589,8 @@ class NetHSM:
 
 
 @contextlib.contextmanager
-def connect(host, version, username, password):
-    nethsm = NetHSM(host, version, username, password)
+def connect(host, version, username, password, verify_tls=True):
+    nethsm = NetHSM(host, version, username, password, verify_tls)
     try:
         yield nethsm
     finally:
