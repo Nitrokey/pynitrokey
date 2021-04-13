@@ -371,6 +371,19 @@ class NetHSM:
                 },
             )
 
+    def delete_key(self, key_id):
+        try:
+            self.get_api().keys_key_id_delete(key_id=key_id)
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR],
+                messages={
+                    404: f"Key {key_id} not found",
+                },
+            )
+
     def generate_key(self, algorithm, mechanisms, length, key_id):
         from .client.model.key_algorithm import KeyAlgorithm
         from .client.model.key_mechanism import KeyMechanism

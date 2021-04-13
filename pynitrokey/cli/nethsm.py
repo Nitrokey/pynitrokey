@@ -370,6 +370,19 @@ def get_key(ctx, key_id):
 
 
 @nethsm.command()
+@click.argument("key-id")
+@click.pass_context
+def delete_key(ctx, key_id):
+    """Delete the key pair with the given key ID on the NetHSM.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    with connect(ctx) as nethsm:
+        nethsm.delete_key(key_id)
+        print(f"Key {key_id} deleted on NetHSM {nethsm.host}")
+
+
+@nethsm.command()
 @click.option(
     "-a",
     "--algorithm",
