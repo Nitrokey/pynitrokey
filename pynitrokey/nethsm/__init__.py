@@ -105,6 +105,17 @@ class KeyMechanism(enum.Enum):
     ECDSA_P521_SIGNATURE = "ECDSA_P521_Signature"
 
 
+class DecryptMode(enum.Enum):
+    RAW = "RAW"
+    PKCS1 = "PKCS1"
+    OAEP_MD5 = "OAEP_MD5"
+    OAEP_SHA1 = "OAEP_SHA1"
+    OAEP_SHA224 = "OAEP_SHA224"
+    OAEP_SHA256 = "OAEP_SHA256"
+    OAEP_SHA384 = "OAEP_SHA384"
+    OAEP_SHA512 = "OAEP_SHA512"
+
+
 class SystemInfo:
     def __init__(self, firmware_version, software_version, hardware_version, build_tag):
         self.firmware_version = firmware_version
@@ -642,6 +653,26 @@ class NetHSM:
                 e,
                 state=State.OPERATIONAL,
                 roles=[Role.ADMINISTRATOR],
+            )
+
+    def decrypt(self, key_id, data, mode):
+        from .client.model.base64 import Base64
+        from .client.model.decrypt_mode import DecryptMode
+        from .client.model.decrypt_request_data import DecryptRequestData
+
+        body = DecryptRequestData(encrypted=Base64(data), mode=DecryptMode(mode))
+        try:
+            data = self.get_api().keys_key_id_decrypt_post(key_id=key_id, body=body)
+            return data.decrypted.value
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.OPERATOR],
+                messages={
+                    400: "Bad request -- e. g. invalid encryption mode",
+                    404: f"Key {key_id} not found",
+                },
             )
 
 

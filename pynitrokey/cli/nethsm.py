@@ -24,6 +24,7 @@ LOG_LEVEL_TYPE = make_enum_type(pynitrokey.nethsm.LogLevel)
 UNATTENDED_BOOT_STATUS_TYPE = make_enum_type(pynitrokey.nethsm.UnattendedBootStatus)
 ALGORITHM_TYPE = make_enum_type(pynitrokey.nethsm.KeyAlgorithm)
 MECHANISM_TYPE = make_enum_type(pynitrokey.nethsm.KeyMechanism)
+DECRYPT_MODE_TYPE = make_enum_type(pynitrokey.nethsm.DecryptMode)
 
 
 def print_row(values, widths):
@@ -789,3 +790,32 @@ def reset(ctx):
     with connect(ctx) as nethsm:
         nethsm.reset()
         print(f"NetHSM {nethsm.host} is about to reset")
+
+
+@nethsm.command()
+@click.option(
+    "-k",
+    "--key-id",
+    prompt=True,
+    help="The ID of the key to decrypt the data width",
+)
+@click.option(
+    "-d",
+    "--data",
+    prompt=True,
+    help="The encrypted data in Base64 encoding",
+)
+@click.option(
+    "-m",
+    "--mode",
+    type=DECRYPT_MODE_TYPE,
+    prompt=True,
+    help="The decrypt mode",
+)
+@click.pass_context
+def decrypt(ctx, key_id, data, mode):
+    """Decrypt data with a secret key on the NetHSM and print the decrypted message.
+
+    This command requires authentication as a user with the Operator role."""
+    with connect(ctx) as nethsm:
+        print(nethsm.decrypt(key_id, data, mode))
