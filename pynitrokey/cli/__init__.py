@@ -8,6 +8,7 @@
 # copied, modified, or distributed except according to those terms.
 
 import os
+import sys
 
 import click
 
@@ -66,4 +67,4 @@ def ls():
 nitropy.add_command(ls)
 
 
-print("Nitrokey tool for Nitrokey FIDO2, Nitrokey Start & NetHSM")
+print("Nitrokey tool for Nitrokey FIDO2, Nitrokey Start & NetHSM", file=sys.stderr)
