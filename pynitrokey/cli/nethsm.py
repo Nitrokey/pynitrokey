@@ -25,6 +25,7 @@ UNATTENDED_BOOT_STATUS_TYPE = make_enum_type(pynitrokey.nethsm.UnattendedBootSta
 ALGORITHM_TYPE = make_enum_type(pynitrokey.nethsm.KeyAlgorithm)
 MECHANISM_TYPE = make_enum_type(pynitrokey.nethsm.KeyMechanism)
 DECRYPT_MODE_TYPE = make_enum_type(pynitrokey.nethsm.DecryptMode)
+SIGN_MODE_TYPE = make_enum_type(pynitrokey.nethsm.SignMode)
 
 
 def print_row(values, widths):
@@ -819,3 +820,33 @@ def decrypt(ctx, key_id, data, mode):
     This command requires authentication as a user with the Operator role."""
     with connect(ctx) as nethsm:
         print(nethsm.decrypt(key_id, data, mode))
+
+
+@nethsm.command()
+@click.option(
+    "-k",
+    "--key-id",
+    prompt=True,
+    help="The ID of the key to sign the data width",
+)
+@click.option(
+    "-d",
+    "--data",
+    prompt=True,
+    help="The data to sign encoded using Base64",
+)
+@click.option(
+    "-m",
+    "--mode",
+    type=SIGN_MODE_TYPE,
+    prompt=True,
+    help="The sign mode",
+)
+@click.pass_context
+def sign(ctx, key_id, data, mode):
+    """Sign data with a secret key on the NetHSM and print the signature.
+
+    This command requires authentication as a user with the Operator role."""
+    with connect(ctx) as nethsm:
+        signature = nethsm.sign(key_id, data, mode)
+        print(signature)

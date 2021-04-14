@@ -118,6 +118,21 @@ class DecryptMode(enum.Enum):
     OAEP_SHA512 = "OAEP_SHA512"
 
 
+class SignMode(enum.Enum):
+      PKCS1 = "PKCS1"
+      PSS_MD5 = "PSS_MD5"
+      PSS_SHA1 = "PSS_SHA1"
+      PSS_SHA224 = "PSS_SHA224"
+      PSS_SHA256 = "PSS_SHA256"
+      PSS_SHA384 = "PSS_SHA384"
+      PSS_SHA512 = "PSS_SHA512"
+      ED25519 = "ED25519"
+      ECDSA_P224 = "ECDSA_P224"
+      ECDSA_P256 = "ECDSA_P256"
+      ECDSA_P384 = "ECDSA_P384"
+      ECDSA_P521 = "ECDSA_P521"
+
+
 class SystemInfo:
     def __init__(self, firmware_version, software_version, hardware_version, build_tag):
         self.firmware_version = firmware_version
@@ -693,6 +708,26 @@ class NetHSM:
                 roles=[Role.OPERATOR],
                 messages={
                     400: "Bad request -- e. g. invalid encryption mode",
+                    404: f"Key {key_id} not found",
+                },
+            )
+
+    def sign(self, key_id, data, mode):
+        from .client.model.base64 import Base64
+        from .client.model.sign_mode import SignMode
+        from .client.model.sign_request_data import SignRequestData
+
+        body = SignRequestData(message=Base64(data), mode=SignMode(mode))
+        try:
+            data = self.get_api().keys_key_id_sign_post(key_id=key_id, body=body)
+            return data.signature.value
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.OPERATOR],
+                messages={
+                    400: "Bad request -- e. g. invalid sign mode",
                     404: f"Key {key_id} not found",
                 },
             )
