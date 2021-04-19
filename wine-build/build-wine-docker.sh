@@ -44,6 +44,13 @@ for msi_part in core dev exe lib pip tools; do
 done
 
 
+wget https://static.rust-lang.org/dist/rust-nightly-i686-pc-windows-msvc.msi
+wine msiexec /i rust-nightly-i686-pc-windows-msvc.msi /qb
+
+wget https://download.microsoft.com/download/5/f/7/5f7acaeb-8363-451f-9425-68a90f98b238/visualcppbuildtools_full.exe
+wine visualcppbuildtools_full.exe
+
+
 for repo in SomberNight/pyinstaller libusb/libusb; do
     git clone https://github.com/${repo}.git $(basename ${repo})
 done

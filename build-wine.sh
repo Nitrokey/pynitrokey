@@ -4,7 +4,12 @@
 
 pushd wine-build
 
-sudo rm -rf out
+if [[ -e "./out" ]]; then
+	echo "the temporary output dir: 'out' exists, please delete!"
+	exit 1
+fi
+
+
 docker build -t nk/wine-build .
 
 
