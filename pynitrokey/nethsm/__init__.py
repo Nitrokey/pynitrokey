@@ -159,15 +159,17 @@ class Key:
 
 
 def _handle_api_exception(e, messages={}, roles=[], state=None):
-    if e.status == 403 and roles:
+    if e.status in messages:
+        message = messages[e.status]
+    elif e.status == 403 and roles:
         roles = [role.value for role in roles]
         message = "Access denied -- this operation requires the role " + " or ".join(
             roles
         )
+    elif e.status == 401 and roles:
+        message = "Unauthorized -- invalid username or password"
     elif e.status == 412 and state:
         message = f"Precondition failed -- this operation can only be used on a NetHSM in the state {state.value}"
-    elif e.status in messages:
-        message = messages[e.status]
     else:
         message = f"Unexpected API error {e.status}: {e.reason}"
 
@@ -245,12 +247,10 @@ class NetHSM:
         try:
             self.get_api().lock_post()
         except ApiException as e:
-            # TODO: API docs say 403, but demo server gives 401, see nethsm issue #99
             _handle_api_exception(
                 e,
                 state=State.OPERATIONAL,
                 roles=[Role.ADMINISTRATOR],
-                messages={401: "Access denied"},
             )
 
     def provision(self, unlock_passphrase, admin_passphrase, system_time):
@@ -281,9 +281,6 @@ class NetHSM:
                 e,
                 state=State.OPERATIONAL,
                 roles=[Role.ADMINISTRATOR],
-                messages={
-                    401: "Invalid user name and/or password",
-                },
             )
 
     def get_user(self, user_id):
