@@ -354,21 +354,25 @@ def list_keys(ctx, details):
 
 @nethsm.command()
 @click.argument("key_id")
+@click.option("--public-key", is_flag=True, help="Query the public key as a PEM file")
 @click.pass_context
-def get_key(ctx, key_id):
+def get_key(ctx, key_id, public_key):
     """Get information about a key on the NetHSM.
 
     This command requires authentication as a user with the Administrator or
     Operator role."""
     with connect(ctx) as nethsm:
-        key = nethsm.get_key(key_id)
-        mechanisms = ", ".join(key.mechanisms)
-        print(f"Key {key_id} on NetHSM {nethsm.host}:")
-        print(f"Algorithm:       {key.algorithm}")
-        print(f"Mechanisms:      {mechanisms}")
-        print(f"Operations:      {key.operations}")
-        print(f"Modulus:         {key.modulus}")
-        print(f"Public exponent: {key.public_exponent}")
+        if public_key:
+            print(nethsm.get_key_public_key(key_id))
+        else:
+            key = nethsm.get_key(key_id)
+            mechanisms = ", ".join(key.mechanisms)
+            print(f"Key {key_id} on NetHSM {nethsm.host}:")
+            print(f"Algorithm:       {key.algorithm}")
+            print(f"Mechanisms:      {mechanisms}")
+            print(f"Operations:      {key.operations}")
+            print(f"Modulus:         {key.modulus}")
+            print(f"Public exponent: {key.public_exponent}")
 
 
 @nethsm.command()

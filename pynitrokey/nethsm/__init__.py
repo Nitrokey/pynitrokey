@@ -423,6 +423,19 @@ class NetHSM:
                 },
             )
 
+    def get_key_public_key(self, key_id):
+        try:
+            return self.get_api().keys_key_id_public_pem_get(key_id=key_id)
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR, Role.OPERATOR],
+                messages={
+                    404: f"Key {key_id} not found",
+                },
+            )
+
     def add_key(self, key_id, algorithm, mechanisms, prime_p, prime_q, public_exponent, data):
         from .client.model.key_algorithm import KeyAlgorithm
         from .client.model.key_mechanism import KeyMechanism
