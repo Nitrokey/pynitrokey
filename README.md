@@ -76,6 +76,11 @@ nitropy start set-identity [0,1,2]
 
 Where 0, 1 and 2 are the available IDs.
 
+## NetHSM
+
+A guide on how to use `nitropy` to access a NetHSM is available on
+[docs.nitrokey.com](https://docs.nitrokey.com/nethsm/cli.html).
+
 ## Maintainers
 
 Current maintainers can be found in [MAINTAINERS.MD](MAINTAINERS.MD) file.
