@@ -119,10 +119,10 @@ nethsm-client: nethsm-scheme.json
 		# -i=https://nethsmdemo.nitrokey.com/api_docs/gen_nethsm_api_oas20.json \
 
 .PHONY: wine-build
-wine-build: pynitrokey-$(VERSION).msi nitropy-$(VERSION).exe
+wine-build: wine-build/pynitrokey-$(VERSION).msi wine-build/nitropy-$(VERSION).exe
 
-pynitrokey-$(VERSION).msi nitropy-$(VERSION).exe:
+wine-build/pynitrokey-$(VERSION).msi wine-build/nitropy-$(VERSION).exe:
 	sh build-wine.sh
-	cp wine-build/out/pynitrokey-$(VERSION)-win32.msi .
-	cp wine-build/out/nitropy-$(VERSION).exe .
+	cp wine-build/out/pynitrokey-$(VERSION)-win32.msi wine-build
+	cp wine-build/out/nitropy-$(VERSION).exe wine-build
 
