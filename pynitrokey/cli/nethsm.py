@@ -95,10 +95,17 @@ def connect(ctx, require_auth=True):
             )
 
     with pynitrokey.nethsm.connect(host, version, username, password, verify_tls) as nethsm:
+        import urllib3.exceptions
+
         try:
             yield nethsm
         except pynitrokey.nethsm.NetHSMError as e:
             raise click.ClickException(e)
+        except urllib3.exceptions.MaxRetryError as e:
+            if isinstance(e.reason, urllib3.exceptions.SSLError):
+                raise click.ClickException(f"Could not connect to the NetHSM: {e.reason}\nIf you use a self-signed sertificated, please set the --no-verify-tls option.")
+            else:
+                raise e
 
 
 @nethsm.command()
