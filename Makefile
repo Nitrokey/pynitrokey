@@ -117,3 +117,12 @@ nethsm-client: nethsm-scheme.json
 	# misses proper mime type definitions for operations that return other data
 	# than JSON
 		# -i=https://nethsmdemo.nitrokey.com/api_docs/gen_nethsm_api_oas20.json \
+
+.PHONY: wine-build
+wine-build: pynitrokey-$(VERSION).msi nitropy-$(VERSION).exe
+
+pynitrokey-$(VERSION).msi nitropy-$(VERSION).exe:
+	sh build-wine.sh
+	cp wine-build/out/pynitrokey-$(VERSION)-win32.msi .
+	cp wine-build/out/nitropy-$(VERSION).exe .
+
