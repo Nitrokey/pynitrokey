@@ -11,6 +11,7 @@ import contextlib
 import datetime
 
 import click
+import urllib3
 
 import pynitrokey.nethsm
 
@@ -74,6 +75,9 @@ def nethsm(ctx, host, version, username, password, verify_tls):
     ctx.obj["NETHSM_USERNAME"] = username
     ctx.obj["NETHSM_PASSWORD"] = password
     ctx.obj["NETHSM_VERIFY_TLS"] = verify_tls
+
+    if not verify_tls:
+        urllib3.disable_warnings()
 
 
 @contextlib.contextmanager
