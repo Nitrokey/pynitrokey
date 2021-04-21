@@ -107,7 +107,7 @@ def connect(ctx, require_auth=True):
             raise click.ClickException(e)
         except urllib3.exceptions.MaxRetryError as e:
             if isinstance(e.reason, urllib3.exceptions.SSLError):
-                raise click.ClickException(f"Could not connect to the NetHSM: {e.reason}\nIf you use a self-signed sertificated, please set the --no-verify-tls option.")
+                raise click.ClickException(f"Could not connect to the NetHSM: {e.reason}\nIf you use a self-signed certificate, please set the --no-verify-tls option.")
             else:
                 raise e
 
