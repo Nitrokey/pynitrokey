@@ -1,0 +1,83 @@
+stages:
+  - pull-github
+  - build
+  - cleanup
+  - deploy
+  - deploy-cleanup
+
+variables:
+  GIT_STRATEGY: clone			#This seems to have no effect also set in webinterface
+  GIT_DEPTH: 0					#This seems to have no effect also set in webinterface
+  GIT_SUBMODULE_STRATEGY: recursive
+
+pull:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "trigger"'
+  image: ubuntu:20.04
+  tags:
+    - uind
+  stage: pull-github
+  before_script:
+    - apt-get update -y
+    - apt-get install -y git
+  script:
+    - mkdir git-magic
+    - cd git-magic
+    - git clone --mirror https://github.com/LennardBoediger/pynitrokey.git
+    - cd pynitrokey.git
+    - git remote add --mirror=fetch secondary https://git.dotplex.com/lennard.boediger/pynitrokey.git
+    - git remote set-url secondary https://oauth2:$GITLAB_REPO_KEY@git.dotplex.com/lennard.boediger/pynitrokey.git
+    - git fetch origin
+    - git push secondary --tags
+    - git push secondary --all
+
+build-for-pypi:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'  #run this job only on push event
+  tags:
+    - dinvm
+  stage: build
+  script:
+    - make CI
+  artifacts:
+    paths:
+      - dist/*
+
+delete-vm:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'  #run this job only on push event
+  tags:
+    - shell
+  stage: cleanup
+  script:
+    - vboxmanage unregistervm new-ubutu-vm-runner-ZdHgWdtA-concurrent-0 --delete
+
+publish-pypi:
+  when: manual   #run this job only on manual user interaction in the webinterface
+  allow_failure: false
+  only:
+    - pushes
+  image: ubuntu:20.04
+  tags:
+    - dinvm
+  stage: deploy
+  script:
+    - make update-venv
+    - echo "[distutils]" >> ~/.pypirc
+    - echo "index-servers =" >> ~/.pypirc
+    - echo "    test-pypi" >> ~/.pypirc
+    - echo "" >> ~/.pypirc
+    - echo "[test-pypi]" >> ~/.pypirc
+    - echo "repository = https://upload.pypi.org/legacy/" >> ~/.pypirc
+    - echo "username = __token__" >> ~/.pypirc
+    - echo "${PYPI_TOKEN}" >> ~/.pypirc
+    - make publish
+
+delete-publish-vm:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'  #run this job only on push event
+  tags:
+    - shell
+  stage: deploy-cleanup
+  script:
+    - vboxmanage unregistervm new-ubutu-vm-runner-ZdHgWdtA-concurrent-0 --delete
