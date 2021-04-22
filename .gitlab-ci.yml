@@ -50,7 +50,7 @@ delete-vm:
     - shell
   stage: cleanup
   script:
-    - vboxmanage unregistervm new-ubutu-vm-runner-ZdHgWdtA-concurrent-0 --delete
+    - vboxmanage unregistervm ubuntu-runner-runner-hszxezQU-concurrent-0 --delete
 
 publish-pypi:
   when: manual   #run this job only on manual user interaction in the webinterface
@@ -80,4 +80,4 @@ delete-publish-vm:
     - shell
   stage: deploy-cleanup
   script:
-    - vboxmanage unregistervm new-ubutu-vm-runner-ZdHgWdtA-concurrent-0 --delete
+    - vboxmanage unregistervm ubuntu-runner-runner-hszxezQU-concurrent-0 --delete
