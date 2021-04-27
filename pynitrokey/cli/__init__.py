@@ -7,6 +7,7 @@
 # http://opensource.org/licenses/MIT>, at your option. This file may not be
 # copied, modified, or distributed except according to those terms.
 
+import logging
 import os
 import sys
 
@@ -18,26 +19,32 @@ from pynitrokey.cli.fido2 import fido2
 from pynitrokey.cli.nethsm import nethsm
 from pynitrokey.cli.start import start
 from pynitrokey.cli.storage import storage
+from pynitrokey.confconsts import LOG_FN, LOG_FORMAT
 
 from . import _patches  # noqa  (since otherwise "unused")
 
-if (os.name == "posix") and os.environ.get("ALLOW_ROOT") is None:
-    if os.geteuid() == 0:
-        print("THIS COMMAND SHOULD NOT BE RUN AS ROOT!")
-        print()
-        print(
-            "Please install udev rules and run `nitropy` as regular user (without sudo)."
-        )
-        print(
-            "We suggest using: https://raw.githubusercontent.com/Nitrokey/libnitrokey/master/data/41-nitrokey.rules"
-        )
-        print()
-        print("For more information, see: https://www.nitrokey.com/documentation/installation#p:nitrokey-fido2&os:linux")
+
+def check_root():
+    if (os.name == "posix") and os.environ.get("ALLOW_ROOT") is None:
+        if os.geteuid() == 0:
+            print("THIS COMMAND SHOULD NOT BE RUN AS ROOT!")
+            print()
+            print(
+                "Please install udev rules and run `nitropy` as regular user (without sudo)."
+            )
+            print(
+                "We suggest using: https://raw.githubusercontent.com/Nitrokey/libnitrokey/master/data/41-nitrokey.rules"
+            )
+            print()
+            print("For more information, see: https://www.nitrokey.com/documentation/installation#p:nitrokey-fido2&os:linux")
 
 
 @click.group()
 def nitropy():
-    pass
+    logging.basicConfig(format=LOG_FORMAT, level=logging.DEBUG, filename=LOG_FN)
+
+    print("Nitrokey tool for Nitrokey FIDO2, Nitrokey Start & NetHSM", file=sys.stderr)
+    check_root()
 
 
 nitropy.add_command(fido2)
@@ -55,8 +62,6 @@ def version():
 nitropy.add_command(version)
 
 
-
-
 @click.command()
 def ls():
     """List Nitrokey keys (in firmware or bootloader mode)"""
@@ -64,7 +69,5 @@ def ls():
     fido2.commands["list"].callback()
     start.commands["list"].callback()
 
+
 nitropy.add_command(ls)
-
-
-print("Nitrokey tool for Nitrokey FIDO2, Nitrokey Start & NetHSM", file=sys.stderr)

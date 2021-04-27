@@ -15,7 +15,7 @@ from threading import Event, Timer
 from typing import List
 from getpass import getpass
 
-from pynitrokey.confconsts import LOG_FN, LOG_FORMAT, GH_ISSUES_URL, SUPPORT_EMAIL
+from pynitrokey.confconsts import GH_ISSUES_URL, SUPPORT_EMAIL
 from pynitrokey.confconsts import VERBOSE, Verbosity
 
 STDOUT_PRINT = True
@@ -60,9 +60,6 @@ class Timeout(object):
             self.timer.cancel()
 
 
-logging.basicConfig(format=LOG_FORMAT, level=logging.DEBUG, filename=LOG_FN)
-logger = logging.getLogger()
-
 # @todo: introduce granularization: dbg, info, err (warn?)
 #        + machine-readable
 #        + logfile-only (partly solved)
@@ -74,6 +71,7 @@ def local_print(*messages, **kwargs):
                   `list of ...` -> list of either `str` or `Exception` handle serialized
     """
     passed_exc = None
+    logger = logging.getLogger()
 
     for item in messages:
         # handle exception in order as, if it is a regular message
