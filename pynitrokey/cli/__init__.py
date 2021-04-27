@@ -41,7 +41,8 @@ def check_root():
 
 @click.group()
 def nitropy():
-    logging.basicConfig(format=LOG_FORMAT, level=logging.DEBUG, filename=LOG_FN)
+    handler = logging.FileHandler(filename=LOG_FN, delay=True)
+    logging.basicConfig(format=LOG_FORMAT, level=logging.DEBUG, handlers=[handler])
 
     print("Nitrokey tool for Nitrokey FIDO2, Nitrokey Start & NetHSM", file=sys.stderr)
     check_root()
