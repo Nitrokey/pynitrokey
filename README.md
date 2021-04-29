@@ -19,6 +19,13 @@ sudo apt install python3-pip
 pip3 install --user pynitrokey
 ```
 
+To access Nitrokey Start and FIDO2 devices without superuser rights, you need to install the Nitrokey udev rules that are shipped with `libnitrokey`.  You can also install them manually:
+
+```
+wget https://raw.githubusercontent.com/Nitrokey/libnitrokey/master/data/41-nitrokey.rules
+sudo mv 41-nitrokey.rules /etc/udev/rules.d/
+```
+
 ### Windows
 *Generally Windows support and the installer are experimental - please use with caution.*
 
