@@ -7,6 +7,7 @@
 # http://opensource.org/licenses/MIT>, at your option. This file may not be
 # copied, modified, or distributed except according to those terms.
 
+import logging
 import os
 import platform
 from datetime import datetime
@@ -20,9 +21,12 @@ import time
 
 import pynitrokey
 
-from pynitrokey.helpers import local_print, local_critical, LOG_FN, logger
+from pynitrokey.confconsts import LOG_FN
+from pynitrokey.helpers import local_print, local_critical
 from pynitrokey.helpers import AskUser
 
+
+logger = logging.getLogger()
 
 
 @click.command()
