@@ -15,7 +15,7 @@ from threading import Event, Timer
 from typing import List
 from getpass import getpass
 
-from pynitrokey.confconsts import GH_ISSUES_URL, SUPPORT_EMAIL
+from pynitrokey.confconsts import GH_ISSUES_URL, SUPPORT_EMAIL, LOG_FN
 from pynitrokey.confconsts import VERBOSE, Verbosity
 
 STDOUT_PRINT = True
