@@ -48,7 +48,7 @@ jobs:
       - run: make system-nitropy-test-simple
       - run: make system-pip-install
       - run: make system-nitropy-test-simple
-  
+
   install-last-version-uninstall-no-upgrade-install:
     executor: python/default
     steps:
@@ -58,7 +58,7 @@ jobs:
       - run: make system-pip-uninstall
       - run: make system-pip-install
       - run: make system-nitropy-test-simple
-  
+
   install-last-version-upgrade-install:
     executor: python/default
     steps:
@@ -69,10 +69,22 @@ jobs:
       - run: make system-nitropy-test-simple
 
 workflows:
+  # Build checks that are executed for every commit or PR
   main:
     jobs:
       - build-msi-win
       - build-linux
+  # Integration tests that check that the installation from PyPI is working
+  # properly and that are executed nightly
+  pypi:
+    triggers:
+      - schedule:
+          cron: "0 0 * * *"
+          filters:
+            branches:
+              only:
+                master
+    jobs:
       - install-test-pip
       - install-with-older-fido
       - install-last-version-upgrade-install
