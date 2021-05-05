@@ -124,8 +124,14 @@ def sign(verifying_key, app_hex, output_json, end_page):
     default=20,
     type=int,
 )
+@click.option(
+    "--pages",
+    help="Set MCU flash size in pages. Should be in sync with firmware settings.",
+    default=128,
+    type=int,
+)
 def mergehex(
-    attestation_key, attestation_cert, lock, input_hex_files, output_hex_file, end_page
+    attestation_key, attestation_cert, lock, input_hex_files, output_hex_file, end_page, pages
 ):
     """Merges hex files, and patches in the attestation key.
 
@@ -140,6 +146,7 @@ def mergehex(
         APPLICATION_END_PAGE=end_page,
         attestation_cert=attestation_cert,
         lock=lock,
+        PAGES=pages
     )
 
 

@@ -79,6 +79,7 @@ def mergehex(
     attestation_key=None,
     attestation_cert=None,
     APPLICATION_END_PAGE=20,
+    PAGES=128,
     lock=False,
 ):
     """Merges hex files, and patches in the attestation key.
@@ -113,7 +114,6 @@ def mergehex(
     def flash_addr(num):
         return 0x08000000 + num * 2048
 
-    PAGES = 128
     APPLICATION_END_PAGE = PAGES - APPLICATION_END_PAGE
     AUTH_WORD_ADDR = flash_addr(APPLICATION_END_PAGE) - 8
     ATTESTATION_PAGE = 15
