@@ -9,11 +9,14 @@
 
 import contextlib
 import datetime
+import os.path
 
 import click
+import requests
 import urllib3
 
 import pynitrokey.nethsm
+
 
 def make_enum_type(enum_cls):
     return click.Choice([variant.value for variant in enum_cls], case_sensitive=False)
@@ -110,6 +113,8 @@ def connect(ctx, require_auth=True):
                 raise click.ClickException(f"Could not connect to the NetHSM: {e.reason}\nIf you use a self-signed certificate, please set the --no-verify-tls option.")
             else:
                 raise e
+        except requests.exceptions.SSLError as e:
+            raise click.ClickException(f"Could not connect to the NetHSM: {e}\nIf you use a self-signed certificate, please set the --no-verify-tls option.")
 
 
 @nethsm.command()
@@ -770,6 +775,50 @@ def system_info(ctx):
         print(f"Software version: {info.software_version}")
         print(f"Hardware version: {info.hardware_version}")
         print(f"Build tag:        {info.build_tag}")
+
+
+@nethsm.command()
+@click.argument("filename")
+@click.pass_context
+def backup(ctx, filename):
+    """Make a backup of a NetHSM instance and write it to a file.
+
+    This command requires authentication as a user with the Backup role."""
+    if os.path.exists(filename):
+        raise click.ClickException(f"Backup file {filename} already exists")
+    with connect(ctx) as nethsm:
+        data = nethsm.backup()
+        with open(filename, 'xb') as f:
+            f.write(data)
+            print(f"Backup for {nethsm.host} written to {filename}")
+
+
+@nethsm.command()
+@click.option(
+    "-p",
+    "--backup-passphrase",
+    hide_input=True,
+    prompt=True,
+    help="The backup passphrase",
+)
+@click.option(
+    "-t",
+    "--system-time",
+    type=DATETIME_TYPE,
+    help="The system time to set (default: the time of this system)",
+)
+@click.argument("filename")
+@click.pass_context
+def restore(ctx, backup_passphrase, system_time, filename):
+    """Restore a backup of a NetHSM instance from a file.
+
+    If the system time is not set, the current system time is used."""
+    if not system_time:
+        system_time = datetime.datetime.now(datetime.timezone.utc)
+    with connect(ctx, require_auth=False) as nethsm:
+        with open(filename, "rb") as f:
+            nethsm.restore(f, backup_passphrase, system_time)
+        print(f"Backup restored on NetHSM {nethsm.host}")
 
 
 @nethsm.command()

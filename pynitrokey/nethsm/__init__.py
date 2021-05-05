@@ -11,6 +11,7 @@ import contextlib
 import enum
 import json
 import re
+import requests
 
 from . import client
 from .client import ApiException
@@ -203,8 +204,23 @@ class NetHSM:
         config.verify_ssl = verify_tls
         self.client = client.ApiClient(configuration=config)
 
+        self.session = requests.Session()
+        self.session.auth = (self.username, self.password)
+        self.session.verify = verify_tls
+
     def close(self):
         self.client.close()
+        self.session.close()
+
+    def request(self, method, endpoint, params=None, data=None):
+        url = f"https://{self.host}/api/{self.version}/{endpoint}"
+        response = self.session.request(method, url, params=params, data=data)
+        if not response.ok:
+            e = ApiException(status=response.status_code, reason=response.reason)
+            e.body = response.text
+            e.headers = response.headers
+            raise e
+        return response
 
     def get_api(self):
         from .client.api.default_api import DefaultApi
@@ -670,6 +686,33 @@ class NetHSM:
                 e,
                 state=State.OPERATIONAL,
                 roles=[Role.ADMINISTRATOR],
+            )
+
+    def backup(self):
+        try:
+            response = self.request("POST", "system/backup")
+            return response.content
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.BACKUP],
+            )
+
+    def restore(self, backup, passphrase, time):
+        try:
+            params = {
+                "backupPassphrase": passphrase,
+                "systemTime": time.isoformat(),
+            }
+            self.request("POST", "system/restore", params=params, data=backup)
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.UNPROVISIONED,
+                messages={
+                    400: "Bad request -- backup did not apply",
+                },
             )
 
     def reboot(self):
