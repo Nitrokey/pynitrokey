@@ -56,8 +56,7 @@ system-pip-install-upgrade:
 	python -m pip install -U pynitrokey
 
 system-pip-install-last-version:
-	python -m pip install pynitrokey== 2>&1 | grep -oE ", ([^,]+), ([^,]+)\)$$" | cut -d "," -f 2 | xargs > LAST_VERSION
-	python -m pip install pynitrokey==`cat LAST_VERSION | xargs`
+	python -m pip install pynitrokey==$(VERSION)
 
 system-pip-install:
 	python -m pip install pynitrokey
