@@ -780,6 +780,7 @@
       ],
       "get": {
         "description": "Retrieve stored certificate. The content-type header will display the media type of the stored data.",
+        "produces": ["application/x-pem-file", "application/x-x509-ca-cert", "application/pgp-keys"],
         "responses": {
           "200": {
             "description": "",

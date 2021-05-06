@@ -577,6 +577,19 @@ class NetHSM:
                 e, state=State.OPERATIONAL, roles=[Role.ADMINISTRATOR]
             )
 
+    def get_key_certificate(self, key_id):
+        try:
+            return self.get_api().keys_key_id_cert_get(key_id=key_id)
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR, Role.OPERATOR],
+                messages={
+                    404: f"Certificate for key {key_id} not found",
+                },
+            )
+
     def set_certificate(self, cert):
         try:
             self.request("PUT", "config/tls/cert.pem", data=cert, mime_type="application/x-pem-file")
@@ -588,6 +601,35 @@ class NetHSM:
                 messages={
                     400: "Bad Request -- invalid certificate",
                 }
+            )
+
+    def set_key_certificate(self, key_id, cert, mime_type):
+        try:
+            self.request("PUT", f"keys/{key_id}/cert", data=cert, mime_type=mime_type)
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR],
+                messages={
+                    400: "Bad Request -- invalid certificate",
+                    404: f"Key {key_id} not found",
+                    409: f"Conflict -- key {key_id} already has a certificate",
+                }
+            )
+
+    def delete_key_certificate(self, key_id):
+        try:
+            return self.get_api().keys_key_id_cert_delete(key_id=key_id)
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR],
+                messages={
+                    404: f"Key {key_id} not found",
+                    409: f"Certificate for key {key_id} not found",
+                },
             )
 
     def csr(self, country, state_or_province, locality, organization, organizational_unit,

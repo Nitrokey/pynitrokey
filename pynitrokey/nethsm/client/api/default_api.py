@@ -2467,7 +2467,9 @@ class DefaultApi(object):
             },
             headers_map={
                 'accept': [
-                    'application/json'
+                    'application/x-pem-file',
+                    'application/x-x509-ca-cert',
+                    'application/pgp-keys'
                 ],
                 'content_type': [],
             },

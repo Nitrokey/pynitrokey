@@ -9,6 +9,7 @@
 
 import contextlib
 import datetime
+import mimetypes
 import os.path
 
 import click
@@ -20,6 +21,14 @@ import pynitrokey.nethsm
 
 def make_enum_type(enum_cls):
     return click.Choice([variant.value for variant in enum_cls], case_sensitive=False)
+
+
+API_CERTIFICATE_MIME_TYPE = "application/x-pem-file"
+KEY_CERTIFICATE_MIME_TYPES = [
+    "application/x-pem-file",
+    "application/x-x509-ca-cert",
+    "application/pgp-keys",
+]
 
 
 DATETIME_TYPE = click.DateTime(formats=["%Y-%m-%dT%H:%M:%S%z"])
@@ -761,18 +770,112 @@ def set_unattended_boot(ctx, status):
         print(f"Updated the unattended boot configuration for NetHSM {nethsm.host}")
 
 
+def get_api_or_key_id(api, key_id):
+    """Helper method for operations that can be executed either for the API
+    certificate or for the certificate stored for a key."""
+    if api and key_id:
+        raise click.ClickException("--api and --key-id are mutually exclusive")
+
+    if not api and not key_id:
+        choice = click.Choice(["api", "key"], case_sensitive=False)
+        method = click.prompt(
+            "For stored key or for NetHSM HTTPS API?",
+            type=choice,
+        )
+        if method == "api":
+            api = True
+        elif method == "key":
+            key_id = click.prompt("Key ID")
+        else:
+            raise ValueError("Unexpected method")
+
+    return (api, key_id)
+
+
 @nethsm.command()
+@click.option("-a", "--api", is_flag=True, help="Set the certificate for the NetHSM HTTPS API")
+@click.option("-k", "--key-id", help="The ID of the key to set the certificate for")
+@click.option(
+    "-m",
+    "--mime-type",
+    type=click.Choice(KEY_CERTIFICATE_MIME_TYPES),
+    help="The MIME type of the certificate (only with --key-id)",
+)
 @click.argument("filename")
 @click.pass_context
-def set_certificate(ctx, filename):
-    """Set the certificate used for the NetHSM HTTPS API.
+def set_certificate(ctx, api, key_id, mime_type, filename):
+    """Set a certificate on the NetHSM.
+
+    If the --api option is set, the certificate used for the NetHSM HTTPS API
+    is set.  If the --key-id option is set, the certificate for a key stored on
+    the NetHSM is set.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    (api, key_id) = get_api_or_key_id(api, key_id)
+    with connect(ctx) as nethsm:
+        with open(filename, "rb") as f:
+            if key_id:
+                if not mime_type:
+                    (mime_type, _) = mimetypes.guess_type(filename)
+                if not mime_type:
+                    raise click.ClickException(
+                        f"Failed to detect MIME type for {filename}. Use --mime-type to "
+                        "explicitly set the MIME type."
+                    )
+                if mime_type not in KEY_CERTIFICATE_MIME_TYPES:
+                    raise click.ClickException(
+                        f"Unsupported certificate mime type {mime_type} detected for "
+                        f"{filename}"
+                    )
+                nethsm.set_key_certificate(key_id, f, mime_type)
+                print(f"Updated the certificate for key {key_id} on NetHSM {nethsm.host}")
+            else:
+                if mime_type:
+                    raise click.ClickException("--mime-type cannot be used with --api")
+                nethsm.set_certificate(f)
+                print(f"Updated the API certificate for NetHSM {nethsm.host}")
+
+
+@nethsm.command()
+@click.option("-a", "--api", is_flag=True, help="Get the certificate for the NetHSM HTTPS API")
+@click.option("-k", "--key-id", help="The ID of the key to get the certificate for")
+@click.pass_context
+def get_certificate(ctx, api, key_id):
+    """Get a certificate from the NetHSM.
+
+    If the --api option is set, the certificate used for the NetHSM HTTPS API
+    is queried.  If the --key-id option is set, the certificate for a key stored on
+    the NetHSM is queried.
+
+    This command requires authentication as a user with the Administrator role.
+    The certificate for a key can also be queried by a user with the Operator
+    role."""
+    (api, key_id) = get_api_or_key_id(api, key_id)
+    with connect(ctx) as nethsm:
+        if key_id:
+            cert = nethsm.get_key_certificate(key_id)
+        else:
+            cert = nethsm.get_certificate()
+        print(cert)
+
+
+@nethsm.command()
+@click.option(
+    "-k",
+    "--key-id",
+    prompt=True,
+    help="The ID of the key to delete the certificate for",
+)
+@click.pass_context
+def delete_certificate(ctx, key_id):
+    """Delete a certificate for a stored key from the NetHSM.
 
     This command requires authentication as a user with the Administrator
     role."""
     with connect(ctx) as nethsm:
-        with open(filename, "rb") as f:
-            nethsm.set_certificate(f)
-        print(f"Updated the certificate for NetHSM {nethsm.host}")
+        nethsm.delete_key_certificate(key_id)
+        print(f"Deleted certificate for key {key_id} on NetHSM {nethsm.host}")
 
 
 @nethsm.command()
@@ -796,23 +899,7 @@ def csr(ctx, api, key_id, country, state_or_province, locality, organization, or
 
     This command requires authentication as a user with the Administrator
     role."""
-
-    if api and key_id:
-        raise click.ClickException("--api and --key-id are mutually exclusive")
-
-    if not api and not key_id:
-        choice = click.Choice(["api", "key"], case_sensitive=False)
-        method = click.prompt(
-            "Generate CSR for stored key or for NetHSM HTTPS API?",
-            type=choice,
-        )
-        if method == "api":
-            api = True
-        elif method == "key":
-            key_id = click.prompt("Key ID")
-        else:
-            raise ValueError("Unexpected method")
-
+    (api, key_id) = get_api_or_key_id(api, key_id)
     with connect(ctx) as nethsm:
         if key_id:
             csr = nethsm.key_csr(
