@@ -1156,7 +1156,7 @@ class DefaultApi(object):
             },
             headers_map={
                 'accept': [
-                    'application/json'
+                    'application/x-pem-file'
                 ],
                 'content_type': [
                     'application/json'

@@ -776,6 +776,35 @@ def set_certificate(ctx, filename):
 
 
 @nethsm.command()
+@click.option("--country", default="", prompt=True, help="The country name")
+@click.option("--state-or-province", default="", prompt=True, help="The state or province name")
+@click.option("--locality", default="", prompt=True, help="The locality name")
+@click.option("--organization", default="", prompt=True, help="The organization name")
+@click.option("--organizational-unit", default="", prompt=True, help="The organization unit name")
+@click.option("--common-name", default="", prompt=True, help="The common name")
+@click.option("--email-address", default="", prompt=True, help="The email address")
+@click.pass_context
+def csr(ctx, country, state_or_province, locality, organization, organizational_unit, common_name,
+        email_address):
+    """Generate a certificate signing request for the NetHSM, for example to
+    replace the self-signed initial certificate.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    with connect(ctx) as nethsm:
+        csr = nethsm.csr(
+            country=country,
+            state_or_province=state_or_province,
+            locality=locality,
+            organization=organization,
+            organizational_unit=organizational_unit,
+            common_name=common_name,
+            email_address=email_address,
+        )
+        print(csr)
+
+
+@nethsm.command()
 @click.pass_context
 def system_info(ctx):
     """Get system information for a NetHSM instance.

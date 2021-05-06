@@ -1394,6 +1394,7 @@
     "/config/tls/csr.pem": {
       "put": {
         "description": "Get NetHSM certificate signing request e.g. to replace self-signed intital certificate.",
+        "produces": ["application/x-pem-file"],
         "parameters": [
           {
             "x-amf-mediaType": "application/json",

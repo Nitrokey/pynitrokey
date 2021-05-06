@@ -590,6 +590,24 @@ class NetHSM:
                 }
             )
 
+    def csr(self, country, state_or_province, locality, organization, organizational_unit,
+            common_name, email_address):
+        from .client.model.distinguished_name import DistinguishedName
+
+        body = DistinguishedName(
+            country_name=country,
+            state_or_province_name=state_or_province,
+            locality_name=locality,
+            organization_name=organization,
+            organizational_unit_name=organizational_unit,
+            common_name=common_name,
+            email_address=email_address,
+        )
+        try:
+            return self.get_api().config_tls_csr_pem_put(body=body)
+        except ApiException as e:
+            _handle_api_exception(e, state=State.OPERATIONAL, roles=[Role.ADMINISTRATOR])
+
     def set_backup_passphrase(self, passphrase):
         from .client.model.backup_passphrase_config import BackupPassphraseConfig
 
