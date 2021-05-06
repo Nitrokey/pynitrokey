@@ -776,6 +776,8 @@ def set_certificate(ctx, filename):
 
 
 @nethsm.command()
+@click.option("-a", "--api", is_flag=True, help="Generate a CSR for the NetHSM HTTPS API")
+@click.option("-k", "--key-id", help="The ID of the key to generate the CSR for")
 @click.option("--country", default="", prompt=True, help="The country name")
 @click.option("--state-or-province", default="", prompt=True, help="The state or province name")
 @click.option("--locality", default="", prompt=True, help="The locality name")
@@ -784,23 +786,55 @@ def set_certificate(ctx, filename):
 @click.option("--common-name", default="", prompt=True, help="The common name")
 @click.option("--email-address", default="", prompt=True, help="The email address")
 @click.pass_context
-def csr(ctx, country, state_or_province, locality, organization, organizational_unit, common_name,
-        email_address):
-    """Generate a certificate signing request for the NetHSM, for example to
-    replace the self-signed initial certificate.
+def csr(ctx, api, key_id, country, state_or_province, locality, organization, organizational_unit,
+        common_name, email_address):
+    """Generate a certificate signing request.
+
+    If the --api option is set, the CSR is generated for the NetHSM, for
+    example to replace the self-signed initial certificate.  If the --key-id
+    option is set, the CSR is generated for a key stored on the NetHSM.
 
     This command requires authentication as a user with the Administrator
     role."""
-    with connect(ctx) as nethsm:
-        csr = nethsm.csr(
-            country=country,
-            state_or_province=state_or_province,
-            locality=locality,
-            organization=organization,
-            organizational_unit=organizational_unit,
-            common_name=common_name,
-            email_address=email_address,
+
+    if api and key_id:
+        raise click.ClickException("--api and --key-id are mutually exclusive")
+
+    if not api and not key_id:
+        choice = click.Choice(["api", "key"], case_sensitive=False)
+        method = click.prompt(
+            "Generate CSR for stored key or for NetHSM HTTPS API?",
+            type=choice,
         )
+        if method == "api":
+            api = True
+        elif method == "key":
+            key_id = click.prompt("Key ID")
+        else:
+            raise ValueError("Unexpected method")
+
+    with connect(ctx) as nethsm:
+        if key_id:
+            csr = nethsm.key_csr(
+                key_id=key_id,
+                country=country,
+                state_or_province=state_or_province,
+                locality=locality,
+                organization=organization,
+                organizational_unit=organizational_unit,
+                common_name=common_name,
+                email_address=email_address,
+            )
+        else:
+            csr = nethsm.csr(
+                country=country,
+                state_or_province=state_or_province,
+                locality=locality,
+                organization=organization,
+                organizational_unit=organizational_unit,
+                common_name=common_name,
+                email_address=email_address,
+            )
         print(csr)
 
 

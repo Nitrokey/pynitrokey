@@ -606,6 +606,7 @@
       ],
       "post": {
         "description": "Retrieve a certificate signing request in PEM format.",
+        "produces": ["application/x-pem-file"],
         "parameters": [
           {
             "x-amf-mediaType": "application/json",
