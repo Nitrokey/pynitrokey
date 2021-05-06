@@ -822,6 +822,47 @@ def restore(ctx, backup_passphrase, system_time, filename):
 
 
 @nethsm.command()
+@click.argument("filename")
+@click.pass_context
+def update(ctx, filename):
+    """Load an update to a NetHSM instance.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    with connect(ctx) as nethsm:
+        with open(filename, "rb") as f:
+            release_notes = nethsm.update(f)
+        print(f"Image {filename} uploaded to NetHSM {nethsm.host}")
+        if release_notes:
+            print("Release notes:")
+            print("  " + release_notes)
+
+
+@nethsm.command()
+@click.pass_context
+def cancel_update(ctx):
+    """Cancel a queued update on a NetHSM instance.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    with connect(ctx) as nethsm:
+        nethsm.cancel_update()
+        print(f"Update successfully cancelled on NetHSM {nethsm.host}")
+
+
+@nethsm.command()
+@click.pass_context
+def commit_update(ctx):
+    """Commit a queued update on a NetHSM instance.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    with connect(ctx) as nethsm:
+        nethsm.commit_update()
+        print(f"Update successfully committed on NetHSM {nethsm.host}")
+
+
+@nethsm.command()
 @click.pass_context
 def reboot(ctx):
     """Reboot a NetHSM instance.

@@ -715,6 +715,41 @@ class NetHSM:
                 },
             )
 
+    def update(self, image):
+        try:
+            response = self.request("POST", "system/update", data=image)
+            return response.json().get("releaseNotes")
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR],
+                messages={
+                    400: "Bad request -- malformed image",
+                    409: "Conflict -- major version downgrade is not allowed",
+                },
+            )
+
+    def cancel_update(self):
+        try:
+            self.get_api().system_cancel_update_post()
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR],
+            )
+
+    def commit_update(self):
+        try:
+            self.get_api().system_commit_update_post()
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR],
+            )
+
     def reboot(self):
         try:
             self.get_api().system_reboot_post()
