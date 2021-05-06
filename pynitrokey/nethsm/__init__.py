@@ -212,9 +212,12 @@ class NetHSM:
         self.client.close()
         self.session.close()
 
-    def request(self, method, endpoint, params=None, data=None):
+    def request(self, method, endpoint, params=None, data=None, mime_type=None):
         url = f"https://{self.host}/api/{self.version}/{endpoint}"
-        response = self.session.request(method, url, params=params, data=data)
+        headers = {}
+        if mime_type:
+            headers["Content-Type"] = mime_type
+        response = self.session.request(method, url, params=params, data=data, headers=headers)
         if not response.ok:
             e = ApiException(status=response.status_code, reason=response.reason)
             e.body = response.text
@@ -572,6 +575,19 @@ class NetHSM:
         except ApiException as e:
             _handle_api_exception(
                 e, state=State.OPERATIONAL, roles=[Role.ADMINISTRATOR]
+            )
+
+    def set_certificate(self, cert):
+        try:
+            self.request("PUT", "config/tls/cert.pem", data=cert, mime_type="application/x-pem-file")
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR],
+                messages={
+                    400: "Bad Request -- invalid certificate",
+                }
             )
 
     def set_backup_passphrase(self, passphrase):

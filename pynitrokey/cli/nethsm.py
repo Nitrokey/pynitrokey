@@ -762,6 +762,20 @@ def set_unattended_boot(ctx, status):
 
 
 @nethsm.command()
+@click.argument("filename")
+@click.pass_context
+def set_certificate(ctx, filename):
+    """Set the certificate used for the NetHSM HTTPS API.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    with connect(ctx) as nethsm:
+        with open(filename, "rb") as f:
+            nethsm.set_certificate(f)
+        print(f"Updated the certificate for NetHSM {nethsm.host}")
+
+
+@nethsm.command()
 @click.pass_context
 def system_info(ctx):
     """Get system information for a NetHSM instance.
