@@ -121,7 +121,7 @@ nethsm-client: nethsm-scheme.json
 wine-build: wine-build/pynitrokey-$(VERSION).msi wine-build/nitropy-$(VERSION).exe
 
 wine-build/pynitrokey-$(VERSION).msi wine-build/nitropy-$(VERSION).exe:
-	sh build-wine.sh
+	bash build-wine.sh
 	cp wine-build/out/pynitrokey-$(VERSION)-win32.msi wine-build
 	cp wine-build/out/nitropy-$(VERSION).exe wine-build
 
