@@ -1,9 +1,7 @@
 stages:
   - pull-github
   - build
-  - cleanup
   - deploy
-  - deploy-cleanup
 
 variables:
   GIT_STRATEGY: clone			#This seems to have no effect also set in webinterface
@@ -12,30 +10,23 @@ variables:
 
 pull:
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "trigger"'
+    - if: '$CI_PIPELINE_SOURCE == "trigger" && $CI_COMMIT_BRANCH == "master"'
   image: ubuntu:20.04
   tags:
-    - uind
+    - docker
   stage: pull-github
   before_script:
-    - apt-get update -y
     - apt-get install -y git
   script:
-    - mkdir git-magic
-    - cd git-magic
-    - git clone --mirror https://github.com/nitrokey/pynitrokey.git
-    - cd pynitrokey.git
-    - git remote add --mirror=fetch secondary https://git.dotplex.com/nitrokey/pynitrokey.git
-    - git remote set-url secondary https://oauth2:$GITLAB_REPO_KEY@git.dotplex.com/nitrokey/pynitrokey.git
-    - git fetch origin
-    - git push secondary --tags
-    - git push secondary --all
+    - chmod +x ./ci-scripts/pull.sh
+    - ./ci-scripts/pull.sh
 
-build-for-pypi:
+build-pypi:
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "push"'  #run this job only on push event
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
   tags:
-    - dinvm
+    - lxc
   stage: build
   script:
     - make CI
@@ -43,41 +34,60 @@ build-for-pypi:
     paths:
       - dist/*
 
-delete-vm:
+build-msi:
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "push"'  #run this job only on push event
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_PIPELINE_SOURCE == "web"'
   tags:
-    - shell
-  stage: cleanup
+    - lxc
+  stage: build
   script:
-    - vboxmanage unregistervm ubuntu-runner-runner-hszxezQU-concurrent-0 --delete
+    - make wine-build
+  artifacts:
+    paths:
+      - wine-build/*.exe
+      - wine-build/*.msi
 
-publish-pypi:
-  when: manual   #run this job only on manual user interaction in the webinterface
-  allow_failure: false
-  only:
-    - pushes
-  image: ubuntu:20.04
-  tags:
-    - dinvm
+upload-nightly:
   stage: deploy
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+  tags:
+    - docker
+  image: nightly-upload:latest
+  before_script:
+    - apt-get update -y
+    - apt-get install -y git zip rsync
   script:
-    - make update-venv
-    - echo "[distutils]" >> ~/.pypirc
-    - echo "index-servers =" >> ~/.pypirc
-    - echo "    test-pypi" >> ~/.pypirc
-    - echo "" >> ~/.pypirc
-    - echo "[test-pypi]" >> ~/.pypirc
-    - echo "repository = https://upload.pypi.org/legacy/" >> ~/.pypirc
-    - echo "username = __token__" >> ~/.pypirc
-    - echo "${PYPI_TOKEN}" >> ~/.pypirc
+    - chmod +x ./ci-scripts/nightly_upload.sh
+    - mkdir nightly-build
+    - mv wine-build/*.msi nightly-build
+    - mv wine-build/*.exe nightly-build
+    - mv dist/* nightly-build
+    - zip -r pynitrokey.zip nightly-build
+    - ./ci-scripts/nightly_upload.sh pynitrokey.zip
+
+build-and-publish-pypi:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+  tags:
+    - lxc
+  stage: build
+  script:
+    - make CI
+    - sed -e "s|\${passw}|$PYPI_TOKEN|" ci-scripts/.pypirc_tamplate > ~/.pypirc
     - make publish
 
-delete-publish-vm:
+publish-msi:
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "push"'  #run this job only on push event
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+  image: ubuntu:20.04
   tags:
-    - shell
-  stage: deploy-cleanup
+    - docker
+  stage: deploy
   script:
-    - vboxmanage unregistervm ubuntu-runner-runner-hszxezQU-concurrent-0 --delete
+    - apt-get update -y
+    - apt-get install -y git curl jq zip
+    - chmod +x ./ci-scripts/release.sh
+    - ./ci-scripts/release.sh
