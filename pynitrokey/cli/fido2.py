@@ -94,14 +94,15 @@ def genkey(input_seed_file, output_pem_file):
 @click.argument("verifying-key")
 @click.argument("app-hex")
 @click.argument("output-json")
+@click.option("--pages", default=128, type=int, help="Size of the MCU flash in pages")
 @click.option("--end_page",
               help="Set APPLICATION_END_PAGE. Shall be in sync with firmware settings",
               default=20, type=int)
-def sign(verifying_key, app_hex, output_json, end_page):
+def sign(verifying_key, app_hex, output_json, end_page, pages):
     """Signs a fw-hex file, outputs a .json file that can be used for signed update."""
 
     msg = pynitrokey.fido2.operations.sign_firmware(
-        verifying_key, app_hex, APPLICATION_END_PAGE=end_page)
+        verifying_key, app_hex, APPLICATION_END_PAGE=end_page, PAGES=pages)
     local_print(f"Saving signed firmware to: {output_json}")
     with open(output_json, "wb+") as fh:
         fh.write(json.dumps(msg).encode())
