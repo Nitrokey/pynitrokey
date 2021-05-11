@@ -13,10 +13,10 @@ done
 
 mkdir git-magic
 cd git-magic
-git clone --mirror https://github.com/LennardBoediger/mirror-test.git
-cd mirror-test.git
-git remote add --mirror=fetch secondary https://git.dotplex.com/lennard.boediger/mirror-test.git
-git remote set-url secondary https://oauth2:$GITLAB_REPO_KEY@git.dotplex.com/lennard.boediger/mirror-test.git
+git clone --mirror https://github.com/Nitrokey/pynitrokey.git
+cd pynitrokey.git
+git remote add --mirror=fetch secondary https://git.dotplex.com/Nitrokey/pynitrokey.git
+git remote set-url secondary https://oauth2:$GITLAB_REPO_KEY@git.dotplex.com/Nitrokey/pynitrokey.git
 git fetch origin
 git push secondary --tags
 

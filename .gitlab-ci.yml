@@ -11,12 +11,12 @@ variables:
 pull:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "trigger" && $CI_COMMIT_BRANCH == "master"'
-  image: ubuntu:20.04
+  image: nitrokey/pull:latest
   tags:
     - docker
   stage: pull-github
   before_script:
-    - apt-get install -y git
+    - apt-get update -y
   script:
     - chmod +x ./ci-scripts/pull.sh
     - ./ci-scripts/pull.sh
@@ -55,10 +55,9 @@ upload-nightly:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
   tags:
     - docker
-  image: nightly-upload:latest
+  image: nitrokey/nightly-upload:latest
   before_script:
     - apt-get update -y
-    - apt-get install -y git zip rsync
   script:
     - chmod +x ./ci-scripts/nightly_upload.sh
     - mkdir nightly-build
@@ -82,12 +81,12 @@ build-and-publish-pypi:
 publish-msi:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "web"'
-  image: ubuntu:20.04
+  image: nitrokey/publish-git:latest
   tags:
     - docker
   stage: deploy
-  script:
+  before_script:
     - apt-get update -y
-    - apt-get install -y git curl jq zip
+  script:
     - chmod +x ./ci-scripts/release.sh
     - ./ci-scripts/release.sh
