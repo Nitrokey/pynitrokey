@@ -119,7 +119,10 @@ def mergehex(
     ATTESTATION_PAGE = 15
     ATTEST_ADDR = flash_addr(PAGES - ATTESTATION_PAGE)
 
+    print(f"PAGES: {PAGES}")
     print(f"app end page: {APPLICATION_END_PAGE}")
+    print(f"endpage addr: {hex(flash_addr(APPLICATION_END_PAGE - 1))}")
+    print(f"ATTEST_PAGE page: {PAGES - ATTESTATION_PAGE}")
     first = IntelHex(input_hex_files[0])
     for input_hex_file in input_hex_files[1:]:
         print(f"merging {first} with {input_hex_file}")
@@ -175,9 +178,9 @@ def mergehex(
     first.tofile(output_hex_file, format="hex")
 
 
-def sign_firmware(sk_name, hex_file, APPLICATION_END_PAGE = 20):
+def sign_firmware(sk_name, hex_file, APPLICATION_END_PAGE = 20, PAGES=128):
     v1 = sign_firmware_for_version(sk_name, hex_file, 19)
-    v2 = sign_firmware_for_version(sk_name, hex_file, 20)
+    v2 = sign_firmware_for_version(sk_name, hex_file, 20, PAGES=PAGES)
 
     # use fw from v2 since it's smaller.
     fw = v2["firmware"]
@@ -194,7 +197,7 @@ def sign_firmware(sk_name, hex_file, APPLICATION_END_PAGE = 20):
     }
 
 
-def sign_firmware_for_version(sk_name, hex_file, APPLICATION_END_PAGE):
+def sign_firmware_for_version(sk_name, hex_file, APPLICATION_END_PAGE, PAGES=128):
     # Maybe this is not the optimal module...
 
     import base64
@@ -214,7 +217,6 @@ def sign_firmware_for_version(sk_name, hex_file, APPLICATION_END_PAGE):
     # TODO put this somewhere else.
     START = ih.segments()[0][0]
     # keep in sync with targets/stm32l432/src/memory_layout.h
-    PAGES = 128
     PAGE_SIZE = 2048
     END = (0x08000000 + ((PAGES - APPLICATION_END_PAGE) * PAGE_SIZE)) - 8
 
