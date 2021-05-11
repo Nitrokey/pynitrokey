@@ -1,5 +1,5 @@
 #!/bin/bash
-set -euxo pipefail
+set -euo pipefail
 # nightly_upload: checks remote file for changes and uploads new version if necessary
 # Usage:
 # set scp(ssh) server with user and path
