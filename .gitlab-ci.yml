@@ -4,22 +4,11 @@ stages:
   - deploy
 
 variables:
+  #Repo for shared scripts (pull.sh release.sh, nightly_upload.sh):
   GIT_STRATEGY: clone			#This seems to have no effect also set in webinterface
   GIT_DEPTH: 0					#This seems to have no effect also set in webinterface
-  GIT_SUBMODULE_STRATEGY: recursive
+  GIT_SUBMODULE_STRATEGY: recursive #This seems to have no effect also set in webinterfac
 
-pull:
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "trigger" && $CI_COMMIT_BRANCH == "master"'
-  image: nitrokey/pull:latest
-  tags:
-    - docker
-  stage: pull-github
-  before_script:
-    - apt-get update -y
-  script:
-    - chmod +x ./ci-scripts/pull.sh
-    - ./ci-scripts/pull.sh
 
 build-pypi:
   rules:
@@ -49,23 +38,53 @@ build-msi:
       - wine-build/*.exe
       - wine-build/*.msi
 
+
+pull:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "trigger" && $CI_COMMIT_BRANCH == "master"'
+  image: nitrokey/ci-pull:latest
+  tags:
+    - docker
+  stage: pull-github
+  variables:
+    #Repo for shared scripts (pull.sh release.sh, nightly_upload.sh):
+    SCRIPTS_REPO: git@git.dotplex.com:nitrokey/gitlab-ci.git
+  before_script:
+    - apt-get update -y
+    - export SCRIPTS_DIR=$(mktemp -d)
+    - echo "-----BEGIN OPENSSH PRIVATE KEY-----" > ~/.ssh/common_scripts_key
+    - echo "$COMMON_SCRIPTS_KEY" >> ~/.ssh/common_scripts_key
+    - echo "-----END OPENSSH PRIVATE KEY-----" >> ~/.ssh/common_scripts_key
+    - chmod 600 ~/.ssh/common_scripts_key
+    - git clone -q --depth 1 $SCRIPTS_REPO $SCRIPTS_DIR
+  script:
+    - chmod +x  $SCRIPTS_DIR/ci-scripts/pull.sh
+    - $SCRIPTS_DIR/ci-scripts/pull.sh
+
 upload-nightly:
   stage: deploy
+  variables:
+    #Repo for shared scripts (pull.sh release.sh, nightly_upload.sh):
+    SCRIPTS_REPO: git@git.dotplex.com:nitrokey/gitlab-ci.git
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
   tags:
     - docker
-  image: nitrokey/nightly-upload:latest
+  image: nitrokey/ci-nightly-upload:latest
   before_script:
     - apt-get update -y
+    - export SCRIPTS_DIR=$(mktemp -d)
+    - echo "-----BEGIN OPENSSH PRIVATE KEY-----" > ~/.ssh/common_scripts_key
+    - echo "$COMMON_SCRIPTS_KEY" >> ~/.ssh/common_scripts_key
+    - echo "-----END OPENSSH PRIVATE KEY-----" >> ~/.ssh/common_scripts_key
+    - chmod 600 ~/.ssh/common_scripts_key
+    - git clone -q --depth 1 $SCRIPTS_REPO $SCRIPTS_DIR
   script:
-    - chmod +x ./ci-scripts/nightly_upload.sh
-    - mkdir nightly-build
-    - mv wine-build/*.msi nightly-build
-    - mv wine-build/*.exe nightly-build
-    - mv dist/* nightly-build
-    - zip -r pynitrokey.zip nightly-build
-    - ./ci-scripts/nightly_upload.sh pynitrokey.zip
+    - mv wine-build/*.msi artifacts
+    - mv wine-build/*.exe artifacts
+    - mv dist/* artifacts
+    - chmod +x $SCRIPTS_DIR/ci-scripts/nightly_upload.sh
+    - $SCRIPTS_DIR/ci-scripts/nightly_upload.sh
 
 build-and-publish-pypi:
   rules:
@@ -81,12 +100,23 @@ build-and-publish-pypi:
 publish-msi:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "web"'
-  image: nitrokey/publish-git:latest
+  image: nitrokey/ci-publish-git:latest
   tags:
     - docker
   stage: deploy
+  variables:
+    #Repo for shared scripts (pull.sh release.sh, nightly_upload.sh):
+    SCRIPTS_REPO: git@git.dotplex.com:nitrokey/gitlab-ci.git
   before_script:
     - apt-get update -y
+    - export SCRIPTS_DIR=$(mktemp -d)
+    - echo "-----BEGIN OPENSSH PRIVATE KEY-----" > ~/.ssh/common_scripts_key
+    - echo "$COMMON_SCRIPTS_KEY" >> ~/.ssh/common_scripts_key
+    - echo "-----END OPENSSH PRIVATE KEY-----" >> ~/.ssh/common_scripts_key
+    - chmod 600 ~/.ssh/common_scripts_key
+    - git clone -q --depth 1 $SCRIPTS_REPO $SCRIPTS_DIR
   script:
-    - chmod +x ./ci-scripts/release.sh
-    - ./ci-scripts/release.sh
+    - mv wine-build/*.msi artifacts
+    - mv wine-build/*.exe artifacts
+    - chmod +x $SCRIPTS_DIR/ci-scripts/release.sh
+    - $SCRIPTS_DIR/ci-scripts/release.sh
