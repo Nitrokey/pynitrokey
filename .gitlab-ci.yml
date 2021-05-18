@@ -8,6 +8,7 @@ variables:
   GIT_STRATEGY: clone			#This seems to have no effect also set in webinterface
   GIT_DEPTH: 0					#This seems to have no effect also set in webinterface
   GIT_SUBMODULE_STRATEGY: recursive #This seems to have no effect also set in webinterfac
+  SCRIPTS_REPO: git@git.dotplex.com:nitrokey/gitlab-ci.git
 
 
 build-pypi:
@@ -46,26 +47,17 @@ pull:
   tags:
     - docker
   stage: pull-github
-  variables:
-    #Repo for shared scripts (pull.sh release.sh, nightly_upload.sh):
-    SCRIPTS_REPO: git@git.dotplex.com:nitrokey/gitlab-ci.git
   before_script:
     - apt-get update -y
+    - ./ci-scripts/copy_common_scripts_key.sh
     - export SCRIPTS_DIR=$(mktemp -d)
-    - echo "-----BEGIN OPENSSH PRIVATE KEY-----" > ~/.ssh/common_scripts_key
-    - echo "$COMMON_SCRIPTS_KEY" >> ~/.ssh/common_scripts_key
-    - echo "-----END OPENSSH PRIVATE KEY-----" >> ~/.ssh/common_scripts_key
-    - chmod 600 ~/.ssh/common_scripts_key
     - git clone -q --depth 1 $SCRIPTS_REPO $SCRIPTS_DIR
   script:
     - chmod +x  $SCRIPTS_DIR/ci-scripts/pull.sh
-    - $SCRIPTS_DIR/ci-scripts/pull.sh
+    - $SCRIPTS_DIR/ci-scripts/pull.sh nitrokey pynitrokey
 
 upload-nightly:
   stage: deploy
-  variables:
-    #Repo for shared scripts (pull.sh release.sh, nightly_upload.sh):
-    SCRIPTS_REPO: git@git.dotplex.com:nitrokey/gitlab-ci.git
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
   tags:
@@ -73,11 +65,8 @@ upload-nightly:
   image: nitrokey/ci-nightly-upload:latest
   before_script:
     - apt-get update -y
+    - ./ci-scripts/copy_common_scripts_key.sh
     - export SCRIPTS_DIR=$(mktemp -d)
-    - echo "-----BEGIN OPENSSH PRIVATE KEY-----" > ~/.ssh/common_scripts_key
-    - echo "$COMMON_SCRIPTS_KEY" >> ~/.ssh/common_scripts_key
-    - echo "-----END OPENSSH PRIVATE KEY-----" >> ~/.ssh/common_scripts_key
-    - chmod 600 ~/.ssh/common_scripts_key
     - git clone -q --depth 1 $SCRIPTS_REPO $SCRIPTS_DIR
   script:
     - mv wine-build/*.msi artifacts
@@ -104,16 +93,10 @@ publish-msi:
   tags:
     - docker
   stage: deploy
-  variables:
-    #Repo for shared scripts (pull.sh release.sh, nightly_upload.sh):
-    SCRIPTS_REPO: git@git.dotplex.com:nitrokey/gitlab-ci.git
   before_script:
     - apt-get update -y
+    - ./ci-scripts/copy_common_scripts_key.sh
     - export SCRIPTS_DIR=$(mktemp -d)
-    - echo "-----BEGIN OPENSSH PRIVATE KEY-----" > ~/.ssh/common_scripts_key
-    - echo "$COMMON_SCRIPTS_KEY" >> ~/.ssh/common_scripts_key
-    - echo "-----END OPENSSH PRIVATE KEY-----" >> ~/.ssh/common_scripts_key
-    - chmod 600 ~/.ssh/common_scripts_key
     - git clone -q --depth 1 $SCRIPTS_REPO $SCRIPTS_DIR
   script:
     - mv wine-build/*.msi artifacts
