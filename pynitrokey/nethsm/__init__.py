@@ -212,12 +212,14 @@ class NetHSM:
         self.client.close()
         self.session.close()
 
-    def request(self, method, endpoint, params=None, data=None, mime_type=None):
+    def request(self, method, endpoint, params=None, data=None, mime_type=None, json=None):
         url = f"https://{self.host}/api/{self.version}/{endpoint}"
         headers = {}
         if mime_type:
             headers["Content-Type"] = mime_type
-        response = self.session.request(method, url, params=params, data=data, headers=headers)
+        response = self.session.request(
+            method, url, params=params, data=data, headers=headers, json=json
+        )
         if not response.ok:
             e = ApiException(status=response.status_code, reason=response.reason)
             e.body = response.text
@@ -653,19 +655,19 @@ class NetHSM:
 
     def key_csr(self, key_id, country, state_or_province, locality, organization,
                 organizational_unit, common_name, email_address):
-        from .client.model.distinguished_name import DistinguishedName
+        data = {
+            "countryName": country,
+            "stateOrProvinceName": state_or_province,
+            "localityName": locality,
+            "organizationName": organization,
+            "organizationalUnitName": organizational_unit,
+            "commonName": common_name,
+            "emailAddress": email_address,
 
-        body = DistinguishedName(
-            country_name=country,
-            state_or_province_name=state_or_province,
-            locality_name=locality,
-            organization_name=organization,
-            organizational_unit_name=organizational_unit,
-            common_name=common_name,
-            email_address=email_address,
-        )
+        }
         try:
-            return self.get_api().keys_key_id_csr_pem_post(key_id=key_id, body=body)
+            response = self.request("POST", f"keys/{key_id}/csr.pem", json=data)
+            return response.content.decode("utf-8")
         except ApiException as e:
             _handle_api_exception(
                 e,
