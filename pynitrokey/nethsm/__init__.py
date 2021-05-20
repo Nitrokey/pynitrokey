@@ -579,7 +579,8 @@ class NetHSM:
 
     def get_key_certificate(self, key_id):
         try:
-            return self.get_api().keys_key_id_cert_get(key_id=key_id)
+            response = self.request("GET", f"keys/{key_id}/cert")
+            return response.content
         except ApiException as e:
             _handle_api_exception(
                 e,
