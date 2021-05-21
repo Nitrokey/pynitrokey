@@ -141,11 +141,22 @@ def reboot(serial):
 
 @click.command()
 @click.option("-s", "--serial", help="Serial number of Nitrokey to use")
-def bootloader_version(serial):
+@click.option("-p", "--pubkey", help="Show public key for the firmware", is_flag=True)
+def bootloader_version(serial, pubkey):
     """Version of bootloader."""
     from pynitrokey.fido2 import find
     p = find(serial)
     local_print(".".join(map(str, p.bootloader_version())))
+    from binascii import b2a_hex
+    from hashlib import sha256
+    if pubkey:
+        bpub = p.boot_pubkey()
+        bpub = b2a_hex(bpub)
+        local_print(f'Bootloader public key: \t\t{bpub}')
+        s = sha256()
+        s.update(bpub)
+        bpubh = b2a_hex(s.digest())
+        local_print(f'Bootloader public key sha256: \t{bpubh}')
 
 
 program.add_command(aux)
