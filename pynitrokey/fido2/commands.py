@@ -28,6 +28,7 @@ class SoloBootloader:
     reboot = 0x45
     st_dfu = 0x46
     disable = 0x47
+    boot_pubkey = 0x48
 
     HIDCommandBoot = 0x50
     HIDCommandEnterBoot = 0x51

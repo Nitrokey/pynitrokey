@@ -159,6 +159,9 @@ class NKFido2Client:
     def write_flash(self, addr, data):
         self.exchange(SoloBootloader.write, addr, data)
 
+    def boot_pubkey(self):
+        return self.exchange(SoloBootloader.boot_pubkey)
+
     def get_rng(self, num=0):
         ret = self.send_data_hid(SoloBootloader.HIDCommandRNG, struct.pack("B", num))
         return ret
