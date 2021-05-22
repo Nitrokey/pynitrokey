@@ -18,6 +18,7 @@ import pynitrokey.fido2.operations
 from pynitrokey.cli.fido2 import fido2
 from pynitrokey.cli.nethsm import nethsm
 from pynitrokey.cli.start import start
+from pynitrokey.cli.pro import pro
 from pynitrokey.cli.storage import storage
 from pynitrokey.confconsts import LOG_FN, LOG_FORMAT
 
@@ -44,12 +45,13 @@ def nitropy():
     handler = logging.FileHandler(filename=LOG_FN, delay=True)
     logging.basicConfig(format=LOG_FORMAT, level=logging.DEBUG, handlers=[handler])
 
-    print("Nitrokey tool for Nitrokey FIDO2, Nitrokey Start & NetHSM", file=sys.stderr)
+    print("Nitrokey tool for Nitrokey FIDO2, Nitrokey Pro v2, Nitrokey Start & NetHSM", file=sys.stderr)
     check_root()
 
 
 nitropy.add_command(fido2)
 nitropy.add_command(nethsm)
+nitropy.add_command(pro)
 nitropy.add_command(start)
 nitropy.add_command(storage)
 
@@ -67,6 +69,7 @@ nitropy.add_command(version)
 def ls():
     """List Nitrokey keys (in firmware or bootloader mode)"""
 
+    pro.commands["list"].callback()
     fido2.commands["list"].callback()
     start.commands["list"].callback()
 

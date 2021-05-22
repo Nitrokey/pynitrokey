@@ -137,6 +137,40 @@ function testfido2
 
 }
 
+
+function testpro
+{
+	make_title "Testing Nitrokey - Pro v2" \
+		"Please insert a Nitrokey Pro (will be wiped!)"
+
+
+	make_title "Simple listing of devices"
+
+	run ls
+	run pro list
+
+	make_title "setting identity 0, 1, 2, 0"
+
+	run pro set-identity 0
+	run pro set-identity 1
+	run pro set-identity 2
+	run pro set-identity 0
+
+	make_title "updating with latest firmware"
+
+	run pro update
+
+
+	make_title "setting identity 2, 0, 1, 0"
+
+	run pro set-identity 2
+	run pro set-identity 0
+	run pro set-identity 1
+	run pro set-identity 0
+}
+
+
+
 function teststart
 {
 	make_title "Testing Nitrokey - Start" \

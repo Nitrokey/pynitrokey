@@ -1,9 +1,9 @@
 # pynitrokey
 
-A command line interface for the Nitrokey FIDO2, Nitrokey Start and NetHSM.
+A command line interface for the Nitrokey FIDO2, Nitrokey Start, Nitrokey Pro & NetHSM.
 
 ## Current state
-Update to the latest firmware versions on the Nitrokey Start and Nitrokey FIDO2 devices was tested. Windows support for Nitrokey Start is not added yet.
+Update to the latest firmware versions on the Nitrokey Start, Nitrokey FIDO2 and Pro v2 devices was tested. Windows support for Nitrokey Start is not added yet.
 
 Additional features:
 - handle `status` command for displaying touch button status (2.0.0 firmware and later);
@@ -19,7 +19,7 @@ sudo apt install python3-pip
 pip3 install --user pynitrokey
 ```
 
-To access Nitrokey Start and FIDO2 devices without superuser rights, you need to install the Nitrokey udev rules that are shipped with `libnitrokey`.  You can also install them manually:
+To access Nitrokey Start, Pro and FIDO2 devices without superuser rights, you need to install the Nitrokey udev rules that are shipped with `libnitrokey`.  You can also install them manually:
 
 ```
 wget https://raw.githubusercontent.com/Nitrokey/libnitrokey/master/data/41-nitrokey.rules
@@ -41,6 +41,15 @@ How to install:
 
 Without administrator privileges `nitropy` might not be able to communicate to device.
 
+## Nitrokey Pro v2
+### Firmware Update
+Automatic firmware update is recommended via https://update.nitrokey.com. Alternatively, it is also possible to update the Nitrokey Pro v2 using:
+```bash
+nitropy pro update
+```
+
+Your Nitrokey Pro is now updated to the latest firmware.
+
 ## Nitrokey FIDO2
 ### Firmware Update
 Automatic firmware update is recommended via https://update.nitrokey.com. Alternatively, it is also possible to update the Nitrokey FIDO2 using:
@@ -49,6 +58,8 @@ nitropy fido2 update
 ```
 
 Your Nitrokey FIDO2 is now updated to the latest firmware.
+
+
 
 ## Nitrokey Start
 ### Firmware Update
