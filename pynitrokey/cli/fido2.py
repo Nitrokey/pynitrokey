@@ -160,15 +160,24 @@ def rng():
 @click.command()
 def list():
     """List all 'Nitrokey FIDO2' devices"""
-    solos = nkfido2.find_all()
+    devs = nkfido2.find_all()
     local_print(":: 'Nitrokey FIDO2' keys")
-    for c in solos:
-        devdata = c.dev.descriptor
-        if "serial_number" in devdata:
-            local_print(f"{devdata['serial_number']}: {devdata['product_string']}")
+    for c in devs:
+        descr = c.dev.descriptor
+        
+        if hasattr(descr, "product_name"):
+            name = descr.product_name
+        elif c.is_solo_bootloader():
+            name = "FIDO2 Bootloader device"
         else:
-            local_print(f"{devdata['path']}: {devdata['product_string']}")
+            name = "FIDO2 device"
 
+        if hasattr(descr, "serial_number"):
+            id_ = descr.serial_number
+        else:
+            id_ = descr.path
+
+        local_print(f"{id_}: {name}")
 
 @click.command()
 @click.option("--count", default=8, help="How many bytes to generate (defaults to 8)")

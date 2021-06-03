@@ -54,7 +54,7 @@ def find_all():
 
     hid_devices = list(CtapHidDevice.list_devices())
     solo_devices = [d for d in hid_devices
-        if (d.descriptor["vendor_id"], d.descriptor["product_id"]) in [
+        if (d.descriptor.vid, d.descriptor.pid) in [
             ## @FIXME: move magic numbers
             (1155, 41674),
             (0x20A0, 0x42B3),
