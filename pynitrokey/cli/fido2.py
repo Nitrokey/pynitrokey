@@ -281,12 +281,11 @@ def feedkernel(count, serial):
     show_default=True,
 )
 def make_credential(serial, host, user, udp, prompt):
-    """(EXPERIMENTAL) Generate a credential.
+    """Generate a credential.
 
     Pass `--prompt ""` to output only the `credential_id` as hex.
     """
 
-    local_print("EXPERIMENTAL: use with care, not a fully supported function")
     nkfido2.hmac_secret.make_credential(
         host=host, user_id=user, serial=serial, output=True, prompt=prompt, udp=udp
     )
@@ -309,7 +308,7 @@ def make_credential(serial, host, user, udp, prompt):
 @click.argument("credential-id")
 @click.argument("challenge")
 def challenge_response(serial, host, user, prompt, credential_id, challenge, udp):
-    """(EXPERIMENTAL)  Uses `hmac-secret` to implement a challenge-response mechanism.
+    """Uses `hmac-secret` to implement a challenge-response mechanism.
 
     We abuse hmac-secret, which gives us `HMAC(K, hash(challenge))`, where `K`
     is a secret tied to the `credential_id`. We hash the challenge first, since
@@ -322,9 +321,6 @@ def challenge_response(serial, host, user, prompt, credential_id, challenge, udp
 
     The prompt can be suppressed using `--prompt ""`.
     """
-
-    local_print("EXPERIMENTAL: Currently disabled: challenge-response")
-    return
 
     nkfido2.hmac_secret.simple_secret(
         credential_id,

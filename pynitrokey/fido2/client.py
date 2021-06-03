@@ -185,18 +185,20 @@ class NKFido2Client:
     def reset(self,):
         self.ctap2.reset()
 
-    # @todo: unneeded, remove this...
     def make_credential(self, pin=None):
+        client = self.get_current_fido_client()
         rp = {"id": self.host, "name": "example site"}
         user = {"id": self.user_id, "name": "example user"}
-        challenge = "Y2hhbGxlbmdl"
-        attest, data = self.client.make_credential({
-            "rp": rp,
-            "user": user,
-            "challenge": challenge.encode("utf8"),
-            "pubKeyCredParams": [{"type": "public-key", "alg": -7}],
-        }, pin=pin)
-
+        challenge = b"Y2hhbGxlbmdl"
+        options = PublicKeyCredentialCreationOptions(
+            rp,
+            user,
+            challenge,
+            [{"type": "public-key", "alg": -8}, {"type": "public-key", "alg": -7}],
+        )
+        result = client.make_credential(options, pin=pin)
+        attest = result.attestation_object
+        data = result.client_data
         try:
             attest.verify(data.hash)
         except AttributeError:
@@ -207,6 +209,12 @@ class NKFido2Client:
         cert = x509.load_der_x509_certificate(x5c, default_backend())
 
         return cert
+
+    def cred_mgmt(self, pin):
+        client = self.get_current_fido_client()
+        token = client.client_pin.get_pin_token(pin)
+        ctap2 = CTAP2(self.get_current_hid_device())
+        return CredentialManagement(ctap2, client.client_pin.protocol, token)
 
     def enter_solo_bootloader(self,):
         """
