@@ -249,6 +249,10 @@ class NKFido2Client:
                 pass
             else:
                 raise (e)
+        except Exception as e:
+            # exception during bootloader version check, assume no bootloader
+            #local_print("could not get bootloader version")
+            pass
         return False
 
     def enter_st_dfu(self,):

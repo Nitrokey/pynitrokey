@@ -121,11 +121,11 @@ def update(serial, yes):
         c = find_all()[0]
 
         _props = c.dev.descriptor
-        local_print(f"Device connected:")
-        if "serial_number" in _props:
-            local_print(f"{_props['serial_number']}: {_props['product_string']}")
-        else:
-            local_print(f"{_props['path']}: {_props['product_string']}")
+        # local_print(f"Device connected:")
+        # if "serial_number" in _props:
+        #     local_print(f"{_props['serial_number']}: {_props['product_string']}")
+        # else:
+        #     local_print(f"{_props.path}: {_props['product_string']}")
 
         version_raw = c.solo_version()
         major, minor, patch = version_raw[:3]
