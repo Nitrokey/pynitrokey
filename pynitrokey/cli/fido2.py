@@ -446,7 +446,7 @@ def change_pin(serial):
     try:
         # @fixme: move this (function) into own fido2-client-class
         client = nkfido2.find(serial).client
-        PIN(client.ctap2).change_pin(old_pin, new_pin)
+        client.client_pin.change_pin(old_pin, new_pin)
         local_print("done - please use new pin to verify key")
 
     except Exception as e:
@@ -466,7 +466,7 @@ def set_pin(serial):
     try:
         # @fixme: move this (function) into own fido2-client-class
         client = nkfido2.find(serial).client
-        PIN(client.ctap2).set_pin(new_pin)
+        client.client_pin.set_pin(new_pin)
         local_print("done - please use new pin to verify key")
 
     except Exception as e:
