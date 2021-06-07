@@ -21,7 +21,7 @@ from pynitrokey.cli.start import start
 from pynitrokey.cli.storage import storage
 from pynitrokey.confconsts import LOG_FN, LOG_FORMAT
 
-from . import _patches  # noqa  (since otherwise "unused")
+#from . import _patches  # noqa  (since otherwise "unused")
 
 
 def check_root():

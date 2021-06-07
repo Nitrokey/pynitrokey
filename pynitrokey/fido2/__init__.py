@@ -3,7 +3,7 @@ import time
 import socket
 import usb
 
-from pynitrokey.fido2 import hmac_secret
+#from pynitrokey.fido2 import hmac_secret
 from pynitrokey.fido2.client import NKFido2Client
 from pynitrokey.exceptions import NoSoloFoundError
 
