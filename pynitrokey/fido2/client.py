@@ -13,6 +13,9 @@ import struct
 import sys
 import tempfile
 import time
+import secrets
+import binascii
+import hashlib
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
@@ -69,7 +72,12 @@ class NKFido2Client:
         self.dev = dev
 
         self.ctap1 = CTAP1(dev)
-        self.ctap2 = CTAP2(dev)
+        
+        try:
+            self.ctap2 = CTAP2(dev)
+        except CtapError as e:
+            self.ctap2 = None
+
         try:
             self.client = Fido2Client(dev, self.origin)
         except CtapError:
@@ -185,28 +193,105 @@ class NKFido2Client:
     def reset(self,):
         self.ctap2.reset()
 
-    # @todo: unneeded, remove this...
-    def make_credential(self, pin=None):
-        rp = {"id": self.host, "name": "example site"}
-        user = {"id": self.user_id, "name": "example user"}
-        challenge = "Y2hhbGxlbmdl"
-        attest, data = self.client.make_credential({
-            "rp": rp,
-            "user": user,
-            "challenge": challenge.encode("utf8"),
-            "pubKeyCredParams": [{"type": "public-key", "alg": -7}],
-        }, pin=pin)
+    def make_credential(self, 
+        host="nitrokeys.dev",
+        user_id="they",
+        serial=None,
+        pin=None,
+        prompt="Touch your authenticator to generate a credential...",
+        output=True,
+        udp=False,
+    ):
 
-        try:
-            attest.verify(data.hash)
-        except AttributeError:
-            verifier = Attestation.for_type(attest.fmt)
-            verifier().verify(attest.att_statement, attest.auth_data, data.hash)
-        print("Register valid")
-        x5c = attest.att_statement["x5c"][0]
-        cert = x509.load_der_x509_certificate(x5c, default_backend())
+        user_id = user_id.encode()
+        client = self.client
 
-        return cert
+        rp = {"id": host, "name": "Example RP"}
+        client.host = host
+        client.origin = f"https://{client.host}"
+        client.user_id = user_id
+        user = {"id": user_id, "name": "A. User"}
+        challenge = secrets.token_bytes(32)
+
+        if prompt:
+            print(prompt)
+
+        attestation_object = client.make_credential(
+            {
+                "rp": rp,
+                "user": user,
+                "challenge": challenge,
+                "pubKeyCredParams": [
+                    {"type": "public-key", "alg": -8},
+                    {"type": "public-key", "alg": -7},
+                ],
+                "extensions": {"hmacCreateSecret": True},
+            },
+            pin=pin,
+        ).attestation_object
+
+        credential = attestation_object.auth_data.credential_data
+        credential_id = credential.credential_id
+        if output:
+            print(credential_id.hex())
+
+        return credential_id
+
+    def simple_secret(self,
+        credential_id,
+        secret_input,
+        host="nitrokeys.dev",
+        user_id="they",
+        serial=None,
+        pin=None,
+        prompt="Touch your authenticator to generate a response...",
+        output=True,
+        udp=False,
+    ):
+        user_id = user_id.encode()
+
+        client = self.client
+
+        # rp = {"id": host, "name": "Example RP"}
+        client.host = host
+        client.origin = f"https://{client.host}"
+        client.user_id = user_id
+        # user = {"id": user_id, "name": "A. User"}
+        credential_id = binascii.a2b_hex(credential_id)
+
+        allow_list = [{"type": "public-key", "id": credential_id}]
+
+        challenge = secrets.token_bytes(32)
+
+        h = hashlib.sha256()
+        h.update(secret_input.encode())
+        salt = h.digest()
+
+        if prompt:
+            print(prompt)
+
+        assertion = client.get_assertion(
+            {
+                "rpId": host,
+                "challenge": challenge,
+                "allowCredentials": allow_list,
+                "extensions": {"hmacGetSecret": {"salt1": salt}},
+            },
+            pin=pin,
+        ).get_response(0)
+
+        output = assertion.extension_results["hmacGetSecret"]["output1"]
+        if output:
+            print(output.hex())
+
+        return output
+
+
+    def cred_mgmt(self, pin):
+        client = self.get_current_fido_client()
+        token = client.client_pin.get_pin_token(pin)
+        ctap2 = CTAP2(self.get_current_hid_device())
+        return CredentialManagement(ctap2, client.client_pin.protocol, token)
 
     def enter_solo_bootloader(self,):
         """
@@ -241,6 +326,10 @@ class NKFido2Client:
                 pass
             else:
                 raise (e)
+        except Exception as e:
+            # exception during bootloader version check, assume no bootloader
+            #local_print("could not get bootloader version")
+            pass
         return False
 
     def enter_st_dfu(self,):

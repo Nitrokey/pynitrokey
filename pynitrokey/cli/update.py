@@ -113,27 +113,9 @@ def update(serial, yes):
     local_print(f"Firmware saved to {fw_fn}",
                 f"Downloaded firmware version: {gh_release_data['tag_name']}")
 
-    # @fixme: whyyyyy is this here, move away... (maybe directly next to `fido2.find()`)
-    def get_dev_details():
+    ver = client.solo_version()
 
-        # @fixme: why not use `find` here...
-        from pynitrokey.fido2 import find_all
-        c = find_all()[0]
-
-        _props = c.dev.descriptor
-        local_print(f"Device connected:")
-        if "serial_number" in _props:
-            local_print(f"{_props['serial_number']}: {_props['product_string']}")
-        else:
-            local_print(f"{_props['path']}: {_props['product_string']}")
-
-        version_raw = c.solo_version()
-        major, minor, patch = version_raw[:3]
-        locked = "" if len(version_raw) > 3 and version_raw[3] else "unlocked"
-
-        local_print(f"Firmware version: {major}.{minor}.{patch} {locked}", None)
-
-    get_dev_details()
+    local_print(f"Current Firmware version: {ver[0]}.{ver[1]}.{ver[2]}")
 
     # ask for permission
     if not yes:
@@ -147,6 +129,7 @@ def update(serial, yes):
     else:
         try:
             local_print("Entering bootloader mode, please confirm with button on key!")
+            client.use_hid()
             client.enter_bootloader_or_die()
             time.sleep(0.5)
         except Exception as e:
@@ -154,7 +137,6 @@ def update(serial, yes):
 
     # reconnect and actually flash it...
     try:
-        from pynitrokey.fido2 import find
         client = find(serial)
         client.use_hid()
         client.program_file(fw_fn)
@@ -162,17 +144,22 @@ def update(serial, yes):
     except Exception as e:
         local_critical("problem flashing firmware:", e)
 
-    local_print(None, "After update check")
-    tries = 100
-    for i in range(tries):
+    local_print(None, "After update version check...")
+
+    for _ in range(100):
         try:
-            get_dev_details()
+            client = find(serial)
+            new_ver = client.solo_version()
+            local_print(f"New Firmware version: {new_ver[0]}.{new_ver[1]}.{new_ver[2]}")
             break
+
+        # expected until the devices comes up again
+        except OSError:
+            continue
+        # unexpected...
         except Exception as e:
-            if i > tries-1:
-                local_critical("Could not connect to device after update", e)
-                raise
-            time.sleep(0.5)
+            local_print("unexpected error", e)
+            break
 
     local_print("Congratulations, your key was updated to the latest firmware.")
     logger.debug("Finishing session {}".format(datetime.now()))

@@ -11,113 +11,117 @@
 
 import sys
 
-## Windows
-if sys.platform.startswith("win32"):
-    import fido2._pyu2f.windows
+########################################################
+# removed as fido._pyu2f is not part of fido2 anymore...
+####################################################
 
-    oldDevAttrFunc = fido2._pyu2f.windows.FillDeviceAttributes
-    from ctypes import wintypes
-    import ctypes
+# ## Windows
+# if sys.platform.startswith("win32"):
+#     import fido2._pyu2f.windows
 
-    fido2._pyu2f.windows.hid.HidD_GetSerialNumberString.restype = wintypes.BOOLEAN
-    fido2._pyu2f.windows.hid.HidD_GetSerialNumberString.argtypes = [
-        ctypes.c_void_p,
-        ctypes.c_void_p,
-        ctypes.c_ulong,
-    ]
+#     oldDevAttrFunc = fido2._pyu2f.windows.FillDeviceAttributes
+#     from ctypes import wintypes
+#     import ctypes
 
-    def newDevAttrFunc(device, descriptor):
-        oldDevAttrFunc(device, descriptor)
-        buf_ser = ctypes.create_string_buffer(1024)
-        result = fido2._pyu2f.windows.hid.HidD_GetSerialNumberString(
-            device, buf_ser, 1024
-        )
-        if result:
-            descriptor.serial_number = ctypes.wstring_at(buf_ser)
+#     fido2._pyu2f.windows.hid.HidD_GetSerialNumberString.restype = wintypes.BOOLEAN
+#     fido2._pyu2f.windows.hid.HidD_GetSerialNumberString.argtypes = [
+#         ctypes.c_void_p,
+#         ctypes.c_void_p,
+#         ctypes.c_ulong,
+#     ]
 
-    fido2._pyu2f.windows.FillDeviceAttributes = newDevAttrFunc
+#     def newDevAttrFunc(device, descriptor):
+#         oldDevAttrFunc(device, descriptor)
+#         buf_ser = ctypes.create_string_buffer(1024)
+#         result = fido2._pyu2f.windows.hid.HidD_GetSerialNumberString(
+#             device, buf_ser, 1024
+#         )
+#         if result:
+#             descriptor.serial_number = ctypes.wstring_at(buf_ser)
 
-
-## macOS
-if sys.platform.startswith("darwin"):
-    import fido2._pyu2f.macos
-    from fido2._pyu2f import base
-    from fido2._pyu2f.macos import (
-        iokit,
-        IO_HID_DEVICE_REF,
-        GetDeviceIntProperty,
-        GetDevicePath,
-        GetDeviceStringProperty,
-        HID_DEVICE_PROPERTY_VENDOR_ID,
-        HID_DEVICE_PROPERTY_PRODUCT_ID,
-        HID_DEVICE_PROPERTY_PRODUCT,
-        HID_DEVICE_PROPERTY_PRIMARY_USAGE,
-        HID_DEVICE_PROPERTY_PRIMARY_USAGE_PAGE,
-        HID_DEVICE_PROPERTY_REPORT_ID,
-        cf,
-    )
-
-    HID_DEVICE_PROPERTY_SERIAL_NUMBER = b"SerialNumber"
-
-    def newEnumerate():
-        """See base class."""
-        # Init a HID manager
-        hid_mgr = iokit.IOHIDManagerCreate(None, None)
-        if not hid_mgr:
-            raise OSError("Unable to obtain HID manager reference")
-        iokit.IOHIDManagerSetDeviceMatching(hid_mgr, None)
-
-        # Get devices from HID manager
-        device_set_ref = iokit.IOHIDManagerCopyDevices(hid_mgr)
-        if not device_set_ref:
-            raise OSError("Failed to obtain devices from HID manager")
-
-        num = iokit.CFSetGetCount(device_set_ref)
-        devices = (IO_HID_DEVICE_REF * num)()
-        iokit.CFSetGetValues(device_set_ref, devices)
-
-        # Retrieve and build descriptor dictionaries for each device
-        descriptors = []
-        for dev in devices:
-            d = base.DeviceDescriptor()
-            d.vendor_id = GetDeviceIntProperty(dev, HID_DEVICE_PROPERTY_VENDOR_ID)
-            d.product_id = GetDeviceIntProperty(dev, HID_DEVICE_PROPERTY_PRODUCT_ID)
-            d.product_string = GetDeviceStringProperty(dev, HID_DEVICE_PROPERTY_PRODUCT)
-            d.serial_number = GetDeviceStringProperty(
-                dev, HID_DEVICE_PROPERTY_SERIAL_NUMBER
-            )
-            d.usage = GetDeviceIntProperty(dev, HID_DEVICE_PROPERTY_PRIMARY_USAGE)
-            d.usage_page = GetDeviceIntProperty(
-                dev, HID_DEVICE_PROPERTY_PRIMARY_USAGE_PAGE
-            )
-            d.report_id = GetDeviceIntProperty(dev, HID_DEVICE_PROPERTY_REPORT_ID)
-            d.path = GetDevicePath(dev)
-            descriptors.append(d.ToPublicDict())
-
-        # Clean up CF objects
-        cf.CFRelease(device_set_ref)
-        cf.CFRelease(hid_mgr)
-
-        return descriptors
-
-    fido2._pyu2f.macos.MacOsHidDevice.Enumerate = newEnumerate
+#     fido2._pyu2f.windows.FillDeviceAttributes = newDevAttrFunc
 
 
-## Linux
-if sys.platform.startswith("linux"):
-    import fido2._pyu2f.linux
+# ## macOS
+# if sys.platform.startswith("darwin"):
+#     import fido2._pyu2f.macos
+#     from fido2._pyu2f import base
+#     from fido2._pyu2f.macos import (
+#         iokit,
+#         IO_HID_DEVICE_REF,
+#         GetDeviceIntProperty,
+#         GetDevicePath,
+#         GetDeviceStringProperty,
+#         HID_DEVICE_PROPERTY_VENDOR_ID,
+#         HID_DEVICE_PROPERTY_PRODUCT_ID,
+#         HID_DEVICE_PROPERTY_PRODUCT,
+#         HID_DEVICE_PROPERTY_PRIMARY_USAGE,
+#         HID_DEVICE_PROPERTY_PRIMARY_USAGE_PAGE,
+#         HID_DEVICE_PROPERTY_REPORT_ID,
+#         cf,
+#     )
 
-    oldnewParseUevent = fido2._pyu2f.linux.ParseUevent
+#     HID_DEVICE_PROPERTY_SERIAL_NUMBER = b"SerialNumber"
 
-    def newParseUevent(uevent, desc):
-        oldnewParseUevent(uevent, desc)
-        lines = uevent.split(b"\n")
-        for line in lines:
-            line = line.strip()
-            if not line:
-                continue
-            k, v = line.split(b"=")
-            if k == b"HID_UNIQ":
-                desc.serial_number = v.decode("utf8")
+#     def newEnumerate():
+#         """See base class."""
+#         # Init a HID manager
+#         hid_mgr = iokit.IOHIDManagerCreate(None, None)
+#         if not hid_mgr:
+#             raise OSError("Unable to obtain HID manager reference")
+#         iokit.IOHIDManagerSetDeviceMatching(hid_mgr, None)
 
-    fido2._pyu2f.linux.ParseUevent = newParseUevent
+#         # Get devices from HID manager
+#         device_set_ref = iokit.IOHIDManagerCopyDevices(hid_mgr)
+#         if not device_set_ref:
+#             raise OSError("Failed to obtain devices from HID manager")
+
+#         num = iokit.CFSetGetCount(device_set_ref)
+#         devices = (IO_HID_DEVICE_REF * num)()
+#         iokit.CFSetGetValues(device_set_ref, devices)
+
+#         # Retrieve and build descriptor dictionaries for each device
+#         descriptors = []
+#         for dev in devices:
+#             d = base.DeviceDescriptor()
+#             d.vendor_id = GetDeviceIntProperty(dev, HID_DEVICE_PROPERTY_VENDOR_ID)
+#             d.product_id = GetDeviceIntProperty(dev, HID_DEVICE_PROPERTY_PRODUCT_ID)
+#             d.product_string = GetDeviceStringProperty(dev, HID_DEVICE_PROPERTY_PRODUCT)
+#             d.serial_number = GetDeviceStringProperty(
+#                 dev, HID_DEVICE_PROPERTY_SERIAL_NUMBER
+#             )
+#             d.usage = GetDeviceIntProperty(dev, HID_DEVICE_PROPERTY_PRIMARY_USAGE)
+#             d.usage_page = GetDeviceIntProperty(
+#                 dev, HID_DEVICE_PROPERTY_PRIMARY_USAGE_PAGE
+#             )
+#             d.report_id = GetDeviceIntProperty(dev, HID_DEVICE_PROPERTY_REPORT_ID)
+#             d.path = GetDevicePath(dev)
+#             descriptors.append(d.ToPublicDict())
+
+#         # Clean up CF objects
+#         cf.CFRelease(device_set_ref)
+#         cf.CFRelease(hid_mgr)
+
+#         return descriptors
+
+#     fido2._pyu2f.macos.MacOsHidDevice.Enumerate = newEnumerate
+
+
+# ## Linux
+# if sys.platform.startswith("linux"):
+#     import fido2._pyu2f.linux
+
+#     oldnewParseUevent = fido2._pyu2f.linux.ParseUevent
+
+#     def newParseUevent(uevent, desc):
+#         oldnewParseUevent(uevent, desc)
+#         lines = uevent.split(b"\n")
+#         for line in lines:
+#             line = line.strip()
+#             if not line:
+#                 continue
+#             k, v = line.split(b"=")
+#             if k == b"HID_UNIQ":
+#                 desc.serial_number = v.decode("utf8")
+
+#     fido2._pyu2f.linux.ParseUevent = newParseUevent

@@ -160,15 +160,24 @@ def rng():
 @click.command()
 def list():
     """List all 'Nitrokey FIDO2' devices"""
-    solos = nkfido2.find_all()
+    devs = nkfido2.find_all()
     local_print(":: 'Nitrokey FIDO2' keys")
-    for c in solos:
-        devdata = c.dev.descriptor
-        if "serial_number" in devdata:
-            local_print(f"{devdata['serial_number']}: {devdata['product_string']}")
+    for c in devs:
+        descr = c.dev.descriptor
+        
+        if hasattr(descr, "product_name"):
+            name = descr.product_name
+        elif c.is_solo_bootloader():
+            name = "FIDO2 Bootloader device"
         else:
-            local_print(f"{devdata['path']}: {devdata['product_string']}")
+            name = "FIDO2 device"
 
+        if hasattr(descr, "serial_number"):
+            id_ = descr.serial_number
+        else:
+            id_ = descr.path
+
+        local_print(f"{id_}: {name}")
 
 @click.command()
 @click.option("--count", default=8, help="How many bytes to generate (defaults to 8)")
@@ -270,7 +279,7 @@ def feedkernel(count, serial):
     "--host", help="Relying party's host", default="nitrokeys.dev", show_default=True
 )
 @click.option("--user", help="User ID", default="they", show_default=True)
-#@click.option("--pin", help="provide PIN instead of asking the user", default=None)
+@click.option("--pin", help="provide PIN instead of asking the user", default=None)
 @click.option(
     "--udp", is_flag=True, default=False, help="Communicate over UDP with software key"
 )
@@ -280,21 +289,23 @@ def feedkernel(count, serial):
     default="Touch your authenticator to generate a credential...",
     show_default=True,
 )
-def make_credential(serial, host, user, udp, prompt):
-    """(EXPERIMENTAL) Generate a credential.
+def make_credential(serial, host, user, udp, prompt, pin):
+    """Generate a credential.
 
     Pass `--prompt ""` to output only the `credential_id` as hex.
     """
 
-    local_print("EXPERIMENTAL: use with care, not a fully supported function")
-    nkfido2.hmac_secret.make_credential(
-        host=host, user_id=user, serial=serial, output=True, prompt=prompt, udp=udp
+    if not pin:
+        pin = AskUser.hidden("Please provide pin: ")
+
+    nkfido2.find().make_credential(
+        host=host, user_id=user, serial=serial, output=True, prompt=prompt, udp=udp, pin=pin
     )
 
 
 @click.command()
 @click.option("-s", "--serial", help="Serial number of Nitrokey use")
-#@click.option("--pin", help="provide PIN instead of asking the user", default=None)
+@click.option("--pin", help="provide PIN instead of asking the user", default=None)
 @click.option("--host", help="Relying party's host", default="nitrokeys.dev")
 @click.option("--user", help="User ID", default="they")
 @click.option(
@@ -303,13 +314,13 @@ def make_credential(serial, host, user, udp, prompt):
 @click.option(
     "--prompt",
     help="Prompt for user",
-    default="Touch your authenticator to generate a reponse...",
+    default="Touch your authenticator to generate a response...",
     show_default=True,
 )
 @click.argument("credential-id")
 @click.argument("challenge")
-def challenge_response(serial, host, user, prompt, credential_id, challenge, udp):
-    """(EXPERIMENTAL)  Uses `hmac-secret` to implement a challenge-response mechanism.
+def challenge_response(serial, host, user, prompt, credential_id, challenge, udp, pin):
+    """Uses `hmac-secret` to implement a challenge-response mechanism.
 
     We abuse hmac-secret, which gives us `HMAC(K, hash(challenge))`, where `K`
     is a secret tied to the `credential_id`. We hash the challenge first, since
@@ -322,11 +333,11 @@ def challenge_response(serial, host, user, prompt, credential_id, challenge, udp
 
     The prompt can be suppressed using `--prompt ""`.
     """
+    
+    if not pin:
+        pin = AskUser.hidden("Please provide pin: ")
 
-    local_print("EXPERIMENTAL: Currently disabled: challenge-response")
-    return
-
-    nkfido2.hmac_secret.simple_secret(
+    nkfido2.find().simple_secret(
         credential_id,
         challenge,
         host=host,
@@ -334,7 +345,8 @@ def challenge_response(serial, host, user, prompt, credential_id, challenge, udp
         serial=serial,
         prompt=prompt,
         output=True,
-        udp=udp
+        udp=udp,
+        pin=pin
     )
 
 
@@ -441,7 +453,7 @@ def change_pin(serial):
     try:
         # @fixme: move this (function) into own fido2-client-class
         client = nkfido2.find(serial).client
-        PIN(client.ctap2).change_pin(old_pin, new_pin)
+        client.client_pin.change_pin(old_pin, new_pin)
         local_print("done - please use new pin to verify key")
 
     except Exception as e:
@@ -461,7 +473,7 @@ def set_pin(serial):
     try:
         # @fixme: move this (function) into own fido2-client-class
         client = nkfido2.find(serial).client
-        PIN(client.ctap2).set_pin(new_pin)
+        client.client_pin.set_pin(new_pin)
         local_print("done - please use new pin to verify key")
 
     except Exception as e:
