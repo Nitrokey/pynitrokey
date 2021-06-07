@@ -146,7 +146,14 @@ def bootloader_version(serial, pubkey):
     """Version of bootloader."""
     from pynitrokey.fido2 import find
     p = find(serial)
-    local_print(".".join(map(str, p.bootloader_version())))
+
+    if not p.is_solo_bootloader():
+        local_print("Not in Bootloader Mode!")
+        return
+    else:
+        local_print("Detected Bootloader Mode")
+
+    local_print("Version: " + ".".join(map(str, p.bootloader_version())))
     from binascii import b2a_hex
     from hashlib import sha256
     if pubkey:
