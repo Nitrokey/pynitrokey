@@ -69,7 +69,12 @@ class NKFido2Client:
         self.dev = dev
 
         self.ctap1 = CTAP1(dev)
-        self.ctap2 = CTAP2(dev)
+        
+        try:
+            self.ctap2 = CTAP2(dev)
+        except CtapError as e:
+            self.ctap2 = None
+
         try:
             self.client = Fido2Client(dev, self.origin)
         except CtapError:
@@ -186,7 +191,7 @@ class NKFido2Client:
         self.ctap2.reset()
 
     def make_credential(self, pin=None):
-        client = self.get_current_fido_client()
+        client = self.client
         rp = {"id": self.host, "name": "example site"}
         user = {"id": self.user_id, "name": "example user"}
         challenge = b"Y2hhbGxlbmdl"
