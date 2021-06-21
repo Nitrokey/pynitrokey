@@ -396,8 +396,12 @@ def get_key(ctx, key_id, public_key):
             print(f"Type:            {key.type}")
             print(f"Mechanisms:      {mechanisms}")
             print(f"Operations:      {key.operations}")
-            print(f"Modulus:         {key.modulus}")
-            print(f"Public exponent: {key.public_exponent}")
+            if key.modulus:
+                print(f"Modulus:         {key.modulus}")
+            if key.public_exponent:
+                print(f"Public exponent: {key.public_exponent}")
+            if key.data:
+                print(f"Data:            {key.data}")
 
 
 @nethsm.command()

@@ -144,13 +144,14 @@ class User:
 
 
 class Key:
-    def __init__(self, key_id, mechanisms, type, operations, modulus, public_exponent):
+    def __init__(self, key_id, mechanisms, type, operations, modulus, public_exponent, data):
         self.key_id = key_id
         self.mechanisms = mechanisms
         self.type = type
         self.operations = operations
         self.modulus = modulus
         self.public_exponent = public_exponent
+        self.data = data
 
 
 def _handle_api_exception(e, messages={}, roles=[], state=None):
@@ -422,8 +423,9 @@ class NetHSM:
                 mechanisms=[mechanism.value for mechanism in key.mechanisms.value],
                 type=key.type.value,
                 operations=key.operations,
-                modulus=key.key.modulus,
-                public_exponent=key.key.public_exponent,
+                modulus=getattr(key.key, "modulus", None),
+                public_exponent=getattr(key.key, "public_exponent", None),
+                data=getattr(key.key, "data", None),
             )
         except ApiException as e:
             _handle_api_exception(
