@@ -76,13 +76,13 @@ class UnattendedBootStatus(enum.Enum):
     OFF = "off"
 
 
-class KeyAlgorithm(enum.Enum):
+class KeyType(enum.Enum):
     RSA = "RSA"
-    ED25519 = "ED25519"
-    ECDSA_P224 = "ECDSA_P224"
-    ECDSA_P256 = "ECDSA_P256"
-    ECDSA_P384 = "ECDSA_P384"
-    ECDSA_P521 = "ECDSA_P521"
+    CURVE25519 = "Curve25519"
+    EC_P224 = "EC_P224"
+    EC_P256 = "EC_P256"
+    EC_P384 = "EC_P384"
+    EC_P521 = "EC_P521"
 
 
 class KeyMechanism(enum.Enum):
@@ -101,11 +101,8 @@ class KeyMechanism(enum.Enum):
     RSA_SIGNATURE_PSS_SHA256 = "RSA_Signature_PSS_SHA256"
     RSA_SIGNATURE_PSS_SHA384 = "RSA_Signature_PSS_SHA384"
     RSA_SIGNATURE_PSS_SHA512 = "RSA_Signature_PSS_SHA512"
-    ED25519_SIGNATURE = "ED25519_Signature"
-    ECDSA_P224_SIGNATURE = "ECDSA_P224_Signature"
-    ECDSA_P256_SIGNATURE = "ECDSA_P256_Signature"
-    ECDSA_P384_SIGNATURE = "ECDSA_P384_Signature"
-    ECDSA_P521_SIGNATURE = "ECDSA_P521_Signature"
+    EDDSA_SIGNATURE = "EdDSA_Signature"
+    ECDSA_SIGNATURE = "ECDSA_Signature"
 
 
 class DecryptMode(enum.Enum):
@@ -120,18 +117,15 @@ class DecryptMode(enum.Enum):
 
 
 class SignMode(enum.Enum):
-      PKCS1 = "PKCS1"
-      PSS_MD5 = "PSS_MD5"
-      PSS_SHA1 = "PSS_SHA1"
-      PSS_SHA224 = "PSS_SHA224"
-      PSS_SHA256 = "PSS_SHA256"
-      PSS_SHA384 = "PSS_SHA384"
-      PSS_SHA512 = "PSS_SHA512"
-      ED25519 = "ED25519"
-      ECDSA_P224 = "ECDSA_P224"
-      ECDSA_P256 = "ECDSA_P256"
-      ECDSA_P384 = "ECDSA_P384"
-      ECDSA_P521 = "ECDSA_P521"
+    PKCS1 = "PKCS1"
+    PSS_MD5 = "PSS_MD5"
+    PSS_SHA1 = "PSS_SHA1"
+    PSS_SHA224 = "PSS_SHA224"
+    PSS_SHA256 = "PSS_SHA256"
+    PSS_SHA384 = "PSS_SHA384"
+    PSS_SHA512 = "PSS_SHA512"
+    EDDSA = "EdDSA"
+    ECDSA = "ECDSA"
 
 
 class SystemInfo:
@@ -150,10 +144,10 @@ class User:
 
 
 class Key:
-    def __init__(self, key_id, mechanisms, algorithm, operations, modulus, public_exponent):
+    def __init__(self, key_id, mechanisms, type, operations, modulus, public_exponent):
         self.key_id = key_id
         self.mechanisms = mechanisms
-        self.algorithm = algorithm
+        self.type = type
         self.operations = operations
         self.modulus = modulus
         self.public_exponent = public_exponent
@@ -426,7 +420,7 @@ class NetHSM:
             return Key(
                 key_id=key_id,
                 mechanisms=[mechanism.value for mechanism in key.mechanisms.value],
-                algorithm=key.algorithm.value,
+                type=key.type.value,
                 operations=key.operations,
                 modulus=key.key.modulus,
                 public_exponent=key.key.public_exponent,
@@ -454,14 +448,14 @@ class NetHSM:
                 },
             )
 
-    def add_key(self, key_id, algorithm, mechanisms, prime_p, prime_q, public_exponent, data):
-        from .client.model.key_algorithm import KeyAlgorithm
+    def add_key(self, key_id, type, mechanisms, prime_p, prime_q, public_exponent, data):
+        from .client.model.key_type import KeyType
         from .client.model.key_mechanism import KeyMechanism
         from .client.model.key_mechanisms import KeyMechanisms
         from .client.model.key_private_data import KeyPrivateData
         from .client.model.private_key import PrivateKey
 
-        if algorithm == "RSA":
+        if type == "RSA":
             key_data = KeyPrivateData(
                 prime_p=prime_p,
                 prime_q=prime_q,
@@ -471,7 +465,7 @@ class NetHSM:
             key_data = KeyPrivateData(data=data)
 
         body = PrivateKey(
-            algorithm=KeyAlgorithm(algorithm),
+            type=KeyType(type),
             mechanisms=KeyMechanisms([KeyMechanism(mechanism) for mechanism in mechanisms]),
             key=key_data,
         )
@@ -506,14 +500,14 @@ class NetHSM:
                 },
             )
 
-    def generate_key(self, algorithm, mechanisms, length, key_id):
-        from .client.model.key_algorithm import KeyAlgorithm
+    def generate_key(self, type, mechanisms, length, key_id):
+        from .client.model.key_type import KeyType
         from .client.model.key_mechanism import KeyMechanism
         from .client.model.key_mechanisms import KeyMechanisms
         from .client.model.key_generate_request_data import KeyGenerateRequestData
 
         body = KeyGenerateRequestData(
-            algorithm=KeyAlgorithm(algorithm),
+            type=KeyType(type),
             mechanisms=KeyMechanisms([KeyMechanism(mechanism) for mechanism in mechanisms]),
             length=length,
             id=key_id or "",

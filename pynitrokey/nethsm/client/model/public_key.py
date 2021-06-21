@@ -27,12 +27,12 @@ from pynitrokey.nethsm.client.model_utils import (  # noqa: F401
 )
 
 def lazy_import():
-    from pynitrokey.nethsm.client.model.key_algorithm import KeyAlgorithm
     from pynitrokey.nethsm.client.model.key_mechanisms import KeyMechanisms
     from pynitrokey.nethsm.client.model.key_public_data import KeyPublicData
-    globals()['KeyAlgorithm'] = KeyAlgorithm
+    from pynitrokey.nethsm.client.model.key_type import KeyType
     globals()['KeyMechanisms'] = KeyMechanisms
     globals()['KeyPublicData'] = KeyPublicData
+    globals()['KeyType'] = KeyType
 
 
 class PublicKey(ModelNormal):
@@ -82,7 +82,7 @@ class PublicKey(ModelNormal):
         lazy_import()
         return {
             'mechanisms': (KeyMechanisms,),  # noqa: E501
-            'algorithm': (KeyAlgorithm,),  # noqa: E501
+            'type': (KeyType,),  # noqa: E501
             'key': (KeyPublicData,),  # noqa: E501
             'operations': (int,),  # noqa: E501
         }
@@ -94,7 +94,7 @@ class PublicKey(ModelNormal):
 
     attribute_map = {
         'mechanisms': 'mechanisms',  # noqa: E501
-        'algorithm': 'algorithm',  # noqa: E501
+        'type': 'type',  # noqa: E501
         'key': 'key',  # noqa: E501
         'operations': 'operations',  # noqa: E501
     }
@@ -111,12 +111,12 @@ class PublicKey(ModelNormal):
     ])
 
     @convert_js_args_to_python_args
-    def __init__(self, mechanisms, algorithm, key, operations, *args, **kwargs):  # noqa: E501
+    def __init__(self, mechanisms, type, key, operations, *args, **kwargs):  # noqa: E501
         """PublicKey - a model defined in OpenAPI
 
         Args:
             mechanisms (KeyMechanisms):
-            algorithm (KeyAlgorithm):
+            type (KeyType):
             key (KeyPublicData):
             operations (int):
 
@@ -177,7 +177,7 @@ class PublicKey(ModelNormal):
         self._visited_composed_classes = _visited_composed_classes + (self.__class__,)
 
         self.mechanisms = mechanisms
-        self.algorithm = algorithm
+        self.type = type
         self.key = key
         self.operations = operations
         for var_name, var_value in kwargs.items():

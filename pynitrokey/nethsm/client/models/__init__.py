@@ -18,7 +18,6 @@ from pynitrokey.nethsm.client.model.distinguished_name import DistinguishedName
 from pynitrokey.nethsm.client.model.health_state_data import HealthStateData
 from pynitrokey.nethsm.client.model.id import ID
 from pynitrokey.nethsm.client.model.info_data import InfoData
-from pynitrokey.nethsm.client.model.key_algorithm import KeyAlgorithm
 from pynitrokey.nethsm.client.model.key_generate_request_data import KeyGenerateRequestData
 from pynitrokey.nethsm.client.model.key_item import KeyItem
 from pynitrokey.nethsm.client.model.key_list import KeyList
@@ -26,6 +25,7 @@ from pynitrokey.nethsm.client.model.key_mechanism import KeyMechanism
 from pynitrokey.nethsm.client.model.key_mechanisms import KeyMechanisms
 from pynitrokey.nethsm.client.model.key_private_data import KeyPrivateData
 from pynitrokey.nethsm.client.model.key_public_data import KeyPublicData
+from pynitrokey.nethsm.client.model.key_type import KeyType
 from pynitrokey.nethsm.client.model.log_level import LogLevel
 from pynitrokey.nethsm.client.model.logging_config import LoggingConfig
 from pynitrokey.nethsm.client.model.network_config import NetworkConfig

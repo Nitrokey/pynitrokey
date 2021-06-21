@@ -27,12 +27,12 @@ from pynitrokey.nethsm.client.model_utils import (  # noqa: F401
 )
 
 def lazy_import():
-    from pynitrokey.nethsm.client.model.key_algorithm import KeyAlgorithm
     from pynitrokey.nethsm.client.model.key_mechanisms import KeyMechanisms
     from pynitrokey.nethsm.client.model.key_private_data import KeyPrivateData
-    globals()['KeyAlgorithm'] = KeyAlgorithm
+    from pynitrokey.nethsm.client.model.key_type import KeyType
     globals()['KeyMechanisms'] = KeyMechanisms
     globals()['KeyPrivateData'] = KeyPrivateData
+    globals()['KeyType'] = KeyType
 
 
 class PrivateKey(ModelNormal):
@@ -82,7 +82,7 @@ class PrivateKey(ModelNormal):
         lazy_import()
         return {
             'mechanisms': (KeyMechanisms,),  # noqa: E501
-            'algorithm': (KeyAlgorithm,),  # noqa: E501
+            'type': (KeyType,),  # noqa: E501
             'key': (KeyPrivateData,),  # noqa: E501
         }
 
@@ -93,7 +93,7 @@ class PrivateKey(ModelNormal):
 
     attribute_map = {
         'mechanisms': 'mechanisms',  # noqa: E501
-        'algorithm': 'algorithm',  # noqa: E501
+        'type': 'type',  # noqa: E501
         'key': 'key',  # noqa: E501
     }
 
@@ -109,12 +109,12 @@ class PrivateKey(ModelNormal):
     ])
 
     @convert_js_args_to_python_args
-    def __init__(self, mechanisms, algorithm, key, *args, **kwargs):  # noqa: E501
+    def __init__(self, mechanisms, type, key, *args, **kwargs):  # noqa: E501
         """PrivateKey - a model defined in OpenAPI
 
         Args:
             mechanisms (KeyMechanisms):
-            algorithm (KeyAlgorithm):
+            type (KeyType):
             key (KeyPrivateData):
 
         Keyword Args:
@@ -174,7 +174,7 @@ class PrivateKey(ModelNormal):
         self._visited_composed_classes = _visited_composed_classes + (self.__class__,)
 
         self.mechanisms = mechanisms
-        self.algorithm = algorithm
+        self.type = type
         self.key = key
         for var_name, var_value in kwargs.items():
             if var_name not in self.attribute_map and \
