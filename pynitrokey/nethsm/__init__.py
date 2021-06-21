@@ -11,6 +11,7 @@ import contextlib
 import enum
 import json
 import re
+import requests
 
 from . import client
 from .client import ApiException
@@ -75,13 +76,13 @@ class UnattendedBootStatus(enum.Enum):
     OFF = "off"
 
 
-class KeyAlgorithm(enum.Enum):
+class KeyType(enum.Enum):
     RSA = "RSA"
-    ED25519 = "ED25519"
-    ECDSA_P224 = "ECDSA_P224"
-    ECDSA_P256 = "ECDSA_P256"
-    ECDSA_P384 = "ECDSA_P384"
-    ECDSA_P521 = "ECDSA_P521"
+    CURVE25519 = "Curve25519"
+    EC_P224 = "EC_P224"
+    EC_P256 = "EC_P256"
+    EC_P384 = "EC_P384"
+    EC_P521 = "EC_P521"
 
 
 class KeyMechanism(enum.Enum):
@@ -100,11 +101,8 @@ class KeyMechanism(enum.Enum):
     RSA_SIGNATURE_PSS_SHA256 = "RSA_Signature_PSS_SHA256"
     RSA_SIGNATURE_PSS_SHA384 = "RSA_Signature_PSS_SHA384"
     RSA_SIGNATURE_PSS_SHA512 = "RSA_Signature_PSS_SHA512"
-    ED25519_SIGNATURE = "ED25519_Signature"
-    ECDSA_P224_SIGNATURE = "ECDSA_P224_Signature"
-    ECDSA_P256_SIGNATURE = "ECDSA_P256_Signature"
-    ECDSA_P384_SIGNATURE = "ECDSA_P384_Signature"
-    ECDSA_P521_SIGNATURE = "ECDSA_P521_Signature"
+    EDDSA_SIGNATURE = "EdDSA_Signature"
+    ECDSA_SIGNATURE = "ECDSA_Signature"
 
 
 class DecryptMode(enum.Enum):
@@ -119,18 +117,15 @@ class DecryptMode(enum.Enum):
 
 
 class SignMode(enum.Enum):
-      PKCS1 = "PKCS1"
-      PSS_MD5 = "PSS_MD5"
-      PSS_SHA1 = "PSS_SHA1"
-      PSS_SHA224 = "PSS_SHA224"
-      PSS_SHA256 = "PSS_SHA256"
-      PSS_SHA384 = "PSS_SHA384"
-      PSS_SHA512 = "PSS_SHA512"
-      ED25519 = "ED25519"
-      ECDSA_P224 = "ECDSA_P224"
-      ECDSA_P256 = "ECDSA_P256"
-      ECDSA_P384 = "ECDSA_P384"
-      ECDSA_P521 = "ECDSA_P521"
+    PKCS1 = "PKCS1"
+    PSS_MD5 = "PSS_MD5"
+    PSS_SHA1 = "PSS_SHA1"
+    PSS_SHA224 = "PSS_SHA224"
+    PSS_SHA256 = "PSS_SHA256"
+    PSS_SHA384 = "PSS_SHA384"
+    PSS_SHA512 = "PSS_SHA512"
+    EDDSA = "EdDSA"
+    ECDSA = "ECDSA"
 
 
 class SystemInfo:
@@ -149,13 +144,14 @@ class User:
 
 
 class Key:
-    def __init__(self, key_id, mechanisms, algorithm, operations, modulus, public_exponent):
+    def __init__(self, key_id, mechanisms, type, operations, modulus, public_exponent, data):
         self.key_id = key_id
         self.mechanisms = mechanisms
-        self.algorithm = algorithm
+        self.type = type
         self.operations = operations
         self.modulus = modulus
         self.public_exponent = public_exponent
+        self.data = data
 
 
 def _handle_api_exception(e, messages={}, roles=[], state=None):
@@ -203,8 +199,28 @@ class NetHSM:
         config.verify_ssl = verify_tls
         self.client = client.ApiClient(configuration=config)
 
+        self.session = requests.Session()
+        self.session.auth = (self.username, self.password)
+        self.session.verify = verify_tls
+
     def close(self):
         self.client.close()
+        self.session.close()
+
+    def request(self, method, endpoint, params=None, data=None, mime_type=None, json=None):
+        url = f"https://{self.host}/api/{self.version}/{endpoint}"
+        headers = {}
+        if mime_type:
+            headers["Content-Type"] = mime_type
+        response = self.session.request(
+            method, url, params=params, data=data, headers=headers, json=json
+        )
+        if not response.ok:
+            e = ApiException(status=response.status_code, reason=response.reason)
+            e.body = response.text
+            e.headers = response.headers
+            raise e
+        return response
 
     def get_api(self):
         from .client.api.default_api import DefaultApi
@@ -405,10 +421,11 @@ class NetHSM:
             return Key(
                 key_id=key_id,
                 mechanisms=[mechanism.value for mechanism in key.mechanisms.value],
-                algorithm=key.algorithm.value,
+                type=key.type.value,
                 operations=key.operations,
-                modulus=key.key.modulus,
-                public_exponent=key.key.public_exponent,
+                modulus=getattr(key.key, "modulus", None),
+                public_exponent=getattr(key.key, "public_exponent", None),
+                data=getattr(key.key, "data", None),
             )
         except ApiException as e:
             _handle_api_exception(
@@ -433,14 +450,14 @@ class NetHSM:
                 },
             )
 
-    def add_key(self, key_id, algorithm, mechanisms, prime_p, prime_q, public_exponent, data):
-        from .client.model.key_algorithm import KeyAlgorithm
+    def add_key(self, key_id, type, mechanisms, prime_p, prime_q, public_exponent, data):
+        from .client.model.key_type import KeyType
         from .client.model.key_mechanism import KeyMechanism
         from .client.model.key_mechanisms import KeyMechanisms
         from .client.model.key_private_data import KeyPrivateData
         from .client.model.private_key import PrivateKey
 
-        if algorithm == "RSA":
+        if type == "RSA":
             key_data = KeyPrivateData(
                 prime_p=prime_p,
                 prime_q=prime_q,
@@ -450,7 +467,7 @@ class NetHSM:
             key_data = KeyPrivateData(data=data)
 
         body = PrivateKey(
-            algorithm=KeyAlgorithm(algorithm),
+            type=KeyType(type),
             mechanisms=KeyMechanisms([KeyMechanism(mechanism) for mechanism in mechanisms]),
             key=key_data,
         )
@@ -485,14 +502,14 @@ class NetHSM:
                 },
             )
 
-    def generate_key(self, algorithm, mechanisms, length, key_id):
-        from .client.model.key_algorithm import KeyAlgorithm
+    def generate_key(self, type, mechanisms, length, key_id):
+        from .client.model.key_type import KeyType
         from .client.model.key_mechanism import KeyMechanism
         from .client.model.key_mechanisms import KeyMechanisms
         from .client.model.key_generate_request_data import KeyGenerateRequestData
 
         body = KeyGenerateRequestData(
-            algorithm=KeyAlgorithm(algorithm),
+            type=KeyType(type),
             mechanisms=KeyMechanisms([KeyMechanism(mechanism) for mechanism in mechanisms]),
             length=length,
             id=key_id or "",
@@ -556,6 +573,105 @@ class NetHSM:
         except ApiException as e:
             _handle_api_exception(
                 e, state=State.OPERATIONAL, roles=[Role.ADMINISTRATOR]
+            )
+
+    def get_key_certificate(self, key_id):
+        try:
+            response = self.request("GET", f"keys/{key_id}/cert")
+            return response.content.decode('utf-8')
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR, Role.OPERATOR],
+                messages={
+                    404: f"Certificate for key {key_id} not found",
+                },
+            )
+
+    def set_certificate(self, cert):
+        try:
+            self.request("PUT", "config/tls/cert.pem", data=cert, mime_type="application/x-pem-file")
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR],
+                messages={
+                    400: "Bad Request -- invalid certificate",
+                }
+            )
+
+    def set_key_certificate(self, key_id, cert, mime_type):
+        try:
+            self.request("PUT", f"keys/{key_id}/cert", data=cert, mime_type=mime_type)
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR],
+                messages={
+                    400: "Bad Request -- invalid certificate",
+                    404: f"Key {key_id} not found",
+                    409: f"Conflict -- key {key_id} already has a certificate",
+                }
+            )
+
+    def delete_key_certificate(self, key_id):
+        try:
+            return self.get_api().keys_key_id_cert_delete(key_id=key_id)
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR],
+                messages={
+                    404: f"Key {key_id} not found",
+                    409: f"Certificate for key {key_id} not found",
+                },
+            )
+
+    def csr(self, country, state_or_province, locality, organization, organizational_unit,
+            common_name, email_address):
+        from .client.model.distinguished_name import DistinguishedName
+
+        body = DistinguishedName(
+            country_name=country,
+            state_or_province_name=state_or_province,
+            locality_name=locality,
+            organization_name=organization,
+            organizational_unit_name=organizational_unit,
+            common_name=common_name,
+            email_address=email_address,
+        )
+        try:
+            return self.get_api().config_tls_csr_pem_put(body=body)
+        except ApiException as e:
+            _handle_api_exception(e, state=State.OPERATIONAL, roles=[Role.ADMINISTRATOR])
+
+    def key_csr(self, key_id, country, state_or_province, locality, organization,
+                organizational_unit, common_name, email_address):
+        data = {
+            "countryName": country,
+            "stateOrProvinceName": state_or_province,
+            "localityName": locality,
+            "organizationName": organization,
+            "organizationalUnitName": organizational_unit,
+            "commonName": common_name,
+            "emailAddress": email_address,
+
+        }
+        try:
+            response = self.request("POST", f"keys/{key_id}/csr.pem", json=data)
+            return response.content.decode("utf-8")
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR, Role.OPERATOR],
+                messages={
+                    404: f"Key {key_id} not found",
+                },
             )
 
     def set_backup_passphrase(self, passphrase):
@@ -665,6 +781,68 @@ class NetHSM:
                 hardware_version=data.hardware_version,
                 build_tag=data.build_tag,
             )
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR],
+            )
+
+    def backup(self):
+        try:
+            response = self.request("POST", "system/backup")
+            return response.content
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.BACKUP],
+            )
+
+    def restore(self, backup, passphrase, time):
+        try:
+            params = {
+                "backupPassphrase": passphrase,
+                "systemTime": time.isoformat(),
+            }
+            self.request("POST", "system/restore", params=params, data=backup)
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.UNPROVISIONED,
+                messages={
+                    400: "Bad request -- backup did not apply",
+                },
+            )
+
+    def update(self, image):
+        try:
+            response = self.request("POST", "system/update", data=image)
+            return response.json().get("releaseNotes")
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR],
+                messages={
+                    400: "Bad request -- malformed image",
+                    409: "Conflict -- major version downgrade is not allowed",
+                },
+            )
+
+    def cancel_update(self):
+        try:
+            self.get_api().system_cancel_update_post()
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR],
+            )
+
+    def commit_update(self):
+        try:
+            self.get_api().system_commit_update_post()
         except ApiException as e:
             _handle_api_exception(
                 e,

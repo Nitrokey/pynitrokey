@@ -27,10 +27,10 @@ from pynitrokey.nethsm.client.model_utils import (  # noqa: F401
 )
 
 def lazy_import():
-    from pynitrokey.nethsm.client.model.key_algorithm import KeyAlgorithm
     from pynitrokey.nethsm.client.model.key_mechanisms import KeyMechanisms
-    globals()['KeyAlgorithm'] = KeyAlgorithm
+    from pynitrokey.nethsm.client.model.key_type import KeyType
     globals()['KeyMechanisms'] = KeyMechanisms
+    globals()['KeyType'] = KeyType
 
 
 class KeyGenerateRequestData(ModelNormal):
@@ -84,7 +84,7 @@ class KeyGenerateRequestData(ModelNormal):
         lazy_import()
         return {
             'mechanisms': (KeyMechanisms,),  # noqa: E501
-            'algorithm': (KeyAlgorithm,),  # noqa: E501
+            'type': (KeyType,),  # noqa: E501
             'length': (int,),  # noqa: E501
             'id': (str,),  # noqa: E501
         }
@@ -96,7 +96,7 @@ class KeyGenerateRequestData(ModelNormal):
 
     attribute_map = {
         'mechanisms': 'mechanisms',  # noqa: E501
-        'algorithm': 'algorithm',  # noqa: E501
+        'type': 'type',  # noqa: E501
         'length': 'length',  # noqa: E501
         'id': 'id',  # noqa: E501
     }
@@ -113,12 +113,12 @@ class KeyGenerateRequestData(ModelNormal):
     ])
 
     @convert_js_args_to_python_args
-    def __init__(self, mechanisms, algorithm, *args, **kwargs):  # noqa: E501
+    def __init__(self, mechanisms, type, *args, **kwargs):  # noqa: E501
         """KeyGenerateRequestData - a model defined in OpenAPI
 
         Args:
             mechanisms (KeyMechanisms):
-            algorithm (KeyAlgorithm):
+            type (KeyType):
 
         Keyword Args:
             _check_type (bool): if True, values for parameters in openapi_types
@@ -179,7 +179,7 @@ class KeyGenerateRequestData(ModelNormal):
         self._visited_composed_classes = _visited_composed_classes + (self.__class__,)
 
         self.mechanisms = mechanisms
-        self.algorithm = algorithm
+        self.type = type
         for var_name, var_value in kwargs.items():
             if var_name not in self.attribute_map and \
                         self._configuration is not None and \

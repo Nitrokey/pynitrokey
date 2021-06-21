@@ -56,11 +56,8 @@ class SignMode(ModelSimple):
             'PSS_SHA256': "PSS_SHA256",
             'PSS_SHA384': "PSS_SHA384",
             'PSS_SHA512': "PSS_SHA512",
-            'ED25519': "ED25519",
-            'ECDSA_P224': "ECDSA_P224",
-            'ECDSA_P256': "ECDSA_P256",
-            'ECDSA_P384': "ECDSA_P384",
-            'ECDSA_P521': "ECDSA_P521",
+            'EDDSA': "EdDSA",
+            'ECDSA': "ECDSA",
         },
     }
 
@@ -110,10 +107,10 @@ class SignMode(ModelSimple):
         Note that value can be passed either in args or in kwargs, but not in both.
 
         Args:
-            args[0] (str):, must be one of ["PKCS1", "PSS_MD5", "PSS_SHA1", "PSS_SHA224", "PSS_SHA256", "PSS_SHA384", "PSS_SHA512", "ED25519", "ECDSA_P224", "ECDSA_P256", "ECDSA_P384", "ECDSA_P521", ]  # noqa: E501
+            args[0] (str):, must be one of ["PKCS1", "PSS_MD5", "PSS_SHA1", "PSS_SHA224", "PSS_SHA256", "PSS_SHA384", "PSS_SHA512", "EdDSA", "ECDSA", ]  # noqa: E501
 
         Keyword Args:
-            value (str):, must be one of ["PKCS1", "PSS_MD5", "PSS_SHA1", "PSS_SHA224", "PSS_SHA256", "PSS_SHA384", "PSS_SHA512", "ED25519", "ECDSA_P224", "ECDSA_P256", "ECDSA_P384", "ECDSA_P521", ]  # noqa: E501
+            value (str):, must be one of ["PKCS1", "PSS_MD5", "PSS_SHA1", "PSS_SHA224", "PSS_SHA256", "PSS_SHA384", "PSS_SHA512", "EdDSA", "ECDSA", ]  # noqa: E501
             _check_type (bool): if True, values for parameters in openapi_types
                                 will be type checked and a TypeError will be
                                 raised if the wrong type is input.

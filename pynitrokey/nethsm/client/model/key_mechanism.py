@@ -64,11 +64,8 @@ class KeyMechanism(ModelSimple):
             'RSA_SIGNATURE_PSS_SHA256': "RSA_Signature_PSS_SHA256",
             'RSA_SIGNATURE_PSS_SHA384': "RSA_Signature_PSS_SHA384",
             'RSA_SIGNATURE_PSS_SHA512': "RSA_Signature_PSS_SHA512",
-            'ED25519_SIGNATURE': "ED25519_Signature",
-            'ECDSA_P224_SIGNATURE': "ECDSA_P224_Signature",
-            'ECDSA_P256_SIGNATURE': "ECDSA_P256_Signature",
-            'ECDSA_P384_SIGNATURE': "ECDSA_P384_Signature",
-            'ECDSA_P521_SIGNATURE': "ECDSA_P521_Signature",
+            'EDDSA_SIGNATURE': "EdDSA_Signature",
+            'ECDSA_SIGNATURE': "ECDSA_Signature",
         },
     }
 
@@ -118,10 +115,10 @@ class KeyMechanism(ModelSimple):
         Note that value can be passed either in args or in kwargs, but not in both.
 
         Args:
-            args[0] (str):, must be one of ["RSA_Decryption_RAW", "RSA_Decryption_PKCS1", "RSA_Decryption_OAEP_MD5", "RSA_Decryption_OAEP_SHA1", "RSA_Decryption_OAEP_SHA224", "RSA_Decryption_OAEP_SHA256", "RSA_Decryption_OAEP_SHA384", "RSA_Decryption_OAEP_SHA512", "RSA_Signature_PKCS1", "RSA_Signature_PSS_MD5", "RSA_Signature_PSS_SHA1", "RSA_Signature_PSS_SHA224", "RSA_Signature_PSS_SHA256", "RSA_Signature_PSS_SHA384", "RSA_Signature_PSS_SHA512", "ED25519_Signature", "ECDSA_P224_Signature", "ECDSA_P256_Signature", "ECDSA_P384_Signature", "ECDSA_P521_Signature", ]  # noqa: E501
+            args[0] (str):, must be one of ["RSA_Decryption_RAW", "RSA_Decryption_PKCS1", "RSA_Decryption_OAEP_MD5", "RSA_Decryption_OAEP_SHA1", "RSA_Decryption_OAEP_SHA224", "RSA_Decryption_OAEP_SHA256", "RSA_Decryption_OAEP_SHA384", "RSA_Decryption_OAEP_SHA512", "RSA_Signature_PKCS1", "RSA_Signature_PSS_MD5", "RSA_Signature_PSS_SHA1", "RSA_Signature_PSS_SHA224", "RSA_Signature_PSS_SHA256", "RSA_Signature_PSS_SHA384", "RSA_Signature_PSS_SHA512", "EdDSA_Signature", "ECDSA_Signature", ]  # noqa: E501
 
         Keyword Args:
-            value (str):, must be one of ["RSA_Decryption_RAW", "RSA_Decryption_PKCS1", "RSA_Decryption_OAEP_MD5", "RSA_Decryption_OAEP_SHA1", "RSA_Decryption_OAEP_SHA224", "RSA_Decryption_OAEP_SHA256", "RSA_Decryption_OAEP_SHA384", "RSA_Decryption_OAEP_SHA512", "RSA_Signature_PKCS1", "RSA_Signature_PSS_MD5", "RSA_Signature_PSS_SHA1", "RSA_Signature_PSS_SHA224", "RSA_Signature_PSS_SHA256", "RSA_Signature_PSS_SHA384", "RSA_Signature_PSS_SHA512", "ED25519_Signature", "ECDSA_P224_Signature", "ECDSA_P256_Signature", "ECDSA_P384_Signature", "ECDSA_P521_Signature", ]  # noqa: E501
+            value (str):, must be one of ["RSA_Decryption_RAW", "RSA_Decryption_PKCS1", "RSA_Decryption_OAEP_MD5", "RSA_Decryption_OAEP_SHA1", "RSA_Decryption_OAEP_SHA224", "RSA_Decryption_OAEP_SHA256", "RSA_Decryption_OAEP_SHA384", "RSA_Decryption_OAEP_SHA512", "RSA_Signature_PKCS1", "RSA_Signature_PSS_MD5", "RSA_Signature_PSS_SHA1", "RSA_Signature_PSS_SHA224", "RSA_Signature_PSS_SHA256", "RSA_Signature_PSS_SHA384", "RSA_Signature_PSS_SHA512", "EdDSA_Signature", "ECDSA_Signature", ]  # noqa: E501
             _check_type (bool): if True, values for parameters in openapi_types
                                 will be type checked and a TypeError will be
                                 raised if the wrong type is input.

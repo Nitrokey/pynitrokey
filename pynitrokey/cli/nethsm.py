@@ -9,21 +9,33 @@
 
 import contextlib
 import datetime
+import mimetypes
+import os.path
 
 import click
+import requests
 import urllib3
 
 import pynitrokey.nethsm
 
+
 def make_enum_type(enum_cls):
     return click.Choice([variant.value for variant in enum_cls], case_sensitive=False)
+
+
+API_CERTIFICATE_MIME_TYPE = "application/x-pem-file"
+KEY_CERTIFICATE_MIME_TYPES = [
+    "application/x-pem-file",
+    "application/x-x509-ca-cert",
+    "application/pgp-keys",
+]
 
 
 DATETIME_TYPE = click.DateTime(formats=["%Y-%m-%dT%H:%M:%S%z"])
 ROLE_TYPE = make_enum_type(pynitrokey.nethsm.Role)
 LOG_LEVEL_TYPE = make_enum_type(pynitrokey.nethsm.LogLevel)
 UNATTENDED_BOOT_STATUS_TYPE = make_enum_type(pynitrokey.nethsm.UnattendedBootStatus)
-ALGORITHM_TYPE = make_enum_type(pynitrokey.nethsm.KeyAlgorithm)
+TYPE_TYPE = make_enum_type(pynitrokey.nethsm.KeyType)
 MECHANISM_TYPE = make_enum_type(pynitrokey.nethsm.KeyMechanism)
 DECRYPT_MODE_TYPE = make_enum_type(pynitrokey.nethsm.DecryptMode)
 SIGN_MODE_TYPE = make_enum_type(pynitrokey.nethsm.SignMode)
@@ -110,6 +122,8 @@ def connect(ctx, require_auth=True):
                 raise click.ClickException(f"Could not connect to the NetHSM: {e.reason}\nIf you use a self-signed certificate, please set the --no-verify-tls option.")
             else:
                 raise e
+        except requests.exceptions.SSLError as e:
+            raise click.ClickException(f"Could not connect to the NetHSM: {e}\nIf you use a self-signed certificate, please set the --no-verify-tls option.")
 
 
 @nethsm.command()
@@ -350,12 +364,12 @@ def list_keys(ctx, details):
 
         headers = ["Key ID"]
         if details:
-            headers += ["Algorithm", "Mechanisms", "Operations"]
+            headers += ["Type", "Mechanisms", "Operations"]
             data = []
             for key_id in key_ids:
                 key = nethsm.get_key(key_id=key_id.value)
                 data.append(
-                    [key_id, key.algorithm, ", ".join(key.mechanisms), key.operations]
+                    [key_id, key.type, ", ".join(key.mechanisms), key.operations]
                 )
         else:
             data = [[key_id] for key_id in key_ids]
@@ -379,11 +393,15 @@ def get_key(ctx, key_id, public_key):
             key = nethsm.get_key(key_id)
             mechanisms = ", ".join(key.mechanisms)
             print(f"Key {key_id} on NetHSM {nethsm.host}:")
-            print(f"Algorithm:       {key.algorithm}")
+            print(f"Type:            {key.type}")
             print(f"Mechanisms:      {mechanisms}")
             print(f"Operations:      {key.operations}")
-            print(f"Modulus:         {key.modulus}")
-            print(f"Public exponent: {key.public_exponent}")
+            if key.modulus:
+                print(f"Modulus:         {key.modulus}")
+            if key.public_exponent:
+                print(f"Public exponent: {key.public_exponent}")
+            if key.data:
+                print(f"Data:            {key.data}")
 
 
 @nethsm.command()
@@ -399,13 +417,26 @@ def delete_key(ctx, key_id):
         print(f"Key {key_id} deleted on NetHSM {nethsm.host}")
 
 
-def prompt_mechanisms(algorithm):
+def prompt_mechanisms(type):
+    # We assume that key type X corresponds to the mechanisms starting with X.
+    # This is no longer true for curves, so we have to adapt the type
+    if type == pynitrokey.nethsm.KeyType.CURVE25519.value:
+        type = "EdDSA"
+    elif type.startswith("EC_"):
+        type = "ECDSA"
+
     available_mechanisms = []
-    print("Supported mechanisms for this algorithm:")
+    print("Supported mechanisms for this key type:")
     for mechanism in pynitrokey.nethsm.KeyMechanism:
-        if mechanism.value.startswith(algorithm):
+        if mechanism.value.startswith(type):
             available_mechanisms.append(mechanism.value)
             print(f"  {mechanism.value}")
+
+    # If there is only one matching algorithm, we can choose it and don’t have
+    # to ask the user.
+    if len(available_mechanisms) == 1:
+        print(f"Automatically selecting the key mechanism {available_mechanisms[0]}")
+        return available_mechanisms
 
     print("Please enter at least one mechanism.  Enter an empty string to "
           "finish the list of mechanisms.")
@@ -439,11 +470,11 @@ def prompt_mechanisms(algorithm):
 
 @nethsm.command()
 @click.option(
-    "-a",
-    "--algorithm",
-    type=ALGORITHM_TYPE,
+    "-t",
+    "--type",
+    type=TYPE_TYPE,
     prompt=True,
-    help="The algorithm for the new key",
+    help="The type for the new key",
 )
 @click.option(
     "-m",
@@ -479,16 +510,16 @@ def prompt_mechanisms(algorithm):
     help="The ID of the new key",
 )
 @click.pass_context
-def add_key(ctx, algorithm, mechanisms, prime_p, prime_q, public_exponent, data, key_id):
+def add_key(ctx, type, mechanisms, prime_p, prime_q, public_exponent, data, key_id):
     """Add a key pair on the NetHSM.
 
     If the key ID is not set, it is generated by the NetHSM.
 
     This command requires authentication as a user with the Administrator
     role."""
-    mechanisms = list(mechanisms) or prompt_mechanisms(algorithm)
+    mechanisms = list(mechanisms) or prompt_mechanisms(type)
 
-    if algorithm == "RSA":
+    if type == "RSA":
         if data:
             raise click.ClickException("-d/--data must not be set for RSA keys")
         if not prime_p:
@@ -510,7 +541,7 @@ def add_key(ctx, algorithm, mechanisms, prime_p, prime_q, public_exponent, data,
     with connect(ctx) as nethsm:
         key_id = nethsm.add_key(
             key_id=key_id,
-            algorithm=algorithm,
+            type=type,
             mechanisms=mechanisms,
             prime_p=prime_p,
             prime_q=prime_q,
@@ -522,11 +553,12 @@ def add_key(ctx, algorithm, mechanisms, prime_p, prime_q, public_exponent, data,
 
 @nethsm.command()
 @click.option(
-    "-a",
-    "--algorithm",
-    type=ALGORITHM_TYPE,
+    "type",
+    "-t",
+    "--type",
+    type=TYPE_TYPE,
     prompt=True,
-    help="The algorithm for the generated key",
+    help="The type for the generated key",
 )
 @click.option(
     "-m",
@@ -549,14 +581,14 @@ def add_key(ctx, algorithm, mechanisms, prime_p, prime_q, public_exponent, data,
     help="The ID of the generated key",
 )
 @click.pass_context
-def generate_key(ctx, algorithm, mechanisms, length, key_id):
+def generate_key(ctx, type, mechanisms, length, key_id):
     """Generate a key pair on the NetHSM.
 
     This command requires authentication as a user with the Administrator
     role."""
-    mechanisms = list(mechanisms) or prompt_mechanisms(algorithm)
+    mechanisms = list(mechanisms) or prompt_mechanisms(type)
     with connect(ctx) as nethsm:
-        key_id = nethsm.generate_key(algorithm, mechanisms, length, key_id)
+        key_id = nethsm.generate_key(type, mechanisms, length, key_id)
         print(f"Key {key_id} generated on NetHSM {nethsm.host}")
 
 
@@ -756,6 +788,161 @@ def set_unattended_boot(ctx, status):
         print(f"Updated the unattended boot configuration for NetHSM {nethsm.host}")
 
 
+def get_api_or_key_id(api, key_id):
+    """Helper method for operations that can be executed either for the API
+    certificate or for the certificate stored for a key."""
+    if api and key_id:
+        raise click.ClickException("--api and --key-id are mutually exclusive")
+
+    if not api and not key_id:
+        choice = click.Choice(["api", "key"], case_sensitive=False)
+        method = click.prompt(
+            "For stored key or for NetHSM HTTPS API?",
+            type=choice,
+        )
+        if method == "api":
+            api = True
+        elif method == "key":
+            key_id = click.prompt("Key ID")
+        else:
+            raise ValueError("Unexpected method")
+
+    return (api, key_id)
+
+
+@nethsm.command()
+@click.option("-a", "--api", is_flag=True, help="Set the certificate for the NetHSM HTTPS API")
+@click.option("-k", "--key-id", help="The ID of the key to set the certificate for")
+@click.option(
+    "-m",
+    "--mime-type",
+    type=click.Choice(KEY_CERTIFICATE_MIME_TYPES),
+    help="The MIME type of the certificate (only with --key-id)",
+)
+@click.argument("filename")
+@click.pass_context
+def set_certificate(ctx, api, key_id, mime_type, filename):
+    """Set a certificate on the NetHSM.
+
+    If the --api option is set, the certificate used for the NetHSM HTTPS API
+    is set.  If the --key-id option is set, the certificate for a key stored on
+    the NetHSM is set.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    (api, key_id) = get_api_or_key_id(api, key_id)
+    with connect(ctx) as nethsm:
+        with open(filename, "rb") as f:
+            if key_id:
+                if not mime_type:
+                    (mime_type, _) = mimetypes.guess_type(filename)
+                if not mime_type:
+                    raise click.ClickException(
+                        f"Failed to detect MIME type for {filename}. Use --mime-type to "
+                        "explicitly set the MIME type."
+                    )
+                if mime_type not in KEY_CERTIFICATE_MIME_TYPES:
+                    raise click.ClickException(
+                        f"Unsupported certificate mime type {mime_type} detected for "
+                        f"{filename}"
+                    )
+                nethsm.set_key_certificate(key_id, f, mime_type)
+                print(f"Updated the certificate for key {key_id} on NetHSM {nethsm.host}")
+            else:
+                if mime_type:
+                    raise click.ClickException("--mime-type cannot be used with --api")
+                nethsm.set_certificate(f)
+                print(f"Updated the API certificate for NetHSM {nethsm.host}")
+
+
+@nethsm.command()
+@click.option("-a", "--api", is_flag=True, help="Get the certificate for the NetHSM HTTPS API")
+@click.option("-k", "--key-id", help="The ID of the key to get the certificate for")
+@click.pass_context
+def get_certificate(ctx, api, key_id):
+    """Get a certificate from the NetHSM.
+
+    If the --api option is set, the certificate used for the NetHSM HTTPS API
+    is queried.  If the --key-id option is set, the certificate for a key stored on
+    the NetHSM is queried.
+
+    This command requires authentication as a user with the Administrator role.
+    The certificate for a key can also be queried by a user with the Operator
+    role."""
+    (api, key_id) = get_api_or_key_id(api, key_id)
+    with connect(ctx) as nethsm:
+        if key_id:
+            cert = nethsm.get_key_certificate(key_id)
+        else:
+            cert = nethsm.get_certificate()
+        print(cert)
+
+
+@nethsm.command()
+@click.option(
+    "-k",
+    "--key-id",
+    prompt=True,
+    help="The ID of the key to delete the certificate for",
+)
+@click.pass_context
+def delete_certificate(ctx, key_id):
+    """Delete a certificate for a stored key from the NetHSM.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    with connect(ctx) as nethsm:
+        nethsm.delete_key_certificate(key_id)
+        print(f"Deleted certificate for key {key_id} on NetHSM {nethsm.host}")
+
+
+@nethsm.command()
+@click.option("-a", "--api", is_flag=True, help="Generate a CSR for the NetHSM HTTPS API")
+@click.option("-k", "--key-id", help="The ID of the key to generate the CSR for")
+@click.option("--country", default="", prompt=True, help="The country name")
+@click.option("--state-or-province", default="", prompt=True, help="The state or province name")
+@click.option("--locality", default="", prompt=True, help="The locality name")
+@click.option("--organization", default="", prompt=True, help="The organization name")
+@click.option("--organizational-unit", default="", prompt=True, help="The organization unit name")
+@click.option("--common-name", default="", prompt=True, help="The common name")
+@click.option("--email-address", default="", prompt=True, help="The email address")
+@click.pass_context
+def csr(ctx, api, key_id, country, state_or_province, locality, organization, organizational_unit,
+        common_name, email_address):
+    """Generate a certificate signing request.
+
+    If the --api option is set, the CSR is generated for the NetHSM, for
+    example to replace the self-signed initial certificate.  If the --key-id
+    option is set, the CSR is generated for a key stored on the NetHSM.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    (api, key_id) = get_api_or_key_id(api, key_id)
+    with connect(ctx) as nethsm:
+        if key_id:
+            csr = nethsm.key_csr(
+                key_id=key_id,
+                country=country,
+                state_or_province=state_or_province,
+                locality=locality,
+                organization=organization,
+                organizational_unit=organizational_unit,
+                common_name=common_name,
+                email_address=email_address,
+            )
+        else:
+            csr = nethsm.csr(
+                country=country,
+                state_or_province=state_or_province,
+                locality=locality,
+                organization=organization,
+                organizational_unit=organizational_unit,
+                common_name=common_name,
+                email_address=email_address,
+            )
+        print(csr)
+
+
 @nethsm.command()
 @click.pass_context
 def system_info(ctx):
@@ -770,6 +957,91 @@ def system_info(ctx):
         print(f"Software version: {info.software_version}")
         print(f"Hardware version: {info.hardware_version}")
         print(f"Build tag:        {info.build_tag}")
+
+
+@nethsm.command()
+@click.argument("filename")
+@click.pass_context
+def backup(ctx, filename):
+    """Make a backup of a NetHSM instance and write it to a file.
+
+    This command requires authentication as a user with the Backup role."""
+    if os.path.exists(filename):
+        raise click.ClickException(f"Backup file {filename} already exists")
+    with connect(ctx) as nethsm:
+        data = nethsm.backup()
+        with open(filename, 'xb') as f:
+            f.write(data)
+            print(f"Backup for {nethsm.host} written to {filename}")
+
+
+@nethsm.command()
+@click.option(
+    "-p",
+    "--backup-passphrase",
+    hide_input=True,
+    prompt=True,
+    help="The backup passphrase",
+)
+@click.option(
+    "-t",
+    "--system-time",
+    type=DATETIME_TYPE,
+    help="The system time to set (default: the time of this system)",
+)
+@click.argument("filename")
+@click.pass_context
+def restore(ctx, backup_passphrase, system_time, filename):
+    """Restore a backup of a NetHSM instance from a file.
+
+    If the system time is not set, the current system time is used."""
+    if not system_time:
+        system_time = datetime.datetime.now(datetime.timezone.utc)
+    with connect(ctx, require_auth=False) as nethsm:
+        with open(filename, "rb") as f:
+            nethsm.restore(f, backup_passphrase, system_time)
+        print(f"Backup restored on NetHSM {nethsm.host}")
+
+
+@nethsm.command()
+@click.argument("filename")
+@click.pass_context
+def update(ctx, filename):
+    """Load an update to a NetHSM instance.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    with connect(ctx) as nethsm:
+        with open(filename, "rb") as f:
+            release_notes = nethsm.update(f)
+        print(f"Image {filename} uploaded to NetHSM {nethsm.host}")
+        if release_notes:
+            print("Release notes:")
+            print("  " + release_notes)
+
+
+@nethsm.command()
+@click.pass_context
+def cancel_update(ctx):
+    """Cancel a queued update on a NetHSM instance.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    with connect(ctx) as nethsm:
+        nethsm.cancel_update()
+        print(f"Update successfully cancelled on NetHSM {nethsm.host}")
+
+
+@nethsm.command()
+@click.pass_context
+def commit_update(ctx):
+    """Commit a queued update on a NetHSM instance.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    with connect(ctx) as nethsm:
+        nethsm.commit_update()
+        print(f"Update successfully committed on NetHSM {nethsm.host}")
 
 
 @nethsm.command()

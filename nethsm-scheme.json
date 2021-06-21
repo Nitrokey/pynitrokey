@@ -196,6 +196,9 @@
           "204": {
             "description": "Unlock was successful, NetHSM is <i>Operational</i> now."
           },
+          "400": {
+            "description": "Bad request (invalid passphrase)."
+          },
           "403": {
             "description": "Unlock failed (access denied)."
           },
@@ -218,6 +221,9 @@
         "responses": {
           "204": {
             "description": "Lock was successful, NetHSM is <i>Locked</i> now."
+          },
+          "401": {
+            "description": "Authentication required but none provided."
           },
           "403": {
             "description": "Lock failed (access denied)."
@@ -559,7 +565,7 @@
       ],
       "get": {
         "description": "Retrieve public key in PEM format.",
-	"produces": ["application/x-pem-file"],
+        "produces": ["application/x-pem-file"],
         "responses": {
           "200": {
             "description": "",
@@ -606,6 +612,7 @@
       ],
       "post": {
         "description": "Retrieve a certificate signing request in PEM format.",
+        "produces": ["application/x-pem-file"],
         "parameters": [
           {
             "x-amf-mediaType": "application/json",
@@ -779,6 +786,7 @@
       ],
       "get": {
         "description": "Retrieve stored certificate. The content-type header will display the media type of the stored data.",
+        "produces": ["application/x-pem-file", "application/x-x509-ca-cert", "application/pgp-keys"],
         "responses": {
           "200": {
             "description": "",
@@ -1286,7 +1294,7 @@
     "/config/tls/public.pem": {
       "get": {
         "description": "Get public key for NetHSMs https API.",
-	"produces": ["application/x-pem-file"],
+        "produces": ["application/x-pem-file"],
         "responses": {
           "200": {
             "description": "Successful retrieval of public key.",
@@ -1321,7 +1329,7 @@
     "/config/tls/cert.pem": {
       "get": {
         "description": "Get certificate for NetHSMs https API.",
-	"produces": ["application/x-pem-file"],
+        "produces": ["application/x-pem-file"],
         "responses": {
           "200": {
             "description": "Successful retrieval of certificate.",
@@ -1394,6 +1402,7 @@
     "/config/tls/csr.pem": {
       "put": {
         "description": "Get NetHSM certificate signing request e.g. to replace self-signed intital certificate.",
+        "produces": ["application/x-pem-file"],
         "parameters": [
           {
             "x-amf-mediaType": "application/json",
@@ -2042,11 +2051,8 @@
         "RSA_Signature_PSS_SHA256",
         "RSA_Signature_PSS_SHA384",
         "RSA_Signature_PSS_SHA512",
-        "ED25519_Signature",
-        "ECDSA_P224_Signature",
-        "ECDSA_P256_Signature",
-        "ECDSA_P384_Signature",
-        "ECDSA_P521_Signature"
+        "EdDSA_Signature",
+        "ECDSA_Signature"
       ],
       "type": "string"
     },
@@ -2179,7 +2185,7 @@
       }
     },
     "PemPrivateKey": {
-      "example": "",
+      "example": "-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEAseU3o1Ix2euXUi50ht/mpDYnE2J4maJrIOLmDrmz+jv20hsR\nvPsWnKevYZqEYmvQFNO2Mv9DB5MZfnJ3jL3Aq71Ls1wqOnW9++bZAvqvEVUtlHh0\n5Rz9k1Ga32/OaHHEZj+lG9PlKI8y63K+sKZLuDYiVy1/gzARjpf2hCmTyQSAvtcA\n07WXAqorNI8mhcbIhnrGCeKfB8HYJ1T3uk2lXrwXehVaw9KZzg7KuRO0Qnk+IfR6\nLZjiKiEB9malzqSx3N20vibI672bMR+fqID2oC+ovNOEdRhPlCnztaY1HsnDhJt8\nMDTjlVGveCElvesuSVnNVHmVugDjEYTU1KV3TwIDAQABAoIBAQClSL5QDX9p5R28\napMz+XYW3oWh2h0JScHVVVvBFMNm3S3vet0ZRAV3Wcl2mxUjSN6Vazte2JKTyBWo\nyXvQFUGdj4x1Qk2t8VWqZYr93KKqLQTjbKPXd/8WUHzf2sbhfcqn4bxrRY4mCB6c\naglIocm6hvmTHB/caN33KbQOiX7ZBbwoZG3AKgoJU3SMXnVUfQzl/xnVrWLKESqm\n5kL0OTGLP091jZyMhcceh54RIuaJjPU4opL0bm46DLeQE4z20GfGCcRK/CUt4bNc\nc0wvuOyyzGI5p7QB/HCUJqR33m9ydwDkqC4vrORDxpMaSRNerpoGA+cNHREULh2P\ngaPydXq5AoGBAN3xIhci5LpIVvscNjPyxD6WQq5EZx251IzTnwQ/5E/+qxfYHvwe\nqAuLJ2+QvNQBuNKk85jwZsfUgPR6kku9dOt3n61lnrBRgGcqWnR0j8/NbpVe1qOe\nWArLeijpKKnCZ6uwpE6NND398dCmm3WLZZH64+1eLT8PbX/AIzId5zyzAoGBAM0x\nvWEsKi4pjNMBdaawJMbHEoDmMuib4t+FkbHDkqqSe/OIkHZ9tDQuHWpzDHmb30Na\nKNwQSNLwu3QK64z1NcjZUJFmu0+3NxSyI/EvNA9tiGCT5iSonsz04oa51AYt+IK5\n7JjMjo128INrQwtRFSYHx3hoVVW06tZNE037NiD1AoGABqeNOx5bt04l9X+CDIqx\n4aKFu03nvZdtzQ8nTGxR/ygGnz9mpm6Q4U+5zfmL/9tRXFd/yk0i98jiWPI34rd6\ngvjiO8O5P1YiQHWforBAA54IO8hNLTi5MRGqxwE+q+BdVWOFeal4MIelsXjdXmfg\nksDwBpT1TFe9E8CCDaWh4ksCgYAhHCiR2H2J61x04+RnHD8i8BZ1RC/sxtKp/LSQ\nuZ0d9vsXRe8Bn7EHRnWqqpvVt6gkBxVWxS3rE7s7s1Nk8GBYY3CTtb790vOJXGFe\nVp6Q6ry50MOvIKJXMiCnWq7yvFJATd32nfNWsl2G5zTvS4sdEt5F+Jfkd4f5QoCd\n8a4/TQKBgQDEdY3XTibkDt80zUFIP6RRAyfM6p2grk+o08De0BBZD/1GX9V9ARNT\nbC3+2qXXDYGxbMWgsoqsQTREJD78+sdD3q+IfIc1m7XvuIgyLMAalm+Kd1HlUF/J\n7VCKjgchT0OKwmi0d52TEOiz6U35Jv4GWBstsh1KVpHYiTnwnhAwKg==\n-----END RSA PRIVATE KEY-----\n",
       "type": "string"
     },
     "NetworkConfig": {
@@ -2205,17 +2211,6 @@
           "type": "string"
         }
       }
-    },
-    "KeyAlgorithm": {
-      "enum": [
-        "RSA",
-        "ED25519",
-        "ECDSA_P224",
-        "ECDSA_P256",
-        "ECDSA_P384",
-        "ECDSA_P521"
-      ],
-      "type": "string"
     },
     "ProvisionRequestData": {
       "example": {
@@ -2321,7 +2316,7 @@
         "mechanisms": [
           "RSA_Signature_PSS_SHA256"
         ],
-        "algorithm": "RSA",
+        "type": "RSA",
         "key": {
           "primeP": "frtz7u89gft89uz",
           "primeQ": "FhJQl11CiY0ifRHXeAqFh4rdSl6",
@@ -2331,15 +2326,15 @@
       "type": "object",
       "required": [
         "mechanisms",
-        "algorithm",
+        "type",
         "key"
       ],
       "properties": {
         "mechanisms": {
           "$ref": "#/definitions/KeyMechanisms"
         },
-        "algorithm": {
-          "$ref": "#/definitions/KeyAlgorithm"
+        "type": {
+          "$ref": "#/definitions/KeyType"
         },
         "key": {
           "$ref": "#/definitions/KeyPrivateData"
@@ -2347,7 +2342,7 @@
       }
     },
     "PemCSR": {
-      "example": "-----BEGIN CERTIFICATE REQUEST-----\nMIICpzCCAY8CAQAwYjFgMAkGA1UEBgwCREUwDQYDVQQHDAZCZXJsaW4wDwYDVQQK\nDAhOaXRyb2tleTATBgNVBAMMDG5ldGhzbS5sb2NhbDAeBgkqhkiG9w0BCQEMEWlu\nZm9Abml0cm9rZXkuY29tMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA\nx7ghfro+VEepYmy2V7HPn5PSRdmGzxewcpmzxTtrZ10BygbEqhPsAr4fWI9pG7iR\nXzeza7DMjrQptzKsfSy6dBFmSEZer+hJxuOdhBG/FX6pjwRrZpbOQxyr+aTlE3jm\n2XP12Cqx0wsYGIoJlWHbGb90IAx9zpdYQgHoJZ4x5ims5vo7h3puPEyVycJH5fMB\nB9h+2Bxc4BxaPKMm15JR1B7ToB3g16SJY2B1t/aqNmqSBZC4HP1fCuSbBm83OgqR\nhdk1P6r/vqOVKrxVupDqKkdcf/dRBiQalJ9tQbVbs9OOYfQ6n25GvJTvGtqOEugg\nit32tV16JXCZjnYePAvtNwIDAQABoAAwDQYJKoZIhvcNAQELBQADggEBAGTXJciq\nFMdQeobMDjGgnzR30HC77rJ/Bdu9rqpAtjUcL05K2ufma/gXvPCl1WYEr8JJ3aiA\nr2ebitcvm+qwXLsBe68o5bSXxMe6PigyuB0lSijB6MeItMxsVFPbKvDk7Hj4ad2P\nM6aaAixRcJi9eIA93yKmpPXyUcycW0wjQU6CeV/aMN9kLLbxzEgf0it5QXY7nexu\n2no32GHFbLiI8GoMvuPEgeks3qBtrxKwTOdKWAFDAgEiXZ8m4zN0V66J3zurMzzr\ntJ6G/JEFGy1sITUatqSxqR4A5eGsV9ktFWZbtwRihuCNIVIQ8d9Up5CWFLWExwNS\nZxGNJ4YEMwKYf6s=\n-----END CERTIFICATE REQUEST-----\n",
+      "example": "-----BEGIN CERTIFICATE REQUEST-----\nMIICpzCCAY8CAQAwYjFgMAkGA1UEBhMCREUwDQYDVQQHDAZCZXJsaW4wDwYDVQQK\nDAhOaXRyb2tleTATBgNVBAMMDG5ldGhzbS5sb2NhbDAeBgkqhkiG9w0BCQEWEWlu\nZm9Abml0cm9rZXkuY29tMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA\nx7ghfro+VEepYmy2V7HPn5PSRdmGzxewcpmzxTtrZ10BygbEqhPsAr4fWI9pG7iR\nXzeza7DMjrQptzKsfSy6dBFmSEZer+hJxuOdhBG/FX6pjwRrZpbOQxyr+aTlE3jm\n2XP12Cqx0wsYGIoJlWHbGb90IAx9zpdYQgHoJZ4x5ims5vo7h3puPEyVycJH5fMB\nB9h+2Bxc4BxaPKMm15JR1B7ToB3g16SJY2B1t/aqNmqSBZC4HP1fCuSbBm83OgqR\nhdk1P6r/vqOVKrxVupDqKkdcf/dRBiQalJ9tQbVbs9OOYfQ6n25GvJTvGtqOEugg\nit32tV16JXCZjnYePAvtNwIDAQABoAAwDQYJKoZIhvcNAQELBQADggEBABVz67ib\nngef9acHkwTYHHQk3MHxQRSLOxUKoDjk1URMgJ2hgL5HR91yQ3gBPxVuEGWdEQXJ\nC4sM9S3OoM5yFJFj56Y8MaASHFo58V5N1FaFqf3BbVKNzM4Jgrtghw1teJU45xZR\n0+sjA0YjVJwGnNXfBJdQVNXgWJcXy4bmPSaF7khxDnoP7dmxMcpQ2HKL8X9E/kef\nKOhz+HtlCWoqwD77aR3wKrYWdn+fwMeTRGNpJLPdKl7vyleb8pjtWUYnNTIP4Zh+\nBLX93udZxl8sVpJBnLcIWplwJB16hxk5ZODjWUOrhkwZ0MbiPFbKkihc8GMLLEyp\ndHRjrbgAUrx5DuY=\n-----END CERTIFICATE REQUEST-----\n",
       "type": "string"
     },
     "DecryptRequestData": {
@@ -2378,11 +2373,8 @@
         "PSS_SHA256",
         "PSS_SHA384",
         "PSS_SHA512",
-        "ED25519",
-        "ECDSA_P224",
-        "ECDSA_P256",
-        "ECDSA_P384",
-        "ECDSA_P521"
+        "EdDSA",
+        "ECDSA"
       ],
       "type": "string"
     },
@@ -2608,7 +2600,7 @@
       "type": "string"
     },
     "PGPPrivateKey": {
-      "example": "",
+      "example": "-----BEGIN PGP PRIVATE KEY BLOCK-----\nVersion: GnuPG v2\n\nMIIEvDCCAqQCCQCZ9VKHZSKydDANBgkqhkiG9w0BAQsFADAgMQ4wDAYDVQQIDAVo\nZWxsbzEOMAwGA1UEBwwFaGVsbG8wHhcNMTgxMDMwMTI0MDQ3WhcNMTkxMDMwMTI0\nMDQ3WjAgMQ4wDAYDVQQIDAVoZWxsbzEOMAwGA1UEBwwFaGVsbG8wggIiMA0GCSqG\nSIb3DQEBAQUAA4ICDwAwggIKAoICAQC8WRImgeu4U6Yg5q0/SvoieQL5JwPHaCrN\n6Cc0mj8pnzTBu/f0QYNentcnu0EclD99kla6/gdiJnt0b/IT23o37+t2n0BvEgVQ\nMJxJ/BjIqSZCykq4SWHKia1OS7tJKE2Q/hgGq/RQJ0zecWKA9SuafXDt0plw0saz\nP8ZosFyToMYnPB54SzXj4qeD5t2L2dOamTTyziw/GJDGdwssImEDfeWyMRRyHcIa\nu9HNGaTxjCdBGzCR+PEX3ZHhGzl5iMlgtZUICgXMgAvFZHHEYNtyCW9ZzUB2ZKE2\nnMbu8hbl7GXRCdJaAqlJfKiGp/WvbmrLhCzcwqhu4UnqGXOxeEQryrkPAbiLafqb\nfPLHB7dr8OEGlUzp1SCHR1JxwdBVohuO2lL+O5nMD3ZVdVnh2F5Et6I9lO4w9+5n\naI6pmO4oy9PsqKvUjxVnEeo1Ee1n9o/4T6fe6XBIQLPqEmy2IXynZP0eJn1Yu9SF\nTkTSmJ+jRiU7EMaagQrM4Ds5seVNVWKOvUjDQCV+QRZaaPcrkMoFtjLCVMhLgy7M\n/Dfl63qCcdVkPwdbI/apjfG8qMrez4k3qAZDYgS3fujyuq9wv7xbq2+o0Ck4Ono2\nmMAA6JDSZr8XwR3ac/UK1KGv+weh1fOVO+c6mSN9M+W1MtkJS+i4/Aj2yDCJzVk3\nGZpd5/E6WwIDAQABMA0GCSqGSIb3DQEBCwUAA4ICAQAB+8+1dk20P6R+RvDRs1mo\ne1CegaPH2bl9t1WVuXJIUkrIGDceVr5f19pcaNQRYwZuoQd8VQXCZUpWbo//TWxl\nItS3prQgcrfcTi7gCzp1+q1bZk6H21tzESDJTXPFp019/ypdUB4Jsty7qQL73sE3\nnj67DH+srPCknAhfFag0dPOOjAY19IrIomtBMlvYNpb5XupEUAQFCjk6VdLVAzzl\nM5Swj+kmLA0OUHTF2zAwj2k+B9RAkbetu/lXLwUiiQNG00j8YP03lErxDd29m2jl\nNFlSn8YYsgzmihF5fUFTJXP5tS7lF4FnLNbw9pfdeVZBT1uTOcckmFv6n6edttZS\nFhC70hBB8tFFtemGFquZ0N7w8O7DmIYI936n283rzxyuWdi+JqOUQ0KzpGbFOP3t\nAOdVcx/JW8kjDdWRcRDr85M4MnkG6HEzW4uzGBtxBplL7KH0L8LX+lx6ySjIrbRD\nQtwBxwZGtHZJAqskO6vobzzybCKuVUaQwkPrQsK5iLA6Nn1Yxu6XmtlvoPeNIc63\nPa3ix8vNFbBTtS6iBdbOPse5qgRV0DC94ocedzKw4QzQRa5REIniJ2X8hVoVAcBh\n3nQKyZApl2I/pZMlbZ0Cg5yxjhBaxKwci7jyoMerMMo2EdbZN87gP+2x6tKuY1MO\n35mqzHn+FjWq0eAtpzhO5Q==\n-----END PGP PRIVATE KEY BLOCK-----\n",
       "type": "string"
     },
     "PublicKey": {
@@ -2616,7 +2608,7 @@
         "mechanisms": [
           "RSA_Signature_PSS_SHA256"
         ],
-        "algorithm": "RSA",
+        "type": "RSA",
         "key": {
           "modulus": "FhJQl11CiY0ifRHXeAqFh4rdSl6",
           "publicExponent": "FhJQl11CiY0ifRHXeAqFh4rdSl6"
@@ -2626,7 +2618,7 @@
       "type": "object",
       "required": [
         "mechanisms",
-        "algorithm",
+        "type",
         "key",
         "operations"
       ],
@@ -2634,8 +2626,8 @@
         "mechanisms": {
           "$ref": "#/definitions/KeyMechanisms"
         },
-        "algorithm": {
-          "$ref": "#/definitions/KeyAlgorithm"
+        "type": {
+          "$ref": "#/definitions/KeyType"
         },
         "key": {
           "$ref": "#/definitions/KeyPublicData"
@@ -2682,21 +2674,21 @@
         "mechanisms": [
           "RSA_Signature_PSS_SHA256"
         ],
-        "algorithm": "RSA",
+        "type": "RSA",
         "length": 2048,
         "id": "myKey2"
       },
       "type": "object",
       "required": [
         "mechanisms",
-        "algorithm"
+        "type"
       ],
       "properties": {
         "mechanisms": {
           "$ref": "#/definitions/KeyMechanisms"
         },
-        "algorithm": {
-          "$ref": "#/definitions/KeyAlgorithm"
+        "type": {
+          "$ref": "#/definitions/KeyType"
         },
         "length": {
           "type": "integer",
@@ -2707,6 +2699,17 @@
           "type": "string"
         }
       }
+    },
+    "KeyType": {
+      "enum": [
+        "RSA",
+        "Curve25519",
+        "EC_P224",
+        "EC_P256",
+        "EC_P384",
+        "EC_P521"
+      ],
+      "type": "string"
     },
     "Switch": {
       "enum": [
