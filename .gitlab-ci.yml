@@ -1,3 +1,5 @@
+include: 'https://raw.githubusercontent.com/Nitrokey/common-ci-jobs/master/common_jobs.yml'
+
 stages:
   - pull-github
   - build
@@ -9,6 +11,9 @@ variables:
   GIT_DEPTH: 0					#This seems to have no effect also set in webinterface
   GIT_SUBMODULE_STRATEGY: recursive #This seems to have no effect also set in webinterfac
   SCRIPTS_REPO: git@git.dotplex.com:nitrokey/gitlab-ci.git
+  REPO_USER: nitrokey
+  REPO_NAME: pynitrokey
+  MAIN_BRANCH: master
 
 
 build-pypi:
@@ -20,9 +25,13 @@ build-pypi:
   stage: build
   script:
     - make CI
+  after_script:
+    - mkdir -p artifacts
+    - cp dist/* artifacts
+    - wget $icon_server/checkmark/$CI_COMMIT_REF_NAME/$CI_COMMIT_SHA/$CI_JOB_NAME/$CI_JOB_STATUS/${CI_JOB_URL#*/*/*/}
   artifacts:
     paths:
-      - dist/*
+      - artifacts
 
 build-msi:
   rules:
@@ -34,46 +43,14 @@ build-msi:
   stage: build
   script:
     - make wine-build
+  after_script:
+    - mkdir -p artifacts
+    - cp wine-build/*.exe artifacts
+    - cp wine-build/*.msi artifacts
+    - wget $icon_server/checkmark/$CI_COMMIT_REF_NAME/$CI_COMMIT_SHA/$CI_JOB_NAME/$CI_JOB_STATUS/${CI_JOB_URL#*/*/*/}
   artifacts:
     paths:
-      - wine-build/*.exe
-      - wine-build/*.msi
-
-
-pull:
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "trigger" && $CI_COMMIT_BRANCH == "master"'
-  image: nitrokey/ci-pull:latest
-  tags:
-    - docker
-  stage: pull-github
-  before_script:
-    - apt-get update -y
-    - ./ci-scripts/copy_common_scripts_key.sh
-    - export SCRIPTS_DIR=$(mktemp -d)
-    - git clone -q --depth 1 $SCRIPTS_REPO $SCRIPTS_DIR
-  script:
-    - chmod +x  $SCRIPTS_DIR/ci-scripts/pull.sh
-    - $SCRIPTS_DIR/ci-scripts/pull.sh nitrokey pynitrokey
-
-upload-nightly:
-  stage: deploy
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule"'
-  tags:
-    - docker
-  image: nitrokey/ci-nightly-upload:latest
-  before_script:
-    - apt-get update -y
-    - ./ci-scripts/copy_common_scripts_key.sh
-    - export SCRIPTS_DIR=$(mktemp -d)
-    - git clone -q --depth 1 $SCRIPTS_REPO $SCRIPTS_DIR
-  script:
-    - mv wine-build/*.msi artifacts
-    - mv wine-build/*.exe artifacts
-    - mv dist/* artifacts
-    - chmod +x $SCRIPTS_DIR/ci-scripts/nightly_upload.sh
-    - $SCRIPTS_DIR/ci-scripts/nightly_upload.sh
+    - artifacts
 
 build-and-publish-pypi:
   rules:
@@ -85,21 +62,3 @@ build-and-publish-pypi:
     - make CI
     - sed -e "s|\${passw}|$PYPI_TOKEN|" ci-scripts/.pypirc_tamplate > ~/.pypirc
     - make publish
-
-publish-msi:
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "web"'
-  image: nitrokey/ci-publish-git:latest
-  tags:
-    - docker
-  stage: deploy
-  before_script:
-    - apt-get update -y
-    - ./ci-scripts/copy_common_scripts_key.sh
-    - export SCRIPTS_DIR=$(mktemp -d)
-    - git clone -q --depth 1 $SCRIPTS_REPO $SCRIPTS_DIR
-  script:
-    - mv wine-build/*.msi artifacts
-    - mv wine-build/*.exe artifacts
-    - chmod +x $SCRIPTS_DIR/ci-scripts/release.sh
-    - $SCRIPTS_DIR/ci-scripts/release.sh
