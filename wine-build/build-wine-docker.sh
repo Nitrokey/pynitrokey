@@ -1,4 +1,13 @@
+#!/bin/bash
+
 pwd=$(pwd)
+
+echo "CURRENT DIRS"
+echo `pwd`
+echo $pwd
+echo $(pwd)
+
+
 
 
 export WINEPREFIX=${pwd}/wine_base
