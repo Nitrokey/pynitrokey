@@ -72,12 +72,12 @@ popd
 py -m pip install pyusb libusb 
 
 # ok let's hack the right libusb version into it...
-mkdir libusb-1.0.24
-pushd libusb-1.0.24
-wget https://github.com/libusb/libusb/releases/download/v1.0.24/libusb-1.0.24.7z
-7z x libusb-1.0.24.7z
-cp VS2019/MS32/dll/libusb-1.0.dll ${PY_HOME}/Lib/site-packages/libusb/_platform/_windows/x86/libusb-1.0.dll
-popd
+#mkdir libusb-1.0.24
+#pushd libusb-1.0.24
+#wget https://github.com/libusb/libusb/releases/download/v1.0.24/libusb-1.0.24.7z
+#7z x libusb-1.0.24.7z
+#cp VS2019/MS32/dll/libusb-1.0.dll ${PY_HOME}/Lib/site-packages/libusb/_platform/_windows/x86/libusb-1.0.dll
+#popd
 
 
 # now actually run pynitrokey build(s)
