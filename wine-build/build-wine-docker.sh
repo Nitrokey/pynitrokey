@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x
+
 pwd=$(pwd)
 
 export WINEPREFIX=${pwd}/wine_base
