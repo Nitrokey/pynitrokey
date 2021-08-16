@@ -2,14 +2,6 @@
 
 pwd=$(pwd)
 
-echo "CURRENT DIRS"
-echo `pwd`
-echo $pwd
-echo $(pwd)
-
-
-
-
 export WINEPREFIX=${pwd}/wine_base
 
 PY_VERSION=3.6.8
@@ -48,7 +40,9 @@ function py
 
 # boot wineprefix
 mkdir -p ${CACHE_DIR} ${WINE_BUILD_DIR} ${WINEPREFIX}
-WINEPREFIX=${pwd}/${WINEPREFIX} wineboot
+#WINEPREFIX=${pwd}/${WINEPREFIX} wineboot
+wineboot
+
 
 # wine python install 
 for msi_part in core dev exe lib pip tools; do 
