@@ -1,7 +1,11 @@
+#!/bin/bash
+
+set -x
+
 pwd=$(pwd)
 
-
 export WINEPREFIX=${pwd}/wine_base
+#export WINEARCH=win32
 
 PY_VERSION=3.6.8
 PY_BASE_URL=https://www.python.org/ftp/python/${PY_VERSION}/win32
@@ -33,18 +37,24 @@ export WINEPREFIX
 
 function py
 {
+	#WINEDEBUG=+all wine ${PY_WINE_HOME}/python.exe -O -B "$@"
 	wine ${PY_WINE_HOME}/python.exe -O -B "$@"
 }
 
 
 # boot wineprefix
 mkdir -p ${CACHE_DIR} ${WINE_BUILD_DIR} ${WINEPREFIX}
-WINEPREFIX=${pwd}/${WINEPREFIX} wineboot
+#WINEPREFIX=${pwd}/${WINEPREFIX} wineboot
+
+#WINEDEBUG=+all wineboot
+wineboot
+
 
 # wine python install 
 for msi_part in core dev exe lib pip tools; do 
 	wget ${PY_BASE_URL}/${msi_part}.msi
-	wine msiexec /i ${msi_part}.msi /qb TARGETDIR=${PY_WINE_HOME}
+	#WINEDEBUG=+all msiexec /i ${msi_part}.msi /qb TARGETDIR=${PY_WINE_HOME}
+	msiexec /i ${msi_part}.msi /qb TARGETDIR=${PY_WINE_HOME}
 done
 
 for repo in SomberNight/pyinstaller libusb/libusb; do
@@ -72,12 +82,12 @@ popd
 py -m pip install pyusb libusb 
 
 # ok let's hack the right libusb version into it...
-mkdir libusb-1.0.24
-pushd libusb-1.0.24
-wget https://github.com/libusb/libusb/releases/download/v1.0.24/libusb-1.0.24.7z
-7z x libusb-1.0.24.7z
-cp VS2019/MS32/dll/libusb-1.0.dll ${PY_HOME}/Lib/site-packages/libusb/_platform/_windows/x86/libusb-1.0.dll
-popd
+#mkdir libusb-1.0.24
+#pushd libusb-1.0.24
+#wget https://github.com/libusb/libusb/releases/download/v1.0.24/libusb-1.0.24.7z
+#7z x libusb-1.0.24.7z
+#cp VS2019/MS32/dll/libusb-1.0.dll ${PY_HOME}/Lib/site-packages/libusb/_platform/_windows/x86/libusb-1.0.dll
+#popd
 
 
 # now actually run pynitrokey build(s)
