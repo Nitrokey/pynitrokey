@@ -37,7 +37,7 @@ export WINEPREFIX
 
 function py
 {
-	wine ${PY_WINE_HOME}/python.exe -O -B "$@"
+	wine64 ${PY_WINE_HOME}/python.exe -O -B "$@"
 }
 
 
@@ -50,7 +50,7 @@ wineboot
 # wine python install 
 for msi_part in core dev exe lib pip tools; do 
 	wget ${PY_BASE_URL}/${msi_part}.msi
-	wine msiexec /i ${msi_part}.msi /qb TARGETDIR=${PY_WINE_HOME}
+	msiexec /i ${msi_part}.msi /qb TARGETDIR=${PY_WINE_HOME}
 done
 
 for repo in SomberNight/pyinstaller libusb/libusb; do
