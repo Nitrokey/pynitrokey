@@ -3,6 +3,7 @@
 pwd=$(pwd)
 
 export WINEPREFIX=${pwd}/wine_base
+export WINEARCH=win32
 
 PY_VERSION=3.6.8
 PY_BASE_URL=https://www.python.org/ftp/python/${PY_VERSION}/win32
