@@ -37,7 +37,7 @@ export WINEPREFIX
 
 function py
 {
-	wine64 ${PY_WINE_HOME}/python.exe -O -B "$@"
+	wine ${PY_WINE_HOME}/python.exe -O -B "$@"
 }
 
 

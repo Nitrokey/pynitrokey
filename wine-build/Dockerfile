@@ -1,4 +1,4 @@
-FROM alpine:latest
+FROM i386/alpine:latest
 
 # Install prerequisites
 RUN apk add libnitrokey git wget build-base \
