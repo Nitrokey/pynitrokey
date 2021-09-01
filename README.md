@@ -83,6 +83,19 @@ nitropy start set-identity [0,1,2]
 
 Where 0, 1 and 2 are the available IDs.
 
+#### Alternative MI switching method
+
+`pynitrokey` installation is not always possible, hence describing below alternative method to change the Identity on the Nitrokey Start. It suffices to have any CCID application installed, and send the following APDU `00 85 00 {ID}` (hex), where `ID` is in range `[0;2]`. After receiving this command Nitrokey Start will reboot with the selected identity.
+
+Here is how to do it using GnuPG:
+```text
+# Setting ID to 2
+$ gpg-connect-agent --hex "scd apdu  00 85 00 02" /bye
+ERR 65539 Unknown version in packet <Unspecified source>
+```
+
+The error message here is expected due to immediate reboot of the device, and with losing the connection.
+
 ## NetHSM
 
 A guide on how to use `nitropy` to access a NetHSM is available on
