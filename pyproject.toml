@@ -24,6 +24,7 @@ requires = [
   "urllib3",
 	"cffi",
 	"cbor",
+	"nkdfu"
 ]
 classifiers=[
     "License :: OSI Approved :: MIT License",

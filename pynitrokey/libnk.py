@@ -19,7 +19,7 @@ along with libnitrokey. If not, see <http://www.gnu.org/licenses/>.
 
 SPDX-License-Identifier: LGPL-3.0
 """
-
+import os
 import sys
 from pathlib import Path
 from random import randint
@@ -63,11 +63,20 @@ def _get_c_library():
         + list(Path("/lib").glob("libnitrokey.so.*")) \
         + list(Path("/usr/lib/x86_64-linux-gnu").glob("libnitrokey.so.*"))
 
+    env_path = os.getenv("LIBNK_PATH")
+    if env_path:
+        print(f'Using env variable supplied path: {env_path}')
+        libs += [Path(env_path)]
+        libs += list(Path(env_path).glob("libnitrokey.so*"))
+
     load_lib = None
     load_header = None
     for lib in libs:
         for ver in avail_versions:
-            if ver in lib.as_posix():
+            # TODO load library and check its declared version instead of checking the filename
+            # Fixing on 3.6.0 for the time being
+            ver = '3.6.0'
+            if ver in lib.as_posix() or True:
                 load_lib = lib.as_posix()
                 load_header = (header_parent_path / header.format(ver)).as_posix()
 
@@ -464,6 +473,10 @@ class NitrokeyPro(BaseLibNitrokey):
     def _connect(self):
         """only connects to NitrokeyPro devices"""
         return self.api.NK_login(b'P')
+
+    def enable_firmware_update(self, password):
+        """set nk storage device to firmware update"""
+        return self.api.NK_enable_firmware_update_pro(c_enc(password))
 
 
 class BaseSlots:
