@@ -37,10 +37,17 @@ def enable_update(password):
 
     local_print("Enabling firmware update mode")
     nks = NitrokeyPro()
-    libnk_version_current = nks.library_version()
-    libnk_version_required = (3, 6)
-    if not libnk_version_current > libnk_version_required:
+    try:
+        libnk_version_current = nks.library_version()
+    except Exception as e:
+        local_print('Unhandled libnitrokey library version. Please upgrade it.')
+        local_print(f'Error: {str(e)}')
+        return 1
+    libnk_version_required = (3, 5)
+    if libnk_version_current < libnk_version_required:
         local_print(f'You need libnitrokey {libnk_version_required} to run this command. Currently installed: {libnk_version_current}.')
+        local_print('You can provide custom path for the libnitrokey with LIBNK_PATH environmental variable, e.g. by calling it like:')
+        local_print('$ env LIBNK_PATH=/my/path/libnitrokey.so nitropy <command>')
         return 1
 
     try:
