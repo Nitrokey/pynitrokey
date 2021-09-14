@@ -92,9 +92,20 @@ Here is how to do it using GnuPG:
 # Setting ID to 2
 $ gpg-connect-agent --hex "scd apdu  00 85 00 02" /bye
 ERR 65539 Unknown version in packet <Unspecified source>
+
+# Alternative error messsage
+ERR 65572 Bad certificate <Unspecified source>
 ```
 
 The error message here is expected due to immediate reboot of the device, and with losing the connection.
+
+When the ID change is attempted to be done immediately, the following response could be received:
+```
+ERR 100663406 Card removed <SCD>
+```
+To restore the communication, either kill the `gpg-agent` or run `gpg --card-status` again.
+
+Tip: alternative `gpg-connect-agent reloadagent /bye` is not sufficient.
 
 ## NetHSM
 
