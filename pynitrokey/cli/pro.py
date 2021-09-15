@@ -4,9 +4,7 @@ import sys
 import click
 import nkdfu
 import logging
-import nkdfu.dfu as dfu
 import intelhex as ih
-import usb1
 
 from pynitrokey.helpers import local_print
 from pynitrokey.libnk import NitrokeyPro, DeviceNotFound
@@ -68,6 +66,9 @@ def update(firmware_path: str):
 
     FIRMWARE_PATH: A path to the firmware file. File name should end with .bin.
     """
+    import nkdfu.dfu as dfu
+    import usb1
+
     print = local_print
     # TODO(szszsz): extract logic to nkdfu, leaving only end-user error handling
     assert firmware_path.endswith('bin')
