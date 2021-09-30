@@ -146,7 +146,8 @@ def main(wait_e, keyno, passwd, data_regnual, data_upgrade, skip_bootloader, ver
         # Compute passwd data
         try:
             kdf_data = gnuk.cmd_get_data(0x00, 0xf9).tobytes()
-        except:
+        except Exception as e:
+            local_print("Note: KDF DO not found", e)
             kdf_data = b""
 
         if kdf_data == b"":
@@ -190,7 +191,7 @@ def main(wait_e, keyno, passwd, data_regnual, data_upgrade, skip_bootloader, ver
                 gnuk.execute(mem_info[0] + len(data_regnual) - 4)
                 break
             except Exception as e:
-                local_print(f"failed - trying again - retry: {i+1}")
+                local_print(f"failed - trying again - retry: {i+1}", e)
                 if i == conn_retries - 1:
                     raise e
                 continue
@@ -219,7 +220,7 @@ def main(wait_e, keyno, passwd, data_regnual, data_upgrade, skip_bootloader, ver
                         local_print("Device: {dev.filename}")
                     break
                 except Exception as e:
-                    local_print(f"failed - trying again - retry: {i+1}")
+                    local_print(f"failed - trying again - retry: {i+1}", e)
                     # @todo: log exception to file: e
 
         local_print("", "")
@@ -394,6 +395,7 @@ def show_kdf_details(passwd):
     try:
         gnuk = get_gnuk_device(logger=logger, verbose=True)
     except ValueError as e:
+        local_print("Connection error", e)
         if "No ICC present" in str(e):
             print("Cannot connect to device. Closing other open connections.")
             kill_smartcard_services()
@@ -432,7 +434,7 @@ def show_kdf_details(passwd):
                 passwd_data = kdf_calc(passwd, salt, iters)
                 print(f'passwd_data: {binascii.b2a_hex(passwd_data)}')
             except ValueError as e:
-                print(str(e))
+                local_print("Error getting KDF", e)
         else:
             print('Provide password to calculate final hash')
 
@@ -471,7 +473,7 @@ def start_update(regnual, gnuk, default_password, password, wait_e, keyno, verbo
         try:
             passwd = AskUser.hidden("Admin password:")
         except Exception as e:
-            local_critical("aborting", e)
+            local_critical("aborting update", e)
 
     local_print("Firmware data to be used:")
     data = get_firmware_file(regnual, FirmwareType.REGNUAL)
@@ -519,7 +521,7 @@ def start_update(regnual, gnuk, default_password, password, wait_e, keyno, verbo
 
         # @todo: add proper exceptions (for each case) here
         except ValueError as e:
-            local_print("error while running update")
+            local_print("error while running update", e)
             str_factory_reset = "Please 'factory-reset' your device to " \
                 "continue (this will delete all user data from the device) " \
                 "and try again with PIN='12345678'"

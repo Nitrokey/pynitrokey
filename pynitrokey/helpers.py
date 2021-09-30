@@ -79,6 +79,7 @@ def local_print(*messages, **kwargs):
             logger.exception(item)
             passed_exc = item
             item = repr(item)
+            item = 'Exception encountered: ' + item
 
         # just a newline, don't log to file...
         elif item is None or item == "":
