@@ -181,7 +181,7 @@ def list():
 
 @click.command()
 @click.option("--count", default=8, help="How many bytes to generate (defaults to 8)")
-@click.option("-s", "--serial", help="Serial number of Nitrokey to use")
+@click.option("-s", "--serial", help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.")
 def hexbytes(count, serial):
     """Output COUNT number of random bytes, hex-encoded."""
 
@@ -192,7 +192,7 @@ def hexbytes(count, serial):
 
 # @todo: not really useful like this? endless output only on request (--count ?)
 @click.command()
-@click.option("-s", "--serial", help="Serial number of Nitrokey to use")
+@click.option("-s", "--serial", help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.")
 def raw(serial):
     """Output raw entropy endlessly."""
     p = nkfido2.find(serial)
@@ -203,7 +203,7 @@ def raw(serial):
 
 # @todo: also review, endless output only on request (--count ?)
 @click.command()
-@click.option("-s", "--serial", help="Serial number of Nitrokey to use")
+@click.option("-s", "--serial", help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.")
 @click.option("-b", "--blink", is_flag=True, help="Blink in the meantime")
 def status(serial, blink: bool):
     """Print device's status"""
@@ -221,7 +221,7 @@ def status(serial, blink: bool):
 
 @click.command()
 @click.option("--count", default=64, help="How many bytes to generate (defaults to 8)")
-@click.option("-s", "--serial", help="Serial number of Nitrokey to use")
+@click.option("-s", "--serial", help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.")
 def feedkernel(count, serial):
     """Feed random bytes to /dev/random."""
 
@@ -274,7 +274,7 @@ def feedkernel(count, serial):
 
 
 @click.command()
-@click.option("-s", "--serial", help="Serial number of Nitrokey use")
+@click.option("-s", "--serial", help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.")
 @click.option(
     "--host", help="Relying party's host", default="nitrokeys.dev", show_default=True
 )
@@ -304,7 +304,7 @@ def make_credential(serial, host, user, udp, prompt, pin):
 
 
 @click.command()
-@click.option("-s", "--serial", help="Serial number of Nitrokey use")
+@click.option("-s", "--serial", help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.")
 @click.option("--pin", help="provide PIN instead of asking the user", default=None)
 @click.option("--host", help="Relying party's host", default="nitrokeys.dev")
 @click.option("--user", help="User ID", default="they")
@@ -356,7 +356,7 @@ def challenge_response(serial, host, user, prompt, credential_id, challenge, udp
 ######           SoloBootloader.HIDCommandProbe => 0x70 returns "INVALID_COMMAND"
 ######         - decide its future asap...
 @click.command()
-@click.option("-s", "--serial", help="Serial number of Nitrokey use")
+@click.option("-s", "--serial", help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.")
 @click.option(
     "--udp", is_flag=True, default=False, help="Communicate over UDP with software key"
 )
@@ -419,7 +419,7 @@ def probe(serial, udp, hash_type, filename):
 
 
 @click.command()
-@click.option("-s", "--serial", help="Serial number of Nitrokey to use")
+@click.option("-s", "--serial", help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.")
 @click.option("-y", "--yes", help="Agree to all questions", is_flag=True)
 def reset(serial, yes):
     """Reset key - wipes all credentials!!!"""
@@ -438,7 +438,7 @@ def reset(serial, yes):
 
 # @fixme: lacking functionality? remove? implement?
 @click.command()
-@click.option("-s", "--serial", help="Serial number of Nitrokey to use")
+@click.option("-s", "--serial", help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.")
 # @click.option("--new-pin", help="change current pin")
 def change_pin(serial):
     """Change pin of current key"""
@@ -461,7 +461,7 @@ def change_pin(serial):
                        "did you set one already? or is it wrong?", e)
 
 @click.command()
-@click.option("-s", "--serial", help="Serial number of Nitrokey to use")
+@click.option("-s", "--serial", help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.")
 # @click.option("--new-pin", help="change current pin")
 def set_pin(serial):
     """Set pin of current key"""
@@ -484,7 +484,7 @@ def set_pin(serial):
 
 @click.command()
 #@click.option("--pin", help="PIN for to access key", default=None)
-@click.option("-s", "--serial", help="Serial number of Nitrokey to use")
+@click.option("-s", "--serial", help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.")
 @click.option(
     "--udp", is_flag=True, default=False, help="Communicate over UDP with software key"
 )
@@ -553,7 +553,7 @@ def verify(serial, udp):
 
 
 @click.command()
-@click.option("-s", "--serial", help="Serial number of Nitrokey to use")
+@click.option("-s", "--serial", help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.")
 @click.option(
     "--udp", is_flag=True, default=False, help="Communicate over UDP with software key"
 )
@@ -582,7 +582,7 @@ def version(serial, udp):
 
 
 @click.command()
-@click.option("-s", "--serial", help="Serial number of Nitrokey to use")
+@click.option("-s", "--serial", help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.")
 @click.option(
     "--udp", is_flag=True, default=False, help="Communicate over UDP with software key"
 )
@@ -592,7 +592,7 @@ def wink(serial, udp):
     nkfido2.find(serial, udp=udp).wink()
 
 @click.command()
-@click.option("-s", "--serial", help="Serial number of Nitrokey to use")
+@click.option("-s", "--serial", help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.")
 @click.option(
     "--udp", is_flag=True, default=False, help="Communicate over UDP with software key"
 )

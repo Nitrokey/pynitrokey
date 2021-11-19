@@ -41,7 +41,7 @@ def program():
 
 
 @click.command()
-@click.option("-s", "--serial", help="Serial number of Nitrokey to use")
+@click.option("-s", "--serial", help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.")
 @click.argument("firmware")  # , help="firmware (bundle) to program")
 def bootloader(serial, firmware):
     """Program via Nitrokey bootloader interface.
@@ -105,7 +105,7 @@ def _enter_bootloader(serial):
 
 
 @click.command()
-@click.option("-s", "--serial", help="Serial number of Nitrokey to use")
+@click.option("-s", "--serial", help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.")
 def enter_bootloader(serial):
     """Switch from Nitrokey firmware to Nitrokey bootloader.
 
@@ -117,7 +117,7 @@ def enter_bootloader(serial):
 
 
 @click.command()
-@click.option("-s", "--serial", help="Serial number of Nitrokey to use")
+@click.option("-s", "--serial", help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.")
 def leave_bootloader(serial):
     """Switch from Nitrokey bootloader to Nitrokey firmware."""
     from pynitrokey.fido2 import find
@@ -125,7 +125,7 @@ def leave_bootloader(serial):
 
 
 @click.command()
-@click.option("-s", "--serial", help="Serial number of Nitrokey to use")
+@click.option("-s", "--serial", help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.")
 def reboot(serial):
     """Reboot.
 
@@ -140,7 +140,7 @@ def reboot(serial):
 
 
 @click.command()
-@click.option("-s", "--serial", help="Serial number of Nitrokey to use")
+@click.option("-s", "--serial", help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.")
 @click.option("-p", "--pubkey", help="Show public key for the firmware", is_flag=True)
 def bootloader_version(serial, pubkey):
     """Version of bootloader."""

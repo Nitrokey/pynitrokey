@@ -30,7 +30,7 @@ logger = logging.getLogger()
 
 
 @click.command()
-@click.option("-s", "--serial", help="Serial number of Nitrokey key to target",
+@click.option("-s", "--serial", help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
               default=None)
 @click.option('-y', 'yes', default=False, is_flag=True, help='agree to everything')
 def update(serial, yes):
