@@ -24,7 +24,7 @@ from fido2.client import Fido2Client
 from fido2.ctap import CtapError
 from fido2.ctap1 import CTAP1
 from fido2.ctap2 import CTAP2
-from fido2.hid import CTAPHID, CtapHidDevice
+from fido2.hid import CTAPHID, CtapHidDevice, open_device
 from intelhex import IntelHex
 
 import pynitrokey.exceptions
@@ -57,18 +57,23 @@ class NKFido2Client:
         except OSError:
             pass
 
-    def find_device(self, dev=None, solo_serial=None):
+    def find_device(self, dev=None, solo_serial: str = None):
         if dev is None:
             devices = list(CtapHidDevice.list_devices())
             if solo_serial is not None:
-                devices = [
-                    d for d in devices if d.descriptor["serial_number"] == solo_serial
-                ]
-            if len(devices) > 1:
+                if solo_serial.startswith('device='):
+                    solo_serial = solo_serial.split('=')[1]
+                    dev = open_device(solo_serial)
+                else:
+                    devices = [
+                        d for d in devices if d.descriptor["serial_number"] == solo_serial
+                    ]
+            if dev is None and len(devices) > 1:
                 raise pynitrokey.exceptions.NonUniqueDeviceError
-            if len(devices) == 0:
-                raise RuntimeError("No FIDO device found")
-            dev = devices[0]
+            if dev is None and len(devices) > 0:
+                dev = devices[0]
+        if dev is None:
+            raise RuntimeError("No FIDO device found")
         self.dev = dev
 
         self.ctap1 = CTAP1(dev)
