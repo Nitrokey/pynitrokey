@@ -17,6 +17,7 @@ import pynitrokey
 import pynitrokey.fido2.operations
 from pynitrokey.cli.fido2 import fido2
 from pynitrokey.cli.nethsm import nethsm
+from pynitrokey.cli.nk3 import nk3
 from pynitrokey.cli.pro import pro
 from pynitrokey.cli.start import start
 from pynitrokey.cli.storage import storage
@@ -47,12 +48,16 @@ def nitropy():
     handler = logging.FileHandler(filename=LOG_FN, delay=True)
     logging.basicConfig(format=LOG_FORMAT, level=logging.DEBUG, handlers=[handler])
 
-    print("Nitrokey tool for Nitrokey FIDO2, Nitrokey Start & NetHSM", file=sys.stderr)
+    print(
+        "Nitrokey tool for Nitrokey FIDO2, Nitrokey Start, Nitrokey 3 & NetHSM",
+        file=sys.stderr,
+    )
     check_root()
 
 
 nitropy.add_command(fido2)
 nitropy.add_command(nethsm)
+nitropy.add_command(nk3)
 nitropy.add_command(start)
 nitropy.add_command(storage)
 nitropy.add_command(pro)
@@ -73,6 +78,7 @@ def ls():
 
     fido2.commands["list"].callback()
     start.commands["list"].callback()
+    nk3.commands["list"].callback()
 
 
 nitropy.add_command(ls)
