@@ -86,8 +86,8 @@ def update(firmware_path: str):
     if vendor is not None:
         if ":" in vendor:
             vendor, product = vendor.split(":")
-            product = int(product, 16)
-        vendor = int(vendor, 16)
+            product = int(product, 16)  # type: ignore
+        vendor = int(vendor, 16)  # type: ignore
     dev = None
     bus = None
     with usb1.USBContext() as context:

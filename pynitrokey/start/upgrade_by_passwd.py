@@ -101,7 +101,7 @@ def progress_func(x):
         local_print(f"Progress: {round(x, 2)}%\r", end="", flush=True)
 
 
-progress_func.last = 0
+progress_func.last = 0  # type: ignore
 
 
 def main(
@@ -393,7 +393,7 @@ def validate_hash(url: str, hash: bytes):
         if name in line.decode():
             hash_expected, hash_name = line.split()
             logger.debug(
-                "{} {}/{} {}".format(
+                "{} {}/{} {}".format(  # type: ignore
                     hash_expected == hash,
                     hash_name,
                     name,
@@ -413,7 +413,7 @@ def get_firmware_file(file_name: str, type: FirmwareType):
         return firmware_data
 
     tag = get_latest_release_data()["tag_name"]
-    url = FIRMWARE_URL.get(type, None).format(tag)
+    url = FIRMWARE_URL.get(type, None).format(tag)  # type: ignore
     firmware_data = download_file_or_exit(url)
     hash_data = hash_data_512(firmware_data)
     hash_valid = "valid" if validate_hash(url, hash_data) else "invalid"

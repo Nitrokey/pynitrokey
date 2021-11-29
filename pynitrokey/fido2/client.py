@@ -472,7 +472,7 @@ class NKFido2Client:
         print("erasing firmware...")
         for i in range(seg[0], seg[1], chunk):
             s = i
-            e = min(i + chunk, seg[1])
+            e = min(i + chunk, seg[1])  # type: ignore
             data = ih.tobinarray(start=i, size=e - s)
             self.write_flash(i, data)
             total += chunk

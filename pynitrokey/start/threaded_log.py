@@ -19,7 +19,7 @@ from typing import List
 
 
 class ThreadLog(threading.Thread):
-    _dmesg_skip_strings = []
+    _dmesg_skip_strings = []  # type: ignore
 
     _write_to_log = False
 
@@ -43,12 +43,12 @@ class ThreadLog(threading.Thread):
         return False
 
     def execute(self, command: List[str]):
-        self.process = subprocess.Popen(
+        self.process = subprocess.Popen(  # type: ignore
             command, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
         )
 
         # Poll process for new output until finished
-        for line in iter(self.process.stdout.readline, ""):
+        for line in iter(self.process.stdout.readline, ""):  # type: ignore
             if self.finished:
                 break
             if not line or self.finished or not self._write_to_log:
@@ -57,7 +57,7 @@ class ThreadLog(threading.Thread):
                 continue
             self.logger.debug(line.strip())
 
-        self.process.wait()
+        self.process.wait()  # type: ignore
         self.logger.debug("Finished")
 
     def start_logging(self):

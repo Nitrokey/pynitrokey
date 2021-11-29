@@ -410,7 +410,7 @@ class BaseLibNitrokey:
         )
 
     @property
-    def serial(self, as_int=False):
+    def serial(self, as_int=False):  # type: ignore
         return (
             py_enc(self.api.NK_device_serial_number())
             if not as_int

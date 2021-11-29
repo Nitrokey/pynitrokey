@@ -6,4 +6,5 @@ flake8
 flit
 ipython
 isort
-
+mypy
+types-requests

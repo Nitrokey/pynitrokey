@@ -710,7 +710,8 @@ def get_gnuk_device(verbose=True, logger: logging.Logger = None):
     for (dev, config, intf) in gnuk_devices():
         try:
             icc = gnuk_token(dev, config, intf)
-            icc.set_logger(logger)
+            if logger:
+                icc.set_logger(logger)
             if logger:
                 logger.debug(
                     "{} {} {}".format(dev.filename, config.value, intf.interfaceNumber)
