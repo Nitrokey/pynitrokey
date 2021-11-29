@@ -1,11 +1,12 @@
-
-from enum import IntEnum
-import tempfile
-import os
 import logging
+import os
+import tempfile
+from enum import IntEnum
+
 
 class Verbosity(IntEnum):
     """regular lvls from `logging` & `machine` for machine-readable output only"""
+
     machine = 100
     silent = logging.CRITICAL
     minimal = logging.WARNING
@@ -31,12 +32,14 @@ if _env_dbg_lvl:
     except ValueError as e:
         VERBOSE = DEFAULT_VERBOSE
         print(f"exception: {e}")
-        print(f"environment variable: '{ENV_DEBUG_VAR}' invalid, "
-              f"setting default: {VERBOSE.name} = {VERBOSE.value}")
+        print(
+            f"environment variable: '{ENV_DEBUG_VAR}' invalid, "
+            f"setting default: {VERBOSE.name} = {VERBOSE.value}"
+        )
 
 LOG_FN = tempfile.NamedTemporaryFile(prefix="nitropy.log.").name
-LOG_FORMAT_STDOUT = '%(asctime)-15s %(levelname)6s %(name)10s %(message)s'
-LOG_FORMAT = '%(relativeCreated)-8d %(levelname)6s %(name)10s %(message)s'
+LOG_FORMAT_STDOUT = "%(asctime)-15s %(levelname)6s %(name)10s %(message)s"
+LOG_FORMAT = "%(relativeCreated)-8d %(levelname)6s %(name)10s %(message)s"
 
 GH_ISSUES_URL = "https://github.com/Nitrokey/pynitrokey/issues/"
 SUPPORT_EMAIL = "support@nitrokey.com"

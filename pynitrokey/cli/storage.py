@@ -10,9 +10,8 @@
 
 import click
 
-from pynitrokey.helpers import local_print, local_critical
-
-from pynitrokey.libnk import NitrokeyStorage, BaseLibNitrokey, DeviceNotFound
+from pynitrokey.helpers import local_critical, local_print
+from pynitrokey.libnk import BaseLibNitrokey, DeviceNotFound, NitrokeyStorage
 
 
 @click.group()
@@ -31,8 +30,12 @@ def list():
 
 
 @click.command()
-@click.option("-p", "--password", default="12345678",
-              help="update password to be used instead of default")
+@click.option(
+    "-p",
+    "--password",
+    default="12345678",
+    help="update password to be used instead of default",
+)
 def enable_update(password):
     """enable firmware update for NK Storage device"""
 
@@ -48,4 +51,3 @@ def enable_update(password):
 
 storage.add_command(list)
 storage.add_command(enable_update)
-

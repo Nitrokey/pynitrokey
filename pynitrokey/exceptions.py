@@ -11,6 +11,7 @@
 class BasePyNKException(Exception):
     pass
 
+
 class NonUniqueDeviceError(Exception):
     """When specifying a potentially destructive command...
 

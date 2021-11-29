@@ -7,51 +7,55 @@
 # http://opensource.org/licenses/MIT>, at your option. This file may not be
 # copied, modified, or distributed except according to those terms.
 
+import json
 import logging
 import os
 import platform
+import sys
+import tempfile
+import time
 from datetime import datetime
 
 import click
 import requests
-import sys
-import tempfile
-import json
-import time
 
 import pynitrokey
-
 from pynitrokey.confconsts import LOG_FN
-from pynitrokey.helpers import local_print, local_critical
-from pynitrokey.helpers import AskUser
-
+from pynitrokey.helpers import AskUser, local_critical, local_print
 
 logger = logging.getLogger()
 
 
 @click.command()
-@click.option("-s", "--serial", help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
-              default=None)
-@click.option('-y', 'yes', default=False, is_flag=True, help='agree to everything')
+@click.option(
+    "-s",
+    "--serial",
+    help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
+    default=None,
+)
+@click.option("-y", "yes", default=False, is_flag=True, help="agree to everything")
 def update(serial, yes):
     """Update Nitrokey key to latest firmware version."""
 
     # @fixme: print this and allow user to cancel (if not -y is active)
-    #update_url = 'https://update.nitrokey.com/'
-    #print('Please use {} to run the firmware update'.format(update_url))
-    #return
+    # update_url = 'https://update.nitrokey.com/'
+    # print('Please use {} to run the firmware update'.format(update_url))
+    # return
 
     IS_LINUX = platform.system() == "Linux"
 
     logger.debug(f"Start session {datetime.now()}")
 
     # @fixme: move to generic startup stuff logged into file exclusively!
-    local_print("Nitrokey FIDO2 firmware update tool",
-                f"Platform: {platform.platform()}",
-                f"System: {platform.system()}, is_linux: {IS_LINUX}",
-                f"Python: {platform.python_version()}",
-                f"Saving run log to: {LOG_FN}", "",
-                f"Starting update procedure for Nitrokey FIDO2...")
+    local_print(
+        "Nitrokey FIDO2 firmware update tool",
+        f"Platform: {platform.platform()}",
+        f"System: {platform.system()}, is_linux: {IS_LINUX}",
+        f"Python: {platform.python_version()}",
+        f"Saving run log to: {LOG_FN}",
+        "",
+        f"Starting update procedure for Nitrokey FIDO2...",
+    )
 
     from pynitrokey.fido2 import find
 
@@ -61,17 +65,26 @@ def update(serial, yes):
         client = find(serial)
 
     except pynitrokey.exceptions.NoSoloFoundError as e:
-        local_critical(None,
-            "No Nitrokey key found!", e, None,
+        local_critical(
+            None,
+            "No Nitrokey key found!",
+            e,
+            None,
             "If you are on Linux, are your udev rules up to date?",
             "For more, see: ",
             "  https://www.nitrokey.com/documentation/installation#os:linux",
-            None)
+            None,
+        )
 
     except pynitrokey.exceptions.NonUniqueDeviceError as e:
-        local_critical(None,
-            "Multiple Nitrokey keys are plugged in!", e, None,
-            "Please unplug all but one key", None)
+        local_critical(
+            None,
+            "Multiple Nitrokey keys are plugged in!",
+            e,
+            None,
+            "Please unplug all but one key",
+            None,
+        )
 
     except Exception as e:
         local_critical(None, "Unhandled error connecting to key", e, None)
@@ -86,21 +99,23 @@ def update(serial, yes):
         local_critical("Failed downloading firmware", e)
 
     # search asset with `fn` suffix being .json and take its url
-    assets = [(x["name"], x["browser_download_url"]) \
-              for x in gh_release_data["assets"]]
+    assets = [(x["name"], x["browser_download_url"]) for x in gh_release_data["assets"]]
     download_url = None
     for fn, url in assets:
         if fn.endswith(".json"):
             download_url = url
             break
     if not download_url:
-        local_critical("Failed to determine latest release (url)",
-                       "assets:", *map(str, assets))
+        local_critical(
+            "Failed to determine latest release (url)", "assets:", *map(str, assets)
+        )
 
     # download asset url
     # @fixme: move to confconsts.py ...
-    local_print(f"Downloading latest firmware: {gh_release_data['tag_name']} "
-                f"(published at {gh_release_data['published_at']})")
+    local_print(
+        f"Downloading latest firmware: {gh_release_data['tag_name']} "
+        f"(published at {gh_release_data['published_at']})"
+    )
     tmp_dir = tempfile.gettempdir()
     fw_fn = os.path.join(tmp_dir, "fido2_firmware.json")
     try:
@@ -110,8 +125,10 @@ def update(serial, yes):
     except Exception as e:
         local_critical("Failed downloading firmware", e)
 
-    local_print(f"Firmware saved to {fw_fn}",
-                f"Downloaded firmware version: {gh_release_data['tag_name']}")
+    local_print(
+        f"Firmware saved to {fw_fn}",
+        f"Downloaded firmware version: {gh_release_data['tag_name']}",
+    )
 
     ver = client.solo_version()
 
@@ -164,8 +181,3 @@ def update(serial, yes):
     local_print("Congratulations, your key was updated to the latest firmware.")
     logger.debug("Finishing session {}".format(datetime.now()))
     local_print("Log saved to: {}".format(LOG_FN))
-
-
-
-
-

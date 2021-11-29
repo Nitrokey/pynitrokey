@@ -8,10 +8,11 @@
 # copied, modified, or distributed except according to those terms.
 
 import contextlib
-import click
 import enum
 import json
 import re
+
+import click
 import requests
 
 from . import client
@@ -145,7 +146,9 @@ class User:
 
 
 class Key:
-    def __init__(self, key_id, mechanisms, type, operations, modulus, public_exponent, data):
+    def __init__(
+        self, key_id, mechanisms, type, operations, modulus, public_exponent, data
+    ):
         self.key_id = key_id
         self.mechanisms = mechanisms
         self.type = type
@@ -208,7 +211,9 @@ class NetHSM:
         self.client.close()
         self.session.close()
 
-    def request(self, method, endpoint, params=None, data=None, mime_type=None, json=None):
+    def request(
+        self, method, endpoint, params=None, data=None, mime_type=None, json=None
+    ):
         url = f"https://{self.host}/api/{self.version}/{endpoint}"
         headers = {}
         if mime_type:
@@ -229,7 +234,7 @@ class NetHSM:
         return DefaultApi(self.client)
 
     def get_location(self):
-        return self.client.last_response.getheaders().get('location', '')
+        return self.client.last_response.getheaders().get("location", "")
 
     def get_key_id_from_location(self):
         location = self.get_location()
@@ -451,11 +456,13 @@ class NetHSM:
                 },
             )
 
-    def add_key(self, key_id, type, mechanisms, prime_p, prime_q, public_exponent, data):
-        from .client.model.key_type import KeyType
+    def add_key(
+        self, key_id, type, mechanisms, prime_p, prime_q, public_exponent, data
+    ):
         from .client.model.key_mechanism import KeyMechanism
         from .client.model.key_mechanisms import KeyMechanisms
         from .client.model.key_private_data import KeyPrivateData
+        from .client.model.key_type import KeyType
         from .client.model.private_key import PrivateKey
 
         if type == "RSA":
@@ -469,7 +476,9 @@ class NetHSM:
 
         body = PrivateKey(
             type=KeyType(type),
-            mechanisms=KeyMechanisms([KeyMechanism(mechanism) for mechanism in mechanisms]),
+            mechanisms=KeyMechanisms(
+                [KeyMechanism(mechanism) for mechanism in mechanisms]
+            ),
             key=key_data,
         )
         try:
@@ -504,14 +513,16 @@ class NetHSM:
             )
 
     def generate_key(self, type, mechanisms, length, key_id):
-        from .client.model.key_type import KeyType
+        from .client.model.key_generate_request_data import KeyGenerateRequestData
         from .client.model.key_mechanism import KeyMechanism
         from .client.model.key_mechanisms import KeyMechanisms
-        from .client.model.key_generate_request_data import KeyGenerateRequestData
+        from .client.model.key_type import KeyType
 
         body = KeyGenerateRequestData(
             type=KeyType(type),
-            mechanisms=KeyMechanisms([KeyMechanism(mechanism) for mechanism in mechanisms]),
+            mechanisms=KeyMechanisms(
+                [KeyMechanism(mechanism) for mechanism in mechanisms]
+            ),
             length=length,
             id=key_id or "",
         )
@@ -579,7 +590,7 @@ class NetHSM:
     def get_key_certificate(self, key_id):
         try:
             response = self.request("GET", f"keys/{key_id}/cert")
-            return response.content.decode('utf-8')
+            return response.content.decode("utf-8")
         except ApiException as e:
             _handle_api_exception(
                 e,
@@ -592,7 +603,12 @@ class NetHSM:
 
     def set_certificate(self, cert):
         try:
-            self.request("PUT", "config/tls/cert.pem", data=cert, mime_type="application/x-pem-file")
+            self.request(
+                "PUT",
+                "config/tls/cert.pem",
+                data=cert,
+                mime_type="application/x-pem-file",
+            )
         except ApiException as e:
             _handle_api_exception(
                 e,
@@ -600,7 +616,7 @@ class NetHSM:
                 roles=[Role.ADMINISTRATOR],
                 messages={
                     400: "Bad Request -- invalid certificate",
-                }
+                },
             )
 
     def set_key_certificate(self, key_id, cert, mime_type):
@@ -615,7 +631,7 @@ class NetHSM:
                     400: "Bad Request -- invalid certificate",
                     404: f"Key {key_id} not found",
                     409: f"Conflict -- key {key_id} already has a certificate",
-                }
+                },
             )
 
     def delete_key_certificate(self, key_id):
@@ -632,8 +648,16 @@ class NetHSM:
                 },
             )
 
-    def csr(self, country, state_or_province, locality, organization, organizational_unit,
-            common_name, email_address):
+    def csr(
+        self,
+        country,
+        state_or_province,
+        locality,
+        organization,
+        organizational_unit,
+        common_name,
+        email_address,
+    ):
         from .client.model.distinguished_name import DistinguishedName
 
         body = DistinguishedName(
@@ -648,10 +672,21 @@ class NetHSM:
         try:
             return self.get_api().config_tls_csr_pem_put(body=body)
         except ApiException as e:
-            _handle_api_exception(e, state=State.OPERATIONAL, roles=[Role.ADMINISTRATOR])
+            _handle_api_exception(
+                e, state=State.OPERATIONAL, roles=[Role.ADMINISTRATOR]
+            )
 
-    def key_csr(self, key_id, country, state_or_province, locality, organization,
-                organizational_unit, common_name, email_address):
+    def key_csr(
+        self,
+        key_id,
+        country,
+        state_or_province,
+        locality,
+        organization,
+        organizational_unit,
+        common_name,
+        email_address,
+    ):
         data = {
             "countryName": country,
             "stateOrProvinceName": state_or_province,
@@ -660,7 +695,6 @@ class NetHSM:
             "organizationalUnitName": organizational_unit,
             "commonName": common_name,
             "emailAddress": email_address,
-
         }
         try:
             response = self.request("POST", f"keys/{key_id}/csr.pem", json=data)
@@ -711,7 +745,9 @@ class NetHSM:
         from .client.model.log_level import LogLevel
         from .client.model.logging_config import LoggingConfig
 
-        body = LoggingConfig(ip_address=ip_address, port=port, log_level=LogLevel(log_level))
+        body = LoggingConfig(
+            ip_address=ip_address, port=port, log_level=LogLevel(log_level)
+        )
         try:
             self.get_api().config_logging_put(body=body)
         except ApiException as e:

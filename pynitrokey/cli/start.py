@@ -8,23 +8,26 @@
 # copied, modified, or distributed except according to those terms.
 
 
-from time import sleep
 from subprocess import check_output
+from time import sleep
 
 import click
-
 from usb.core import USBError
 
+from pynitrokey.helpers import local_critical, local_print
 from pynitrokey.start.gnuk_token import get_gnuk_device
-from pynitrokey.start.usb_strings import get_devices as get_devices_strings
-
-from pynitrokey.start.upgrade_by_passwd import validate_gnuk, validate_regnual, logger,\
-    start_update, DEFAULT_WAIT_FOR_REENUMERATION, DEFAULT_PW3, IS_LINUX, \
-    show_kdf_details
-
 from pynitrokey.start.threaded_log import ThreadLog
-
-from pynitrokey.helpers import local_print, local_critical
+from pynitrokey.start.upgrade_by_passwd import (
+    DEFAULT_PW3,
+    DEFAULT_WAIT_FOR_REENUMERATION,
+    IS_LINUX,
+    logger,
+    show_kdf_details,
+    start_update,
+    validate_gnuk,
+    validate_regnual,
+)
+from pynitrokey.start.usb_strings import get_devices as get_devices_strings
 
 # @fixme: add 'version' for consistency with fido2
 
@@ -41,8 +44,9 @@ def list():
     """list connected devices"""
     local_print(":: 'Nitrokey Start' keys:")
     for dct in get_devices_strings():
-        local_print(f"{dct['Serial']}: {dct['Vendor']} "
-                    f"{dct['Product']} ({dct['Revision']})")
+        local_print(
+            f"{dct['Serial']}: {dct['Vendor']} " f"{dct['Product']} ({dct['Revision']})"
+        )
 
 
 @click.command()
@@ -70,9 +74,9 @@ def set_identity(identity):
         except ValueError as e:
             if "No ICC present" in str(e):
                 local_print("Could not connect to device, trying to close scdaemon")
-                result = check_output(["gpg-connect-agent",
-                                       "SCD KILLSCD", "SCD BYE",
-                                       "/bye"])  # gpgconf --kill all might be better?
+                result = check_output(
+                    ["gpg-connect-agent", "SCD KILLSCD", "SCD BYE", "/bye"]
+                )  # gpgconf --kill all might be better?
                 sleep(3)
             else:
                 local_critical(e)
@@ -87,32 +91,70 @@ def set_identity(identity):
 @click.option(
     "--gnuk", default=None, callback=validate_gnuk, help="path to gnuk binary"
 )
-@click.option("-f", "default_password", is_flag=True, default=False,
-    help=f"use default Admin PIN: {DEFAULT_PW3}")
+@click.option(
+    "-f",
+    "default_password",
+    is_flag=True,
+    default=False,
+    help=f"use default Admin PIN: {DEFAULT_PW3}",
+)
 @click.option("-p", "password", help="use provided Admin PIN")
-@click.option("-e", "wait_e", default=DEFAULT_WAIT_FOR_REENUMERATION, type=int,
-    help="time to wait for device to enumerate, after regnual was executed on device")
+@click.option(
+    "-e",
+    "wait_e",
+    default=DEFAULT_WAIT_FOR_REENUMERATION,
+    type=int,
+    help="time to wait for device to enumerate, after regnual was executed on device",
+)
 @click.option("-k", "keyno", default=0, type=int, help="selected key index")
 @click.option("-v", "verbose", default=0, type=int, help="verbosity level")
 @click.option("-y", "yes", default=False, is_flag=True, help="agree to everything")
-@click.option("-b", "skip_bootloader", default=False, is_flag=True,
-    help="Skip bootloader upload (e.g. when done so already)")
 @click.option(
-    "--green-led", is_flag=True, default=False,
-    help="Use firmware for early 'Nitrokey Start' key hardware revisions"
+    "-b",
+    "skip_bootloader",
+    default=False,
+    is_flag=True,
+    help="Skip bootloader upload (e.g. when done so already)",
 )
-def update(regnual, gnuk, default_password, password, wait_e, keyno, verbose, yes,
-           skip_bootloader, green_led):
+@click.option(
+    "--green-led",
+    is_flag=True,
+    default=False,
+    help="Use firmware for early 'Nitrokey Start' key hardware revisions",
+)
+def update(
+    regnual,
+    gnuk,
+    default_password,
+    password,
+    wait_e,
+    keyno,
+    verbose,
+    yes,
+    skip_bootloader,
+    green_led,
+):
     """update device's firmware"""
 
-    args = (regnual, gnuk, default_password, password, wait_e, keyno, verbose, yes,
-           skip_bootloader, green_led)
+    args = (
+        regnual,
+        gnuk,
+        default_password,
+        password,
+        wait_e,
+        keyno,
+        verbose,
+        yes,
+        skip_bootloader,
+        green_led,
+    )
 
     if green_led and (regnual is None or gnuk is None):
         local_critical(
             "You selected the --green-led option, please provide '--regnual' and "
             "'--gnuk' in addition to proceed. ",
-            "use one from: https://github.com/Nitrokey/nitrokey-start-firmware)")
+            "use one from: https://github.com/Nitrokey/nitrokey-start-firmware)",
+        )
 
     if IS_LINUX:
         with ThreadLog(logger.getChild("dmesg"), "dmesg -w"):
@@ -131,4 +173,3 @@ start.add_command(list)
 start.add_command(set_identity)
 start.add_command(update)
 start.add_command(kdf_details)
-

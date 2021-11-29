@@ -110,7 +110,9 @@ def connect(ctx, require_auth=True):
                 f"[auth] Password for user {username} on NetHSM {host}", hide_input=True
             )
 
-    with pynitrokey.nethsm.connect(host, version, username, password, verify_tls) as nethsm:
+    with pynitrokey.nethsm.connect(
+        host, version, username, password, verify_tls
+    ) as nethsm:
         import urllib3.exceptions
 
         try:
@@ -119,11 +121,15 @@ def connect(ctx, require_auth=True):
             raise click.ClickException(e)
         except urllib3.exceptions.MaxRetryError as e:
             if isinstance(e.reason, urllib3.exceptions.SSLError):
-                raise click.ClickException(f"Could not connect to the NetHSM: {e.reason}\nIf you use a self-signed certificate, please set the --no-verify-tls option.")
+                raise click.ClickException(
+                    f"Could not connect to the NetHSM: {e.reason}\nIf you use a self-signed certificate, please set the --no-verify-tls option."
+                )
             else:
                 raise e
         except requests.exceptions.SSLError as e:
-            raise click.ClickException(f"Could not connect to the NetHSM: {e}\nIf you use a self-signed certificate, please set the --no-verify-tls option.")
+            raise click.ClickException(
+                f"Could not connect to the NetHSM: {e}\nIf you use a self-signed certificate, please set the --no-verify-tls option."
+            )
 
 
 @nethsm.command()
@@ -438,8 +444,10 @@ def prompt_mechanisms(type):
         print(f"Automatically selecting the key mechanism {available_mechanisms[0]}")
         return available_mechanisms
 
-    print("Please enter at least one mechanism.  Enter an empty string to "
-          "finish the list of mechanisms.")
+    print(
+        "Please enter at least one mechanism.  Enter an empty string to "
+        "finish the list of mechanisms."
+    )
 
     mechanism_type = click.Choice(available_mechanisms, case_sensitive=False)
     mechanisms = []
@@ -534,7 +542,9 @@ def add_key(ctx, type, mechanisms, prime_p, prime_q, public_exponent, data, key_
         if prime_q:
             raise click.ClickException("-q/--prime-q may only be set for RSA keys")
         if public_exponent:
-            raise click.ClickException("-e/--public-exponent may only be set for RSA keys")
+            raise click.ClickException(
+                "-e/--public-exponent may only be set for RSA keys"
+            )
         if not data:
             data = click.prompt("Key data")
 
@@ -811,7 +821,9 @@ def get_api_or_key_id(api, key_id):
 
 
 @nethsm.command()
-@click.option("-a", "--api", is_flag=True, help="Set the certificate for the NetHSM HTTPS API")
+@click.option(
+    "-a", "--api", is_flag=True, help="Set the certificate for the NetHSM HTTPS API"
+)
 @click.option("-k", "--key-id", help="The ID of the key to set the certificate for")
 @click.option(
     "-m",
@@ -847,7 +859,9 @@ def set_certificate(ctx, api, key_id, mime_type, filename):
                         f"{filename}"
                     )
                 nethsm.set_key_certificate(key_id, f, mime_type)
-                print(f"Updated the certificate for key {key_id} on NetHSM {nethsm.host}")
+                print(
+                    f"Updated the certificate for key {key_id} on NetHSM {nethsm.host}"
+                )
             else:
                 if mime_type:
                     raise click.ClickException("--mime-type cannot be used with --api")
@@ -856,7 +870,9 @@ def set_certificate(ctx, api, key_id, mime_type, filename):
 
 
 @nethsm.command()
-@click.option("-a", "--api", is_flag=True, help="Get the certificate for the NetHSM HTTPS API")
+@click.option(
+    "-a", "--api", is_flag=True, help="Get the certificate for the NetHSM HTTPS API"
+)
 @click.option("-k", "--key-id", help="The ID of the key to get the certificate for")
 @click.pass_context
 def get_certificate(ctx, api, key_id):
@@ -897,18 +913,34 @@ def delete_certificate(ctx, key_id):
 
 
 @nethsm.command()
-@click.option("-a", "--api", is_flag=True, help="Generate a CSR for the NetHSM HTTPS API")
+@click.option(
+    "-a", "--api", is_flag=True, help="Generate a CSR for the NetHSM HTTPS API"
+)
 @click.option("-k", "--key-id", help="The ID of the key to generate the CSR for")
 @click.option("--country", default="", prompt=True, help="The country name")
-@click.option("--state-or-province", default="", prompt=True, help="The state or province name")
+@click.option(
+    "--state-or-province", default="", prompt=True, help="The state or province name"
+)
 @click.option("--locality", default="", prompt=True, help="The locality name")
 @click.option("--organization", default="", prompt=True, help="The organization name")
-@click.option("--organizational-unit", default="", prompt=True, help="The organization unit name")
+@click.option(
+    "--organizational-unit", default="", prompt=True, help="The organization unit name"
+)
 @click.option("--common-name", default="", prompt=True, help="The common name")
 @click.option("--email-address", default="", prompt=True, help="The email address")
 @click.pass_context
-def csr(ctx, api, key_id, country, state_or_province, locality, organization, organizational_unit,
-        common_name, email_address):
+def csr(
+    ctx,
+    api,
+    key_id,
+    country,
+    state_or_province,
+    locality,
+    organization,
+    organizational_unit,
+    common_name,
+    email_address,
+):
     """Generate a certificate signing request.
 
     If the --api option is set, the CSR is generated for the NetHSM, for
@@ -970,7 +1002,7 @@ def backup(ctx, filename):
         raise click.ClickException(f"Backup file {filename} already exists")
     with connect(ctx) as nethsm:
         data = nethsm.backup()
-        with open(filename, 'xb') as f:
+        with open(filename, "xb") as f:
             f.write(data)
             print(f"Backup for {nethsm.host} written to {filename}")
 

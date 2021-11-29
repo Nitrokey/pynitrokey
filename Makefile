@@ -3,27 +3,32 @@
 PACKAGE_NAME=pynitrokey
 VENV=venv
 
+BLACK_FLAGS=-t py35 --extend-exclude pynitrokey/nethsm/client
+FLAKE8_FLAGS=--extend-exclude pynitrokey/nethsm/client
+ISORT_FLAGS=--py 35 --extend-skip pynitrokey/nethsm/client
+
+# whitelist of directories for flake8
+FLAKE8_DIRS=pynitrokey/nethsm
 
 # setup development environment
 init: update-venv
 
 # ensure this passes before commiting
 check: lint
-	$(VENV)/bin/python3 -m black --check $(PACKAGE_NAME)/
-	$(VENV)/bin/python3 -m isort --check-only $(PACKAGE_NAME)/
+	$(VENV)/bin/python3 -m black $(BLACK_FLAGS) --check $(PACKAGE_NAME)/
+	$(VENV)/bin/python3 -m isort $(ISORT_FLAGS) --check-only $(PACKAGE_NAME)/
 
 # automatic code fixes
 fix: black isort
 
 black:
-	$(VENV)/bin/python3 -m black -t py35 $(PACKAGE_NAME)/
+	$(VENV)/bin/python3 -m black $(BLACK_FLAGS) $(PACKAGE_NAME)/
 
 isort:
-	$(VENV)/bin/python3 -m isort --py 35 $(PACKAGE_NAME)/
+	$(VENV)/bin/python3 -m isort $(ISORT_FLAGS) $(PACKAGE_NAME)/
 
 lint:
-	$(VENV)/bin/python3 -m flake8 $(PACKAGE_NAME)/ \
-		--extend-exclude pynitrokey/nethsm/client
+	$(VENV)/bin/python3 -m flake8 $(FLAKE8_FLAGS) $(FLAKE8_DIRS)
 
 semi-clean:
 	rm -rf **/__pycache__
@@ -84,7 +89,7 @@ update-venv: $(VENV)
 CI:
 	env FLIT_ROOT_INSTALL=1 $(MAKE) init VENV=$(VENV)
 	env FLIT_ROOT_INSTALL=1 $(MAKE) build-forced VENV=$(VENV)
-	# $(MAKE) check || true # disableing this for the ci to work
+	$(MAKE) check
 	@echo
 	env LC_ALL=C.UTF-8 LANG=C.UTF-8 $(VENV)/bin/nitropy
 	@echo

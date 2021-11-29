@@ -8,15 +8,15 @@
 # copied, modified, or distributed except according to those terms.
 
 import base64
+import binascii
+import hashlib
 import json
 import struct
 import sys
 import tempfile
 import time
-import secrets
-import binascii
-import hashlib
 
+import secrets
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from fido2.attestation import Attestation
@@ -33,25 +33,33 @@ from pynitrokey.fido2.commands import SoloBootloader, SoloExtension
 
 
 class NKFido2Client:
-    def __init__(self,):
+    def __init__(
+        self,
+    ):
         self.origin = "https://example.org"
         self.host = "example.org"
         self.user_id = b"they"
         self.exchange = self.exchange_hid
         self.do_reboot = True
 
-    def use_u2f(self,):
+    def use_u2f(
+        self,
+    ):
         self.exchange = self.exchange_u2f
 
-    def use_hid(self,):
+    def use_hid(
+        self,
+    ):
         self.exchange = self.exchange_hid
 
     def set_reboot(self, val):
-        """ option to reboot after programming """
+        """option to reboot after programming"""
         self.do_reboot = val
 
-    def reboot(self,):
-        """ option to reboot after programming """
+    def reboot(
+        self,
+    ):
+        """option to reboot after programming"""
         try:
             self.exchange(SoloBootloader.reboot)
         except OSError:
@@ -61,12 +69,14 @@ class NKFido2Client:
         if dev is None:
             devices = list(CtapHidDevice.list_devices())
             if solo_serial is not None:
-                if solo_serial.startswith('device='):
-                    solo_serial = solo_serial.split('=')[1]
+                if solo_serial.startswith("device="):
+                    solo_serial = solo_serial.split("=")[1]
                     dev = open_device(solo_serial)
                 else:
                     devices = [
-                        d for d in devices if d.descriptor["serial_number"] == solo_serial
+                        d
+                        for d in devices
+                        if d.descriptor["serial_number"] == solo_serial
                     ]
             if dev is None and len(devices) > 1:
                 raise pynitrokey.exceptions.NonUniqueDeviceError
@@ -77,7 +87,7 @@ class NKFido2Client:
         self.dev = dev
 
         self.ctap1 = CTAP1(dev)
-        
+
         try:
             self.ctap2 = CTAP2(dev)
         except CtapError as e:
@@ -156,13 +166,17 @@ class NKFido2Client:
 
         return res.signature[1:]
 
-    def bootloader_version(self,):
+    def bootloader_version(
+        self,
+    ):
         data = self.exchange(SoloBootloader.version)
         if len(data) > 2:
             return (data[0], data[1], data[2])
         return (0, 0, data[0])
 
-    def solo_version(self,):
+    def solo_version(
+        self,
+    ):
         try:
             return self.send_data_hid(0x61, b"")
         except CtapError:
@@ -192,13 +206,18 @@ class NKFido2Client:
         """
         self.exchange(SoloBootloader.done, 0, sig)
 
-    def wink(self,):
+    def wink(
+        self,
+    ):
         self.send_data_hid(CTAPHID.WINK, b"")
 
-    def reset(self,):
+    def reset(
+        self,
+    ):
         self.ctap2.reset()
 
-    def make_credential(self, 
+    def make_credential(
+        self,
         host="nitrokeys.dev",
         user_id="they",
         serial=None,
@@ -242,7 +261,8 @@ class NKFido2Client:
 
         return credential_id
 
-    def simple_secret(self,
+    def simple_secret(
+        self,
         credential_id,
         secret_input,
         host="nitrokeys.dev",
@@ -291,14 +311,15 @@ class NKFido2Client:
 
         return output
 
-
     def cred_mgmt(self, pin):
         client = self.get_current_fido_client()
         token = client.client_pin.get_pin_token(pin)
         ctap2 = CTAP2(self.get_current_hid_device())
         return CredentialManagement(ctap2, client.client_pin.protocol, token)
 
-    def enter_solo_bootloader(self,):
+    def enter_solo_bootloader(
+        self,
+    ):
         """
         If Nitrokey is configured as Nitrokey hacker or something similar,
         this command will tell the token to boot directly to the bootloader
@@ -322,7 +343,9 @@ class NKFido2Client:
             else:
                 raise (e)
 
-    def is_solo_bootloader(self,):
+    def is_solo_bootloader(
+        self,
+    ):
         try:
             self.bootloader_version()
             return True
@@ -333,11 +356,13 @@ class NKFido2Client:
                 raise (e)
         except Exception as e:
             # exception during bootloader version check, assume no bootloader
-            #local_print("could not get bootloader version")
+            # local_print("could not get bootloader version")
             pass
         return False
 
-    def enter_st_dfu(self,):
+    def enter_st_dfu(
+        self,
+    ):
         """
         If Nitrokey is configured as Nitrokey hacker or something similar,
         this command will tell the token to boot directly to the st DFU
@@ -351,7 +376,9 @@ class NKFido2Client:
         else:
             self.send_only_hid(SoloBootloader.HIDCommandEnterSTBoot, "")
 
-    def disable_solo_bootloader(self,):
+    def disable_solo_bootloader(
+        self,
+    ):
         """
         Disables the Nitrokey bootloader.  Only do this if you want to void the possibility
         of any updates.
@@ -372,8 +399,8 @@ class NKFido2Client:
             return base64.b64decode(helpers.from_websafe(f).encode())
 
         def isCorrectVersion(current, target):
-            """ current is tuple (x,y,z).  target is string '>=x.y.z'.
-                Return True if current satisfies the target expression.
+            """current is tuple (x,y,z).  target is string '>=x.y.z'.
+            Return True if current satisfies the target expression.
             """
             if "=" in target:
                 target = target.split("=")
@@ -411,7 +438,7 @@ class NKFido2Client:
                 #         print("using signature version", v)
                 #         sig = parseField(firmware_file_data["versions"][v]["signature"])
                 #         break
-                sig = parseField(firmware_file_data["versions"]['>2.5.3']["signature"])
+                sig = parseField(firmware_file_data["versions"][">2.5.3"]["signature"])
 
                 if sig is None:
                     raise RuntimeError(
@@ -462,7 +489,7 @@ class NKFido2Client:
         if self.do_reboot:
             try:
                 print("bootloader is verifying signature...")
-                print(f'Trying with {sig.hex()}')
+                print(f"Trying with {sig.hex()}")
                 self.verify_flash(sig)
                 print("...pass!")
                 success = True

@@ -37,8 +37,8 @@ e.g. with the following command to install all dependencies:
 """
 
 try:
-    import usb
     import requests
+    import usb
 except ImportError:
     print(IMPORT_ERROR_HELP)
     exit(1)
@@ -47,37 +47,42 @@ import binascii
 import hashlib
 import logging
 import os
+import platform
 import time
-from sys import platform
 from collections import defaultdict
 from datetime import datetime
 from enum import Enum
 from functools import lru_cache
 from struct import pack
 from subprocess import check_output
-import platform
-import requests
+from sys import platform
 
+import requests
 from click import BadParameter
 
 import pynitrokey.start.rsa as rsa
-from pynitrokey.start.gnuk_token import get_gnuk_device, gnuk_devices_by_vidpid, \
-    regnual, SHA256_OID_PREFIX, crc32, parse_kdf_data
+from pynitrokey.confconsts import LOG_FN, LOG_FORMAT_STDOUT
+from pynitrokey.helpers import AskUser, local_critical, local_print
+from pynitrokey.start.gnuk_token import (
+    SHA256_OID_PREFIX,
+    crc32,
+    get_gnuk_device,
+    gnuk_devices_by_vidpid,
+    parse_kdf_data,
+    regnual,
+)
 from pynitrokey.start.kdf_calc import kdf_calc
-#from pynitrokey.start.threaded_log import ThreadLog
-from pynitrokey.start.usb_strings import get_devices, print_device
 from pynitrokey.start.rsa_pub_key import rsa_key_data
 
-from pynitrokey.confconsts import LOG_FN, LOG_FORMAT_STDOUT
-from pynitrokey.helpers import local_print, local_critical, AskUser
-
+# from pynitrokey.start.threaded_log import ThreadLog
+from pynitrokey.start.usb_strings import get_devices, print_device
 
 # This should be event driven, not guessing some period, or polling.
 # @todo: move to confconsts.py
 TIME_DETECT_DEVICE_AFTER_UPDATE_LONG_S = 5
 TIME_DETECT_DEVICE_AFTER_UPDATE_S = 30
-ERR_EMPTY_COUNTER = '6983'
-ERR_INVALID_PIN = '6982'
+ERR_EMPTY_COUNTER = "6983"
+ERR_INVALID_PIN = "6982"
 DEFAULT_WAIT_FOR_REENUMERATION = 20
 DEFAULT_PW3 = "12345678"
 BY_ADMIN = 3
@@ -86,6 +91,7 @@ IS_LINUX = platform.system() == "Linux"
 
 logger = logging.getLogger()
 
+
 def progress_func(x):
     x = x * 100
     if x == 0:
@@ -93,13 +99,15 @@ def progress_func(x):
 
     if progress_func.last * 10 <= x < 100:
         progress_func.last += 1
-        local_print(f'Progress: {round(x, 2)}%\r', end='', flush=True)
+        local_print(f"Progress: {round(x, 2)}%\r", end="", flush=True)
 
 
 progress_func.last = 0
 
 
-def main(wait_e, keyno, passwd, data_regnual, data_upgrade, skip_bootloader, verbosity=0):
+def main(
+    wait_e, keyno, passwd, data_regnual, data_upgrade, skip_bootloader, verbosity=0
+):
     reg = None
 
     # @todo: this is constantly used: how about a consistent/generic solution?
@@ -134,7 +142,7 @@ def main(wait_e, keyno, passwd, data_regnual, data_upgrade, skip_bootloader, ver
         # @todo: use global verbosity
         if verbosity:
             local_print("CRC32: %04x\n" % crc32code)
-        data_regnual += pack('<I', crc32code)
+        data_regnual += pack("<I", crc32code)
 
         rsa_key = rsa.read_key_from_list(rsa_key_data)
         rsa_raw_pubkey = rsa.get_raw_pubkey(rsa_key)
@@ -145,16 +153,24 @@ def main(wait_e, keyno, passwd, data_regnual, data_upgrade, skip_bootloader, ver
 
         # Compute passwd data
         try:
-            kdf_data = gnuk.cmd_get_data(0x00, 0xf9).tobytes()
+            kdf_data = gnuk.cmd_get_data(0x00, 0xF9).tobytes()
         except Exception as e:
             local_print("Note: KDF DO not found", e)
             kdf_data = b""
 
         if kdf_data == b"":
-            passwd_data = passwd.encode('UTF-8')
+            passwd_data = passwd.encode("UTF-8")
         else:
-            algo, subalgo, iters, salt_user, salt_reset, salt_admin, \
-                hash_user, hash_admin = parse_kdf_data(kdf_data)
+            (
+                algo,
+                subalgo,
+                iters,
+                salt_user,
+                salt_reset,
+                salt_admin,
+                hash_user,
+                hash_admin,
+            ) = parse_kdf_data(kdf_data)
 
             salt = salt_admin if salt_admin else salt_user
             passwd_data = kdf_calc(passwd, salt, iters)
@@ -176,12 +192,18 @@ def main(wait_e, keyno, passwd, data_regnual, data_upgrade, skip_bootloader, ver
         if verbosity:
             local_print("%08x:%08x" % mem_info)
 
-        local_print("Running update!",
-                    "Do NOT remove the device from the USB slot, until further notice",
-                    "Downloading flash upgrade program...")
+        local_print(
+            "Running update!",
+            "Do NOT remove the device from the USB slot, until further notice",
+            "Downloading flash upgrade program...",
+        )
 
-        gnuk.download(mem_info[0], data_regnual, progress_func=progress_func,
-                      verbose=verbosity == 2)
+        gnuk.download(
+            mem_info[0],
+            data_regnual,
+            progress_func=progress_func,
+            verbose=verbosity == 2,
+        )
 
         local_print("Executing flash upgrade...")
 
@@ -236,8 +258,9 @@ def main(wait_e, keyno, passwd, data_regnual, data_upgrade, skip_bootloader, ver
         local_print("%08x:%08x" % mem_info)
 
     local_print("Downloading the program")
-    reg.download(mem_info[0], data_upgrade, progress_func=progress_func,
-                 verbose=verbosity == 2)
+    reg.download(
+        mem_info[0], data_upgrade, progress_func=progress_func, verbose=verbosity == 2
+    )
 
     local_print("Protecting device")
     reg.protect()
@@ -252,15 +275,20 @@ def main(wait_e, keyno, passwd, data_regnual, data_upgrade, skip_bootloader, ver
 
     return 0
 
+
 @lru_cache()
 def get_latest_release_data():
     try:
         # @todo: move to confconsts.py
-        r = requests.get('https://api.github.com/repos/Nitrokey/nitrokey-start-firmware/releases')
+        r = requests.get(
+            "https://api.github.com/repos/Nitrokey/nitrokey-start-firmware/releases"
+        )
         json = r.json()
         if r.status_code == 403:
-            local_critical(f"JSON raw data: {json}",
-                           f"No Github API access, status code: {r.status_code}")
+            local_critical(
+                f"JSON raw data: {json}",
+                f"No Github API access, status code: {r.status_code}",
+            )
         latest_tag = json[0]
 
     except Exception as e:
@@ -272,13 +300,16 @@ def get_latest_release_data():
 
 def validate_binary_file(path: str):
     import os.path
+
     if not os.path.exists(path):
         raise BadParameter('Path does not exist: "{}"'.format(path))
-    if not path.endswith('.bin'):
+    if not path.endswith(".bin"):
         raise BadParameter(
             'Supplied file "{}" does not have ".bin" extension. '
-            'Make sure you are sending correct file to the device.'
-            .format(os.path.basename(path)))
+            "Make sure you are sending correct file to the device.".format(
+                os.path.basename(path)
+            )
+        )
     return path
 
 
@@ -286,8 +317,10 @@ def validate_name(path: str, name: str):
     if name not in path:
         raise BadParameter(
             'Supplied file "{}" does not have "{}" in name. '
-            'Make sure you have not swapped the arguments.'
-            .format(os.path.basename(path), name))
+            "Make sure you have not swapped the arguments.".format(
+                os.path.basename(path), name
+            )
+        )
     return path
 
 
@@ -296,7 +329,7 @@ def validate_gnuk(ctx, param, path: str):
         return path
 
     validate_binary_file(path)
-    validate_name(path, 'gnuk')
+    validate_name(path, "gnuk")
     return path
 
 
@@ -305,16 +338,19 @@ def validate_regnual(ctx, param, path: str):
         return path
 
     validate_binary_file(path)
-    validate_name(path, 'regnual')
+    validate_name(path, "regnual")
     return path
 
+
 def kill_smartcard_services():
-    local_print('Could not connect to the device. Attempting to close scdaemon.')
+    local_print("Could not connect to the device. Attempting to close scdaemon.")
 
     # check_output(["gpg-connect-agent",
     #               "SCD KILLSCD", "SCD BYE", "/bye"])
-    commands = [('gpgconf --kill all'.split(), True),
-                ('sudo systemctl stop pcscd pcscd.socket'.split(), IS_LINUX)]
+    commands = [
+        ("gpgconf --kill all".split(), True),
+        ("sudo systemctl stop pcscd pcscd.socket".split(), IS_LINUX),
+    ]
 
     for command, flag in commands:
         if not flag:
@@ -337,11 +373,11 @@ class FirmwareType(Enum):
 
 
 # @fixme: move constants to confconsts.py
-REMOTE_PATH = 'https://raw.githubusercontent.com/Nitrokey/nitrokey-start-firmware/gnuk1.2-regnual-fix/prebuilt'
+REMOTE_PATH = "https://raw.githubusercontent.com/Nitrokey/nitrokey-start-firmware/gnuk1.2-regnual-fix/prebuilt"
 FIRMWARE_URL = {
-    FirmwareType.REGNUAL: ('%s/{}/regnual.bin' % REMOTE_PATH),
-    FirmwareType.GNUK: ('%s/{}/gnuk.bin' % REMOTE_PATH),
-    FirmwareType.CHECKSUM: ('%s/checksums.sha512' % REMOTE_PATH),
+    FirmwareType.REGNUAL: ("%s/{}/regnual.bin" % REMOTE_PATH),
+    FirmwareType.GNUK: ("%s/{}/gnuk.bin" % REMOTE_PATH),
+    FirmwareType.CHECKSUM: ("%s/checksums.sha512" % REMOTE_PATH),
 }
 
 
@@ -353,12 +389,19 @@ def hash_data_512(data):
 
 def validate_hash(url: str, hash: bytes):
     checksums = download_file_or_exit(FIRMWARE_URL.get(FirmwareType.CHECKSUM, None))
-    name = ' ' + '/'.join(url.split('/')[-2:])
+    name = " " + "/".join(url.split("/")[-2:])
     for line in checksums.splitlines():
         if name in line.decode():
             hash_expected, hash_name = line.split()
-            logger.debug('{} {}/{} {}'.format(hash_expected == hash, hash_name, name,
-                                              hash[-8:], hash_expected[-8:]))
+            logger.debug(
+                "{} {}/{} {}".format(
+                    hash_expected == hash,
+                    hash_name,
+                    name,
+                    hash[-8:],
+                    hash_expected[-8:],
+                )
+            )
             return hash_expected == hash
     return False
 
@@ -370,14 +413,16 @@ def get_firmware_file(file_name: str, type: FirmwareType):
         local_print("- {}: {}".format(file_name, len(firmware_data)))
         return firmware_data
 
-    tag = get_latest_release_data()['tag_name']
+    tag = get_latest_release_data()["tag_name"]
     url = FIRMWARE_URL.get(type, None).format(tag)
     firmware_data = download_file_or_exit(url)
     hash_data = hash_data_512(firmware_data)
     hash_valid = "valid" if validate_hash(url, hash_data) else "invalid"
 
-    local_print(f"- {type}: {len(firmware_data)}, "
-                f"hash: ...{hash_data[-8:]} {hash_valid} (from ...{url[-24:]})")
+    local_print(
+        f"- {type}: {len(firmware_data)}, "
+        f"hash: ...{hash_data[-8:]} {hash_valid} (from ...{url[-24:]})"
+    )
     return firmware_data
 
 
@@ -405,57 +450,98 @@ def show_kdf_details(passwd):
     gnuk.cmd_select_openpgp()
     # Compute passwd data
     try:
-        kdf_data = gnuk.cmd_get_data(0x00, 0xf9).tobytes()
+        kdf_data = gnuk.cmd_get_data(0x00, 0xF9).tobytes()
     except:
         kdf_data = b""
     if kdf_data == b"":
-        print('KDF not set')
+        print("KDF not set")
         # passwd_data = passwd.encode('UTF-8')
     else:
-        algo, subalgo, iters, salt_user, salt_reset, salt_admin, \
-        hash_user, hash_admin = parse_kdf_data(kdf_data)
+        (
+            algo,
+            subalgo,
+            iters,
+            salt_user,
+            salt_reset,
+            salt_admin,
+            hash_user,
+            hash_admin,
+        ) = parse_kdf_data(kdf_data)
         if salt_admin:
             salt = salt_admin
         else:
             salt = salt_user
         d = {
-            'algo': algo,
-            'subalgo': subalgo,
-            'iters': iters,
-            'salt_user': binascii.b2a_hex(salt_user),
-            'salt_reset': binascii.b2a_hex(salt_reset),
-            'salt_admin': binascii.b2a_hex(salt_admin),
-            'hash_user': binascii.b2a_hex(hash_user),
-            'hash_admin': binascii.b2a_hex(hash_admin),
+            "algo": algo,
+            "subalgo": subalgo,
+            "iters": iters,
+            "salt_user": binascii.b2a_hex(salt_user),
+            "salt_reset": binascii.b2a_hex(salt_reset),
+            "salt_admin": binascii.b2a_hex(salt_admin),
+            "hash_user": binascii.b2a_hex(hash_user),
+            "hash_admin": binascii.b2a_hex(hash_admin),
         }
         pprint(d, width=100)
         if passwd:
             try:
                 passwd_data = kdf_calc(passwd, salt, iters)
-                print(f'passwd_data: {binascii.b2a_hex(passwd_data)}')
+                print(f"passwd_data: {binascii.b2a_hex(passwd_data)}")
             except ValueError as e:
                 local_print("Error getting KDF", e)
         else:
-            print('Provide password to calculate final hash')
+            print("Provide password to calculate final hash")
 
-def start_update(regnual, gnuk, default_password, password, wait_e, keyno, verbose, yes,
-        skip_bootloader, green_led):
+
+def start_update(
+    regnual,
+    gnuk,
+    default_password,
+    password,
+    wait_e,
+    keyno,
+    verbose,
+    yes,
+    skip_bootloader,
+    green_led,
+):
 
     # @todo: move to some more generic position...
-    local_print('Nitrokey Start firmware update tool')
+    local_print("Nitrokey Start firmware update tool")
     # @fixme: especially this, which is to be handle application wide
-    logger.debug('Start session {}'.format(datetime.now()))
-    local_print('Platform: {}'.format(platform.platform()))
-    local_print('System: {}, is_linux: {}'.format(platform.system(), IS_LINUX))
-    local_print('Python: {}'.format(platform.python_version()))
-    local_print('Saving run log to: {}'.format(LOG_FN))
+    logger.debug("Start session {}".format(datetime.now()))
+    local_print("Platform: {}".format(platform.platform()))
+    local_print("System: {}, is_linux: {}".format(platform.system(), IS_LINUX))
+    local_print("Python: {}".format(platform.python_version()))
+    local_print("Saving run log to: {}".format(LOG_FN))
 
-    arg_descs = ["regnual", "gnuk", "default_password", "password", "wait_e", "keyno",
-            "verbose", "yes", "skip_bootloader", "green_led"]
-    args = (regnual, gnuk, default_password, "<hidden>", wait_e, keyno, verbose, yes,
-        skip_bootloader, green_led)
-    logger.debug("Arguments: " + ", ".join(f"{key}= '{val}'" \
-                 for key, val in zip(arg_descs, args)))
+    arg_descs = [
+        "regnual",
+        "gnuk",
+        "default_password",
+        "password",
+        "wait_e",
+        "keyno",
+        "verbose",
+        "yes",
+        "skip_bootloader",
+        "green_led",
+    ]
+    args = (
+        regnual,
+        gnuk,
+        default_password,
+        "<hidden>",
+        wait_e,
+        keyno,
+        verbose,
+        yes,
+        skip_bootloader,
+        green_led,
+    )
+    logger.debug(
+        "Arguments: "
+        + ", ".join(f"{key}= '{val}'" for key, val in zip(arg_descs, args))
+    )
 
     passwd = None
 
@@ -482,8 +568,10 @@ def start_update(regnual, gnuk, default_password, password, wait_e, keyno, verbo
     # Detect devices
     dev_strings = get_devices()
     if len(dev_strings) > 1:
-        local_critical("Only one device should be connected",
-                       "Please remove other devices and retry")
+        local_critical(
+            "Only one device should be connected",
+            "Please remove other devices and retry",
+        )
 
     if dev_strings:
         local_print("Currently connected device strings:")
@@ -496,13 +584,15 @@ def start_update(regnual, gnuk, default_password, password, wait_e, keyno, verbo
 
     latest_tag = get_latest_release_data()
 
-    local_print(f"Please note:",
-                f"- Latest firmware available is: ",
-                f"  {latest_tag['tag_name']} (published: {latest_tag['published_at']})",
-                f"- provided firmware: {gnuk}",
-                f"- all data will be removed from the device!",
-                f"- do not interrupt update process - the device may not run properly!",
-                f"- the process should not take more than 1 minute")
+    local_print(
+        f"Please note:",
+        f"- Latest firmware available is: ",
+        f"  {latest_tag['tag_name']} (published: {latest_tag['published_at']})",
+        f"- provided firmware: {gnuk}",
+        f"- all data will be removed from the device!",
+        f"- do not interrupt update process - the device may not run properly!",
+        f"- the process should not take more than 1 minute",
+    )
     if yes:
         local_print("Accepted automatically")
     else:
@@ -514,17 +604,26 @@ def start_update(regnual, gnuk, default_password, password, wait_e, keyno, verbo
     for attempt_counter in range(retries):
         try:
             # First 4096-byte in data_upgrade is SYS, so, skip it.
-            main(wait_e, keyno, passwd, data, data_upgrade[4096:],
-                 skip_bootloader, verbosity=verbose)
+            main(
+                wait_e,
+                keyno,
+                passwd,
+                data,
+                data_upgrade[4096:],
+                skip_bootloader,
+                verbosity=verbose,
+            )
             update_done = True
             break
 
         # @todo: add proper exceptions (for each case) here
         except ValueError as e:
             local_print("error while running update", e)
-            str_factory_reset = "Please 'factory-reset' your device to " \
-                "continue (this will delete all user data from the device) " \
+            str_factory_reset = (
+                "Please 'factory-reset' your device to "
+                "continue (this will delete all user data from the device) "
                 "and try again with PIN='12345678'"
+            )
 
             if "No ICC present" in str(e):
                 kill_smartcard_services()
@@ -533,22 +632,31 @@ def start_update(regnual, gnuk, default_password, password, wait_e, keyno, verbo
             else:
                 # @fixme run factory reset here since data are lost anyway (rly?)
                 if str(e) == ERR_EMPTY_COUNTER:
-                    local_critical("- device returns: 'Attempt counter empty' "
-                                   "- error for Admin PIN", str_factory_reset, e)
+                    local_critical(
+                        "- device returns: 'Attempt counter empty' "
+                        "- error for Admin PIN",
+                        str_factory_reset,
+                        e,
+                    )
 
                 if str(e) == ERR_INVALID_PIN:
-                    local_critical("- device returns: 'Invalid PIN' error",
-                                   "- please retry with correct PIN", e)
+                    local_critical(
+                        "- device returns: 'Invalid PIN' error",
+                        "- please retry with correct PIN",
+                        e,
+                    )
         except Exception as e:
             local_critical("unexpected error", e)
 
     if not update_done:
-        local_critical("",
+        local_critical(
+            "",
             "Could not proceed with the update",
             "Please execute one or all of the following and try again:",
             "- re-insert device to the USB slot",
             "- run factory-reset on the device",
-            "- close other applications, which could use it (e.g., scdaemon, pcscd)")
+            "- close other applications, which could use it (e.g., scdaemon, pcscd)",
+        )
 
     dev_strings_upgraded = None
     takes_long_time = False
@@ -567,16 +675,19 @@ def start_update(regnual, gnuk, default_password, password, wait_e, keyno, verbo
         local_print(".", end="", flush=True)
 
     if not dev_strings_upgraded:
-        local_print("",
+        local_print(
+            "",
             "could not connect to the device - might be due to a failed update",
             "please re-insert the device, check version using:",
-            "$ nitropy start list")
+            "$ nitropy start list",
+        )
 
-    local_print(f"device can now be safely removed from the USB slot",
-                f"final device strings: {dev_strings_upgraded}")
+    local_print(
+        f"device can now be safely removed from the USB slot",
+        f"final device strings: {dev_strings_upgraded}",
+    )
 
     # @todo: add this to all logs and skip it here
     local_print(f"finishing session {datetime.now()}")
     # @todo: always output this in certain situations... (which ones? errors? warnings?)
     local_print(f"Log saved to: {LOG_FN}")
-

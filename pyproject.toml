@@ -38,3 +38,6 @@ classifiers=[
 
 [tool.flit.scripts]
 nitropy = "pynitrokey.cli:nitropy"
+
+[tool.isort]
+profile = "black"

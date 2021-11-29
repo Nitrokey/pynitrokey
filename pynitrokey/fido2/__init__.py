@@ -1,11 +1,12 @@
-
-import time
 import socket
+import time
+
 import usb
 
-#from pynitrokey.fido2 import hmac_secret
-from pynitrokey.fido2.client import NKFido2Client
 from pynitrokey.exceptions import NoSoloFoundError
+
+# from pynitrokey.fido2 import hmac_secret
+from pynitrokey.fido2.client import NKFido2Client
 
 
 def hot_patch_windows_libusb():
@@ -21,12 +22,10 @@ def hot_patch_windows_libusb():
     usb._objfinalizer._AutoFinalizedObjectBase.__del__ = newdel
 
 
-
 def _UDP_InternalPlatformSwitch(funcname, *args, **kwargs):
     if funcname == "__init__":
         return HidOverUDP(*args, **kwargs)
     return getattr(HidOverUDP, funcname)(*args, **kwargs)
-
 
 
 def find(solo_serial=None, retries=5, raw_device=None, udp=False):
@@ -53,8 +52,11 @@ def find_all():
     from fido2.hid import CtapHidDevice
 
     hid_devices = list(CtapHidDevice.list_devices())
-    solo_devices = [d for d in hid_devices
-        if (d.descriptor.vid, d.descriptor.pid) in [
+    solo_devices = [
+        d
+        for d in hid_devices
+        if (d.descriptor.vid, d.descriptor.pid)
+        in [
             ## @FIXME: move magic numbers
             (1155, 41674),
             (0x20A0, 0x42B3),
@@ -62,5 +64,3 @@ def find_all():
         ]
     ]
     return [find(raw_device=device) for device in solo_devices]
-
-

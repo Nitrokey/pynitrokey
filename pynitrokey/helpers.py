@@ -9,16 +9,21 @@
 
 import logging
 import sys
-
+from getpass import getpass
 from numbers import Number
 from threading import Event, Timer
 from typing import List
-from getpass import getpass
 
-from pynitrokey.confconsts import GH_ISSUES_URL, SUPPORT_EMAIL, LOG_FN
-from pynitrokey.confconsts import VERBOSE, Verbosity
+from pynitrokey.confconsts import (
+    GH_ISSUES_URL,
+    LOG_FN,
+    SUPPORT_EMAIL,
+    VERBOSE,
+    Verbosity,
+)
 
 STDOUT_PRINT = True
+
 
 def to_websafe(data):
     data = data.replace("+", "-")
@@ -79,7 +84,7 @@ def local_print(*messages, **kwargs):
             logger.exception(item)
             passed_exc = item
             item = repr(item)
-            item = 'Exception encountered: ' + item
+            item = "Exception encountered: " + item
 
         # just a newline, don't log to file...
         elif item is None or item == "":
@@ -110,17 +115,21 @@ def local_critical(*messages, support_hint=True, ret_code=1, **kwargs):
         STDOUT_PRINT = False
         local_print("listing all connected devices:")
         from pynitrokey.cli import nitropy
+
         nitropy.commands["ls"].callback()
         STDOUT_PRINT = True
 
         local_print(
-            "", "-" * 80,
+            "",
+            "-" * 80,
             "Critical error occurred, exiting now",
             "Unexpected? Is this a bug? Do you would like to get support/help?",
             f"- You can report issues at: {GH_ISSUES_URL}",
             f"- Writing an e-mail to: {SUPPORT_EMAIL} is also possible",
             f"- Please attach the log: '{LOG_FN}' with any support/help request!",
-            "-" * 80, "")
+            "-" * 80,
+            "",
+        )
     sys.exit(ret_code)
 
 
@@ -137,12 +146,16 @@ class AskUser:
                           set to `False`, if strictly `question` shall be used
         `hide_input`:     use 'getpass' instead of regular `input`
     """
-    def __init__(self, question: str,
-                 options: List[str]=None,
-                 strict: bool=False,
-                 repeat: int=3,
-                 adapt_question=True,
-                 hide_input=False):
+
+    def __init__(
+        self,
+        question: str,
+        options: List[str] = None,
+        strict: bool = False,
+        repeat: int = 3,
+        adapt_question=True,
+        hide_input=False,
+    ):
 
         self.data = None
 
@@ -154,8 +167,11 @@ class AskUser:
             # strip ending colon(s) ':' or whitespace(s) ' '
             _q = _q.strip(" ").strip(":").strip(" ").strip(":")
             if options:
-                _q += f" [{'/'.join(options)}]" if strict else \
-                      f" [{'/'.join(f'({o[0]}){o[1:]}' for o in options)}]"
+                _q += (
+                    f" [{'/'.join(options)}]"
+                    if strict
+                    else f" [{'/'.join(f'({o[0]}){o[1:]}' for o in options)}]"
+                )
             _q += ": "
             self.final_question = _q
 
@@ -165,7 +181,7 @@ class AskUser:
         self.hide_input = hide_input
 
     @classmethod
-    def yes_no(cls, what: str, strict: bool=False):
+    def yes_no(cls, what: str, strict: bool = False):
         opts = ["yes", "no"]
         return cls(what, options=opts, strict=strict).ask() == opts[0]
 
@@ -184,8 +200,11 @@ class AskUser:
     def get_input(self, pre_str=None, hide_input=None):
         pre_input_string = pre_str or self.final_question
         hide_input = hide_input if hide_input is not None else self.hide_input
-        return input(pre_input_string).strip() if not hide_input \
+        return (
+            input(pre_input_string).strip()
+            if not hide_input
             else getpass(pre_input_string)
+        )
 
     def ask(self):
         answer = self.get_input()
