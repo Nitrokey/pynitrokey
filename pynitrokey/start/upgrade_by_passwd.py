@@ -55,7 +55,6 @@ from enum import Enum
 from functools import lru_cache
 from struct import pack
 from subprocess import check_output
-from sys import platform
 
 import requests
 from click import BadParameter
