@@ -8,6 +8,7 @@
 # copied, modified, or distributed except according to those terms.
 
 import contextlib
+import click
 import enum
 import json
 import re
