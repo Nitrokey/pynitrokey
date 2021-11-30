@@ -24,7 +24,6 @@ License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-import tempfile
 from pprint import pprint
 
 IMPORT_ERROR_HELP = """
@@ -38,7 +37,7 @@ e.g. with the following command to install all dependencies:
 
 try:
     import requests
-    import usb
+    import usb  # noqa
 except ImportError:
     print(IMPORT_ERROR_HELP)
     exit(1)

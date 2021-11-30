@@ -22,7 +22,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 from binascii import hexlify, unhexlify
-from os import urandom
 
 
 def read_key_from_file(file):

@@ -9,9 +9,7 @@
 
 import json
 import logging
-import os
 import platform
-import sys
 import tempfile
 import time
 from datetime import datetime
