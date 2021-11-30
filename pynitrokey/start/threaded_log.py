@@ -15,7 +15,7 @@ import subprocess
 import threading
 import time
 from sys import stderr
-from typing import List
+from typing import List, Optional
 
 
 class ThreadLog(threading.Thread):
@@ -30,7 +30,7 @@ class ThreadLog(threading.Thread):
         self.command = command
         self.daemon = True
         self.start()
-        self.process = None
+        self.process: Optional[subprocess.Popen[bytes]] = None
 
     def run(self):
         self.execute(self.command.split())
@@ -43,7 +43,7 @@ class ThreadLog(threading.Thread):
         return False
 
     def execute(self, command: List[str]):
-        self.process = subprocess.Popen(  # type: ignore
+        self.process = subprocess.Popen(
             command, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
         )
 
@@ -57,7 +57,7 @@ class ThreadLog(threading.Thread):
                 continue
             self.logger.debug(line.strip())
 
-        self.process.wait()  # type: ignore
+        self.process.wait()
         self.logger.debug("Finished")
 
     def start_logging(self):
