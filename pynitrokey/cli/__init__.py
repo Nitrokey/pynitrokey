@@ -15,14 +15,14 @@ import click
 
 import pynitrokey
 import pynitrokey.fido2.operations
-from pynitrokey.cli.pro import pro
 from pynitrokey.cli.fido2 import fido2
 from pynitrokey.cli.nethsm import nethsm
+from pynitrokey.cli.pro import pro
 from pynitrokey.cli.start import start
 from pynitrokey.cli.storage import storage
 from pynitrokey.confconsts import LOG_FN, LOG_FORMAT
 
-#from . import _patches  # noqa  (since otherwise "unused")
+# from . import _patches  # noqa  (since otherwise "unused")
 
 
 def check_root():
@@ -37,7 +37,9 @@ def check_root():
                 "We suggest using: https://raw.githubusercontent.com/Nitrokey/libnitrokey/master/data/41-nitrokey.rules"
             )
             print()
-            print("For more information, see: https://www.nitrokey.com/documentation/installation#p:nitrokey-fido2&os:linux")
+            print(
+                "For more information, see: https://www.nitrokey.com/documentation/installation#p:nitrokey-fido2&os:linux"
+            )
 
 
 @click.group()

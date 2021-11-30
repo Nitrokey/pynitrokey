@@ -19,8 +19,7 @@ from typing import List
 
 
 class ThreadLog(threading.Thread):
-    _dmesg_skip_strings = [
-    ]
+    _dmesg_skip_strings = []  # type: ignore
 
     _write_to_log = False
 
@@ -44,10 +43,12 @@ class ThreadLog(threading.Thread):
         return False
 
     def execute(self, command: List[str]):
-        self.process = subprocess.Popen(command, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        self.process = subprocess.Popen(  # type: ignore
+            command, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+        )
 
         # Poll process for new output until finished
-        for line in iter(self.process.stdout.readline, ""):
+        for line in iter(self.process.stdout.readline, ""):  # type: ignore
             if self.finished:
                 break
             if not line or self.finished or not self._write_to_log:
@@ -56,8 +57,8 @@ class ThreadLog(threading.Thread):
                 continue
             self.logger.debug(line.strip())
 
-        self.process.wait()
-        self.logger.debug('Finished')
+        self.process.wait()  # type: ignore
+        self.logger.debug("Finished")
 
     def start_logging(self):
         self._write_to_log = True
@@ -68,19 +69,20 @@ class ThreadLog(threading.Thread):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.logger.debug('Finishing')
+        self.logger.debug("Finishing")
         self.finished = True
         self.process.kill()
         self.process.wait()
         self.join(10)
 
+
 def test_run():
-    FORMAT = '%(relativeCreated)05d [%(process)x] - %(levelname)s - %(name)s - %(message)s [%(filename)s:%(lineno)d]'
+    FORMAT = "%(relativeCreated)05d [%(process)x] - %(levelname)s - %(name)s - %(message)s [%(filename)s:%(lineno)d]"
     logging.basicConfig(format=FORMAT, stream=stderr, level=logging.DEBUG)
-    logger = logging.getLogger('threadlog')
+    logger = logging.getLogger("threadlog")
 
     try:
-        t = ThreadLog(logger, 'dmesg -w')
+        t = ThreadLog(logger, "dmesg -w")
         t.start_logging()
         time.sleep(10)
         t.finished = True
@@ -88,5 +90,5 @@ def test_run():
         return
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test_run()

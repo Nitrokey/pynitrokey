@@ -13,17 +13,16 @@ import time
 import click
 from fido2.ctap import CtapError
 
-from pynitrokey.helpers import local_print, local_critical
-
-from pynitrokey.fido2 import find
-from pynitrokey.fido2 import hot_patch_windows_libusb
-
+from pynitrokey.fido2 import find, hot_patch_windows_libusb
+from pynitrokey.helpers import local_critical, local_print
 
 
 @click.group()
 def program():
     """Program a key."""
     pass
+
+
 #
 # @click.command()
 # @click.option("-s", "--serial", help="Serial number of Nitrokey to use")
@@ -41,7 +40,11 @@ def program():
 
 
 @click.command()
-@click.option("-s", "--serial", help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.")
+@click.option(
+    "-s",
+    "--serial",
+    help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
+)
 @click.argument("firmware")  # , help="firmware (bundle) to program")
 def bootloader(serial, firmware):
     """Program via Nitrokey bootloader interface.
@@ -93,6 +96,7 @@ def aux():
 
 def _enter_bootloader(serial):
     from pynitrokey.fido2 import find
+
     p = find(serial)
 
     local_print("please use the button on the device to confirm")
@@ -105,7 +109,11 @@ def _enter_bootloader(serial):
 
 
 @click.command()
-@click.option("-s", "--serial", help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.")
+@click.option(
+    "-s",
+    "--serial",
+    help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
+)
 def enter_bootloader(serial):
     """Switch from Nitrokey firmware to Nitrokey bootloader.
 
@@ -117,15 +125,24 @@ def enter_bootloader(serial):
 
 
 @click.command()
-@click.option("-s", "--serial", help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.")
+@click.option(
+    "-s",
+    "--serial",
+    help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
+)
 def leave_bootloader(serial):
     """Switch from Nitrokey bootloader to Nitrokey firmware."""
     from pynitrokey.fido2 import find
+
     find(serial).reboot()
 
 
 @click.command()
-@click.option("-s", "--serial", help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.")
+@click.option(
+    "-s",
+    "--serial",
+    help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
+)
 def reboot(serial):
     """Reboot.
 
@@ -136,15 +153,21 @@ def reboot(serial):
     # this implementation actually only works for bootloader
     # firmware doesn't have a reboot command
     from pynitrokey.fido2 import find
+
     find(serial).reboot()
 
 
 @click.command()
-@click.option("-s", "--serial", help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.")
+@click.option(
+    "-s",
+    "--serial",
+    help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
+)
 @click.option("-p", "--pubkey", help="Show public key for the firmware", is_flag=True)
 def bootloader_version(serial, pubkey):
     """Version of bootloader."""
     from pynitrokey.fido2 import find
+
     p = find(serial)
 
     if not p.is_solo_bootloader():
@@ -156,14 +179,15 @@ def bootloader_version(serial, pubkey):
     local_print("Version: " + ".".join(map(str, p.bootloader_version())))
     from binascii import b2a_hex
     from hashlib import sha256
+
     if pubkey:
         bpub = p.boot_pubkey()
         bpub = b2a_hex(bpub)
-        local_print(f'Bootloader public key: \t\t{bpub}')
+        local_print(f"Bootloader public key: \t\t{bpub}")
         s = sha256()
         s.update(bpub)
         bpubh = b2a_hex(s.digest())
-        local_print(f'Bootloader public key sha256: \t{bpubh}')
+        local_print(f"Bootloader public key sha256: \t{bpubh}")
 
 
 program.add_command(aux)
@@ -177,6 +201,4 @@ program.add_command(bootloader)
 
 
 # @fixme: looks useless, so remove it?
-#program.add_command(check_only)
-
-
+# program.add_command(check_only)

@@ -21,29 +21,45 @@ SPDX-License-Identifier: LGPL-3.0
 """
 import os
 import sys
+from datetime import datetime as dt
+from enum import IntEnum
+from functools import wraps
 from pathlib import Path
 from random import randint
 from time import time as timestamp
-from datetime import datetime as dt
-from functools import wraps
+from typing import List, Tuple
 
 import cffi
-from enum import IntEnum
-
-from typing import Tuple, List
 
 from pynitrokey.exceptions import BasePyNKException
 
-class LibraryNotFound(BasePyNKException): pass
-class DeviceNotFound(BasePyNKException): pass
-class InvalidHOTPSecret(BasePyNKException): pass
-class InvalidTOTPSecret(BasePyNKException): pass
 
-class AuthError(BasePyNKException): pass
-class AdminAuthError(AuthError): pass
-class UserAuthError(AuthError): pass
+class LibraryNotFound(BasePyNKException):
+    pass
 
 
+class DeviceNotFound(BasePyNKException):
+    pass
+
+
+class InvalidHOTPSecret(BasePyNKException):
+    pass
+
+
+class InvalidTOTPSecret(BasePyNKException):
+    pass
+
+
+class AuthError(BasePyNKException):
+    pass
+
+
+class AdminAuthError(AuthError):
+    pass
+
+
+class UserAuthError(AuthError):
+    pass
 
 
 ffi = cffi.FFI()
@@ -57,15 +73,17 @@ def _get_c_library():
     header_parent_path = Path(__file__).parent / "nk_headers"
     avail_versions = ["3.6.0", "3.5.0", "3.4.1", "3.4.0"]
 
-    #lib_paths = [p.absolute().as_posix() for p in lib_paths if p.exists()]
-    libs = list(Path("/usr/lib").glob("libnitrokey.so.*")) \
-        + list(Path("/usr/local/lib").glob("libnitrokey.so.*")) \
-        + list(Path("/lib").glob("libnitrokey.so.*")) \
+    # lib_paths = [p.absolute().as_posix() for p in lib_paths if p.exists()]
+    libs = (
+        list(Path("/usr/lib").glob("libnitrokey.so.*"))
+        + list(Path("/usr/local/lib").glob("libnitrokey.so.*"))
+        + list(Path("/lib").glob("libnitrokey.so.*"))
         + list(Path("/usr/lib/x86_64-linux-gnu").glob("libnitrokey.so.*"))
+    )
 
     env_path = os.getenv("LIBNK_PATH")
     if env_path:
-        print(f'Using env variable supplied path: {env_path}')
+        print(f"Using env variable supplied path: {env_path}")
         libs += [Path(env_path)]
         libs += list(Path(env_path).glob("libnitrokey.so*"))
 
@@ -75,7 +93,7 @@ def _get_c_library():
         for ver in avail_versions:
             # TODO load library and check its declared version instead of checking the filename
             # Fixing on 3.6.0 for the time being
-            ver = '3.6.0'
+            ver = "3.6.0"
             if ver in lib.as_posix() or True:
                 load_lib = lib.as_posix()
                 load_header = (header_parent_path / header.format(ver)).as_posix()
@@ -93,16 +111,15 @@ def _get_c_library():
     a = iter(c_code)
     for line in a:
         # parse `enum` and `struct` (maybe typedef?)
-        if line.strip().startswith("struct") or \
-                line.strip().startswith("enum"):
-            while '};' not in line:
+        if line.strip().startswith("struct") or line.strip().startswith("enum"):
+            while "};" not in line:
                 line += (next(a)).strip()
             ffi.cdef(line, override=True)
             cnt += 1
         # parse marked-as portions from the header (function calls)
-        if line.strip().startswith('NK_C_API'):
-            line = line.replace('NK_C_API', '').strip()
-            while ';' not in line:
+        if line.strip().startswith("NK_C_API"):
+            line = line.replace("NK_C_API", "").strip()
+            while ";" not in line:
                 line += (next(a)).strip()
             ffi.cdef(line, override=True)
             cnt += 1
@@ -113,7 +130,8 @@ def _get_c_library():
 
 
 def to_hex(ss):
-    return ''.join([format(ord(s), '02x') for s in ss])
+    return "".join([format(ord(s), "02x") for s in ss])
+
 
 # def lazyio(f):
 #     @wraps
@@ -126,6 +144,7 @@ def to_hex(ss):
 #
 #     return wrapper
 #
+
 
 class RetCode(IntEnum):
     # DeviceErrCodes
@@ -159,20 +178,23 @@ class RetCode(IntEnum):
             return cls(ret_code)
         return cls(ret_code + 20)
 
-
     @property
     def ok(self):
         return self in [RetCode.STATUS_OK, RetCode.CONN_OK]
 
+
 def ret_code(f, wrap_with=None):
     wrapper = wrap_with if wrap_with else RetCode
+
     @wraps(f)
     def wrapped(*v, **kw):
         try:
             return wrapper(f(*v, **kw))
         except ValueError:
             return RetCode.UNKNOWN
+
     return wrapped
+
 
 def con_ret_code(f):
     return ret_code(f, wrap_with=RetCode.from_connect)
@@ -188,11 +210,12 @@ class DeviceModel(IntEnum):
     @property
     def friendly_name(self):
         return {
-            DeviceModel.NONE:       "Disconnected",
-            DeviceModel.NK_PRO:     NitrokeyPro.friendly_name,
+            DeviceModel.NONE: "Disconnected",
+            DeviceModel.NK_PRO: NitrokeyPro.friendly_name,
             DeviceModel.NK_STORAGE: NitrokeyStorage.friendly_name,
-            DeviceModel.NK_LIBREM:  "Nitrokey Librem(?)"
+            DeviceModel.NK_LIBREM: "Nitrokey Librem(?)",
         }[self.value]
+
 
 # string-conversion functions from/to C(++) @fixme: rename properly
 c_enc = lambda x: x.encode("ascii") if isinstance(x, str) else x
@@ -239,14 +262,17 @@ class BaseLibNitrokey:
             _hay = list(map(lambda x: f"{x:02x}", range(256)))
         else:
             _hay = "1234567890abcdefghijklmnopqrstuwvxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        return c_enc("".join(_hay[randint(0, len(_hay) - 1)] \
-                             for _ in range(length or cls.max_pass_len)))
+        return c_enc(
+            "".join(
+                _hay[randint(0, len(_hay) - 1)]
+                for _ in range(length or cls.max_pass_len)
+            )
+        )
 
     @classmethod
     def library_version(cls):
         api = cls.get_api()
-        return (api.NK_get_major_library_version(),
-                api.NK_get_minor_library_version())
+        return (api.NK_get_major_library_version(), api.NK_get_minor_library_version())
 
     @classmethod
     def list_devices(cls):
@@ -265,7 +291,7 @@ class BaseLibNitrokey:
                 "model": cur.model,
                 "path": py_enc(cur.path),
                 "name": name,
-                "serial": py_enc(cur.serial_number)
+                "serial": py_enc(cur.serial_number),
             }
             if not cur.next:
                 break
@@ -305,14 +331,16 @@ class BaseLibNitrokey:
     @ret_code
     def admin_auth(self, admin_pass):
         self._admin_auth_token = self.gen_random()
-        return self.api.NK_first_authenticate(c_enc(admin_pass),
-                                              c_enc(self._admin_auth_token))
+        return self.api.NK_first_authenticate(
+            c_enc(admin_pass), c_enc(self._admin_auth_token)
+        )
 
     @ret_code
     def user_auth(self, user_pass):
         self._user_auth_token = self.gen_random()
-        return self.api.NK_user_authenticate(c_enc(user_pass),
-                                             c_enc(self._user_auth_token))
+        return self.api.NK_user_authenticate(
+            c_enc(user_pass), c_enc(self._user_auth_token)
+        )
 
     @ret_code
     def lock(self):
@@ -363,8 +391,9 @@ class BaseLibNitrokey:
     @property
     def connected(self):
         # using `device_model` to determine, if some device is connected
-        self._connected = self.device_model > DeviceModel.NONE and \
-                          len(self.raw_status.strip()) > 0
+        self._connected = (
+            self.device_model > DeviceModel.NONE and len(self.raw_status.strip()) > 0
+        )
 
         # clear auth tokens, if not connected
         if not self._connected:
@@ -375,34 +404,48 @@ class BaseLibNitrokey:
 
     @property
     def fw_version(self):
-        return (self.api.NK_get_major_firmware_version(),
-                self.api.NK_get_minor_firmware_version())
+        return (
+            self.api.NK_get_major_firmware_version(),
+            self.api.NK_get_minor_firmware_version(),
+        )
+
     @property
-    def serial(self, as_int=False):
-        return py_enc(self.api.NK_device_serial_number()) if not as_int \
+    def serial(self, as_int=False):  # type: ignore
+        return (
+            py_enc(self.api.NK_device_serial_number())
+            if not as_int
             else self.api.NK_device_serial_number_as_u32()
+        )
+
     @property
     def last_command_status(self):
         return self.api.NK_get_last_command_status()
+
     @property
     def raw_status(self):
         return py_enc(self.api.NK_get_status_as_string())
+
     @property
     def device_model(self):
         return self.api.NK_get_device_model()
+
     @property
     def admin_pin_retries(self):
         return self.api.NK_get_admin_retry_count()
+
     @property
     def user_pin_retries(self):
         return self.api.NK_get_user_retry_count()
 
     @property
     def status(self):
-        dct = dict([line.split(":") for line in self.raw_status.split("\n")
-                    if line.strip()])
-        out = {key: val.replace("-", "").replace("\t", "").replace(".", "").strip()
-                    for key, val in dct.items()}
+        dct = dict(
+            [line.split(":") for line in self.raw_status.split("\n") if line.strip()]
+        )
+        out = {
+            key: val.replace("-", "").replace("\t", "").replace(".", "").strip()
+            for key, val in dct.items()
+        }
         out["fw_version"] = self.fw_version
         out["last_cmd_status"] = self.last_command_status
         out["admin_pin_retries"] = self.admin_pin_retries
@@ -451,19 +494,19 @@ class BaseLibNitrokey:
 #  NK_login_auto - (connects to first device available...)
 #
 
+
 class NitrokeyStorage(BaseLibNitrokey):
     friendly_name = "Nitrokey Storage"
 
     @con_ret_code
     def _connect(self):
         """only connects to NitrokeyStorage devices"""
-        return self.api.NK_login(b'S')
-
+        return self.api.NK_login(b"S")
 
     def enable_firmware_update(self, password):
         """set nk storage device to firmware update"""
 
-        return self.api.NK_enable_firmware_update(c_enc(password));
+        return self.api.NK_enable_firmware_update(c_enc(password))
 
 
 class NitrokeyPro(BaseLibNitrokey):
@@ -472,7 +515,7 @@ class NitrokeyPro(BaseLibNitrokey):
     @con_ret_code
     def _connect(self):
         """only connects to NitrokeyPro devices"""
-        return self.api.NK_login(b'P')
+        return self.api.NK_login(b"P")
 
     def enable_firmware_update(self, password):
         """set nk storage device to firmware update"""
@@ -500,6 +543,7 @@ class BaseSlots:
 
     def _get_code(self, *v, **kw):
         raise NotImplementedError((v, kw))
+
     _erase = _write = _get_name = _get_code
 
     # def __getitem__(self, slot_idx):
@@ -512,29 +556,48 @@ class BaseSlots:
 
 class HOTPSlots(BaseSlots):
     count = 3
+
     def _get_name(self, slot_idx):
         return py_enc(self.api.NK_get_hotp_slot_name(slot_idx))
 
     def _get_code(self, slot_idx):
         return self.api.NK_get_hotp_slot_name(slot_idx)
 
-    def _write(self, slot_idx, name, secret, hotp_cnt, use_8_digits=False,
-                    use_enter=False, token_id=None):
+    def _write(
+        self,
+        slot_idx,
+        name,
+        secret,
+        hotp_cnt,
+        use_8_digits=False,
+        use_enter=False,
+        token_id=None,
+    ):
         """secret is expected without(!) \0 termination"""
 
         if len(secret) != 40:
             raise InvalidHOTPSecret(("len", len(secret)))
-        secret = secret.encode("ascii") + '\x00'.encode("ascii")
+        secret = secret.encode("ascii") + "\x00".encode("ascii")
 
         tmp_pass = self.owner.admin_auth_token
 
         # @TODO: interpret ret-val as LibraryErrorCode
-        return self.api.NK_write_hotp_slot(slot_idx, c_enc(name), secret,
-            hotp_cnt, use_8_digits, use_enter, not token_id, c_enc(""), tmp_pass)
+        return self.api.NK_write_hotp_slot(
+            slot_idx,
+            c_enc(name),
+            secret,
+            hotp_cnt,
+            use_8_digits,
+            use_enter,
+            not token_id,
+            c_enc(""),
+            tmp_pass,
+        )
 
     def _erase(self, slot_idx):
         tmp_pass = self.owner.admin_auth_token
         return self.api.NK_erase_hotp_slot(slot_idx, tmp_pass)
+
 
 class TOTPSlots(BaseSlots):
     count = 15
@@ -550,12 +613,28 @@ class TOTPSlots(BaseSlots):
         # @fixme: handle return code
         return ret
 
-    def _write(self, slot_idx, name, secret, time_window=30, use_8_digits=False,
-               use_enter=False, token_id=None):
+    def _write(
+        self,
+        slot_idx,
+        name,
+        secret,
+        time_window=30,
+        use_8_digits=False,
+        use_enter=False,
+        token_id=None,
+    ):
         tmp_pass = self.owner.admin_auth_token
-        ret = self.api.NK_write_totp_slot(slot_idx, c_enc(name), c_enc(secret),
-                                           time_window, use_8_digits, use_enter,
-                                           not token_id, c_enc(""), tmp_pass)
+        ret = self.api.NK_write_totp_slot(
+            slot_idx,
+            c_enc(name),
+            c_enc(secret),
+            time_window,
+            use_8_digits,
+            use_enter,
+            not token_id,
+            c_enc(""),
+            tmp_pass,
+        )
         # @fixme: handle return code
         return ret
 
@@ -579,6 +658,8 @@ class TOTPSlots(BaseSlots):
 
 class PasswordSlots(BaseSlots):
     pass
+
+
 # /**
 #  * Enable password safe access
 #  * @param user_pin char[30] current user PIN
@@ -640,7 +721,7 @@ class PasswordSlots(BaseSlots):
 
 
 # * @return Returns 1, if set unencrypted volume ro/rw pin type is User, 0 otherwise.
-#	NK_C_API int NK_set_unencrypted_volume_rorw_pin_type_user();
+# 	NK_C_API int NK_set_unencrypted_volume_rorw_pin_type_user();
 
 ########### STORAGE
 # NK_C_API NK_unlock_encrypted_volume(const char* user_pin);
@@ -683,11 +764,10 @@ class PasswordSlots(BaseSlots):
 # libnitrokey.NK_logout()  # disconnect device
 
 if __name__ == "__main__":
-    #nkp = NitrokeyPro()
-    #nk = NitrokeyStorage()
-    #nk.list_devices()
-    #print(nk.connect())
-    #print(nkp.admin_auth("123456"))
-    #nk.enable_firmware_update("12345678")
+    # nkp = NitrokeyPro()
+    # nk = NitrokeyStorage()
+    # nk.list_devices()
+    # print(nk.connect())
+    # print(nkp.admin_auth("123456"))
+    # nk.enable_firmware_update("12345678")
     pass
-
