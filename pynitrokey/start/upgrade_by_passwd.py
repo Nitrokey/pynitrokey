@@ -583,13 +583,13 @@ def start_update(
     latest_tag = get_latest_release_data()
 
     local_print(
-        f"Please note:",
-        f"- Latest firmware available is: ",
+        "Please note:",
+        "- Latest firmware available is: ",
         f"  {latest_tag['tag_name']} (published: {latest_tag['published_at']})",
         f"- provided firmware: {gnuk}",
-        f"- all data will be removed from the device!",
-        f"- do not interrupt update process - the device may not run properly!",
-        f"- the process should not take more than 1 minute",
+        "- all data will be removed from the device!",
+        "- do not interrupt update process - the device may not run properly!",
+        "- the process should not take more than 1 minute",
     )
     if yes:
         local_print("Accepted automatically")
@@ -681,7 +681,7 @@ def start_update(
         )
 
     local_print(
-        f"device can now be safely removed from the USB slot",
+        "device can now be safely removed from the USB slot",
         f"final device strings: {dev_strings_upgraded}",
     )
 

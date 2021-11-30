@@ -53,7 +53,7 @@ def update(serial, yes, force):
         f"Python: {platform.python_version()}",
         f"Saving run log to: {LOG_FN}",
         "",
-        f"Starting update procedure for Nitrokey FIDO2...",
+        "Starting update procedure for Nitrokey FIDO2...",
     )
 
     from pynitrokey.fido2 import find
