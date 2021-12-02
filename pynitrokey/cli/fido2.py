@@ -578,7 +578,7 @@ def verify(serial, udp):
 
     cert = None
     try:
-        cert = nkfido2.find(serial, udp=udp).make_credential()
+        cert = nkfido2.find(serial, udp=udp).make_credential(fingerprint_only=True)
 
     except Fido2ClientError as e:
         cause = str(e.cause)
@@ -625,13 +625,12 @@ def verify(serial, udp):
         local_critical("unexpected error", e)
 
     hashdb = {
-        b"d7a23679007fe799aeda4388890f33334aba4097bb33fee609c8998a1ba91bd3": "Nitrokey FIDO2 1.x",
-        b"6d586c0b00b94148df5b54f4a866acd93728d584c6f47c845ac8dade956b12cb": "Nitrokey FIDO2 2.x",
-        b"e1f40563be291c30bc3cc381a7ef46b89ef972bdb048b716b0a888043cf9072a": "Nitrokey FIDO2 Dev 2.x ",
+        "d7a23679007fe799aeda4388890f33334aba4097bb33fee609c8998a1ba91bd3": "Nitrokey FIDO2 1.x",
+        "6d586c0b00b94148df5b54f4a866acd93728d584c6f47c845ac8dade956b12cb": "Nitrokey FIDO2 2.x",
+        "e1f40563be291c30bc3cc381a7ef46b89ef972bdb048b716b0a888043cf9072a": "Nitrokey FIDO2 Dev 2.x ",
     }
 
-    dev_fingerprint = cert.fingerprint(hashes.SHA256())
-    a_hex = binascii.b2a_hex(dev_fingerprint)
+    a_hex = cert
     if a_hex in hashdb:
         local_print(f"found device: {hashdb[a_hex]}")
     else:
