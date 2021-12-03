@@ -225,7 +225,12 @@ class NKFido2Client:
         prompt="Touch your authenticator to generate a credential...",
         output=True,
         udp=False,
+        fingerprint_only=False
     ):
+        """
+        fingerprint_only bool Return sha256 digest of the certificate, in a hex string format. Useful for detecting
+            device's model and firmware.
+        """
 
         user_id = user_id.encode()
         client = self.client
@@ -253,6 +258,13 @@ class NKFido2Client:
             },
             pin=pin,
         ).attestation_object
+
+        if fingerprint_only:
+            if "x5c" not in attestation_object.att_statement:
+                raise ValueError("No x5c information available")
+            from hashlib import sha256
+            data = attestation_object.att_statement["x5c"]
+            return sha256(data[0]).digest().hex()
 
         credential = attestation_object.auth_data.credential_data
         credential_id = credential.credential_id
