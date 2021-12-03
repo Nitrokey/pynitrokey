@@ -225,7 +225,7 @@ class NKFido2Client:
         prompt="Touch your authenticator to generate a credential...",
         output=True,
         udp=False,
-        fingerprint_only=False
+        fingerprint_only=False,
     ):
         """
         fingerprint_only bool Return sha256 digest of the certificate, in a hex string format. Useful for detecting
@@ -263,6 +263,7 @@ class NKFido2Client:
             if "x5c" not in attestation_object.att_statement:
                 raise ValueError("No x5c information available")
             from hashlib import sha256
+
             data = attestation_object.att_statement["x5c"]
             return sha256(data[0]).digest().hex()
 
