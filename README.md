@@ -114,7 +114,7 @@ A guide on how to use `nitropy` to access a NetHSM is available on
 
 ## Maintainers
 
-Current maintainers can be found in [MAINTAINERS.MD](MAINTAINERS.MD) file.
+Current maintainers can be found in [MAINTAINERS.md](MAINTAINERS.md) file.
 
 ## License
 
