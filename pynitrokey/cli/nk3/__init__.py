@@ -11,7 +11,7 @@ from typing import List, Optional, TypeVar
 
 import click
 
-from pynitrokey.helpers import local_print
+from pynitrokey.helpers import local_critical, local_print
 from pynitrokey.nk3 import list as list_nk3
 from pynitrokey.nk3.base import Nitrokey3Base
 from pynitrokey.nk3.device import Nitrokey3Device
@@ -99,6 +99,39 @@ def rng(ctx: Context, length: int) -> None:
             rng = device.rng()
             local_print(rng[:length].hex())
             length -= len(rng)
+
+
+@nk3.command()
+@click.pass_obj
+def test(ctx: Context) -> None:
+    """Run some tests on all connected Nitrokey 3 devices."""
+    from .test import log_devices, run_tests
+
+    devices = ctx.list()
+
+    if len(devices) == 0:
+        log_devices()
+        local_critical("No connected Nitrokey 3 devices found")
+
+    local_print(f"Found {len(devices)} Nitrokey 3 device(s):")
+    for device in devices:
+        local_print(f"- {device.name} at {device.path}")
+
+    results = []
+    for device in devices:
+        results.append(run_tests(device))
+
+    n = len(devices)
+    success = sum(results)
+    failure = n - success
+    local_print("")
+    local_print(
+        f"Summary: {n} device(s) tested, {success} successful, {failure} failed"
+    )
+
+    if failure > 0:
+        local_print("")
+        local_critical(f"Test failed for {failure} device(s)")
 
 
 @nk3.command()

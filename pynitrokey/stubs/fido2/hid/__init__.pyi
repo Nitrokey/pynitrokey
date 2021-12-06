@@ -10,6 +10,7 @@
 from enum import IntEnum, unique
 from typing import Iterator, List
 
+from ..ctap import CtapDevice
 from .base import HidDescriptor
 
 @unique
@@ -25,7 +26,7 @@ class CTAPHID(IntEnum):
     KEEPALIVE: int
     VENDOR_FIRST: int
 
-class CtapHidDevice:
+class CtapHidDevice(CtapDevice):
     descriptor: HidDescriptor
     def call(self, command: int, data: bytes = b"") -> bytes: ...
     def wink(self) -> None: ...
