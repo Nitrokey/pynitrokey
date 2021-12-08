@@ -30,7 +30,7 @@ isort:
 
 lint:
 	$(VENV)/bin/python3 -m flake8 $(FLAKE8_FLAGS) $(FLAKE8_DIRS)
-	$(VENV)/bin/python3 -m mypy $(MYPY_FLAGS) $(PACKAGE_NAME)
+	MYPYPATH=pynitrokey/stubs $(VENV)/bin/python3 -m mypy $(MYPY_FLAGS) $(PACKAGE_NAME)
 
 semi-clean:
 	rm -rf **/__pycache__

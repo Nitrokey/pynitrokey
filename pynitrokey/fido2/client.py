@@ -15,6 +15,7 @@ import struct
 import sys
 import tempfile
 import time
+from typing import Optional
 
 import secrets
 from cryptography import x509
@@ -87,12 +88,12 @@ class NKFido2Client:
         self.ctap1 = CTAP1(dev)
 
         try:
-            self.ctap2 = CTAP2(dev)
+            self.ctap2: Optional[CTAP2] = CTAP2(dev)
         except CtapError as e:
             self.ctap2 = None
 
         try:
-            self.client = Fido2Client(dev, self.origin)
+            self.client: Optional[Fido2Client] = Fido2Client(dev, self.origin)
         except CtapError:
             print("Not using FIDO2 interface.")
             self.client = None
