@@ -1,5 +1,5 @@
 cx-Freeze==6.1
-click>=7.0
+click>=8.0
 cryptography
 ecdsa
 fido2>=0.9.3
