@@ -8,7 +8,7 @@
 # copied, modified, or distributed except according to those terms.
 
 import enum
-import errno
+import logging
 from enum import Enum
 from typing import List, Optional
 
@@ -64,6 +64,7 @@ class Nitrokey3Device(Nitrokey3Base):
             )
 
         self.device = device
+        self.logger = logging.getLogger(f"{__name__}.{device.descriptor.path}")
 
     @property
     def path(self) -> str:
@@ -83,11 +84,8 @@ class Nitrokey3Device(Nitrokey3Base):
             elif mode == BootMode.BOOTROM:
                 self._call(Command.UPDATE)
         except OSError as e:
-            if e.errno == errno.EIO:
-                # IO error is expected as the device does not respond during the reboot
-                pass
-            else:
-                raise e
+            # OS error is expected as the device does not respond during the reboot
+            self.logger.debug("ignoring OSError after reboot", exc_info=e)
 
     def uuid(self) -> Optional[int]:
         uuid = self._call(Command.UUID)
