@@ -2,7 +2,7 @@ cx-Freeze==6.1
 click>=7.0
 cryptography
 ecdsa
-fido2>=0.8.1
+fido2>=0.9.3
 intelhex
 pyserial
 pyusb

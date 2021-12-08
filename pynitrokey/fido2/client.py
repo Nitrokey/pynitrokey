@@ -74,9 +74,7 @@ class NKFido2Client:
                     dev = open_device(solo_serial)
                 else:
                     devices = [
-                        d
-                        for d in devices
-                        if d.descriptor["serial_number"] == solo_serial
+                        d for d in devices if d.descriptor.serial_number == solo_serial
                     ]
             if dev is None and len(devices) > 1:
                 raise pynitrokey.exceptions.NonUniqueDeviceError
