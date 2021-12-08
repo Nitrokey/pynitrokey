@@ -9,6 +9,7 @@
 # copied, modified, or distributed except according to those terms.
 
 import logging
+import platform
 import sys
 from enum import Enum, auto, unique
 from hashlib import sha256
@@ -74,6 +75,11 @@ def log_devices() -> None:
     for device in ctap_devices:
         descriptor = device.descriptor
         logger.info(f"- {descriptor.path} ({descriptor.vid:x}:{descriptor.pid:x})")
+
+
+def log_system() -> None:
+    logger.info(f"platform: {platform.platform()}")
+    logger.info(f"uname: {platform.uname()}")
 
 
 @test_case("UUID query")
