@@ -105,8 +105,9 @@ def rng(ctx: Context, length: int) -> None:
 @click.pass_obj
 def test(ctx: Context) -> None:
     """Run some tests on all connected Nitrokey 3 devices."""
-    from .test import log_devices, run_tests
+    from .test import log_devices, log_system, run_tests
 
+    log_system()
     devices = ctx.list()
 
     if len(devices) == 0:
