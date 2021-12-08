@@ -102,10 +102,16 @@ def rng(ctx: Context, length: int) -> None:
 
 
 @nk3.command()
+@click.option(
+    "-p",
+    "--pin",
+    "pin",
+    help="The FIDO2 PIN of the device (if enabled)",
+)
 @click.pass_obj
-def test(ctx: Context) -> None:
+def test(ctx: Context, pin: Optional[str]) -> None:
     """Run some tests on all connected Nitrokey 3 devices."""
-    from .test import log_devices, log_system, run_tests
+    from .test import TestContext, log_devices, log_system, run_tests
 
     log_system()
     devices = ctx.list()
@@ -119,8 +125,9 @@ def test(ctx: Context) -> None:
         local_print(f"- {device.name} at {device.path}")
 
     results = []
+    test_ctx = TestContext(pin=pin)
     for device in devices:
-        results.append(run_tests(device))
+        results.append(run_tests(test_ctx, device))
 
     n = len(devices)
     success = sum(results)

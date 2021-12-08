@@ -31,6 +31,11 @@ FIDO2_CERT_HASH = "ad8fd1d16f59104b9e06ef323cc03f777ed5303cd421a101c9cb00bb3fdf7
 ExcInfo = Tuple[Type[BaseException], BaseException, TracebackType]
 
 
+class TestContext:
+    def __init__(self, pin: Optional[str]) -> None:
+        self.pin = pin
+
+
 @unique
 class TestStatus(Enum):
     SKIPPED = auto()
@@ -50,7 +55,7 @@ class TestResult:
         self.exc_info = exc_info
 
 
-TestCaseFn = Callable[[Nitrokey3Base], TestResult]
+TestCaseFn = Callable[[TestContext, Nitrokey3Base], TestResult]
 
 
 class TestCase:
@@ -60,7 +65,7 @@ class TestCase:
 
 
 def test_case(name: str) -> Callable[[TestCaseFn], TestCaseFn]:
-    def decorator(func: Callable[[Nitrokey3Base], TestResult]) -> TestCaseFn:
+    def decorator(func: TestCaseFn) -> TestCaseFn:
         TEST_CASES.append(TestCase(name, func))
         return func
 
@@ -83,14 +88,14 @@ def log_system() -> None:
 
 
 @test_case("UUID query")
-def test_uuid_query(device: Nitrokey3Base) -> TestResult:
+def test_uuid_query(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
     uuid = device.uuid()
     uuid_str = f"{uuid:X}" if uuid else "[not supported]"
     return TestResult(TestStatus.SUCCESS, uuid_str)
 
 
 @test_case("Firmware version query")
-def test_firmware_version_query(device: Nitrokey3Base) -> TestResult:
+def test_firmware_version_query(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
     if not isinstance(device, Nitrokey3Device):
         return TestResult(TestStatus.SKIPPED)
     version = device.version()
@@ -98,13 +103,13 @@ def test_firmware_version_query(device: Nitrokey3Base) -> TestResult:
 
 
 @test_case("FIDO2")
-def test_fido2(device: Nitrokey3Base) -> TestResult:
+def test_fido2(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
     if not isinstance(device, Nitrokey3Device):
         return TestResult(TestStatus.SKIPPED)
 
     # Based on https://github.com/Yubico/python-fido2/blob/142587b3e698ca0e253c78d75758fda635cac51a/examples/credential.py
 
-    from fido2.client import Fido2Client
+    from fido2.client import Fido2Client, PinRequiredError
     from fido2.server import Fido2Server
 
     client = Fido2Client(device.device, "https://example.com")
@@ -119,7 +124,15 @@ def test_fido2(device: Nitrokey3Base) -> TestResult:
     )
 
     local_print("Please press the touch button on the device ...")
-    make_credential_result = client.make_credential(create_options["publicKey"])
+    try:
+        make_credential_result = client.make_credential(
+            create_options["publicKey"], pin=ctx.pin
+        )
+    except PinRequiredError:
+        return TestResult(
+            TestStatus.FAILURE,
+            "PIN activated -- please set the --pin option",
+        )
     cert = make_credential_result.attestation_object.att_statement["x5c"]
     cert_hash = sha256(cert[0]).digest().hex()
     data = ""
@@ -138,7 +151,9 @@ def test_fido2(device: Nitrokey3Base) -> TestResult:
     )
 
     local_print("Please press the touch button on the device ...")
-    get_assertion_result = client.get_assertion(request_options["publicKey"])
+    get_assertion_result = client.get_assertion(
+        request_options["publicKey"], pin=ctx.pin
+    )
     get_assertion_response = get_assertion_result.get_response(0)
 
     server.authenticate_complete(
@@ -153,7 +168,7 @@ def test_fido2(device: Nitrokey3Base) -> TestResult:
     return TestResult(TestStatus.SUCCESS, data)
 
 
-def run_tests(device: Nitrokey3Base) -> bool:
+def run_tests(ctx: TestContext, device: Nitrokey3Base) -> bool:
     results = []
 
     local_print("")
@@ -167,7 +182,7 @@ def run_tests(device: Nitrokey3Base) -> bool:
 
     for (i, test_case) in enumerate(TEST_CASES):
         try:
-            result = test_case.fn(device)
+            result = test_case.fn(ctx, device)
         except Exception:
             result = TestResult(TestStatus.FAILURE, exc_info=sys.exc_info())
         results.append(result)
@@ -177,8 +192,9 @@ def run_tests(device: Nitrokey3Base) -> bool:
         status = result.status.name.ljust(status_len)
         msg = ""
         if result.data:
+            print(repr(result.data))
             msg = str(result.data)
-        elif result.exc_info:
+        elif result.exc_info[1]:
             logger.error(
                 f"An exception occured during the execution of the test {test_case.name}:",
                 exc_info=result.exc_info,
