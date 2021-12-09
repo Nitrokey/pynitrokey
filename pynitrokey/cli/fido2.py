@@ -634,7 +634,7 @@ def verify(serial, udp):
 
     a_hex = cert
     if a_hex in hashdb:
-        local_print(f"found device: {hashdb[a_hex]}")
+        local_print(f"found device: {hashdb[a_hex]} ({a_hex})")
     else:
         local_print(f"unknown fingerprint! {a_hex}")
 
