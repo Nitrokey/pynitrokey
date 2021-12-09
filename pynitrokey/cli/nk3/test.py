@@ -192,7 +192,6 @@ def run_tests(ctx: TestContext, device: Nitrokey3Base) -> bool:
         status = result.status.name.ljust(status_len)
         msg = ""
         if result.data:
-            print(repr(result.data))
             msg = str(result.data)
         elif result.exc_info[1]:
             logger.error(
