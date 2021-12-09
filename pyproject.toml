@@ -38,6 +38,16 @@ dependencies = [
     "nkdfu"
 ]
 
+[project.optional-dependencies]
+dev = [
+    "black",
+    "flake8",
+    "ipython",
+    "isort",
+    "mypy",
+    "types-requests",
+]
+
 [project.urls]
 Source =  "https://github.com/Nitrokey/pynitrokey"
 
