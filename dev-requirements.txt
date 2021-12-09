@@ -3,7 +3,7 @@
 
 black
 flake8
-flit
+flit>=3.2
 ipython
 isort
 mypy

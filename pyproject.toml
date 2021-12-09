@@ -1,33 +1,14 @@
 [build-system]
-requires = ["flit"]
-build-backend = "flit.buildapi"
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
 
-[tool.flit.metadata]
-module = "pynitrokey"
-dist-name = "pynitrokey"
-author = "Nitrokey"
-author-email = "pypi@nitrokey.com"
-home-page = "https://github.com/Nitrokey/pynitrokey"
-requires-python = ">=3.6"
-description-file = "README.md"
-requires = [
-  "click >= 7.0",
-  "cryptography",
-  "ecdsa",
-  "fido2 >= 0.9.3",
-  "intelhex",
-  "pyserial",
-  "pyusb",
-  "requests",
-  "pygments",
-  "python-dateutil",
-  "spsdk >= 1.5.0",
-  "urllib3",
-	"cffi",
-	"cbor",
-	"nkdfu"
+[project]
+name = "pynitrokey"
+authors = [
+    { name = "Nitrokey", email = "pypi@nitrokey.com" },
 ]
-classifiers=[
+readme = "README.md"
+classifiers = [
     "License :: OSI Approved :: MIT License",
     "License :: OSI Approved :: Apache Software License",
     "Intended Audience :: Developers",
@@ -36,8 +17,31 @@ classifiers=[
     "Programming Language :: Python :: 3.6",
     "Programming Language :: Python :: 3.7",
 ]
+requires-python = ">=3.6"
+license = { "text" = "Apache-2.0 OR MIT" }
+dynamic = ["version", "description"]
+dependencies = [
+    "click >= 7.0",
+    "cryptography",
+    "ecdsa",
+    "fido2 >= 0.9.3",
+    "intelhex",
+    "pyserial",
+    "pyusb",
+    "requests",
+    "pygments",
+    "python-dateutil",
+    "spsdk >= 1.5.0",
+    "urllib3",
+    "cffi",
+    "cbor",
+    "nkdfu"
+]
 
-[tool.flit.scripts]
+[project.urls]
+Source =  "https://github.com/Nitrokey/pynitrokey"
+
+[project.scripts]
 nitropy = "pynitrokey.cli:nitropy"
 
 [tool.isort]
