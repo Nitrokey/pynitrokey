@@ -1,6 +1,6 @@
 # pynitrokey
 
-A command line interface for the Nitrokey FIDO2, Nitrokey Start and NetHSM.
+A command line interface for the Nitrokey FIDO2, Nitrokey Start, Nitrokey 3 and NetHSM.
 
 ## Current state
 Update to the latest firmware versions on the Nitrokey Start and Nitrokey FIDO2 devices was tested. Windows support for Nitrokey Start is not added yet.
@@ -111,6 +111,10 @@ Tip: alternative `gpg-connect-agent reloadagent /bye` is not sufficient.
 
 A guide on how to use `nitropy` to access a NetHSM is available on
 [docs.nitrokey.com](https://docs.nitrokey.com/nethsm/cli.html).
+
+## Nitrokey 3
+
+A guide on how to use `nitropy` with Nitrokey 3 device is available on [docs.nitrokey.com](https://docs.nitrokey.com/nitrokey3/linux/nitropy.html).
 
 ## Maintainers
 
