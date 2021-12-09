@@ -103,7 +103,6 @@ def rng(ctx: Context, length: int) -> None:
 
 @nk3.command()
 @click.option(
-    "-p",
     "--pin",
     "pin",
     help="The FIDO2 PIN of the device (if enabled)",
