@@ -78,14 +78,13 @@ system-nitropy-test-simple:
 
 $(VENV):
 	python3 -m venv $(VENV)
-	$(VENV)/bin/python3 -m pip install -U pip
+	$(VENV)/bin/python3 -m pip install -U "pip>=21.3.1"
 
 # re-run if dev or runtime dependencies change,
 # or when adding new scripts
 update-venv: $(VENV)
-	$(VENV)/bin/python3 -m pip install -U pip
-	$(VENV)/bin/python3 -m pip install -U -r dev-requirements.txt
-	$(VENV)/bin/python3 -m flit install --symlink
+	$(VENV)/bin/python3 -m pip install -U "pip>=21.3.1"
+	$(VENV)/bin/python3 -m pip install -e .[dev]
 
 .PHONY: CI
 CI:
