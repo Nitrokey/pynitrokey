@@ -9,17 +9,19 @@
 
 import enum
 import logging
+import sys
 from enum import Enum
 from typing import List, Optional
 
-from fido2.hid import CtapHidDevice
+from fido2.hid import CtapHidDevice, open_device
 
-from . import PID_NITROKEY3_DEVICE, VID_NITROKEY
 from .base import Nitrokey3Base
 
 RNG_LEN = 57
 UUID_LEN = 16
 VERSION_LEN = 4
+
+logger = logging.getLogger(__name__)
 
 
 @enum.unique
@@ -56,6 +58,8 @@ class Nitrokey3Device(Nitrokey3Base):
     """A Nitrokey 3 device running the firmware."""
 
     def __init__(self, device: CtapHidDevice) -> None:
+        from . import PID_NITROKEY3_DEVICE, VID_NITROKEY
+
         (vid, pid) = (device.descriptor.vid, device.descriptor.pid)
         if (vid, pid) != (VID_NITROKEY, PID_NITROKEY3_DEVICE):
             raise ValueError(
@@ -64,7 +68,7 @@ class Nitrokey3Device(Nitrokey3Base):
             )
 
         self.device = device
-        self.logger = logging.getLogger(f"{__name__}.{device.descriptor.path}")
+        self.logger = logger.getChild(device.descriptor.path)
 
     @property
     def path(self) -> str:
@@ -129,3 +133,16 @@ class Nitrokey3Device(Nitrokey3Base):
                 # not a Nitrokey 3 device, skip
                 pass
         return devices
+
+    @staticmethod
+    def open(path: str) -> Optional["Nitrokey3Device"]:
+        try:
+            device = open_device(path)
+        except Exception:
+            logger.warn(f"No CTAPHID device at path {path}", exc_info=sys.exc_info())
+            return None
+        try:
+            return Nitrokey3Device(device)
+        except ValueError:
+            logger.warn(f"No Nitrokey 3 device at path {path}", exc_info=sys.exc_info())
+            return None

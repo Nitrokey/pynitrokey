@@ -13,6 +13,7 @@ import click
 
 from pynitrokey.helpers import local_critical, local_print
 from pynitrokey.nk3 import list as list_nk3
+from pynitrokey.nk3 import open as open_nk3
 from pynitrokey.nk3.base import Nitrokey3Base
 from pynitrokey.nk3.device import Nitrokey3Device
 
@@ -24,21 +25,24 @@ class Context:
         self.path = path
 
     def list(self) -> List[Nitrokey3Base]:
-        devices = []
-        for device in list_nk3():
-            if not self.path or self.path == device.path:
-                devices.append(device)
-        return devices
+        if self.path:
+            device = open_nk3(self.path)
+            if device:
+                return [device]
+            else:
+                return []
+        else:
+            return list_nk3()
 
     def _select_unique(self, name: str, devices: List[T]) -> T:
         if len(devices) == 0:
             msg = f"No {name} device found"
             if self.path:
                 msg += f" at path {self.path}"
-            raise click.ClickException(msg)
+            local_critical(msg)
 
         if len(devices) > 1:
-            raise click.ClickException(
+            local_critical(
                 f"Multiple {name} devices found -- use the --path option to select one"
             )
 
