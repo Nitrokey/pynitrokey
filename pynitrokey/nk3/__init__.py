@@ -7,9 +7,10 @@
 # http://opensource.org/licenses/MIT>, at your option. This file may not be
 # copied, modified, or distributed except according to those terms.
 
-from typing import List
+from typing import List, Optional
 
 from .base import Nitrokey3Base
+from .device import Nitrokey3Device
 
 VID_NITROKEY = 0x20A0
 PID_NITROKEY3_DEVICE = 0x42B2
@@ -17,6 +18,8 @@ PID_NITROKEY3_BOOTLOADER = 0x42DD
 
 
 def list() -> List[Nitrokey3Base]:
-    from .device import Nitrokey3Device
-
     return [device for device in Nitrokey3Device.list()]
+
+
+def open(path: str) -> Optional[Nitrokey3Base]:
+    return Nitrokey3Device.open(path)
