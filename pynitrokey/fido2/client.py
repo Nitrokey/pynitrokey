@@ -67,19 +67,22 @@ class NKFido2Client:
             pass
 
     def find_device(self, dev=None, solo_serial: str = None):
+        devices = []
         if dev is None:
-            devices = list(CtapHidDevice.list_devices())
             if solo_serial is not None:
                 if solo_serial.startswith("device="):
                     solo_serial = solo_serial.split("=")[1]
                     dev = open_device(solo_serial)
                 else:
+                    devices = list(CtapHidDevice.list_devices())
                     devices = [
                         d for d in devices if d.descriptor.serial_number == solo_serial
                     ]
-            if dev is None and len(devices) > 1:
+            else:
+                devices = list(CtapHidDevice.list_devices())
+            if len(devices) > 1:
                 raise pynitrokey.exceptions.NonUniqueDeviceError
-            if dev is None and len(devices) > 0:
+            if len(devices) > 0:
                 dev = devices[0]
         if dev is None:
             raise RuntimeError("No FIDO device found")
