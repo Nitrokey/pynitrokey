@@ -49,7 +49,7 @@ pip3 install pynitrokey
 ```
 
 1. Without `penv`: nitropy` can be found here: `/usr/local/bin/nitropy`
-2. With ´penv`: `/Users/[USER_NAME]/.pyenv/versions/[PYENV_NAME]/bin/nitropy`
+2. With `penv`: `/Users/[USER_NAME]/.pyenv/versions/[PYENV_NAME]/bin/nitropy`
 
 
 ## Nitrokey FIDO2
