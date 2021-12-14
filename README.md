@@ -48,8 +48,10 @@ Without administrator privileges `nitropy` might not be able to communicate to d
 pip3 install pynitrokey
 ```
 
-1. Without `penv`: nitropy` can be found here: `/usr/local/bin/nitropy`
+1. Without `penv`: `nitropy` can be found here: `/usr/local/bin/nitropy`
 2. With `penv`: `/Users/[USER_NAME]/.pyenv/versions/[PYENV_NAME]/bin/nitropy`
+
+Make sure you have libnitrokey installed to connect *Nitrokey Pro* and *Nitrokey Storage* devices.
 
 
 ## Nitrokey FIDO2
