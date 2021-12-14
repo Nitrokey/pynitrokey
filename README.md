@@ -41,6 +41,17 @@ How to install:
 
 Without administrator privileges `nitropy` might not be able to communicate to device.
 
+### MacOS
+
+*To install nitropy on MacOS*
+```
+pip3 install pynitrokey
+```
+
+1. Without `penv`: nitropy` can be found here: `/usr/local/bin/nitropy`
+2. With ´penv`: `/Users/[USER_NAME]/.pyenv/versions/[PYENV_NAME]/bin/nitropy`
+
+
 ## Nitrokey FIDO2
 ### Firmware Update
 Automatic firmware update is recommended via https://update.nitrokey.com. Alternatively, it is also possible to update the Nitrokey FIDO2 using:
