@@ -11,7 +11,7 @@ home-page = "https://github.com/Nitrokey/pynitrokey"
 requires-python = ">=3.6"
 description-file = "README.md"
 requires = [
-  "click >= 8.0",
+  "click >= 7.0",
   "cryptography",
   "ecdsa",
   "fido2 >= 0.9.3",
