@@ -21,6 +21,7 @@ requires = [
   "requests",
   "pygments",
   "python-dateutil",
+  "spsdk >= 1.5.0",
   "urllib3",
 	"cffi",
 	"cbor",
