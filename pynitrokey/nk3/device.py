@@ -16,6 +16,7 @@ from typing import List, Optional
 from fido2.hid import CtapHidDevice, open_device
 
 from .base import Nitrokey3Base
+from .utils import Version
 
 RNG_LEN = 57
 UUID_LEN = 16
@@ -39,19 +40,6 @@ class Command(Enum):
 class BootMode(Enum):
     FIRMWARE = enum.auto()
     BOOTROM = enum.auto()
-
-
-class Version:
-    def __init__(self, major: int, minor: int, patch: int) -> None:
-        self.major = major
-        self.minor = minor
-        self.patch = patch
-
-    def __repr__(self) -> str:
-        return f"Version(major={self.major}, minor={self.minor}, patch={self.patch}"
-
-    def __str__(self) -> str:
-        return f"v{self.major}.{self.minor}.{self.patch}"
 
 
 class Nitrokey3Device(Nitrokey3Base):
@@ -103,10 +91,7 @@ class Nitrokey3Device(Nitrokey3Base):
     def version(self) -> Version:
         version_bytes = self._call(Command.VERSION, response_len=VERSION_LEN)
         version = int.from_bytes(version_bytes, "big")
-        major = version >> 22
-        minor = (version >> 6) & ((1 << 16) - 1)
-        patch = version & ((1 << 6) - 1)
-        return Version(major=major, minor=minor, patch=patch)
+        return Version.from_int(version)
 
     def wink(self) -> None:
         self.device.wink()

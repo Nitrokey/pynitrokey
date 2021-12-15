@@ -14,10 +14,14 @@ from typing import List, Optional
 from spsdk.mboot import McuBoot
 from spsdk.mboot.interfaces import RawHid
 from spsdk.mboot.properties import PropertyTag
+from spsdk.sbfile.images import BootImageV21
 from spsdk.utils.usbfilter import USBDeviceFilter
 
 from .base import Nitrokey3Base
+from .utils import Version
 
+RKHT = bytes.fromhex("050aad3e77791a81e59c5b2ba5a158937e9460ee325d8ccba09734b8fdebb171")
+KEK = bytes([0xAA] * 32)
 UUID_LEN = 4
 
 logger = logging.getLogger(__name__)
@@ -72,6 +76,9 @@ class Nitrokey3Bootloader(Nitrokey3Base):
         right_endian = wrong_endian.to_bytes(16, byteorder="little")
         return int.from_bytes(right_endian, byteorder="big")
 
+    def update(self, image: bytes) -> bool:
+        return self.device.receive_sb_file(image)
+
     @staticmethod
     def list() -> List["Nitrokey3Bootloader"]:
         from . import PID_NITROKEY3_BOOTLOADER, VID_NITROKEY
@@ -107,3 +114,26 @@ class Nitrokey3Bootloader(Nitrokey3Base):
                 f"No Nitrokey 3 bootloader at path {path}", exc_info=sys.exc_info()
             )
             return None
+
+
+class FirmwareMetadata:
+    def __init__(self, version: Version) -> None:
+        self.version = version
+
+
+def check_firmware_image(data: bytes) -> FirmwareMetadata:
+    try:
+        image = BootImageV21.parse(data, kek=KEK)
+    except Exception:
+        logger.exception("Failed to parse firmware image", exc_info=sys.exc_info())
+        raise Exception("Failed to parse firmware image")
+
+    if not image.cert_block:
+        raise Exception("Firmware image is not signed")
+    if image.cert_block.rkht != RKHT:
+        raise Exception(
+            f"Firmware image is not signed by Nitrokey (RKHT: {image.cert_block.rkht.hex()})"
+        )
+
+    version = Version.from_bcd_version(image.header.product_version)
+    return FirmwareMetadata(version)
