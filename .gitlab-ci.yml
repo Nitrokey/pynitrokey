@@ -9,9 +9,7 @@ variables:
   #Repo for shared scripts (pull.sh release.sh, nightly_upload.sh):
   GIT_STRATEGY: clone			#This seems to have no effect also set in webinterface
   GIT_DEPTH: 0					#This seems to have no effect also set in webinterface
-  GIT_SUBMODULE_STRATEGY: recursive #This seems to have no effect also set in webinterfac
-  SCRIPTS_REPO: git@git.dotplex.com:nitrokey/gitlab-ci.git
-  REPO_USER: nitrokey
+  GIT_SUBMODULE_STRATEGY: recursive #This seems to have no effect also set in webinterface
   REPO_NAME: pynitrokey
   MAIN_BRANCH: master
 
