@@ -7,6 +7,10 @@
 # http://opensource.org/licenses/MIT>, at your option. This file may not be
 # copied, modified, or distributed except according to those terms.
 
+import itertools
+import logging
+import time
+from concurrent.futures import ThreadPoolExecutor
 from typing import List, Optional, TypeVar
 
 import click
@@ -15,9 +19,17 @@ from pynitrokey.helpers import local_critical, local_print
 from pynitrokey.nk3 import list as list_nk3
 from pynitrokey.nk3 import open as open_nk3
 from pynitrokey.nk3.base import Nitrokey3Base
-from pynitrokey.nk3.device import Nitrokey3Device
+from pynitrokey.nk3.bootloader import (
+    FirmwareMetadata,
+    Nitrokey3Bootloader,
+    check_firmware_image,
+)
+from pynitrokey.nk3.device import BootMode, Nitrokey3Device
+from pynitrokey.nk3.utils import Version
 
 T = TypeVar("T", bound="Nitrokey3Base")
+
+logger = logging.getLogger(__name__)
 
 
 class Context:
@@ -143,6 +155,142 @@ def test(ctx: Context, pin: Optional[str]) -> None:
     if failure > 0:
         local_print("")
         local_critical(f"Test failed for {failure} device(s)")
+
+
+@nk3.command()
+@click.argument("image")
+@click.pass_obj
+def update(ctx: Context, image: str) -> None:
+    """
+    Update the firmware of the device using the given image.
+
+    This command requires that exactly one Nitrokey 3 in bootloader or firmware mode is connected.
+    The user is asked to confirm the operation before the update is started.  The Nitrokey 3 may
+    not be removed during the update.  Also, additional Nitrokey 3 devices may not be connected
+    during the update.
+
+    If the connected Nitrokey 3 device is in firmware mode, the user is prompted to touch the
+    device’s button to confirm rebooting to bootloader mode.
+    """
+    with open(image, "rb") as f:
+        data = f.read()
+    metadata = check_firmware_image(data)
+
+    with ctx.connect() as device:
+        if isinstance(device, Nitrokey3Device):
+            current_version = device.version()
+            _print_update_warning(metadata, current_version)
+
+            local_print("")
+            local_print(
+                "Please press the touch button to reboot the device into bootloader mode ..."
+            )
+            device.reboot(BootMode.BOOTROM)
+
+            local_print("")
+            with _await_bootloader(ctx) as bootloader:
+                _perform_update(bootloader, data)
+        elif isinstance(device, Nitrokey3Bootloader):
+            _print_update_warning(metadata)
+            _perform_update(device, data)
+        else:
+            local_critical(f"Unexpected Nitrokey 3 device: {device}")
+
+    local_print("")
+    with _await_device(ctx) as device:
+        version = device.version()
+        if version == metadata.version:
+            local_print(f"Successfully updated the firmware to version {version}.")
+        else:
+            local_critical(
+                f"The firmware update to {metadata.version} was successful, but the firmware "
+                f"is still reporting version {version}."
+            )
+
+
+def _await_device(ctx: Context) -> Nitrokey3Device:
+    # TODO: refactor into context
+    logger.debug("Waiting for device ...")
+    retries = 10
+    for i in range(retries):
+        logger.debug(f"Try {i + 1} of {retries}")
+        bootloaders = [
+            device for device in ctx.list() if isinstance(device, Nitrokey3Device)
+        ]
+        if len(bootloaders) == 0:
+            time.sleep(0.5)
+            logger.debug("No device found, continuing")
+            continue
+        if len(bootloaders) > 1:
+            local_critical("Multiple devices found")
+        return bootloaders[0]
+
+    local_critical("No Nitrokey 3 device found.")
+    raise Exception("Unreachable")
+
+
+def _await_bootloader(ctx: Context) -> Nitrokey3Bootloader:
+    logger.debug("Waiting for bootloader ...")
+    retries = 10
+    for i in range(retries):
+        logger.debug(f"Try {i + 1} of {retries}")
+        bootloaders = [
+            device for device in ctx.list() if isinstance(device, Nitrokey3Bootloader)
+        ]
+        if len(bootloaders) == 0:
+            time.sleep(0.5)
+            logger.debug("No bootloader device found, continuing")
+            continue
+        if len(bootloaders) > 1:
+            local_critical("Multiple bootloader devices found")
+        return bootloaders[0]
+
+    local_critical("No Nitrokey 3 bootloader device found.")
+    raise Exception("Unreachable")
+
+
+def _print_update_warning(
+    metadata: FirmwareMetadata,
+    current_version: Optional[Version] = None,
+) -> None:
+    current_version_str = str(current_version) if current_version else "[unknown]"
+    local_print(f"Current firmware version:  {current_version_str}")
+    local_print(f"Updated firmware version:  {metadata.version}")
+    if current_version and current_version > metadata.version:
+        local_critical(
+            "The firmware image is older than the firmware on the device.",
+            support_hint=False,
+        )
+    local_print("")
+    local_print(
+        "Please do not remove the Nitrokey 3 or insert any other Nitrokey 3 devices "
+        "during the update."
+    )
+    if not click.confirm("Do you want to perform the firmware update now?"):
+        logger.info("Update cancelled by user")
+        raise click.Abort()
+
+
+def _perform_update(device: Nitrokey3Bootloader, image: bytes) -> None:
+    logger.debug("Starting firmware update")
+
+    with ThreadPoolExecutor() as executor:
+        indicators = itertools.cycle(["/", "-", "\\", "|"])
+        future = executor.submit(device.update, image)
+        while not future.done():
+            print(
+                f"\r[{next(indicators)}] Performing firmware update "
+                "(may take several minutes) ... ",
+                end="",
+            )
+            time.sleep(0.1)
+        print("done")
+
+        if future.result():
+            logger.debug("Firmware update finished successfully")
+            device.reboot()
+        else:
+            local_critical("Firmware update failed")
 
 
 @nk3.command()
