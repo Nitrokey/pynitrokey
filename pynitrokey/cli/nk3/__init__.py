@@ -182,6 +182,7 @@ def update(ctx: Context, image: str, experimental: bool) -> None:
                        'If possible please run it on another operating system or wait for the further updates. '
                        'Please pass --experimental switch to force running it anyway.'
                        )
+        raise click.Abort()
 
     with open(image, "rb") as f:
         data = f.read()
