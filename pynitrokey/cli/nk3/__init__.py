@@ -9,6 +9,7 @@
 
 import itertools
 import logging
+import platform
 import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Optional, TypeVar
@@ -159,8 +160,14 @@ def test(ctx: Context, pin: Optional[str]) -> None:
 
 @nk3.command()
 @click.argument("image")
+@click.option(
+    "--experimental",
+    default=False,
+    is_flag=True,
+    help="Allow to execute experimental features",
+)
 @click.pass_obj
-def update(ctx: Context, image: str) -> None:
+def update(ctx: Context, image: str, experimental: bool) -> None:
     """
     Update the firmware of the device using the given image.
 
@@ -171,7 +178,18 @@ def update(ctx: Context, image: str) -> None:
 
     If the connected Nitrokey 3 device is in firmware mode, the user is prompted to touch the
     device’s button to confirm rebooting to bootloader mode.
+
+    This feature is experimental on MS Windows.
     """
+
+    if platform.system() == "Windows" and not experimental:
+        local_critical(
+            "We experience some issues with this operation on Windows. "
+            "If possible please run it on another operating system or wait for the further updates. "
+            "Please pass --experimental switch to force running it anyway."
+        )
+        raise click.Abort()
+
     with open(image, "rb") as f:
         data = f.read()
     metadata = check_firmware_image(data)
