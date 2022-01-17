@@ -9,6 +9,7 @@
 
 import itertools
 import logging
+import os.path
 import platform
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -26,6 +27,7 @@ from pynitrokey.nk3.bootloader import (
     check_firmware_image,
 )
 from pynitrokey.nk3.device import BootMode, Nitrokey3Device
+from pynitrokey.nk3.updates import get_latest_update, get_update
 from pynitrokey.nk3.utils import Version
 
 T = TypeVar("T", bound="Nitrokey3Base")
@@ -156,6 +158,56 @@ def test(ctx: Context, pin: Optional[str]) -> None:
     if failure > 0:
         local_print("")
         local_critical(f"Test failed for {failure} device(s)")
+
+
+@nk3.command()
+@click.argument("path", default=".")
+@click.option(
+    "-f",
+    "--force",
+    is_flag=True,
+    default=False,
+    help="Overwrite the firmware image if it already exists",
+)
+@click.option("--version", help="Download this version instead of the latest one")
+def fetch_update(path: str, force: bool, version: Optional[str]) -> None:
+    """
+    Fetches a firmware update for the Nitrokey 3 and stores it at the given path.
+
+    If no path is given, the firmware image stored in the current working
+    directory.  If the given path is a directory, the image is stored under
+    that directory.  Otherwise it is written to the path.  Existing files are
+    only overwritten if --force is set.
+
+    Per default, the latest firmware release is fetched.  If you want to
+    download a specific version, use the --version option.
+    """
+    if version:
+        try:
+            update = get_update(version)
+        except Exception as e:
+            local_critical(f"Failed to find firmware update {version}", e)
+    else:
+        try:
+            update = get_latest_update()
+        except Exception as e:
+            local_critical("Failed to find latest firmware update", e)
+
+    try:
+        if os.path.isdir(path):
+            path = update.download_to_dir(path, overwrite=force)
+        else:
+            if not force and os.path.exists(path):
+                local_critical(
+                    f"{path} already exists.  Use --force to overwrite the file."
+                )
+            else:
+                with open(path, "wb") as f:
+                    update.download(f)
+
+        local_print(f"Successfully downloaded firmware release {update.tag} to {path}")
+    except Exception as e:
+        local_critical(f"Failed to download firmware update {update.tag}", e)
 
 
 @nk3.command()
