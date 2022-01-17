@@ -7,19 +7,13 @@
 # http://opensource.org/licenses/MIT>, at your option. This file may not be
 # copied, modified, or distributed except according to those terms.
 
-from collections import namedtuple
+from typing import NamedTuple, Optional, Union
 
-class HidDescriptor(
-    namedtuple(
-        "HidDescriptor",
-        [
-            "path",
-            "vid",
-            "pid",
-            "report_size_in",
-            "report_size_out",
-            "product_name",
-            "serial_number",
-        ],
-    )
-): ...
+class HidDescriptor(NamedTuple):
+    path: Union[str, bytes]
+    vid: int
+    pid: int
+    report_size_in: Optional[int]
+    report_size_out: Optional[int]
+    product_name: bytearray
+    serial_number: bytearray

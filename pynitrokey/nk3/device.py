@@ -15,6 +15,8 @@ from typing import List, Optional
 
 from fido2.hid import CtapHidDevice, open_device
 
+from pynitrokey.fido2 import device_path_to_str
+
 from .base import Nitrokey3Base
 from .utils import Version
 
@@ -56,11 +58,12 @@ class Nitrokey3Device(Nitrokey3Base):
             )
 
         self.device = device
-        self.logger = logger.getChild(device.descriptor.path)
+        self._path = device_path_to_str(device.descriptor.path)
+        self.logger = logger.getChild(self._path)
 
     @property
     def path(self) -> str:
-        return self.device.descriptor.path
+        return self._path
 
     @property
     def name(self) -> str:
