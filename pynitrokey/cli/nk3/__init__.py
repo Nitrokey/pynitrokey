@@ -318,7 +318,8 @@ def _perform_update(device: Nitrokey3Bootloader, image: bytes) -> None:
             logger.debug("Firmware update finished successfully")
             device.reboot()
         else:
-            local_critical("Firmware update failed")
+            (code, message) = device.status
+            local_critical(f"Firmware update failed with status code {code}: {message}")
 
 
 @nk3.command()
