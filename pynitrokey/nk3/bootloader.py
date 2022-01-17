@@ -64,7 +64,7 @@ class Nitrokey3Bootloader(Nitrokey3Base):
         if not self.device.reset(reopen=False):
             # On Windows, this function returns false even if the reset was successful
             if platform.system() == "Windows":
-                logger.warn("Failed to reboot Nitrokey 3 bootloader")
+                logger.warning("Failed to reboot Nitrokey 3 bootloader")
             else:
                 raise Exception("Failed to reboot Nitrokey 3 bootloader")
 
