@@ -18,6 +18,7 @@ from spsdk.sbfile.images import BootImageV21
 from spsdk.utils.usbfilter import USBDeviceFilter
 
 from .base import Nitrokey3Base
+from .helpers import suppress_logs
 from .utils import Version
 
 RKHT = bytes.fromhex("050aad3e77791a81e59c5b2ba5a158937e9460ee325d8ccba09734b8fdebb171")
@@ -77,7 +78,8 @@ class Nitrokey3Bootloader(Nitrokey3Base):
         return int.from_bytes(right_endian, byteorder="big")
 
     def update(self, image: bytes) -> bool:
-        return self.device.receive_sb_file(image)
+        with suppress_logs():
+            return self.device.receive_sb_file(image)
 
     @staticmethod
     def list() -> List["Nitrokey3Bootloader"]:
