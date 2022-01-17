@@ -8,6 +8,7 @@
 # copied, modified, or distributed except according to those terms.
 
 import logging
+import platform
 import sys
 from typing import List, Optional
 
@@ -61,7 +62,11 @@ class Nitrokey3Bootloader(Nitrokey3Base):
 
     def reboot(self) -> None:
         if not self.device.reset(reopen=False):
-            raise Exception("Failed to reboot Nitrokey 3 bootloader")
+            # On Windows, this function returns false even if the reset was successful
+            if platform.system() == "Windows":
+                logger.warning("Failed to reboot Nitrokey 3 bootloader")
+            else:
+                raise Exception("Failed to reboot Nitrokey 3 bootloader")
 
     def uuid(self) -> Optional[int]:
         uuid = self.device.get_property(PropertyTag.UNIQUE_DEVICE_IDENT)
