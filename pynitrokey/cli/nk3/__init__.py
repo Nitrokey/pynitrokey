@@ -206,6 +206,16 @@ def update(ctx: Context, image: str, experimental: bool) -> None:
             device.reboot(BootMode.BOOTROM)
 
             local_print("")
+
+            if platform.system() == "Darwin":
+                # Currently there is an issue with device enumeration after reboot on macOS, see
+                # <https://github.com/Nitrokey/pynitrokey/issues/145>.  To avoid this issue, we
+                # cancel the command now and ask the user to run it again.
+                local_print(
+                    "Bootloader mode enabled. Please repeat this command to apply the update."
+                )
+                raise click.Abort()
+
             with _await_bootloader(ctx) as bootloader:
                 _perform_update(bootloader, data)
         elif isinstance(device, Nitrokey3Bootloader):
