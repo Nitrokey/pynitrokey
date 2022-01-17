@@ -208,7 +208,7 @@ def update(ctx: Context, image: str, experimental: bool) -> None:
             local_print("")
 
             if platform.system() == "Darwin":
-                # There currently is an issue with device enumeration after reboot on macOS, see
+                # Currently there is an issue with device enumeration after reboot on macOS, see
                 # <https://github.com/Nitrokey/pynitrokey/issues/145>.  To avoid this issue, we
                 # cancel the command now and ask the user to run it again.
                 local_print(
