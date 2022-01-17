@@ -56,11 +56,20 @@ class Nitrokey3Device(Nitrokey3Base):
             )
 
         self.device = device
-        self.logger = logger.getChild(device.descriptor.path)
+        if isinstance(device.descriptor.path, str):
+            self._path = device.descriptor.path
+        elif isinstance(device.descriptor.path, bytes):
+            self._path = device.descriptor.path.decode("cp1252")
+        else:
+            raise ValueError(
+                "Expected device path to be of type str or bytes, got "
+                + type(device.descriptor.path)
+            )
+        self.logger = logger.getChild(self._path)
 
     @property
     def path(self) -> str:
-        return self.device.descriptor.path
+        return self._path
 
     @property
     def name(self) -> str:
