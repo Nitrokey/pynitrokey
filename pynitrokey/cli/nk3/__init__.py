@@ -93,11 +93,33 @@ def list() -> None:
 
 
 @nk3.command()
+@click.option(
+    "--bootloader",
+    is_flag=True,
+    help="Reboot a Nitrokey 3 device into bootloader mode",
+)
 @click.pass_obj
-def reboot(ctx: Context) -> None:
-    """Reboot the key."""
+def reboot(ctx: Context, bootloader: bool) -> None:
+    """
+    Reboot the key.
+
+    Per default, the key will reboot into regular firmware mode.  If the --bootloader option
+    is set, a key can boot from firmware mode to bootloader mode.  Booting into
+    bootloader mode has to be confirmed by pressing the touch button.
+    """
     with ctx.connect() as device:
-        device.reboot()
+        if bootloader:
+            if isinstance(device, Nitrokey3Device):
+                local_print(
+                    "Please press the touch button to reboot the device into bootloader mode ..."
+                )
+                device.reboot(BootMode.BOOTROM)
+            else:
+                local_critical(
+                    "A Nitrokey 3 device in bootloader mode can only reboot into firmware mode."
+                )
+        else:
+            device.reboot()
 
 
 @nk3.command()
