@@ -10,9 +10,9 @@
 import logging
 import platform
 import sys
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
-from spsdk.mboot import McuBoot
+from spsdk.mboot import McuBoot, StatusCode
 from spsdk.mboot.interfaces import RawHid
 from spsdk.mboot.properties import PropertyTag
 from spsdk.sbfile.images import BootImageV21
@@ -56,6 +56,12 @@ class Nitrokey3Bootloader(Nitrokey3Base):
     @property
     def name(self) -> str:
         return "Nitrokey 3 Bootloader"
+
+    @property
+    def status(self) -> Tuple[int, str]:
+        code = self.device.status_code
+        message = StatusCode.desc(code)
+        return (code, message)
 
     def close(self) -> None:
         self.device.close()
