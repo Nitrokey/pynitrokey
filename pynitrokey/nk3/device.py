@@ -15,6 +15,8 @@ from typing import List, Optional
 
 from fido2.hid import CtapHidDevice, open_device
 
+from pynitrokey.fido2 import device_path_to_str
+
 from .base import Nitrokey3Base
 from .utils import Version
 
@@ -56,15 +58,7 @@ class Nitrokey3Device(Nitrokey3Base):
             )
 
         self.device = device
-        if isinstance(device.descriptor.path, str):
-            self._path = device.descriptor.path
-        elif isinstance(device.descriptor.path, bytes):
-            self._path = device.descriptor.path.decode("cp1252")
-        else:
-            raise ValueError(
-                "Expected device path to be of type str or bytes, got "
-                + type(device.descriptor.path)
-            )
+        self._path = device_path_to_str(device.descriptor.path)
         self.logger = logger.getChild(self._path)
 
     @property

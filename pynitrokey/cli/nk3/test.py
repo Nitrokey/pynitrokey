@@ -16,6 +16,7 @@ from hashlib import sha256
 from types import TracebackType
 from typing import Callable, Optional, Tuple, Type, Union
 
+from pynitrokey.fido2 import device_path_to_str
 from pynitrokey.helpers import local_print
 from pynitrokey.nk3.base import Nitrokey3Base
 from pynitrokey.nk3.device import Nitrokey3Device
@@ -79,10 +80,7 @@ def log_devices() -> None:
     logger.info(f"Found {len(ctap_devices)} CTAPHID devices:")
     for device in ctap_devices:
         descriptor = device.descriptor
-        if isinstance(descriptor.path, bytes):
-            path = descriptor.path.decode("cp1252")
-        else:
-            path = descriptor.path
+        path = device_path_to_str(descriptor.path)
         logger.info(f"- {path} ({descriptor.vid:x}:{descriptor.pid:x})")
 
 
