@@ -275,7 +275,7 @@ def _print_update_warning(
     local_print("")
     local_print(
         "Please do not remove the Nitrokey 3 or insert any other Nitrokey 3 devices "
-        "during the update."
+        "during the update. Doing so may damage the Nitrokey 3."
     )
     if not click.confirm("Do you want to perform the firmware update now?"):
         logger.info("Update cancelled by user")
