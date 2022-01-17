@@ -23,8 +23,7 @@ class FirmwareUpdate:
         self.url = url
 
     def download(self, f: BinaryIO) -> None:
-        with requests.get(self.url, stream=True) as response:
-            response.raise_for_status()
+        with self._get(stream=True) as response:
             for chunk in response.iter_content(chunk_size=8192):
                 f.write(chunk)
 
@@ -41,6 +40,15 @@ class FirmwareUpdate:
         with open(path, "wb") as f:
             self.download(f)
         return path
+
+    def read(self) -> bytes:
+        with self._get() as response:
+            return response.content
+
+    def _get(self, stream: bool = False) -> requests.Response:
+        response = requests.get(self.url, stream=stream)
+        response.raise_for_status()
+        return response
 
     def __repr__(self) -> str:
         return f"FirmwareUpdate(tag={self.tag}, url={self.url})"
