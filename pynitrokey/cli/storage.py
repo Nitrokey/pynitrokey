@@ -35,8 +35,16 @@ def list():
     """list connected devices"""
 
     local_print(":: 'Nitrokey Storage' keys:")
-    for dct in NitrokeyStorage.list_devices():
-        local_print(dct)
+    devices = NitrokeyStorage.list_devices()
+    for dct in devices:
+        local_print(f' - {dct}')
+    if len(devices) == 1:
+        nks = NitrokeyStorage()
+        nks.connect()
+        local_print(f'Found libnitrokey version: {nks.library_version()}')
+        local_print(f'Firmware version: {nks.fw_version}')
+        local_print(f'Admin PIN retries: {nks.admin_pin_retries}')
+        local_print(f'User PIN retries: {nks.user_pin_retries}')
 
 
 @click.command()

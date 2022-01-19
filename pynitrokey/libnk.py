@@ -71,11 +71,12 @@ def _get_c_library():
     root = Path("/")
     header = "NK_C_API__{}.h"
     header_parent_path = Path(__file__).parent / "nk_headers"
-    avail_versions = ["3.6.0", "3.5.0", "3.4.1", "3.4.0"]
+    avail_versions = ["3.7.0", "3.6.0", "3.5.0", "3.4.1", "3.4.0"]
 
     # lib_paths = [p.absolute().as_posix() for p in lib_paths if p.exists()]
     libs = (
         list(Path("/usr/lib").glob("libnitrokey.so.*"))
+        + list(Path("/usr/lib64").glob("libnitrokey.so.*"))
         + list(Path("/usr/local/lib").glob("libnitrokey.so.*"))
         + list(Path("/lib").glob("libnitrokey.so.*"))
         + list(Path("/usr/lib/x86_64-linux-gnu").glob("libnitrokey.so.*"))
@@ -100,6 +101,10 @@ def _get_c_library():
 
     if load_lib is None:
         print("libnk errror: cannot find libnitrokey library & headers - CRITICAL")
+        print(
+            "You can provide custom path for the libnitrokey with LIBNK_PATH environmental variable, e.g. by calling it like:"
+        )
+        print("$ env LIBNK_PATH=/my/path/libnitrokey.so nitropy <command>")
         print("exiting....")
         sys.exit(1)
 
@@ -285,8 +290,10 @@ class BaseLibNitrokey:
 
         while True:
             model = DeviceModel(cur.model)
-            name = model.friendly_name + "-" + py_enc(cur.serial_number)
-            name = name.replace("0", "")
+            serial = py_enc(cur.serial_number)
+            serial = serial.replace("0", "")
+            name = model.friendly_name + ( "-" + serial if serial else '')
+            name += ' '+py_enc(cur.path)
             out[name] = {
                 "model": cur.model,
                 "path": py_enc(cur.path),
