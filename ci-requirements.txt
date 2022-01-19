@@ -10,6 +10,7 @@ requests
 pygments
 python-dateutil
 spsdk>=1.5.0
+tqdm
 urllib3
 cffi
 

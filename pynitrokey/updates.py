@@ -10,11 +10,14 @@
 import os.path
 import re
 import urllib.parse
-from typing import BinaryIO, Dict
+from typing import BinaryIO, Callable, Dict, Generator, Optional
 
 import requests
 
 API_BASE_URL = "https://api.github.com"
+
+
+ProgressCallback = Callable[[int, int], None]
 
 
 class FirmwareUpdate:
@@ -22,12 +25,18 @@ class FirmwareUpdate:
         self.tag = tag
         self.url = url
 
-    def download(self, f: BinaryIO) -> None:
-        with self._get(stream=True) as response:
-            for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
+    def download(
+        self, f: BinaryIO, callback: Optional[ProgressCallback] = None
+    ) -> None:
+        for chunk in self._get_chunks(callback=callback):
+            f.write(chunk)
 
-    def download_to_dir(self, d: str, overwrite: bool = False) -> str:
+    def download_to_dir(
+        self,
+        d: str,
+        overwrite: bool = False,
+        callback: Optional[ProgressCallback] = None,
+    ) -> str:
         if not os.path.exists(d):
             raise Exception(f"Cannot download firmware: {d} does not exist")
         if not os.path.isdir(d):
@@ -38,12 +47,27 @@ class FirmwareUpdate:
         if os.path.exists(path) and not overwrite:
             raise Exception(f"File {path} already exists and may not be overwritten")
         with open(path, "wb") as f:
-            self.download(f)
+            self.download(f, callback=callback)
         return path
 
-    def read(self) -> bytes:
-        with self._get() as response:
-            return response.content
+    def read(self, callback: Optional[ProgressCallback] = None) -> bytes:
+        result = bytes()
+        for chunk in self._get_chunks(callback=callback):
+            result += chunk
+        return result
+
+    def _get_chunks(
+        self, chunk_size: int = 1024, callback: Optional[ProgressCallback] = None
+    ) -> Generator[bytes, None, None]:
+        with self._get(stream=True) as response:
+            total = int(response.headers.get("content-length", 0))
+            if callback:
+                callback(0, total)
+
+            for chunk in response.iter_content(chunk_size=chunk_size):
+                if callback:
+                    callback(len(chunk), total)
+                yield chunk
 
     def _get(self, stream: bool = False) -> requests.Response:
         response = requests.get(self.url, stream=stream)

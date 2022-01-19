@@ -62,5 +62,11 @@ class Version:
         return cls(major=int_parts[0], minor=int_parts[1], patch=int_parts[2])
 
     @classmethod
+    def from_v_str(cls, s: str) -> "Version":
+        if not s.startswith("v"):
+            raise ValueError(f"Missing v prefix for firmware version: {s}")
+        return Version.from_str(s[1:])
+
+    @classmethod
     def from_bcd_version(cls, version: BcdVersion3) -> "Version":
         return cls(major=version.major, minor=version.minor, patch=version.service)
