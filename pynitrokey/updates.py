@@ -8,9 +8,8 @@
 # copied, modified, or distributed except according to those terms.
 
 import os.path
-import re
 import urllib.parse
-from typing import BinaryIO, Callable, Dict, Generator, Optional
+from typing import BinaryIO, Callable, Dict, Generator, Optional, Pattern
 
 import requests
 
@@ -81,12 +80,12 @@ class FirmwareUpdate:
         return self.tag
 
     @classmethod
-    def _from_release(cls, release: dict, url_pattern: re.Pattern) -> "FirmwareUpdate":
+    def _from_release(cls, release: dict, url_pattern: Pattern) -> "FirmwareUpdate":
         return cls._from_assets(release["assets"], release["tag_name"], url_pattern)
 
     @classmethod
     def _from_assets(
-        cls, assets: list, tag: str, url_pattern: re.Pattern
+        cls, assets: list, tag: str, url_pattern: Pattern
     ) -> "FirmwareUpdate":
         urls = []
         for asset in assets:
@@ -103,7 +102,7 @@ class FirmwareUpdate:
 
 
 class Repository:
-    def __init__(self, owner: str, name: str, update_pattern: re.Pattern) -> None:
+    def __init__(self, owner: str, name: str, update_pattern: Pattern) -> None:
         self.owner = owner
         self.name = name
         self.update_pattern = update_pattern
