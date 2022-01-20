@@ -9,6 +9,7 @@
 
 import itertools
 import logging
+import os.path
 import platform
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -16,7 +17,7 @@ from typing import List, Optional, TypeVar
 
 import click
 
-from pynitrokey.helpers import local_critical, local_print
+from pynitrokey.helpers import ProgressBar, local_critical, local_print
 from pynitrokey.nk3 import list as list_nk3
 from pynitrokey.nk3 import open as open_nk3
 from pynitrokey.nk3.base import Nitrokey3Base
@@ -26,6 +27,7 @@ from pynitrokey.nk3.bootloader import (
     check_firmware_image,
 )
 from pynitrokey.nk3.device import BootMode, Nitrokey3Device
+from pynitrokey.nk3.updates import get_latest_update, get_update
 from pynitrokey.nk3.utils import Version
 
 T = TypeVar("T", bound="Nitrokey3Base")
@@ -181,7 +183,61 @@ def test(ctx: Context, pin: Optional[str]) -> None:
 
 
 @nk3.command()
-@click.argument("image")
+@click.argument("path", default=".")
+@click.option(
+    "-f",
+    "--force",
+    is_flag=True,
+    default=False,
+    help="Overwrite the firmware image if it already exists",
+)
+@click.option("--version", help="Download this version instead of the latest one")
+def fetch_update(path: str, force: bool, version: Optional[str]) -> None:
+    """
+    Fetches a firmware update for the Nitrokey 3 and stores it at the given path.
+
+    If no path is given, the firmware image stored in the current working
+    directory.  If the given path is a directory, the image is stored under
+    that directory.  Otherwise it is written to the path.  Existing files are
+    only overwritten if --force is set.
+
+    Per default, the latest firmware release is fetched.  If you want to
+    download a specific version, use the --version option.
+    """
+    if version:
+        try:
+            update = get_update(version)
+        except Exception as e:
+            local_critical(f"Failed to find firmware update {version}", e)
+    else:
+        try:
+            update = get_latest_update()
+        except Exception as e:
+            local_critical("Failed to find latest firmware update", e)
+
+    bar = ProgressBar(desc=f"Download {update.tag}", unit="B", unit_scale=True)
+
+    try:
+        if os.path.isdir(path):
+            path = update.download_to_dir(path, overwrite=force, callback=bar.update)
+        else:
+            if not force and os.path.exists(path):
+                local_critical(
+                    f"{path} already exists.  Use --force to overwrite the file."
+                )
+            else:
+                with open(path, "wb") as f:
+                    update.download(f, callback=bar.update)
+
+        bar.close()
+
+        local_print(f"Successfully downloaded firmware release {update.tag} to {path}")
+    except Exception as e:
+        local_critical(f"Failed to download firmware update {update.tag}", e)
+
+
+@nk3.command()
+@click.argument("image", required=False)
 @click.option(
     "--experimental",
     default=False,
@@ -189,7 +245,7 @@ def test(ctx: Context, pin: Optional[str]) -> None:
     help="Allow to execute experimental features",
 )
 @click.pass_obj
-def update(ctx: Context, image: str, experimental: bool) -> None:
+def update(ctx: Context, image: Optional[str], experimental: bool) -> None:
     """
     Update the firmware of the device using the given image.
 
@@ -197,6 +253,8 @@ def update(ctx: Context, image: str, experimental: bool) -> None:
     The user is asked to confirm the operation before the update is started.  The Nitrokey 3 may
     not be removed during the update.  Also, additional Nitrokey 3 devices may not be connected
     during the update.
+
+    If no firmware image is given, the latest firmware release is downloaded automatically.
 
     If the connected Nitrokey 3 device is in firmware mode, the user is prompted to touch the
     device’s button to confirm rebooting to bootloader mode.
@@ -212,14 +270,57 @@ def update(ctx: Context, image: str, experimental: bool) -> None:
         )
         raise click.Abort()
 
-    with open(image, "rb") as f:
-        data = f.read()
-    metadata = check_firmware_image(data)
-
     with ctx.connect() as device:
+        release_version = None
+        if image:
+            with open(image, "rb") as f:
+                data = f.read()
+        else:
+            try:
+                update = get_latest_update()
+                logger.info(f"Latest firmware version: {update.tag}")
+            except Exception as e:
+                local_critical("Failed to find latest firmware update", e)
+
+            try:
+                release_version = Version.from_v_str(update.tag)
+
+                if isinstance(device, Nitrokey3Device):
+                    current_version = device.version()
+                    _print_download_warning(release_version, current_version)
+                else:
+                    _print_download_warning(release_version)
+            except ValueError as e:
+                logger.warning("Failed to parse version from release tag", e)
+
+            try:
+                logger.info(
+                    f"Trying to download firmware update from URL: {update.url}"
+                )
+
+                bar = ProgressBar(
+                    desc=f"Download {update.tag}", unit="B", unit_scale=True
+                )
+                data = update.read(callback=bar.update)
+                bar.close()
+            except Exception as e:
+                local_critical(
+                    f"Failed to download latest firmware update {update.tag}", e
+                )
+                return
+
+        metadata = check_firmware_image(data)
+        if release_version and release_version != metadata.version:
+            local_critical(
+                f"The firmware image for the release {release_version} has the unexpected product "
+                f"version {metadata.version}."
+            )
+
         if isinstance(device, Nitrokey3Device):
-            current_version = device.version()
-            _print_update_warning(metadata, current_version)
+            if not release_version:
+                current_version = device.version()
+                _print_version_warning(metadata, current_version)
+            _print_update_warning()
 
             local_print("")
             local_print(
@@ -241,7 +342,8 @@ def update(ctx: Context, image: str, experimental: bool) -> None:
             with _await_bootloader(ctx) as bootloader:
                 _perform_update(bootloader, data)
         elif isinstance(device, Nitrokey3Bootloader):
-            _print_update_warning(metadata)
+            _print_version_warning(metadata)
+            _print_update_warning()
             _perform_update(device, data)
         else:
             local_critical(f"Unexpected Nitrokey 3 device: {device}")
@@ -299,22 +401,60 @@ def _await_bootloader(ctx: Context) -> Nitrokey3Bootloader:
     raise Exception("Unreachable")
 
 
-def _print_update_warning(
+def _print_download_warning(
+    release_version: Version,
+    current_version: Optional[Version] = None,
+) -> None:
+    current_version_str = str(current_version) if current_version else "[unknown]"
+    local_print(f"Current firmware version:  {current_version_str}")
+    local_print(f"Latest firmware version:   {release_version}")
+
+    if current_version and current_version > release_version:
+        local_critical(
+            "The latest firmare release is older than the firmware on the device.",
+            support_hint=False,
+        )
+    elif current_version and current_version == release_version:
+        click.confirm(
+            "You are already running the latest firmware release on the device.  Do you want "
+            f"to continue and download the firmware version {release_version} anyway?",
+            abort=True,
+        )
+    else:
+        click.confirm(
+            f"Do you want to download the firmware version {release_version}?",
+            default=True,
+            abort=True,
+        )
+
+
+def _print_version_warning(
     metadata: FirmwareMetadata,
     current_version: Optional[Version] = None,
 ) -> None:
     current_version_str = str(current_version) if current_version else "[unknown]"
     local_print(f"Current firmware version:  {current_version_str}")
     local_print(f"Updated firmware version:  {metadata.version}")
-    if current_version and current_version > metadata.version:
-        local_critical(
-            "The firmware image is older than the firmware on the device.",
-            support_hint=False,
-        )
+
+    if current_version:
+        if current_version > metadata.version:
+            local_critical(
+                "The firmware image is older than the firmware on the device.",
+                support_hint=False,
+            )
+        elif current_version == metadata.version:
+            if not click.confirm(
+                "The version of the firmware image is the same as on the device.  Do you want "
+                "to continue anyway?"
+            ):
+                raise click.Abort()
+
+
+def _print_update_warning() -> None:
     local_print("")
     local_print(
         "Please do not remove the Nitrokey 3 or insert any other Nitrokey 3 devices "
-        "during the update."
+        "during the update. Doing so may damage the Nitrokey 3."
     )
     if not click.confirm("Do you want to perform the firmware update now?"):
         logger.info("Update cancelled by user")

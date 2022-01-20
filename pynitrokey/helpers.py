@@ -12,7 +12,9 @@ import sys
 from getpass import getpass
 from numbers import Number
 from threading import Event, Timer
-from typing import List
+from typing import List, Optional
+
+from tqdm import tqdm
 
 from pynitrokey.confconsts import (
     GH_ISSUES_URL,
@@ -36,6 +38,26 @@ def from_websafe(data):
     data = data.replace("-", "+")
     data = data.replace("_", "/")
     return data + "=="[: (3 * len(data)) % 4]
+
+
+class ProgressBar:
+    """
+    Helper class for progress bars where the total length of the progress bar
+    is not available before the first iteration.
+    """
+
+    def __init__(self, **kwargs) -> None:
+        self.bar: Optional[tqdm] = None
+        self.kwargs = kwargs
+
+    def update(self, n: int, total: int) -> None:
+        if not self.bar:
+            self.bar = tqdm(total=total, **self.kwargs)
+        self.bar.update(n)
+
+    def close(self) -> None:
+        if self.bar:
+            self.bar.close()
 
 
 class Timeout(object):
