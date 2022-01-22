@@ -19,7 +19,13 @@ sudo apt install python3-pip
 pip3 install --user pynitrokey
 ```
 
-To access Nitrokey Start and FIDO2 devices without superuser rights, you need to install the Nitrokey udev rules that are shipped with `libnitrokey`.  You can also install them manually:
+If you want to use the `nk3` command for accessing Nitrokey 3 devices, you also have to install the `nk3` extra:
+
+```
+pip3 install --user pynitrokey[nk3]
+```
+
+To access Nitrokey Start, FIDO2 and Nitrokey 3 devices without superuser rights, you need to install the Nitrokey udev rules that are shipped with `libnitrokey`.  You can also install them manually:
 
 ```
 wget https://raw.githubusercontent.com/Nitrokey/libnitrokey/master/data/41-nitrokey.rules
@@ -46,6 +52,12 @@ Without administrator privileges `nitropy` might not be able to communicate to d
 *To install nitropy on MacOS*
 ```
 pip3 install pynitrokey
+```
+
+If you want to use the `nk3` command for accessing Nitrokey 3 devices, you also have to install the `nk3` extra:
+
+```
+pip3 install pynitrokey[nk3]
 ```
 
 1. Without `penv`: `nitropy` can be found here: `/usr/local/bin/nitropy`

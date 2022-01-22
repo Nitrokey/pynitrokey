@@ -9,9 +9,16 @@
 
 from typing import List, Optional
 
-from .base import Nitrokey3Base
-from .bootloader import Nitrokey3Bootloader
-from .device import Nitrokey3Device
+try:
+    from .base import Nitrokey3Base
+    from .bootloader import Nitrokey3Bootloader
+    from .device import Nitrokey3Device
+except ImportError:
+    import warnings
+
+    warnings.warn("The pynitrokey.nk3 module requires the nk3 extra")
+
+    raise
 
 VID_NITROKEY = 0x20A0
 PID_NITROKEY3_DEVICE = 0x42B2
