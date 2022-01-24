@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2021 Nitrokey Developers
+# Copyright 2021-2022 Nitrokey Developers
 #
 # Licensed under the Apache License, Version 2.0, <LICENSE-APACHE or
 # http://apache.org/licenses/LICENSE-2.0> or the MIT license <LICENSE-MIT or
@@ -12,11 +12,9 @@ import platform
 import sys
 from typing import List, Optional, Tuple
 
-from spsdk.mboot import McuBoot, StatusCode
-from spsdk.mboot.interfaces import RawHid
-from spsdk.mboot.properties import PropertyTag
+from mboot import McuBoot, PropertyTag
+from mboot.connection import RawHid
 from spsdk.sbfile.images import BootImageV21
-from spsdk.utils.usbfilter import USBDeviceFilter
 
 from .base import Nitrokey3Base
 from .utils import Version
@@ -40,7 +38,6 @@ class Nitrokey3Bootloader(Nitrokey3Base):
                 f"{VID_NITROKEY:x}:{PID_NITROKEY3_BOOTLOADER:x}, "
                 f"got {device.vid:x}:{device.pid:x}"
             )
-        self._path = device.path
         self.device = McuBoot(device)
 
     def __enter__(self) -> "Nitrokey3Bootloader":
@@ -49,9 +46,7 @@ class Nitrokey3Bootloader(Nitrokey3Base):
 
     @property
     def path(self) -> str:
-        if isinstance(self._path, bytes):
-            return self._path.decode("UTF-8")
-        return self._path
+        return "[unknown]"
 
     @property
     def name(self) -> str:
@@ -60,8 +55,7 @@ class Nitrokey3Bootloader(Nitrokey3Base):
     @property
     def status(self) -> Tuple[int, str]:
         code = self.device.status_code
-        message = StatusCode.desc(code)
-        return (code, message)
+        return (code[0], code[2])
 
     def close(self) -> None:
         self.device.close()
@@ -94,11 +88,8 @@ class Nitrokey3Bootloader(Nitrokey3Base):
     def list() -> List["Nitrokey3Bootloader"]:
         from . import PID_NITROKEY3_BOOTLOADER, VID_NITROKEY
 
-        device_filter = USBDeviceFilter(
-            f"0x{VID_NITROKEY:x}:0x{PID_NITROKEY3_BOOTLOADER:x}"
-        )
         devices = []
-        for device in RawHid.enumerate(device_filter):
+        for device in RawHid.enumerate(VID_NITROKEY, PID_NITROKEY3_BOOTLOADER):
             try:
                 devices.append(Nitrokey3Bootloader(device))
             except ValueError:
@@ -109,22 +100,7 @@ class Nitrokey3Bootloader(Nitrokey3Base):
 
     @staticmethod
     def open(path: str) -> Optional["Nitrokey3Bootloader"]:
-        device_filter = USBDeviceFilter(path)
-        devices = RawHid.enumerate(device_filter)
-        if len(devices) == 0:
-            logger.warn(f"No HID device at {path}")
-            return None
-        if len(devices) > 1:
-            logger.warn(f"Multiple HID devices at {path}: {devices}")
-            return None
-
-        try:
-            return Nitrokey3Bootloader(devices[0])
-        except ValueError:
-            logger.warn(
-                f"No Nitrokey 3 bootloader at path {path}", exc_info=sys.exc_info()
-            )
-            return None
+        return None
 
 
 class FirmwareMetadata:

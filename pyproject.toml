@@ -16,6 +16,7 @@ requires = [
   "ecdsa",
   "fido2 >= 0.9.3",
   "intelhex",
+  "mboot >= 0.3.0",
   "pyserial",
   "pyusb",
   "requests",
