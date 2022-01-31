@@ -22,6 +22,7 @@ from pynitrokey.nk3 import list as list_nk3
 from pynitrokey.nk3 import open as open_nk3
 from pynitrokey.nk3.base import Nitrokey3Base
 from pynitrokey.nk3.bootloader import (
+    RKHT,
     FirmwareMetadata,
     Nitrokey3Bootloader,
     check_firmware_image,
@@ -234,6 +235,32 @@ def fetch_update(path: str, force: bool, version: Optional[str]) -> None:
         local_print(f"Successfully downloaded firmware release {update.tag} to {path}")
     except Exception as e:
         local_critical(f"Failed to download firmware update {update.tag}", e)
+
+
+@nk3.command()
+@click.argument("image")
+def validate_update(image: str) -> None:
+    """
+    Validates the given firmware image and prints the firmware version and the signer.
+    """
+    with open(image, "rb") as f:
+        data = f.read()
+
+    try:
+        metadata = FirmwareMetadata.from_image_data(data)
+    except Exception as e:
+        local_critical("Failed to parse and validate firmware image", e)
+
+    if metadata.rkht:
+        if metadata.rkht == RKHT:
+            signature = "Nitrokey"
+        else:
+            signature = f"unknown issuer (RKHT: {metadata.rkht.hex()})"
+    else:
+        signature = "unsigned"
+
+    print(f"version:    {metadata.version}")
+    print(f"signed by:  {signature}")
 
 
 @nk3.command()

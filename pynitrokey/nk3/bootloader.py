@@ -128,23 +128,44 @@ class Nitrokey3Bootloader(Nitrokey3Base):
 
 
 class FirmwareMetadata:
-    def __init__(self, version: Version) -> None:
+    def __init__(self, version: Version, rkht: Optional[bytes]) -> None:
         self.version = version
+        self.rkht = rkht
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, FirmwareMetadata):
+            return NotImplemented
+        return self.version == other.version and self.rkht == other.rkht
+
+    def __repr__(self) -> str:
+        rkht = self.rkht.hex() if self.rkht else None
+        return f"FirmwareMetadata(version={self.version}, rkht={rkht})"
+
+    @classmethod
+    def from_image(cls, image: BootImageV21) -> "FirmwareMetadata":
+        return cls(
+            version=Version.from_bcd_version(image.header.product_version),
+            rkht=image.cert_block.rkht if image.cert_block else None,
+        )
+
+    @classmethod
+    def from_image_data(cls, data: bytes) -> "FirmwareMetadata":
+        return FirmwareMetadata.from_image(BootImageV21.parse(data, kek=KEK))
 
 
 def check_firmware_image(data: bytes) -> FirmwareMetadata:
     try:
-        image = BootImageV21.parse(data, kek=KEK)
+        metadata = FirmwareMetadata.from_image_data(data)
     except Exception:
         logger.exception("Failed to parse firmware image", exc_info=sys.exc_info())
         raise Exception("Failed to parse firmware image")
 
-    if not image.cert_block:
+    if not metadata.rkht:
         raise Exception("Firmware image is not signed")
-    if image.cert_block.rkht != RKHT:
+
+    if metadata.rkht != RKHT:
         raise Exception(
-            f"Firmware image is not signed by Nitrokey (RKHT: {image.cert_block.rkht.hex()})"
+            f"Firmware image is not signed by Nitrokey (RKHT: {metadata.rkht.hex()})"
         )
 
-    version = Version.from_bcd_version(image.header.product_version)
-    return FirmwareMetadata(version)
+    return metadata
