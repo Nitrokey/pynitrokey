@@ -21,22 +21,20 @@ classifiers = [
   "Programming Language :: Python :: 3.9",
 ]
 dependencies = [
+  "cbor",
+  "cffi",
   "click >=7.0",
   "cryptography >=3.4",
   "ecdsa",
   "fido2 >=0.9.3",
   "intelhex",
-  "pyserial",
+  "nkdfu",
+  "python-dateutil",
   "pyusb",
   "requests",
-  "pygments",
-  "python-dateutil",
   "spsdk >=1.5.0",
   "tqdm",
   "urllib3",
-  "cffi",
-  "cbor",
-  "nkdfu",
 ]
 dynamic = ["version", "description"]
 
