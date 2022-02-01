@@ -38,6 +38,17 @@ classifiers=[
     "Programming Language :: Python :: 3.7",
 ]
 
+[tool.flit.metadata.requires-extra]
+dev = [
+  "black==21.12b0",
+  "flake8",
+  "flit",
+  "ipython",
+  "isort",
+  "mypy",
+  "types-requests",
+]
+
 [tool.flit.scripts]
 nitropy = "pynitrokey.cli:nitropy"
 

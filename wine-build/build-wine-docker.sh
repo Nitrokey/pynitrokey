@@ -107,7 +107,7 @@ py -m pip install cx-Freeze==6.1
 py -m pip install flit
 
 # install pynitrokey and dependencies
-py -m flit install
+py -m flit install --deps production
 
 # build msi
 py win_setup.py bdist_msi
