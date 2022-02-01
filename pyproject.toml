@@ -1,55 +1,60 @@
 [build-system]
-requires = ["flit"]
-build-backend = "flit.buildapi"
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
 
-[tool.flit.metadata]
-module = "pynitrokey"
-dist-name = "pynitrokey"
-author = "Nitrokey"
-author-email = "pypi@nitrokey.com"
-home-page = "https://github.com/Nitrokey/pynitrokey"
+[project]
+name = "pynitrokey"
+authors = [
+  { name = "Nitrokey", email = "pypi@nitrokey.com" },
+]
+readme = "README.md"
 requires-python = ">=3.6"
-description-file = "README.md"
-requires = [
-  "click >= 7.0",
-  "cryptography >= 3.4",
+classifiers = [
+  "License :: OSI Approved :: MIT License",
+  "License :: OSI Approved :: Apache Software License",
+  "Intended Audience :: Developers",
+  "Intended Audience :: End Users/Desktop",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.6",
+  "Programming Language :: Python :: 3.7",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+]
+dependencies = [
+  "click >=7.0",
+  "cryptography >=3.4",
   "ecdsa",
-  "fido2 >= 0.9.3",
+  "fido2 >=0.9.3",
   "intelhex",
   "pyserial",
   "pyusb",
   "requests",
   "pygments",
   "python-dateutil",
-  "spsdk >= 1.5.0",
+  "spsdk >=1.5.0",
   "tqdm",
   "urllib3",
   "cffi",
   "cbor",
   "nkdfu",
 ]
-classifiers=[
-    "License :: OSI Approved :: MIT License",
-    "License :: OSI Approved :: Apache Software License",
-    "Intended Audience :: Developers",
-    "Intended Audience :: End Users/Desktop",
-    "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.6",
-    "Programming Language :: Python :: 3.7",
-]
+dynamic = ["version", "description"]
 
-[tool.flit.metadata.requires-extra]
+[project.optional-dependencies]
 dev = [
-  "black==21.12b0",
+  "black ==21.12b0",
   "flake8",
-  "flit",
+  "flit >=3.2,<4",
   "ipython",
   "isort",
   "mypy",
   "types-requests",
 ]
 
-[tool.flit.scripts]
+[project.urls]
+Source = "https://github.com/Nitrokey/pynitrokey"
+
+[project.scripts]
 nitropy = "pynitrokey.cli:nitropy"
 
 [tool.isort]
