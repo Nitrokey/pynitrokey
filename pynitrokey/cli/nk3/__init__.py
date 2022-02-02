@@ -10,13 +10,12 @@
 import logging
 import os.path
 import platform
-import time
 from typing import List, Optional, TypeVar
 
 import click
 from spsdk.mboot.exceptions import McuBootConnectionError
 
-from pynitrokey.helpers import ProgressBar, local_critical, local_print
+from pynitrokey.helpers import ProgressBar, Retries, local_critical, local_print
 from pynitrokey.nk3 import list as list_nk3
 from pynitrokey.nk3 import open as open_nk3
 from pynitrokey.nk3.base import Nitrokey3Base
@@ -31,7 +30,7 @@ from pynitrokey.nk3.exceptions import TimeoutException
 from pynitrokey.nk3.updates import get_latest_update, get_update
 from pynitrokey.nk3.utils import Version
 
-T = TypeVar("T", bound="Nitrokey3Base")
+T = TypeVar("T", bound=Nitrokey3Base)
 
 logger = logging.getLogger(__name__)
 
@@ -378,12 +377,9 @@ def update(ctx: Context, image: Optional[str], experimental: bool) -> None:
                 )
                 raise click.Abort()
 
-            retries = 3
             exc = None
-            for i in range(retries):
-                logger.debug(
-                    f"Trying to connect to bootloader, try {i + 1} of {retries}"
-                )
+            for t in Retries(3):
+                logger.debug(f"Trying to connect to bootloader ({t})")
                 try:
                     with _await_bootloader(ctx) as bootloader:
                         _perform_update(bootloader, data)
@@ -391,8 +387,6 @@ def update(ctx: Context, image: Optional[str], experimental: bool) -> None:
                 except McuBootConnectionError as e:
                     logger.debug("Received connection error", exc_info=True)
                     exc = e
-                    if i + 1 < retries:
-                        time.sleep(0.5)
             else:
                 msgs = ["Failed to connect to Nitrokey 3 bootloader"]
                 if platform.system() == "Linux":
@@ -422,15 +416,12 @@ def update(ctx: Context, image: Optional[str], experimental: bool) -> None:
 
 def _await_device(ctx: Context) -> Nitrokey3Device:
     # TODO: refactor into context
-    logger.debug("Waiting for device ...")
-    retries = 10
-    for i in range(retries):
-        logger.debug(f"Try {i + 1} of {retries}")
+    for t in Retries(10):
+        logger.debug(f"Searching device ({t})")
         bootloaders = [
             device for device in ctx.list() if isinstance(device, Nitrokey3Device)
         ]
         if len(bootloaders) == 0:
-            time.sleep(0.5)
             logger.debug("No device found, continuing")
             continue
         if len(bootloaders) > 1:
@@ -442,15 +433,12 @@ def _await_device(ctx: Context) -> Nitrokey3Device:
 
 
 def _await_bootloader(ctx: Context) -> Nitrokey3Bootloader:
-    logger.debug("Waiting for bootloader ...")
-    retries = 10
-    for i in range(retries):
-        logger.debug(f"Try {i + 1} of {retries}")
+    for t in Retries(10):
+        logger.debug(f"Searching bootloader ({t})")
         bootloaders = [
             device for device in ctx.list() if isinstance(device, Nitrokey3Bootloader)
         ]
         if len(bootloaders) == 0:
-            time.sleep(0.5)
             logger.debug("No bootloader device found, continuing")
             continue
         if len(bootloaders) > 1:
