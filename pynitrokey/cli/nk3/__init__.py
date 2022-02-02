@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2021 Nitrokey Developers
+# Copyright 2021-2022 Nitrokey Developers
 #
 # Licensed under the Apache License, Version 2.0, <LICENSE-APACHE or
 # http://apache.org/licenses/LICENSE-2.0> or the MIT license <LICENSE-MIT or
@@ -16,6 +16,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import List, Optional, TypeVar
 
 import click
+from spsdk.mboot.exceptions import McuBootConnectionError
 
 from pynitrokey.helpers import ProgressBar, local_critical, local_print
 from pynitrokey.nk3 import list as list_nk3
@@ -366,8 +367,29 @@ def update(ctx: Context, image: Optional[str], experimental: bool) -> None:
                 )
                 raise click.Abort()
 
-            with _await_bootloader(ctx) as bootloader:
-                _perform_update(bootloader, data)
+            retries = 3
+            exc = None
+            for i in range(retries):
+                logger.debug(
+                    f"Trying to connect to bootloader, try {i + 1} of {retries}"
+                )
+                try:
+                    with _await_bootloader(ctx) as bootloader:
+                        _perform_update(bootloader, data)
+                    break
+                except McuBootConnectionError as e:
+                    logger.debug("Received connection error", exc_info=True)
+                    exc = e
+                    if i + 1 < retries:
+                        time.sleep(0.5)
+            else:
+                msgs = ["Failed to connect to Nitrokey 3 bootloader"]
+                if platform.system() == "Linux":
+                    msgs += ["Are the Nitrokey udev rules installed and active?"]
+                local_critical(
+                    *msgs,
+                    exc,
+                )
         elif isinstance(device, Nitrokey3Bootloader):
             _print_version_warning(metadata)
             _print_update_warning()
