@@ -10,7 +10,7 @@
 import logging
 import os.path
 import platform
-from typing import List, Optional, TypeVar
+from typing import List, Optional, Type, TypeVar
 
 import click
 from spsdk.mboot.exceptions import McuBootConnectionError
@@ -71,6 +71,26 @@ class Context:
             device for device in self.list() if isinstance(device, Nitrokey3Device)
         ]
         return self._select_unique("Nitrokey 3", devices)
+
+    def _await(self, name: str, ty: Type[T]) -> T:
+        for t in Retries(10):
+            logger.debug(f"Searching {name} device ({t})")
+            devices = [device for device in self.list() if isinstance(device, ty)]
+            if len(devices) == 0:
+                logger.debug(f"No {name} device found, continuing")
+                continue
+            if len(devices) > 1:
+                local_critical(f"Multiple {name} devices found")
+            return devices[0]
+
+        local_critical(f"No {name} device found")
+        raise Exception("unreachable")
+
+    def await_device(self) -> Nitrokey3Device:
+        return self._await("Nitrokey 3", Nitrokey3Device)
+
+    def await_bootloader(self) -> Nitrokey3Bootloader:
+        return self._await("Nitrokey 3 bootloader", Nitrokey3Bootloader)
 
 
 @click.group()
@@ -381,7 +401,7 @@ def update(ctx: Context, image: Optional[str], experimental: bool) -> None:
             for t in Retries(3):
                 logger.debug(f"Trying to connect to bootloader ({t})")
                 try:
-                    with _await_bootloader(ctx) as bootloader:
+                    with ctx.await_bootloader() as bootloader:
                         _perform_update(bootloader, data)
                     break
                 except McuBootConnectionError as e:
@@ -403,7 +423,7 @@ def update(ctx: Context, image: Optional[str], experimental: bool) -> None:
             local_critical(f"Unexpected Nitrokey 3 device: {device}")
 
     local_print("")
-    with _await_device(ctx) as device:
+    with ctx.await_device() as device:
         version = device.version()
         if version == metadata.version:
             local_print(f"Successfully updated the firmware to version {version}.")
@@ -412,41 +432,6 @@ def update(ctx: Context, image: Optional[str], experimental: bool) -> None:
                 f"The firmware update to {metadata.version} was successful, but the firmware "
                 f"is still reporting version {version}."
             )
-
-
-def _await_device(ctx: Context) -> Nitrokey3Device:
-    # TODO: refactor into context
-    for t in Retries(10):
-        logger.debug(f"Searching device ({t})")
-        bootloaders = [
-            device for device in ctx.list() if isinstance(device, Nitrokey3Device)
-        ]
-        if len(bootloaders) == 0:
-            logger.debug("No device found, continuing")
-            continue
-        if len(bootloaders) > 1:
-            local_critical("Multiple devices found")
-        return bootloaders[0]
-
-    local_critical("No Nitrokey 3 device found.")
-    raise Exception("Unreachable")
-
-
-def _await_bootloader(ctx: Context) -> Nitrokey3Bootloader:
-    for t in Retries(10):
-        logger.debug(f"Searching bootloader ({t})")
-        bootloaders = [
-            device for device in ctx.list() if isinstance(device, Nitrokey3Bootloader)
-        ]
-        if len(bootloaders) == 0:
-            logger.debug("No bootloader device found, continuing")
-            continue
-        if len(bootloaders) > 1:
-            local_critical("Multiple bootloader devices found")
-        return bootloaders[0]
-
-    local_critical("No Nitrokey 3 bootloader device found.")
-    raise Exception("Unreachable")
 
 
 def _print_download_warning(
