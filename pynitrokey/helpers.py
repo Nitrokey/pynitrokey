@@ -76,6 +76,15 @@ class ProgressBar:
             self.bar.close()
 
 
+class DownloadProgressBar(ProgressBar):
+    """
+    Helper class for progress bars for downloading a file.
+    """
+
+    def __init__(self, desc: str) -> None:
+        super().__init__(desc=f"Download {desc}", unit="B", unit_scale=True)
+
+
 class Timeout(object):
     """
     Utility class for adding a timeout to an event.

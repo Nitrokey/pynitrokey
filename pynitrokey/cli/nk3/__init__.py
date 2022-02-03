@@ -15,7 +15,13 @@ from typing import List, Optional, Tuple, Type, TypeVar
 import click
 from spsdk.mboot.exceptions import McuBootConnectionError
 
-from pynitrokey.helpers import ProgressBar, Retries, local_critical, local_print
+from pynitrokey.helpers import (
+    DownloadProgressBar,
+    ProgressBar,
+    Retries,
+    local_critical,
+    local_print,
+)
 from pynitrokey.nk3 import list as list_nk3
 from pynitrokey.nk3 import open as open_nk3
 from pynitrokey.nk3.base import Nitrokey3Base
@@ -245,7 +251,7 @@ def fetch_update(path: str, force: bool, version: Optional[str]) -> None:
         except Exception as e:
             local_critical("Failed to find latest firmware update", e)
 
-    bar = ProgressBar(desc=f"Download {update.tag}", unit="B", unit_scale=True)
+    bar = DownloadProgressBar(desc=update.tag)
 
     try:
         if os.path.isdir(path):
@@ -415,7 +421,7 @@ def _download_latest_update(device: Nitrokey3Base) -> Tuple[Version, bytes]:
     try:
         logger.info(f"Trying to download firmware update from URL: {update.url}")
 
-        bar = ProgressBar(desc=f"Download {update.tag}", unit="B", unit_scale=True)
+        bar = DownloadProgressBar(desc=update.tag)
         data = update.read(callback=bar.update)
         bar.close()
 
