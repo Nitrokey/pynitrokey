@@ -33,7 +33,7 @@ from pynitrokey.nk3.bootloader import (
 )
 from pynitrokey.nk3.device import BootMode, Nitrokey3Device
 from pynitrokey.nk3.exceptions import TimeoutException
-from pynitrokey.nk3.updates import get_latest_update, get_update
+from pynitrokey.nk3.updates import get_repo
 from pynitrokey.nk3.utils import Version
 
 T = TypeVar("T", bound=Nitrokey3Base)
@@ -240,15 +240,12 @@ def fetch_update(path: str, force: bool, version: Optional[str]) -> None:
     Per default, the latest firmware release is fetched.  If you want to
     download a specific version, use the --version option.
     """
-    if version:
-        try:
-            update = get_update(version)
-        except Exception as e:
+    try:
+        update = get_repo().get_update_or_latest(version)
+    except Exception as e:
+        if version:
             local_critical(f"Failed to find firmware update {version}", e)
-    else:
-        try:
-            update = get_latest_update()
-        except Exception as e:
+        else:
             local_critical("Failed to find latest firmware update", e)
 
     bar = DownloadProgressBar(desc=update.tag)
@@ -402,7 +399,7 @@ def update(ctx: Context, image: Optional[str], experimental: bool) -> None:
 
 def _download_latest_update(device: Nitrokey3Base) -> Tuple[Version, bytes]:
     try:
-        update = get_latest_update()
+        update = get_repo().get_latest_update()
         logger.info(f"Latest firmware version: {update.tag}")
     except Exception as e:
         local_critical("Failed to find latest firmware update", e)
