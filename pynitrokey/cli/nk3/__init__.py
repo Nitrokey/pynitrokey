@@ -29,6 +29,7 @@ from pynitrokey.nk3.bootloader import (
     check_firmware_image,
 )
 from pynitrokey.nk3.device import BootMode, Nitrokey3Device
+from pynitrokey.nk3.exceptions import TimeoutException
 from pynitrokey.nk3.updates import get_latest_update, get_update
 from pynitrokey.nk3.utils import Version
 
@@ -117,7 +118,13 @@ def reboot(ctx: Context, bootloader: bool) -> None:
                 local_print(
                     "Please press the touch button to reboot the device into bootloader mode ..."
                 )
-                device.reboot(BootMode.BOOTROM)
+                try:
+                    device.reboot(BootMode.BOOTROM)
+                except TimeoutException:
+                    local_critical(
+                        "The reboot was not confirmed with the touch button.",
+                        support_hint=False,
+                    )
             else:
                 local_critical(
                     "A Nitrokey 3 device in bootloader mode can only reboot into firmware mode."
@@ -354,7 +361,13 @@ def update(ctx: Context, image: Optional[str], experimental: bool) -> None:
             local_print(
                 "Please press the touch button to reboot the device into bootloader mode ..."
             )
-            device.reboot(BootMode.BOOTROM)
+            try:
+                device.reboot(BootMode.BOOTROM)
+            except TimeoutException:
+                local_critical(
+                    "The reboot was not confirmed with the touch button.",
+                    support_hint=False,
+                )
 
             local_print("")
 
