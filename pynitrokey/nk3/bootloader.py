@@ -10,12 +10,12 @@
 import logging
 import platform
 import sys
-from typing import List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple
 
 from spsdk.mboot import McuBoot, StatusCode
 from spsdk.mboot.interfaces import RawHid
 from spsdk.mboot.properties import PropertyTag
-from spsdk.sbfile.images import BootImageV21
+from spsdk.sbfile.sb2.images import BootImageV21
 from spsdk.utils.usbfilter import USBDeviceFilter
 
 from .base import Nitrokey3Base
@@ -75,7 +75,7 @@ class Nitrokey3Bootloader(Nitrokey3Base):
                 raise Exception("Failed to reboot Nitrokey 3 bootloader")
 
     def uuid(self) -> Optional[int]:
-        uuid = self.device.get_property(PropertyTag.UNIQUE_DEVICE_IDENT)
+        uuid = self.device.get_property(PropertyTag.UNIQUE_DEVICE_IDENT)  # type: ignore[arg-type]
         if not uuid:
             raise ValueError("Missing response for UUID property query")
         if len(uuid) != UUID_LEN:
@@ -87,8 +87,17 @@ class Nitrokey3Bootloader(Nitrokey3Base):
         right_endian = wrong_endian.to_bytes(16, byteorder="little")
         return int.from_bytes(right_endian, byteorder="big")
 
-    def update(self, image: bytes) -> bool:
-        return self.device.receive_sb_file(image)
+    def update(
+        self,
+        image: bytes,
+        callback: Optional[Callable[[int, int], None]] = None,
+        check_errors: bool = False,
+    ) -> bool:
+        return self.device.receive_sb_file(
+            image,
+            progress_callback=callback,
+            check_errors=check_errors,
+        )
 
     @staticmethod
     def list() -> List["Nitrokey3Bootloader"]:
@@ -99,6 +108,8 @@ class Nitrokey3Bootloader(Nitrokey3Base):
         )
         devices = []
         for device in RawHid.enumerate(device_filter):
+            # TODO: remove assert if https://github.com/NXPmicro/spsdk/issues/32 is fixed
+            assert isinstance(device, RawHid)
             try:
                 devices.append(Nitrokey3Bootloader(device))
             except ValueError:
@@ -119,6 +130,8 @@ class Nitrokey3Bootloader(Nitrokey3Base):
             return None
 
         try:
+            # TODO: remove assert if https://github.com/NXPmicro/spsdk/issues/32 is fixed
+            assert isinstance(devices[0], RawHid)
             return Nitrokey3Bootloader(devices[0])
         except ValueError:
             logger.warn(
