@@ -49,11 +49,26 @@ class ProgressBar:
     def __init__(self, **kwargs) -> None:
         self.bar: Optional[tqdm] = None
         self.kwargs = kwargs
+        self.sum = 0
+
+    def __enter__(self) -> "ProgressBar":
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        self.close()
 
     def update(self, n: int, total: int) -> None:
         if not self.bar:
             self.bar = tqdm(total=total, **self.kwargs)
         self.bar.update(n)
+        self.sum += n
+
+    def update_sum(self, n: int, total: int) -> None:
+        if not self.bar:
+            self.bar = tqdm(total=total, **self.kwargs)
+        if n > self.sum:
+            self.bar.update(n - self.sum)
+            self.sum = n
 
     def close(self) -> None:
         if self.bar:

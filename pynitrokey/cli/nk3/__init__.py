@@ -7,12 +7,10 @@
 # http://opensource.org/licenses/MIT>, at your option. This file may not be
 # copied, modified, or distributed except according to those terms.
 
-import itertools
 import logging
 import os.path
 import platform
 import time
-from concurrent.futures import ThreadPoolExecutor
 from typing import List, Optional, TypeVar
 
 import click
@@ -512,25 +510,21 @@ def _print_update_warning() -> None:
 
 def _perform_update(device: Nitrokey3Bootloader, image: bytes) -> None:
     logger.debug("Starting firmware update")
+    with ProgressBar(
+        desc="Performing firmware update", unit="B", unit_scale=True
+    ) as bar:
+        result = device.update(image, callback=bar.update_sum)
+    logger.debug(f"Firmware update finished with status {device.status}")
 
-    with ThreadPoolExecutor() as executor:
-        indicators = itertools.cycle(["/", "-", "\\", "|"])
-        future = executor.submit(device.update, image)
-        while not future.done():
-            print(
-                f"\r[{next(indicators)}] Performing firmware update "
-                "(may take several minutes) ... ",
-                end="",
-            )
-            time.sleep(0.1)
-        print("done")
+    # TODO: consider repeating firmware update for better diagnostics on failure, see:
+    # https://github.com/NXPmicro/spsdk/issues/29#issuecomment-1030130023
 
-        if future.result():
-            logger.debug("Firmware update finished successfully")
-            device.reboot()
-        else:
-            (code, message) = device.status
-            local_critical(f"Firmware update failed with status code {code}: {message}")
+    if result:
+        logger.debug("Firmware update finished successfully")
+        device.reboot()
+    else:
+        (code, message) = device.status
+        local_critical(f"Firmware update failed with status code {code}: {message}")
 
 
 @nk3.command()
