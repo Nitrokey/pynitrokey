@@ -529,9 +529,6 @@ def _perform_update(device: Nitrokey3Bootloader, image: bytes) -> None:
         result = device.update(image, callback=bar.update_sum)
     logger.debug(f"Firmware update finished with status {device.status}")
 
-    # TODO: consider repeating firmware update for better diagnostics on failure, see:
-    # https://github.com/NXPmicro/spsdk/issues/29#issuecomment-1030130023
-
     if result:
         logger.debug("Firmware update finished successfully")
         device.reboot()
