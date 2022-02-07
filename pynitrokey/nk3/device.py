@@ -13,11 +13,13 @@ import sys
 from enum import Enum
 from typing import List, Optional
 
+from fido2.ctap import CtapError
 from fido2.hid import CtapHidDevice, open_device
 
 from pynitrokey.fido2 import device_path_to_str
 
 from .base import Nitrokey3Base
+from .exceptions import TimeoutException
 from .utils import Version
 
 RNG_LEN = 57
@@ -77,7 +79,15 @@ class Nitrokey3Device(Nitrokey3Base):
             if mode == BootMode.FIRMWARE:
                 self._call(Command.REBOOT)
             elif mode == BootMode.BOOTROM:
-                self._call(Command.UPDATE)
+                try:
+                    self._call(Command.UPDATE)
+                except CtapError as e:
+                    # The admin app returns an Invalid Length error if the user confirmation
+                    # request times out
+                    if e.code == CtapError.ERR.INVALID_LENGTH:
+                        raise TimeoutException()
+                    else:
+                        raise e
         except OSError as e:
             # OS error is expected as the device does not respond during the reboot
             self.logger.debug("ignoring OSError after reboot", exc_info=e)
