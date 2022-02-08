@@ -10,6 +10,7 @@
 import logging
 import os
 import sys
+import warnings
 
 import click
 
@@ -72,13 +73,23 @@ def version():
 nitropy.add_command(version)
 
 
-@click.command()
-def ls():
-    """List Nitrokey keys (in firmware or bootloader mode)"""
-
+def _list():
     fido2.commands["list"].callback()
     start.commands["list"].callback()
     nk3.commands["list"].callback()
 
 
+@click.command()
+def list():
+    """List Nitrokey keys (in firmware or bootloader mode)"""
+    _list()
+
+
+@click.command(hidden=True)
+def ls():
+    warnings.warn("The ls command is deprecated. Please use list instead.")
+    _list()
+
+
+nitropy.add_command(list)
 nitropy.add_command(ls)
