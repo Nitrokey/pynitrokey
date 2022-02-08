@@ -122,8 +122,33 @@ def update(serial, yes, force):
     ver = client.solo_version()
     local_print(f"\tCurrent Firmware version: {ver[0]}.{ver[1]}.{ver[2]}")
 
+    # to find the variant (128kB vs 256kB), switch to the bootloader and get its public key
+    p = find(serial)
+    if not p.is_solo_bootloader():
+        local_print("Not in Bootloader Mode!")
+        return
+
+    # todo refactor and extract
+    from binascii import b2a_hex
+    from hashlib import sha256
+    bpub = p.boot_pubkey()
+    bpub = b2a_hex(bpub)
+    # local_print(f"Bootloader public key: \t\t{bpub}")
+    s = sha256()
+    s.update(bpub)
+    bpubh = b2a_hex(s.digest())
+    # local_print(f"Bootloader public key sha256: \t{bpubh}")
+
+    variants = {
+        "256": b'11d0b23f9f4f1aa319277aabab439447a6a8b89406a03f8ced2c39869c8a2724',
+        "128": b'TODO insert bootloader key hash here',
+        # todo: add 128kB variant
+    }
+    variant = variants[bpubh]
+    # todo go over the latest tag assets and check the currently connected variant version
+    #
+
     # if the downloaded firmware version is the same as the current one, skip update unless force switch is provided
-    # if f'firmware-{ver[0]}.{ver[1]}.{ver[2]}' in gh_release_data['tag_name'] and not force:
     if f"firmware-{ver[0]}.{ver[1]}.{ver[2]}" in download_url:
         if not force:
             local_critical(
