@@ -73,7 +73,7 @@ def update(serial, yes, force):
             None,
             "If you are on Linux, are your udev rules up to date?",
             "For more, see: ",
-            "  https://www.nitrokey.com/documentation/installation#os:linux",
+            "  https://docs.nitrokey.com/fido2/linux/index.html#troubleshooting",
             None,
         )
 
