@@ -168,21 +168,33 @@ def update(serial, yes, force):
         local_print("Key already in bootloader mode, continuing...")
     else:
         try:
-            local_print("Entering bootloader mode, please confirm with button on key!")
+            local_print("Entering bootloader mode, please confirm with button on key! (long 10 second press)")
             client.use_hid()
             client.enter_bootloader_or_die()
             time.sleep(0.5)
         except Exception as e:
             local_critical("problem switching to bootloader mode:", e)
 
-    # reconnect and actually flash it...
-    try:
-        client = find(serial)
-        client.use_hid()
-        client.program_file(fw_fn)
+    time.sleep(1.0)
 
-    except Exception as e:
-        local_critical("problem flashing firmware:", e)
+    def connect_and_flash():
+        # reconnect and actually flash it...
+        # fail after 5 attempts
+        exc = None
+        for _ in range(5):
+            try:
+                client = find(serial)
+                client.use_hid()
+                client.program_file(fw_fn)
+                break
+            except Exception as e:
+                time.sleep(0.5)
+                exc = e
+                # todo log exception info from each failed iteration
+        else:
+            local_critical("problem flashing firmware:", exc)
+
+    connect_and_flash()
 
     local_print(None, "After update version check...")
 
