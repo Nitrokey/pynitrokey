@@ -10,13 +10,18 @@
 import logging
 import os.path
 import platform
-import time
-from typing import List, Optional, TypeVar
+from typing import List, Optional, Tuple, Type, TypeVar
 
 import click
 from spsdk.mboot.exceptions import McuBootConnectionError
 
-from pynitrokey.helpers import ProgressBar, local_critical, local_print
+from pynitrokey.helpers import (
+    DownloadProgressBar,
+    ProgressBar,
+    Retries,
+    local_critical,
+    local_print,
+)
 from pynitrokey.nk3 import list as list_nk3
 from pynitrokey.nk3 import open as open_nk3
 from pynitrokey.nk3.base import Nitrokey3Base
@@ -28,10 +33,10 @@ from pynitrokey.nk3.bootloader import (
 )
 from pynitrokey.nk3.device import BootMode, Nitrokey3Device
 from pynitrokey.nk3.exceptions import TimeoutException
-from pynitrokey.nk3.updates import get_latest_update, get_update
+from pynitrokey.nk3.updates import get_repo
 from pynitrokey.nk3.utils import Version
 
-T = TypeVar("T", bound="Nitrokey3Base")
+T = TypeVar("T", bound=Nitrokey3Base)
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +78,26 @@ class Context:
         ]
         return self._select_unique("Nitrokey 3", devices)
 
+    def _await(self, name: str, ty: Type[T]) -> T:
+        for t in Retries(10):
+            logger.debug(f"Searching {name} device ({t})")
+            devices = [device for device in self.list() if isinstance(device, ty)]
+            if len(devices) == 0:
+                logger.debug(f"No {name} device found, continuing")
+                continue
+            if len(devices) > 1:
+                local_critical(f"Multiple {name} devices found")
+            return devices[0]
+
+        local_critical(f"No {name} device found")
+        raise Exception("unreachable")
+
+    def await_device(self) -> Nitrokey3Device:
+        return self._await("Nitrokey 3", Nitrokey3Device)
+
+    def await_bootloader(self) -> Nitrokey3Bootloader:
+        return self._await("Nitrokey 3 bootloader", Nitrokey3Bootloader)
+
 
 @click.group()
 @click.option("-p", "--path", "path", help="The path of the Nitrokey 3 device")
@@ -113,22 +138,26 @@ def reboot(ctx: Context, bootloader: bool) -> None:
     with ctx.connect() as device:
         if bootloader:
             if isinstance(device, Nitrokey3Device):
-                local_print(
-                    "Please press the touch button to reboot the device into bootloader mode ..."
-                )
-                try:
-                    device.reboot(BootMode.BOOTROM)
-                except TimeoutException:
-                    local_critical(
-                        "The reboot was not confirmed with the touch button.",
-                        support_hint=False,
-                    )
+                _reboot_to_bootloader(device)
             else:
                 local_critical(
                     "A Nitrokey 3 device in bootloader mode can only reboot into firmware mode."
                 )
         else:
             device.reboot()
+
+
+def _reboot_to_bootloader(device: Nitrokey3Device) -> None:
+    local_print(
+        "Please press the touch button to reboot the device into bootloader mode ..."
+    )
+    try:
+        device.reboot(BootMode.BOOTROM)
+    except TimeoutException:
+        local_critical(
+            "The reboot was not confirmed with the touch button.",
+            support_hint=False,
+        )
 
 
 @nk3.command()
@@ -211,18 +240,15 @@ def fetch_update(path: str, force: bool, version: Optional[str]) -> None:
     Per default, the latest firmware release is fetched.  If you want to
     download a specific version, use the --version option.
     """
-    if version:
-        try:
-            update = get_update(version)
-        except Exception as e:
+    try:
+        update = get_repo().get_update_or_latest(version)
+    except Exception as e:
+        if version:
             local_critical(f"Failed to find firmware update {version}", e)
-    else:
-        try:
-            update = get_latest_update()
-        except Exception as e:
+        else:
             local_critical("Failed to find latest firmware update", e)
 
-    bar = ProgressBar(desc=f"Download {update.tag}", unit="B", unit_scale=True)
+    bar = DownloadProgressBar(desc=update.tag)
 
     try:
         if os.path.isdir(path):
@@ -309,38 +335,7 @@ def update(ctx: Context, image: Optional[str], experimental: bool) -> None:
             with open(image, "rb") as f:
                 data = f.read()
         else:
-            try:
-                update = get_latest_update()
-                logger.info(f"Latest firmware version: {update.tag}")
-            except Exception as e:
-                local_critical("Failed to find latest firmware update", e)
-
-            try:
-                release_version = Version.from_v_str(update.tag)
-
-                if isinstance(device, Nitrokey3Device):
-                    current_version = device.version()
-                    _print_download_warning(release_version, current_version)
-                else:
-                    _print_download_warning(release_version)
-            except ValueError as e:
-                logger.warning("Failed to parse version from release tag", e)
-
-            try:
-                logger.info(
-                    f"Trying to download firmware update from URL: {update.url}"
-                )
-
-                bar = ProgressBar(
-                    desc=f"Download {update.tag}", unit="B", unit_scale=True
-                )
-                data = update.read(callback=bar.update)
-                bar.close()
-            except Exception as e:
-                local_critical(
-                    f"Failed to download latest firmware update {update.tag}", e
-                )
-                return
+            release_version, data = _download_latest_update(device)
 
         metadata = check_firmware_image(data)
         if release_version and release_version != metadata.version:
@@ -356,17 +351,7 @@ def update(ctx: Context, image: Optional[str], experimental: bool) -> None:
             _print_update_warning()
 
             local_print("")
-            local_print(
-                "Please press the touch button to reboot the device into bootloader mode ..."
-            )
-            try:
-                device.reboot(BootMode.BOOTROM)
-            except TimeoutException:
-                local_critical(
-                    "The reboot was not confirmed with the touch button.",
-                    support_hint=False,
-                )
-
+            _reboot_to_bootloader(device)
             local_print("")
 
             if platform.system() == "Darwin":
@@ -378,29 +363,21 @@ def update(ctx: Context, image: Optional[str], experimental: bool) -> None:
                 )
                 raise click.Abort()
 
-            retries = 3
             exc = None
-            for i in range(retries):
-                logger.debug(
-                    f"Trying to connect to bootloader, try {i + 1} of {retries}"
-                )
+            for t in Retries(3):
+                logger.debug(f"Trying to connect to bootloader ({t})")
                 try:
-                    with _await_bootloader(ctx) as bootloader:
+                    with ctx.await_bootloader() as bootloader:
                         _perform_update(bootloader, data)
                     break
                 except McuBootConnectionError as e:
                     logger.debug("Received connection error", exc_info=True)
                     exc = e
-                    if i + 1 < retries:
-                        time.sleep(0.5)
             else:
                 msgs = ["Failed to connect to Nitrokey 3 bootloader"]
                 if platform.system() == "Linux":
                     msgs += ["Are the Nitrokey udev rules installed and active?"]
-                local_critical(
-                    *msgs,
-                    exc,
-                )
+                local_critical(*msgs, exc)
         elif isinstance(device, Nitrokey3Bootloader):
             _print_version_warning(metadata)
             _print_update_warning()
@@ -409,7 +386,7 @@ def update(ctx: Context, image: Optional[str], experimental: bool) -> None:
             local_critical(f"Unexpected Nitrokey 3 device: {device}")
 
     local_print("")
-    with _await_device(ctx) as device:
+    with ctx.await_device() as device:
         version = device.version()
         if version == metadata.version:
             local_print(f"Successfully updated the firmware to version {version}.")
@@ -420,45 +397,35 @@ def update(ctx: Context, image: Optional[str], experimental: bool) -> None:
             )
 
 
-def _await_device(ctx: Context) -> Nitrokey3Device:
-    # TODO: refactor into context
-    logger.debug("Waiting for device ...")
-    retries = 10
-    for i in range(retries):
-        logger.debug(f"Try {i + 1} of {retries}")
-        bootloaders = [
-            device for device in ctx.list() if isinstance(device, Nitrokey3Device)
-        ]
-        if len(bootloaders) == 0:
-            time.sleep(0.5)
-            logger.debug("No device found, continuing")
-            continue
-        if len(bootloaders) > 1:
-            local_critical("Multiple devices found")
-        return bootloaders[0]
+def _download_latest_update(device: Nitrokey3Base) -> Tuple[Version, bytes]:
+    try:
+        update = get_repo().get_latest_update()
+        logger.info(f"Latest firmware version: {update.tag}")
+    except Exception as e:
+        local_critical("Failed to find latest firmware update", e)
 
-    local_critical("No Nitrokey 3 device found.")
-    raise Exception("Unreachable")
+    try:
+        release_version = Version.from_v_str(update.tag)
 
+        if isinstance(device, Nitrokey3Device):
+            current_version = device.version()
+            _print_download_warning(release_version, current_version)
+        else:
+            _print_download_warning(release_version)
+    except ValueError as e:
+        logger.warning("Failed to parse version from release tag", e)
 
-def _await_bootloader(ctx: Context) -> Nitrokey3Bootloader:
-    logger.debug("Waiting for bootloader ...")
-    retries = 10
-    for i in range(retries):
-        logger.debug(f"Try {i + 1} of {retries}")
-        bootloaders = [
-            device for device in ctx.list() if isinstance(device, Nitrokey3Bootloader)
-        ]
-        if len(bootloaders) == 0:
-            time.sleep(0.5)
-            logger.debug("No bootloader device found, continuing")
-            continue
-        if len(bootloaders) > 1:
-            local_critical("Multiple bootloader devices found")
-        return bootloaders[0]
+    try:
+        logger.info(f"Trying to download firmware update from URL: {update.url}")
 
-    local_critical("No Nitrokey 3 bootloader device found.")
-    raise Exception("Unreachable")
+        bar = DownloadProgressBar(desc=update.tag)
+        data = update.read(callback=bar.update)
+        bar.close()
+
+        return (release_version, data)
+    except Exception as e:
+        local_critical(f"Failed to download latest firmware update {update.tag}", e)
+        raise Exception("unreachable")
 
 
 def _print_download_warning(

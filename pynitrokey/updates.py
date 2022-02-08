@@ -118,6 +118,11 @@ class Repository:
         )
         return FirmwareUpdate._from_release(release, self.update_pattern)
 
+    def get_update_or_latest(self, tag: Optional[str] = None) -> FirmwareUpdate:
+        if tag:
+            return self.get_update(tag)
+        return self.get_latest_update()
+
     def _call(self, path: str, errors: Dict[int, str] = dict()) -> dict:
         url = self._get_url(path)
         response = requests.get(url)
