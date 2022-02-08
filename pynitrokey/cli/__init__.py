@@ -40,7 +40,7 @@ def check_root():
             )
             print()
             print(
-                "For more information, see: https://www.nitrokey.com/documentation/installation#p:nitrokey-fido2&os:linux"
+                "For more information, see: https://docs.nitrokey.com/fido2/linux/index.html#troubleshooting"
             )
 
 
