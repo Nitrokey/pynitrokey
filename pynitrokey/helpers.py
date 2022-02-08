@@ -153,7 +153,7 @@ def local_critical(*messages, support_hint=True, ret_code=1, **kwargs):
         local_print("listing all connected devices:")
         from pynitrokey.cli import nitropy
 
-        nitropy.commands["ls"].callback()
+        nitropy.commands["list"].callback()
         STDOUT_PRINT = True
 
         local_print(
