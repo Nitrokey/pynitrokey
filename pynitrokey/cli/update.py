@@ -33,8 +33,9 @@ logger = logging.getLogger()
     help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
     default=None,
 )
-@click.option("-y", "yes", default=False, is_flag=True, help="agree to everything")
-def update(serial, yes):
+@click.option("-y", "--yes", default=False, is_flag=True, help="agree to everything")
+@click.option("-f", "--force", default=False, is_flag=True, help="force")
+def update(serial, yes, force):
     """Update Nitrokey key to latest firmware version."""
 
     # @fixme: print this and allow user to cancel (if not -y is active)
@@ -93,6 +94,7 @@ def update(serial, yes):
     # @fixme: move to confconsts.py ...
     api_base_url = "https://api.github.com/repos"
     api_url = f"{api_base_url}/Nitrokey/nitrokey-fido2-firmware/releases/latest"
+    gh_release_data = None
     try:
         gh_release_data = json.loads(requests.get(api_url).text)
     except Exception as e:
@@ -110,32 +112,53 @@ def update(serial, yes):
             "Failed to determine latest release (url)", "assets:", *map(str, assets)
         )
 
-    # download asset url
-    # @fixme: move to confconsts.py ...
+    import os.path
     local_print(
-        f"Downloading latest firmware: {gh_release_data['tag_name']} "
-        f"(published at {gh_release_data['published_at']})"
+        f"Found latest firmware: {os.path.basename(download_url)}\n"
+        f"\t\t(published at {gh_release_data['published_at']}, under tag {gh_release_data['tag_name']})"
     )
-    tmp_dir = tempfile.gettempdir()
-    fw_fn = os.path.join(tmp_dir, "fido2_firmware.json")
-    try:
-        with open(fw_fn, "wb") as fd:
-            firmware = requests.get(download_url)
-            fd.write(firmware.content)
-    except Exception as e:
-        local_critical("Failed downloading firmware", e)
 
-    local_print(
-        f"Firmware saved to {fw_fn}",
-        f"Downloaded firmware version: {gh_release_data['tag_name']}",
-    )
 
     ver = client.solo_version()
+    local_print(f"\tCurrent Firmware version: {ver[0]}.{ver[1]}.{ver[2]}")
 
-    local_print(f"Current Firmware version: {ver[0]}.{ver[1]}.{ver[2]}")
+    # if the downloaded firmware version is the same as the current one, skip update unless force switch is provided
+    # if f'firmware-{ver[0]}.{ver[1]}.{ver[2]}' in gh_release_data['tag_name'] and not force:
+    if f'firmware-{ver[0]}.{ver[1]}.{ver[2]}' in download_url:
+        if not force:
+            local_critical(
+                "Your firmware is up-to-date!\n"
+                "Use --force flag to run update process anyway.",
+                support_hint=False)
+        else:
+            local_print("Firmware is up-to-date. Continue due to --force switch applied.")
+
+    def download_firmware():
+        # download asset url
+        # @fixme: move to confconsts.py ...
+        local_print(
+            f"Downloading latest firmware: {gh_release_data['tag_name']} "
+            f"(published at {gh_release_data['published_at']})"
+        )
+        tmp_dir = tempfile.gettempdir()
+        fw_fn = os.path.join(tmp_dir, "fido2_firmware.json")
+        try:
+            with open(fw_fn, "wb") as fd:
+                firmware = requests.get(download_url)
+                fd.write(firmware.content)
+        except Exception as e:
+            local_critical("Failed downloading firmware", e)
+
+        local_print(
+            f"\tFirmware saved to {fw_fn}",
+            f"\tDownloaded firmware version: {gh_release_data['tag_name']}",
+        )
+        return fw_fn
+    fw_fn = download_firmware()
 
     # ask for permission
     if not yes:
+        local_print("")
         local_print("This will update your Nitrokey FIDO2")
         if not AskUser.strict_yes_no("Do you want to continue?"):
             local_critical("exiting due to user input...", support_hint=False)
