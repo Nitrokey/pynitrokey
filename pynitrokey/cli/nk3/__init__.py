@@ -15,13 +15,8 @@ from typing import List, Optional, Tuple, Type, TypeVar
 import click
 from spsdk.mboot.exceptions import McuBootConnectionError
 
-from pynitrokey.helpers import (
-    DownloadProgressBar,
-    ProgressBar,
-    Retries,
-    local_critical,
-    local_print,
-)
+from pynitrokey.cli.exceptions import CliException
+from pynitrokey.helpers import DownloadProgressBar, ProgressBar, Retries, local_print
 from pynitrokey.nk3 import list as list_nk3
 from pynitrokey.nk3 import open as open_nk3
 from pynitrokey.nk3.base import Nitrokey3Base
@@ -60,10 +55,10 @@ class Context:
             msg = f"No {name} device found"
             if self.path:
                 msg += f" at path {self.path}"
-            local_critical(msg)
+            raise CliException(msg)
 
         if len(devices) > 1:
-            local_critical(
+            raise CliException(
                 f"Multiple {name} devices found -- use the --path option to select one"
             )
 
@@ -86,11 +81,10 @@ class Context:
                 logger.debug(f"No {name} device found, continuing")
                 continue
             if len(devices) > 1:
-                local_critical(f"Multiple {name} devices found")
+                raise CliException(f"Multiple {name} devices found")
             return devices[0]
 
-        local_critical(f"No {name} device found")
-        raise Exception("unreachable")
+        raise CliException(f"No {name} device found")
 
     def await_device(self) -> Nitrokey3Device:
         return self._await("Nitrokey 3", Nitrokey3Device)
@@ -140,8 +134,9 @@ def reboot(ctx: Context, bootloader: bool) -> None:
             if isinstance(device, Nitrokey3Device):
                 _reboot_to_bootloader(device)
             else:
-                local_critical(
-                    "A Nitrokey 3 device in bootloader mode can only reboot into firmware mode."
+                raise CliException(
+                    "A Nitrokey 3 device in bootloader mode can only reboot into firmware mode.",
+                    support_hint=False,
                 )
         else:
             device.reboot()
@@ -154,7 +149,7 @@ def _reboot_to_bootloader(device: Nitrokey3Device) -> None:
     try:
         device.reboot(BootMode.BOOTROM)
     except TimeoutException:
-        local_critical(
+        raise CliException(
             "The reboot was not confirmed with the touch button.",
             support_hint=False,
         )
@@ -194,7 +189,7 @@ def test(ctx: Context, pin: Optional[str]) -> None:
 
     if len(devices) == 0:
         log_devices()
-        local_critical("No connected Nitrokey 3 devices found")
+        raise CliException("No connected Nitrokey 3 devices found")
 
     local_print(f"Found {len(devices)} Nitrokey 3 device(s):")
     for device in devices:
@@ -215,7 +210,7 @@ def test(ctx: Context, pin: Optional[str]) -> None:
 
     if failure > 0:
         local_print("")
-        local_critical(f"Test failed for {failure} device(s)")
+        raise CliException(f"Test failed for {failure} device(s)")
 
 
 @nk3.command()
@@ -244,9 +239,9 @@ def fetch_update(path: str, force: bool, version: Optional[str]) -> None:
         update = get_repo().get_update_or_latest(version)
     except Exception as e:
         if version:
-            local_critical(f"Failed to find firmware update {version}", e)
+            raise CliException(f"Failed to find firmware update {version}", e)
         else:
-            local_critical("Failed to find latest firmware update", e)
+            raise CliException("Failed to find latest firmware update", e)
 
     bar = DownloadProgressBar(desc=update.tag)
 
@@ -255,18 +250,17 @@ def fetch_update(path: str, force: bool, version: Optional[str]) -> None:
             path = update.download_to_dir(path, overwrite=force, callback=bar.update)
         else:
             if not force and os.path.exists(path):
-                local_critical(
+                raise CliException(
                     f"{path} already exists.  Use --force to overwrite the file."
                 )
-            else:
-                with open(path, "wb") as f:
-                    update.download(f, callback=bar.update)
+            with open(path, "wb") as f:
+                update.download(f, callback=bar.update)
 
         bar.close()
 
         local_print(f"Successfully downloaded firmware release {update.tag} to {path}")
     except Exception as e:
-        local_critical(f"Failed to download firmware update {update.tag}", e)
+        raise CliException(f"Failed to download firmware update {update.tag}", e)
 
 
 @nk3.command()
@@ -281,7 +275,7 @@ def validate_update(image: str) -> None:
     try:
         metadata = FirmwareMetadata.from_image_data(data)
     except Exception as e:
-        local_critical("Failed to parse and validate firmware image", e)
+        raise CliException("Failed to parse and validate firmware image", e)
 
     if metadata.rkht:
         if metadata.rkht == RKHT:
@@ -322,12 +316,11 @@ def update(ctx: Context, image: Optional[str], experimental: bool) -> None:
     """
 
     if platform.system() == "Windows" and not experimental:
-        local_critical(
+        raise CliException(
             "We experience some issues with this operation on Windows. "
             "If possible please run it on another operating system or wait for the further updates. "
             "Please pass --experimental switch to force running it anyway."
         )
-        raise click.Abort()
 
     with ctx.connect() as device:
         release_version = None
@@ -339,7 +332,7 @@ def update(ctx: Context, image: Optional[str], experimental: bool) -> None:
 
         metadata = check_firmware_image(data)
         if release_version and release_version != metadata.version:
-            local_critical(
+            raise CliException(
                 f"The firmware image for the release {release_version} has the unexpected product "
                 f"version {metadata.version}."
             )
@@ -377,13 +370,13 @@ def update(ctx: Context, image: Optional[str], experimental: bool) -> None:
                 msgs = ["Failed to connect to Nitrokey 3 bootloader"]
                 if platform.system() == "Linux":
                     msgs += ["Are the Nitrokey udev rules installed and active?"]
-                local_critical(*msgs, exc)
+                raise CliException(*msgs, exc)
         elif isinstance(device, Nitrokey3Bootloader):
             _print_version_warning(metadata)
             _print_update_warning()
             _perform_update(device, data)
         else:
-            local_critical(f"Unexpected Nitrokey 3 device: {device}")
+            raise CliException(f"Unexpected Nitrokey 3 device: {device}")
 
     local_print("")
     with ctx.await_device() as device:
@@ -391,7 +384,7 @@ def update(ctx: Context, image: Optional[str], experimental: bool) -> None:
         if version == metadata.version:
             local_print(f"Successfully updated the firmware to version {version}.")
         else:
-            local_critical(
+            raise CliException(
                 f"The firmware update to {metadata.version} was successful, but the firmware "
                 f"is still reporting version {version}."
             )
@@ -402,7 +395,7 @@ def _download_latest_update(device: Nitrokey3Base) -> Tuple[Version, bytes]:
         update = get_repo().get_latest_update()
         logger.info(f"Latest firmware version: {update.tag}")
     except Exception as e:
-        local_critical("Failed to find latest firmware update", e)
+        raise CliException("Failed to find latest firmware update", e)
 
     try:
         release_version = Version.from_v_str(update.tag)
@@ -424,8 +417,7 @@ def _download_latest_update(device: Nitrokey3Base) -> Tuple[Version, bytes]:
 
         return (release_version, data)
     except Exception as e:
-        local_critical(f"Failed to download latest firmware update {update.tag}", e)
-        raise Exception("unreachable")
+        raise CliException(f"Failed to download latest firmware update {update.tag}", e)
 
 
 def _print_download_warning(
@@ -437,7 +429,7 @@ def _print_download_warning(
     local_print(f"Latest firmware version:   {release_version}")
 
     if current_version and current_version > release_version:
-        local_critical(
+        raise CliException(
             "The latest firmare release is older than the firmware on the device.",
             support_hint=False,
         )
@@ -465,7 +457,7 @@ def _print_version_warning(
 
     if current_version:
         if current_version > metadata.version:
-            local_critical(
+            raise CliException(
                 "The firmware image is older than the firmware on the device.",
                 support_hint=False,
             )
@@ -501,7 +493,7 @@ def _perform_update(device: Nitrokey3Bootloader, image: bytes) -> None:
         device.reboot()
     else:
         (code, message) = device.status
-        local_critical(f"Firmware update failed with status code {code}: {message}")
+        raise CliException(f"Firmware update failed with status code {code}: {message}")
 
 
 @nk3.command()
