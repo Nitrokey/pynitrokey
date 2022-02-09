@@ -113,25 +113,28 @@ def update(serial, yes, force):
         )
 
     import os.path
+
     local_print(
         f"Found latest firmware: {os.path.basename(download_url)}\n"
         f"\t\t(published at {gh_release_data['published_at']}, under tag {gh_release_data['tag_name']})"
     )
-
 
     ver = client.solo_version()
     local_print(f"\tCurrent Firmware version: {ver[0]}.{ver[1]}.{ver[2]}")
 
     # if the downloaded firmware version is the same as the current one, skip update unless force switch is provided
     # if f'firmware-{ver[0]}.{ver[1]}.{ver[2]}' in gh_release_data['tag_name'] and not force:
-    if f'firmware-{ver[0]}.{ver[1]}.{ver[2]}' in download_url:
+    if f"firmware-{ver[0]}.{ver[1]}.{ver[2]}" in download_url:
         if not force:
             local_critical(
                 "Your firmware is up-to-date!\n"
                 "Use --force flag to run update process anyway.",
-                support_hint=False)
+                support_hint=False,
+            )
         else:
-            local_print("Firmware is up-to-date. Continue due to --force switch applied.")
+            local_print(
+                "Firmware is up-to-date. Continue due to --force switch applied."
+            )
 
     def download_firmware():
         # download asset url
@@ -154,6 +157,7 @@ def update(serial, yes, force):
             f"\tDownloaded firmware version: {gh_release_data['tag_name']}",
         )
         return fw_fn
+
     fw_fn = download_firmware()
 
     # ask for permission
@@ -168,7 +172,9 @@ def update(serial, yes, force):
         local_print("Key already in bootloader mode, continuing...")
     else:
         try:
-            local_print("Entering bootloader mode, please confirm with button on key! (long 10 second press)")
+            local_print(
+                "Entering bootloader mode, please confirm with button on key! (long 10 second press)"
+            )
             client.use_hid()
             client.enter_bootloader_or_die()
             time.sleep(0.5)
