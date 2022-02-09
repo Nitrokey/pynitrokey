@@ -19,6 +19,17 @@ API_BASE_URL = "https://api.github.com"
 ProgressCallback = Callable[[int, int], None]
 
 
+class DownloadError(Exception):
+    def __init__(self, msg: str) -> None:
+        super().__init__("Cannot download firmware: " + msg)
+
+
+class OverwriteError(Exception):
+    def __init__(self, path: str) -> None:
+        super().__init__(f"File {path} already exists and may not be overwritten")
+        self.path = path
+
+
 class FirmwareUpdate:
     def __init__(self, tag: str, url: str) -> None:
         self.tag = tag
@@ -37,14 +48,14 @@ class FirmwareUpdate:
         callback: Optional[ProgressCallback] = None,
     ) -> str:
         if not os.path.exists(d):
-            raise Exception(f"Cannot download firmware: {d} does not exist")
+            raise DownloadError(f"Directory {d} does not exist")
         if not os.path.isdir(d):
-            raise Exception(f"Cannot download firmware: {d} is not a directory")
+            raise DownloadError(f"{d} is not a directory")
         url = urllib.parse.urlparse(self.url)
         filename = os.path.basename(url.path)
         path = os.path.join(d, filename)
         if os.path.exists(path) and not overwrite:
-            raise Exception(f"File {path} already exists and may not be overwritten")
+            raise OverwriteError(path)
         with open(path, "wb") as f:
             self.download(f, callback=callback)
         return path

@@ -30,6 +30,7 @@ from pynitrokey.nk3.device import BootMode, Nitrokey3Device
 from pynitrokey.nk3.exceptions import TimeoutException
 from pynitrokey.nk3.updates import get_repo
 from pynitrokey.nk3.utils import Version
+from pynitrokey.updates import OverwriteError
 
 T = TypeVar("T", bound=Nitrokey3Base)
 
@@ -250,15 +251,18 @@ def fetch_update(path: str, force: bool, version: Optional[str]) -> None:
             path = update.download_to_dir(path, overwrite=force, callback=bar.update)
         else:
             if not force and os.path.exists(path):
-                raise CliException(
-                    f"{path} already exists.  Use --force to overwrite the file."
-                )
+                raise OverwriteError(path)
             with open(path, "wb") as f:
                 update.download(f, callback=bar.update)
 
         bar.close()
 
         local_print(f"Successfully downloaded firmware release {update.tag} to {path}")
+    except OverwriteError as e:
+        raise CliException(
+            f"{e.path} already exists.  Use --force to overwrite the file.",
+            support_hint=False,
+        )
     except Exception as e:
         raise CliException(f"Failed to download firmware update {update.tag}", e)
 
