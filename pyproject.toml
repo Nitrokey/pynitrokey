@@ -53,7 +53,7 @@ dev = [
 Source = "https://github.com/Nitrokey/pynitrokey"
 
 [project.scripts]
-nitropy = "pynitrokey.cli:nitropy"
+nitropy = "pynitrokey.cli:main"
 
 [tool.isort]
 profile = "black"

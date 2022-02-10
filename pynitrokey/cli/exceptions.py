@@ -7,16 +7,14 @@
 # http://opensource.org/licenses/MIT>, at your option. This file may not be
 # copied, modified, or distributed except according to those terms.
 
-import click
-
 from pynitrokey.helpers import local_critical
 
 
-class CliException(click.ClickException):
+class CliException(Exception):
     def __init__(
         self, *messages, support_hint: bool = True, ret_code: int = 1, **kwargs
     ):
-        super().__init__("\n".join(messages))
+        super().__init__("\n".join([str(message) for message in messages]))
 
         self.messages = messages
         self.support_hint = support_hint
