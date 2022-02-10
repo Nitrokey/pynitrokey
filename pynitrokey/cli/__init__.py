@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # Copyright 2019 SoloKeys Developers
+# Copyright 2022 Nitrokey Developers
 #
 # Licensed under the Apache License, Version 2.0, <LICENSE-APACHE or
 # http://apache.org/licenses/LICENSE-2.0> or the MIT license <LICENSE-MIT or
@@ -16,6 +17,7 @@ import click
 
 import pynitrokey
 import pynitrokey.fido2.operations
+from pynitrokey.cli.exceptions import CliException
 from pynitrokey.cli.fido2 import fido2
 from pynitrokey.cli.nethsm import nethsm
 from pynitrokey.cli.nk3 import nk3
@@ -23,8 +25,11 @@ from pynitrokey.cli.pro import pro
 from pynitrokey.cli.start import start
 from pynitrokey.cli.storage import storage
 from pynitrokey.confconsts import LOG_FN, LOG_FORMAT
+from pynitrokey.helpers import local_critical
 
 # from . import _patches  # noqa  (since otherwise "unused")
+
+logger = logging.getLogger(__name__)
 
 
 def check_root():
@@ -93,3 +98,13 @@ def ls():
 
 nitropy.add_command(list)
 nitropy.add_command(ls)
+
+
+def main() -> None:
+    try:
+        nitropy()
+    except CliException as e:
+        e.show()
+    except Exception as e:
+        logger.warning("An unhandled exception occured", exc_info=True)
+        local_critical("An unhandled exception occured", e)

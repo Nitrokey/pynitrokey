@@ -10,8 +10,6 @@ import sys
 #    #print (os.environ["PATH"])
 
 
-from pynitrokey.cli import nitropy
+from pynitrokey.cli import main
 
-nitropy()
-
-
+main()
