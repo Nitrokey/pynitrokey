@@ -16,7 +16,7 @@ class CliException(click.ClickException):
     def __init__(
         self, *messages, support_hint: bool = True, ret_code: int = 1, **kwargs
     ):
-        super().__init__("\n".join(messages))
+        super().__init__("\n".join([str(message) for message in messages]))
 
         self.messages = messages
         self.support_hint = support_hint
