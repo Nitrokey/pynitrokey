@@ -508,6 +508,33 @@ class NitrokeyStorage(BaseLibNitrokey):
 
         return self.api.NK_enable_firmware_update(c_enc(password))
 
+    @ret_code
+    def unlock_encrypted_volume(self, password):
+        """Unlock the storage device's encrypted volume"""
+        return self.api.NK_unlock_encrypted_volume(c_enc(password))
+
+    @ret_code
+    def lock_encrypted_volume(self):
+        """Lock the storage device's encrypted volume"""
+        return self.api.NK_lock_encrypted_volume()
+
+    @ret_code
+    def unlock_hidden_volume(self, password):
+        """Unlock hidden volume and locks encrypted volume"""
+        return self.api.NK_unlock_hidden_volume(c_enc(password))
+
+    @ret_code
+    def lock_hidden_volume(self):
+        """Lock hidden volumes"""
+        return self.api.NK_lock_hidden_volume()
+
+    @ret_code
+    def create_hidden_volume(self, slot, start_percent, end_percent, password):
+        """Create hidden volume"""
+        return self.api.NK_create_hidden_volume(
+            slot, start_percent, end_percent, c_enc(password)
+        )
+
 
 class NitrokeyPro(BaseLibNitrokey):
     friendly_name = "Nitrokey Pro"
