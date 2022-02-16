@@ -35,6 +35,7 @@ def get_dict_for_device(dev: usb.Device) -> dict:
     res["name"] = dev.filename
     for i, f in enumerate(field):
         try:
+            s = b""
             s = handle.getString(i + 1, 512)
             res[f] = s.decode("UTF-8")
         except:

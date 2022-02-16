@@ -9,9 +9,11 @@
 
 
 from subprocess import check_output
+from sys import stderr, stdout
 from time import sleep
 
 import click
+from tqdm import tqdm
 from usb.core import USBError
 
 from pynitrokey.helpers import local_critical, local_print
@@ -40,13 +42,53 @@ def start():
 
 
 @click.command()
-def list():
+@click.option(
+    "--verbose", default=False, is_flag=True, help="Print all available information."
+)
+def list(verbose):
     """list connected devices"""
     local_print(":: 'Nitrokey Start' keys:")
     for dct in get_devices_strings():
         local_print(
             f"{dct['Serial']}: {dct['Vendor']} " f"{dct['Product']} ({dct['Revision']})"
         )
+        if verbose:
+            local_print(f"{dct}")
+
+
+@click.command()
+@click.option("--count", default=64, type=int, help="Number of bytes to get.")
+@click.option(
+    "--raw", default=False, is_flag=True, help="Get raw bytes (ASCII by default)."
+)
+@click.option("--quiet", default=False, is_flag=True, help="Do not show progress bar.")
+def rng(count, raw, quiet):
+    """Get random data from device by executing GET CHALLENGE command."""
+    gnuk = get_gnuk_device(verbose=False)
+    gnuk.cmd_select_openpgp()
+    i = 0
+    with tqdm(
+        total=count,
+        file=stderr,
+        disable=quiet or not raw,
+        unit="B",
+        unit_scale=True,
+        unit_divisor=1024,
+    ) as bar:
+        while i < count:
+            try:
+                challenge = gnuk.cmd_get_challenge().tobytes()
+                # cap at count bytes
+                challenge = challenge[: count - i]
+                i += len(challenge)
+                bar.update(len(challenge))
+            except Exception as e:
+                print(count)
+                raise e
+            if raw:
+                stdout.buffer.write(challenge)
+            else:
+                print(challenge.hex())
 
 
 @click.command()
@@ -169,6 +211,7 @@ def kdf_details(passwd):
     return show_kdf_details(passwd)
 
 
+start.add_command(rng)
 start.add_command(list)
 start.add_command(set_identity)
 start.add_command(update)
