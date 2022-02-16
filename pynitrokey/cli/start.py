@@ -10,8 +10,10 @@
 
 from subprocess import check_output
 from time import sleep
+from sys import stderr
 
 import click
+from tqdm import tqdm
 from usb.core import USBError
 
 from pynitrokey.helpers import local_critical, local_print
@@ -51,6 +53,31 @@ def list(verbose):
         if verbose:
             local_print(f"{dct}")
 
+
+@click.command()
+@click.option("--count", default=50, type=int)
+@click.option("--raw", default=False, is_flag=True)
+@click.option("--quiet", default=False, is_flag=True)
+def rng(count, raw, quiet):
+    gnuk = get_gnuk_device(verbose=False)
+    gnuk.cmd_select_openpgp()
+    i = 0
+    with tqdm(total=count, file=stderr, disable=quiet or not raw, unit='B', unit_scale=True, unit_divisor=1024) as bar:
+        while i < count:
+            try:
+                challenge = gnuk.cmd_get_challenge().tobytes()
+                # cap at count bytes
+                challenge = challenge[:count-i]
+                i += len(challenge)
+                bar.update(len(challenge))
+            except Exception as e:
+                print(count)
+                raise e
+            if raw:
+                import sys
+                sys.stdout.buffer.write(challenge)
+            else:
+                print(challenge.hex())
 
 @click.command()
 @click.argument("identity")
@@ -172,6 +199,7 @@ def kdf_details(passwd):
     return show_kdf_details(passwd)
 
 
+start.add_command(rng)
 start.add_command(list)
 start.add_command(set_identity)
 start.add_command(update)
