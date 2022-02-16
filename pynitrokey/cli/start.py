@@ -40,13 +40,16 @@ def start():
 
 
 @click.command()
-def list():
+@click.option("--verbose", default=False, is_flag=True)
+def list(verbose):
     """list connected devices"""
     local_print(":: 'Nitrokey Start' keys:")
     for dct in get_devices_strings():
         local_print(
             f"{dct['Serial']}: {dct['Vendor']} " f"{dct['Product']} ({dct['Revision']})"
         )
+        if verbose:
+            local_print(f"{dct}")
 
 
 @click.command()
