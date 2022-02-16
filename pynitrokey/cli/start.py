@@ -42,7 +42,9 @@ def start():
 
 
 @click.command()
-@click.option("--verbose", default=False, is_flag=True)
+@click.option(
+    "--verbose", default=False, is_flag=True, help="Print all available information."
+)
 def list(verbose):
     """list connected devices"""
     local_print(":: 'Nitrokey Start' keys:")
@@ -55,10 +57,13 @@ def list(verbose):
 
 
 @click.command()
-@click.option("--count", default=50, type=int)
-@click.option("--raw", default=False, is_flag=True)
-@click.option("--quiet", default=False, is_flag=True)
+@click.option("--count", default=64, type=int, help="Number of bytes to get.")
+@click.option(
+    "--raw", default=False, is_flag=True, help="Get raw bytes (ASCII by default)."
+)
+@click.option("--quiet", default=False, is_flag=True, help="Do not show progress bar.")
 def rng(count, raw, quiet):
+    """Get random data from device by executing GET CHALLENGE command."""
     gnuk = get_gnuk_device(verbose=False)
     gnuk.cmd_select_openpgp()
     i = 0
