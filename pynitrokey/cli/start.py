@@ -9,8 +9,8 @@
 
 
 from subprocess import check_output
+from sys import stderr, stdout
 from time import sleep
-from sys import stderr
 
 import click
 from tqdm import tqdm
@@ -62,22 +62,29 @@ def rng(count, raw, quiet):
     gnuk = get_gnuk_device(verbose=False)
     gnuk.cmd_select_openpgp()
     i = 0
-    with tqdm(total=count, file=stderr, disable=quiet or not raw, unit='B', unit_scale=True, unit_divisor=1024) as bar:
+    with tqdm(
+        total=count,
+        file=stderr,
+        disable=quiet or not raw,
+        unit="B",
+        unit_scale=True,
+        unit_divisor=1024,
+    ) as bar:
         while i < count:
             try:
                 challenge = gnuk.cmd_get_challenge().tobytes()
                 # cap at count bytes
-                challenge = challenge[:count-i]
+                challenge = challenge[: count - i]
                 i += len(challenge)
                 bar.update(len(challenge))
             except Exception as e:
                 print(count)
                 raise e
             if raw:
-                import sys
-                sys.stdout.buffer.write(challenge)
+                stdout.buffer.write(challenge)
             else:
                 print(challenge.hex())
+
 
 @click.command()
 @click.argument("identity")
