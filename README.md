@@ -129,6 +129,10 @@ A guide on how to use `nitropy` to access a NetHSM is available on
 
 A guide on how to use `nitropy` with Nitrokey 3 device is available on [docs.nitrokey.com](https://docs.nitrokey.com/nitrokey3/linux/nitropy.html).
 
+## Development
+
+Information for developers and contributors can be found in the [Developer Guide](./docs/developer-guide.rst).
+
 ## Maintainers
 
 Current maintainers can be found in [MAINTAINERS.md](MAINTAINERS.md) file.
