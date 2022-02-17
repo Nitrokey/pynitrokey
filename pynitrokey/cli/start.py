@@ -45,7 +45,7 @@ def start():
 @click.option(
     "--verbose", default=False, is_flag=True, help="Print all available information."
 )
-def list(verbose):
+def list(verbose=False):
     """list connected devices"""
     local_print(":: 'Nitrokey Start' keys:")
     for dct in get_devices_strings():
