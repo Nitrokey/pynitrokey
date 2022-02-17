@@ -6,9 +6,11 @@ block_cipher = None
 a = Analysis(['nitropy.py'],
              pathex=['C:\\build\\cache\\Nitrokey\\pynitrokey.git'],
              binaries=[],
-             datas=[("pynitrokey\\VERSION", "pynitrokey"), 
+             datas=[("pynitrokey\\VERSION", "pynitrokey"),
                     ("C:\\python%%PYTHON_VERSION%%\\lib\\site-packages\\fido2\\public_suffix_list.dat", "fido2"),
-                    ("C:\\python%%PYTHON_VERSION%%\\lib\\site-packages\\libusb\\_platform\\_windows\\x86\\libusb-1.0.dll", ".")
+                    ("C:\\python%%PYTHON_VERSION%%\\lib\\site-packages\\libusb\\_platform\\_windows\\x86\\libusb-1.0.dll", "."),
+                    ("C:\\python%%PYTHON_VERSION%%\\lib\\site-packages\\libusbsio\\bin\\Win32\\libusbsio.dll", "libusbsio/bin/Win32"),
+                    ("C:\\python%%PYTHON_VERSION%%\\lib\\site-packages\\libusbsio\\bin\\x64\\libusbsio.dll", "libusbsio/bin/x64")
 						 ],
              hiddenimports=[],
              hookspath=[],
