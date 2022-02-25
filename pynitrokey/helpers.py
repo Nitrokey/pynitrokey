@@ -8,6 +8,7 @@
 # copied, modified, or distributed except according to those terms.
 
 import logging
+import os
 import sys
 import time
 from getpass import getpass
@@ -237,6 +238,7 @@ class AskUser:
         repeat: int = 3,
         adapt_question=True,
         hide_input=False,
+        envvar: str = None,
     ):
 
         self.data = None
@@ -261,6 +263,7 @@ class AskUser:
         self.strict = strict
         self.repeat = repeat or 1
         self.hide_input = hide_input
+        self.envvar = envvar
 
     @classmethod
     def yes_no(cls, what: str, strict: bool = False):
@@ -289,7 +292,14 @@ class AskUser:
         )
 
     def ask(self):
-        answer = self.get_input()
+        answer = None
+        if self.envvar is not None:
+            fromvar = os.environ.get(self.envvar)
+            if fromvar is not None:
+                answer = fromvar
+
+        if answer is None:
+            answer = self.get_input()
 
         # handle plain input request first
         if not self.options:
