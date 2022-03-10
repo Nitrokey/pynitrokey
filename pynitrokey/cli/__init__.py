@@ -110,5 +110,5 @@ def main() -> None:
     except CliException as e:
         e.show()
     except Exception as e:
-        logger.warning("An unhandled exception occured", exc_info=True)
-        local_critical("An unhandled exception occured", e)
+        logger.warning("An unhandled exception occurred", exc_info=True)
+        local_critical("An unhandled exception occurred", e)
