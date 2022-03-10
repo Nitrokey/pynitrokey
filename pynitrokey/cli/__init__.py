@@ -36,18 +36,21 @@ def check_root():
     if (os.name == "posix") and os.environ.get("ALLOW_ROOT") is None:
         if os.geteuid() == 0:
             print("THIS COMMAND SHOULD NOT BE RUN AS ROOT!")
-            print()
-            print(
-                "Please install udev rules and run `nitropy` as regular user (without sudo)."
-            )
-            print(
-                "We suggest using: https://raw.githubusercontent.com/Nitrokey/libnitrokey/master/data/41-nitrokey.rules"
-            )
-            print()
-            print(
-                "For more information, see: https://docs.nitrokey.com/fido2/linux/index.html#troubleshooting"
-            )
+            subcommand = sys.argv[1]
+            if subcommand != 'nethsm':
+                print()
+                print(
+                    "Please install udev rules and run `nitropy` as regular user (without sudo)."
+                )
+                print(
+                    "We suggest using: https://raw.githubusercontent.com/Nitrokey/libnitrokey/master/data/41-nitrokey.rules"
+                )
+                print(
+                    "For more information, see: https://docs.nitrokey.com/fido2/linux/index.html#troubleshooting"
+                )
+                print()
             print("Set ALLOW_ROOT=1 environment variable to disable this warning.")
+            print()
 
 
 @click.group()
