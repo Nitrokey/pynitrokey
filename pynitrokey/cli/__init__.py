@@ -56,7 +56,7 @@ def nitropy():
     logging.basicConfig(format=LOG_FORMAT, level=logging.DEBUG, handlers=[handler])
 
     print(
-        "Nitrokey tool for Nitrokey FIDO2, Nitrokey Start, Nitrokey 3 & NetHSM",
+        f"Nitrokey tool for Nitrokey FIDO2, Nitrokey Start, Nitrokey 3 & NetHSM {pynitrokey.__version__}",
         file=sys.stderr,
     )
     check_root()
