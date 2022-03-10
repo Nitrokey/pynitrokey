@@ -37,7 +37,7 @@ def check_root():
         if os.geteuid() == 0:
             print("THIS COMMAND SHOULD NOT BE RUN AS ROOT!")
             subcommand = sys.argv[1]
-            if subcommand != 'nethsm':
+            if subcommand != "nethsm":
                 print()
                 print(
                     "Please install udev rules and run `nitropy` as regular user (without sudo)."
