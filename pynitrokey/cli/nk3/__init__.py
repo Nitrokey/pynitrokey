@@ -300,6 +300,7 @@ def validate_update(image: str) -> None:
     default=False,
     is_flag=True,
     help="Allow to execute experimental features",
+    hidden=True,
 )
 @click.pass_obj
 def update(ctx: Context, image: Optional[str], experimental: bool) -> None:
@@ -315,16 +316,10 @@ def update(ctx: Context, image: Optional[str], experimental: bool) -> None:
 
     If the connected Nitrokey 3 device is in firmware mode, the user is prompted to touch the
     device’s button to confirm rebooting to bootloader mode.
-
-    This feature is experimental on MS Windows.
     """
 
-    if platform.system() == "Windows" and not experimental:
-        raise CliException(
-            "We experience some issues with this operation on Windows. "
-            "If possible please run it on another operating system or wait for the further updates. "
-            "Please pass --experimental switch to force running it anyway."
-        )
+    if experimental:
+        "The --experimental switch is not required to run this command anymore and can be safely removed."
 
     with ctx.connect() as device:
         release_version = None
