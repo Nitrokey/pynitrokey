@@ -47,6 +47,7 @@ def check_root():
             print(
                 "For more information, see: https://docs.nitrokey.com/fido2/linux/index.html#troubleshooting"
             )
+            print("Set ALLOW_ROOT=1 environment variable to disable this warning.")
 
 
 @click.group()
