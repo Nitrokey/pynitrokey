@@ -86,6 +86,7 @@ def _list():
     fido2.commands["list"].callback()
     start.commands["list"].callback()
     nk3.commands["list"].callback()
+    # TODO add other handled models
 
 
 @click.command()
