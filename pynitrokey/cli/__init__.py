@@ -47,6 +47,7 @@ def check_root():
             print(
                 "For more information, see: https://docs.nitrokey.com/fido2/linux/index.html#troubleshooting"
             )
+            print("Set ALLOW_ROOT=1 environment variable to disable this warning.")
 
 
 @click.group()
@@ -55,7 +56,7 @@ def nitropy():
     logging.basicConfig(format=LOG_FORMAT, level=logging.DEBUG, handlers=[handler])
 
     print(
-        "Nitrokey tool for Nitrokey FIDO2, Nitrokey Start, Nitrokey 3 & NetHSM",
+        f"Nitrokey tool for Nitrokey FIDO2, Nitrokey Start, Nitrokey 3 & NetHSM {pynitrokey.__version__}",
         file=sys.stderr,
     )
     check_root()
