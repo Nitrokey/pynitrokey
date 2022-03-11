@@ -198,9 +198,16 @@ def local_critical(*messages, support_hint=True, ret_code=1, **kwargs):
         # @fixme: not the best solution
         STDOUT_PRINT = False
         local_print("listing all connected devices:")
-        from pynitrokey.cli import nitropy
 
-        nitropy.commands["list"].callback()
+        try:
+            from pynitrokey.cli import nitropy
+
+            nitropy.commands["list"].callback()
+        except Exception:
+            local_print("Unable to list devices. See log for the details.")
+            logger = logging.getLogger()
+            logger.exception("Unable to list devices")
+
         STDOUT_PRINT = True
 
         local_print(
