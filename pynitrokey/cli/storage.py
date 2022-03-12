@@ -11,17 +11,17 @@ import platform
 import string
 import subprocess
 import time
+from shutil import which
 from typing import Optional
 
 import click
 import dataclasses
 import usb1
 from tqdm import tqdm
-from usb1 import USBDevice
 
 from pynitrokey.cli.exceptions import CliException
 from pynitrokey.helpers import AskUser, local_critical, local_print
-from pynitrokey.libnk import BaseLibNitrokey, DeviceNotFound, NitrokeyStorage, RetCode
+from pynitrokey.libnk import DeviceNotFound, NitrokeyStorage, RetCode
 
 
 def connect_nkstorage():
@@ -68,8 +68,6 @@ class DfuTool:
     @classmethod
     def is_available(cls):
         """Check whether `name` is on PATH and marked as executable."""
-        from shutil import which
-
         return which(cls.name) is not None
 
     @classmethod
