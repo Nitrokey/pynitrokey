@@ -44,4 +44,6 @@ LOG_FORMAT = "%(relativeCreated)-8d %(levelname)6s %(name)10s %(message)s"
 GH_ISSUES_URL = "https://github.com/Nitrokey/pynitrokey/issues/"
 SUPPORT_URL = "https://support.nitrokey.com/"
 SUPPORT_EMAIL = "support@nitrokey.com"
-UDEV_URL = "https://docs.nitrokey.com/nitrokey3/linux/firmware-update.html#troubleshooting"
+UDEV_URL = (
+    "https://docs.nitrokey.com/nitrokey3/linux/firmware-update.html#troubleshooting"
+)

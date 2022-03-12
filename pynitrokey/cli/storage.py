@@ -27,7 +27,9 @@ def connect_nkstorage():
     except DeviceNotFound:
         raise CliException("No Nitrokey Storage device found", support_hint=False)
 
+
 logger = logging.getLogger(__name__)
+
 
 @click.group()
 def storage():
@@ -38,12 +40,12 @@ def storage():
 def process_runner(c: str, args: Optional[dict] = None) -> str:
     """Wrapper for running command and returning output, both logged"""
     cmd = c.split()
-    if args and any(f'${key}' in c for key in args.keys()):
+    if args and any(f"${key}" in c for key in args.keys()):
         for i, _ in enumerate(cmd):
             template = string.Template(cmd[i])
             cmd[i] = template.substitute(args)
 
-    logger.debug(f'Running {c}')
+    logger.debug(f"Running {c}")
     local_print(f'* Running \t"{c}"')
     try:
         output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode()
@@ -56,17 +58,18 @@ def process_runner(c: str, args: Optional[dict] = None) -> str:
 
 
 class DfuTool:
-    name = 'dfu-programmer'
+    name = "dfu-programmer"
 
     @classmethod
     def is_available(cls):
         """Check whether `name` is on PATH and marked as executable."""
         from shutil import which
+
         return which(cls.name) is not None
 
     @classmethod
     def get_version(cls) -> str:
-        c = f'{cls.name} --version'
+        c = f"{cls.name} --version"
         output = process_runner(c).strip()
         return output
 
@@ -76,25 +79,27 @@ class DfuTool:
         #   from packaging import version
         ver_string = cls.get_version()
         ver = ver_string.split()[1]
-        ver_found = (*map(int, ver.split('.')),)
+        ver_found = (*map(int, ver.split(".")),)
         ver_required = (0, 6, 1)
-        local_print(f'Tool found: {ver_string} -> {ver_found}')
+        local_print(f"Tool found: {ver_string} -> {ver_found}")
         return ver_found >= ver_required
 
     @classmethod
     def self_check(cls) -> bool:
         if not cls.is_available():
-            local_print(f"{cls.name} is not available. Please install it or use another tool for update.")
+            local_print(
+                f"{cls.name} is not available. Please install it or use another tool for update."
+            )
             raise click.Abort()
 
-        local_print('')
+        local_print("")
         cls.check_version()
-        local_print('')
+        local_print("")
         return True
 
 
 @click.command()
-@click.argument('firmware', type=click.Path(exists=True, readable=True))
+@click.argument("firmware", type=click.Path(exists=True, readable=True))
 @click.option(
     "--experimental",
     default=False,
@@ -104,10 +109,12 @@ class DfuTool:
 def update(firmware: str, experimental):
     """experimental: run assisted update through dfu-programmer tool"""
     if platform.system() != "Linux" or not experimental:
-        local_print("This feature is Linux only and experimental, which means it was not tested thoroughly.\n"
-                    "Please pass --experimental switch to force running it anyway.")
+        local_print(
+            "This feature is Linux only and experimental, which means it was not tested thoroughly.\n"
+            "Please pass --experimental switch to force running it anyway."
+        )
         raise click.Abort()
-    assert firmware.endswith('.hex')
+    assert firmware.endswith(".hex")
 
     DfuTool.self_check()
 
@@ -117,34 +124,39 @@ def update(firmware: str, experimental):
         dfu-programmer at32uc3a3256s start
         """
 
-    local_print('Note: During the execution update program will try to connect to the device. '
-                'Check your udev rules in case of connection issues.')
-    local_print(f'Using firmware path: {firmware}')
+    local_print(
+        "Note: During the execution update program will try to connect to the device. "
+        "Check your udev rules in case of connection issues."
+    )
+    local_print(f"Using firmware path: {firmware}")
     # note: this is just for presentation - actual argument replacement is done in process_runner
     # the string form cannot be used, as it could contain space which would break dfu-programmer's call
-    args = {'FIRMWARE': firmware}
-    local_print(f'Commands to be executed: {string.Template(commands).substitute(args)}')
+    args = {"FIRMWARE": firmware}
+    local_print(
+        f"Commands to be executed: {string.Template(commands).substitute(args)}"
+    )
     if not click.confirm("Do you want to perform the firmware update now?"):
         logger.info("Update cancelled by user")
         raise click.Abort()
 
-    commands_clean = commands.strip().split('\n')
+    commands_clean = commands.strip().split("\n")
     for c in commands_clean:
         c = c.strip()
-        if not c: continue
+        if not c:
+            continue
         try:
             output = process_runner(c, args)
             if output:
                 local_print(output)
         except subprocess.CalledProcessError as e:
-            linux = 'linux' in platform.platform().lower()
-            local_critical(e,
-                           'Note: make sure you have the udev rules installed.' if linux else '')
+            linux = "linux" in platform.platform().lower()
+            local_critical(
+                e, "Note: make sure you have the udev rules installed." if linux else ""
+            )
 
-    local_print('')
-    local_print('Finished!')
+    local_print("")
+    local_print("Finished!")
     storage.commands["list"].callback()
-
 
 
 @click.command()
@@ -154,14 +166,14 @@ def list():
     local_print(":: 'Nitrokey Storage' keys:")
     devices = NitrokeyStorage.list_devices()
     for dct in devices:
-        local_print(f' - {dct}')
+        local_print(f" - {dct}")
     if len(devices) == 1:
         nks = NitrokeyStorage()
         nks.connect()
-        local_print(f'Found libnitrokey version: {nks.library_version()}')
-        local_print(f'Firmware version: {nks.fw_version}')
-        local_print(f'Admin PIN retries: {nks.admin_pin_retries}')
-        local_print(f'User PIN retries: {nks.user_pin_retries}')
+        local_print(f"Found libnitrokey version: {nks.library_version()}")
+        local_print(f"Firmware version: {nks.fw_version}")
+        local_print(f"Admin PIN retries: {nks.admin_pin_retries}")
+        local_print(f"User PIN retries: {nks.user_pin_retries}")
 
 
 @click.command()

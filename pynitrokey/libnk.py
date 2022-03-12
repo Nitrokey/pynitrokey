@@ -292,8 +292,8 @@ class BaseLibNitrokey:
             model = DeviceModel(cur.model)
             serial = py_enc(cur.serial_number)
             serial = serial.replace("0", "")
-            name = model.friendly_name + ( "-" + serial if serial else '')
-            name += ' '+py_enc(cur.path)
+            name = model.friendly_name + ("-" + serial if serial else "")
+            name += " " + py_enc(cur.path)
             out[name] = {
                 "model": cur.model,
                 "path": py_enc(cur.path),
