@@ -11,6 +11,7 @@ import logging
 import platform
 import string
 import subprocess
+import time
 from typing import Optional
 
 import click
@@ -20,7 +21,7 @@ from usb1 import USBDevice
 from pynitrokey.cli.exceptions import CliException
 from pynitrokey.helpers import AskUser, local_critical, local_print
 from pynitrokey.libnk import BaseLibNitrokey, DeviceNotFound, NitrokeyStorage, RetCode
-
+from tqdm import tqdm
 
 def connect_nkstorage():
     try:
@@ -101,7 +102,13 @@ class DfuTool:
         return True
 
 
-def is_connected() -> dict[str, USBDevice]:
+@dataclasses.dataclass
+class ConnectedDevices:
+    application_mode: int
+    update_mode: int
+
+
+def is_connected() -> ConnectedDevices:
     @dataclasses.dataclass
     class UsbId:
         vid: int
@@ -115,9 +122,8 @@ def is_connected() -> dict[str, USBDevice]:
     with usb1.USBContext() as context:
         for k, v in usb_id.items():
             res = context.getByVendorIDAndProductID(vendor_id=v.vid, product_id=v.pid)
-            devs[k] = res if res else 0
-            logger.debug(f'{k}: {len(devs[k]) if devs[k] else 0}')
-    return devs
+            devs[k] = 1 if res else 0
+    return ConnectedDevices(application_mode=devs['application_mode'], update_mode=devs['update_mode'])
 
 
 @click.command()
@@ -139,7 +145,6 @@ def update(firmware: str, experimental):
     assert firmware.endswith(".hex")
 
     DfuTool.self_check()
-    assert sum([1 if v else 0 for v in is_connected().values()]), "No connected Nitrokey Storage devices found"
 
     commands = """
         dfu-programmer at32uc3a3256s erase
@@ -162,6 +167,8 @@ def update(firmware: str, experimental):
         logger.info("Update cancelled by user")
         raise click.Abort()
 
+    check_for_update_mode()
+
     commands_clean = commands.strip().split("\n")
     for c in commands_clean:
         c = c.strip()
@@ -179,7 +186,28 @@ def update(firmware: str, experimental):
 
     local_print("")
     local_print("Finished!")
+
+    for _ in tqdm(range(10), leave=False):
+        if is_connected().application_mode != 0:
+            break
+        time.sleep(1)
+
     storage.commands["list"].callback()
+
+
+def check_for_update_mode():
+    connected = is_connected()
+    assert connected.application_mode + connected.update_mode > 0, "No connected Nitrokey Storage devices found"
+    if connected.application_mode and not connected.update_mode:
+        # execute bootloader
+        storage.commands["enable-update"].callback()
+        for _ in tqdm(range(10), leave=False):
+            if is_connected().update_mode != 0:
+                break
+            time.sleep(1)
+        time.sleep(1)
+    else:
+        local_print('Nitrokey Storage in update mode found in the USB list (not connected yet)')
 
 
 @click.command()
@@ -212,6 +240,8 @@ def enable_update():
     nks = connect_nkstorage()
     if nks.enable_firmware_update(password) == 0:
         local_print("setting firmware update mode - success!")
+    else:
+        local_critical('Enabling firmware update has failed. Check your firmware password.')
 
 
 @click.command()
