@@ -84,7 +84,7 @@ class DfuTool:
         ver = ver_string.split()[1]
         ver_found = (*map(int, ver.split(".")),)
         ver_required = (0, 6, 1)
-        local_print(f"Tool found: {ver_string} -> {ver_found}")
+        local_print(f"Tool found: {ver_string}")
         return ver_found >= ver_required
 
     @classmethod
