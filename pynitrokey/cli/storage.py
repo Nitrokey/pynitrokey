@@ -6,6 +6,7 @@
 # http://apache.org/licenses/LICENSE-2.0> or the MIT license <LICENSE-MIT or
 # http://opensource.org/licenses/MIT>, at your option. This file may not be
 # copied, modified, or distributed except according to those terms.
+import dataclasses
 import logging
 import platform
 import string
@@ -13,6 +14,8 @@ import subprocess
 from typing import Optional
 
 import click
+import usb1
+from usb1 import USBDevice
 
 from pynitrokey.cli.exceptions import CliException
 from pynitrokey.helpers import AskUser, local_critical, local_print
@@ -98,6 +101,25 @@ class DfuTool:
         return True
 
 
+def is_connected() -> dict[str, USBDevice]:
+    @dataclasses.dataclass
+    class UsbId:
+        vid: int
+        pid: int
+
+    devs = {}
+    usb_id = {
+        'update_mode': UsbId(0x03eb, 0x2ff1),
+        'application_mode': UsbId(0x20a0, 0x4109),
+    }
+    with usb1.USBContext() as context:
+        for k, v in usb_id.items():
+            res = context.getByVendorIDAndProductID(vendor_id=v.vid, product_id=v.pid)
+            devs[k] = res if res else 0
+            logger.debug(f'{k}: {len(devs[k]) if devs[k] else 0}')
+    return devs
+
+
 @click.command()
 @click.argument("firmware", type=click.Path(exists=True, readable=True))
 @click.option(
@@ -117,6 +139,7 @@ def update(firmware: str, experimental):
     assert firmware.endswith(".hex")
 
     DfuTool.self_check()
+    assert sum([1 if v else 0 for v in is_connected().values()]), "No connected Nitrokey Storage devices found"
 
     commands = """
         dfu-programmer at32uc3a3256s erase
