@@ -137,7 +137,9 @@ def update(firmware: str, experimental):
             if output:
                 local_print(output)
         except subprocess.CalledProcessError as e:
-            local_critical(e)
+            linux = 'linux' in platform.platform().lower()
+            local_critical(e,
+                           'Note: make sure you have the udev rules installed.' if linux else '')
 
     local_print('')
     local_print('Finished!')
