@@ -8,6 +8,7 @@
 # copied, modified, or distributed except according to those terms.
 import logging
 import platform
+import string
 import subprocess
 from typing import Optional
 
@@ -37,11 +38,10 @@ def storage():
 def process_runner(c: str, args: Optional[dict] = None) -> str:
     """Wrapper for running command and returning output, both logged"""
     cmd = c.split()
-    if args and any(f'${key}$' in c for key in args.keys()):
-        for k, v in args.items():
-            for i, cpart in enumerate(cmd):
-                if cpart == f'${k}$':
-                    cmd[i] = v
+    if args and any(f'${key}' in c for key in args.keys()):
+        for i, _ in enumerate(cmd):
+            template = string.Template(cmd[i])
+            cmd[i] = template.substitute(args)
 
     logger.debug(f'Running {c}')
     local_print(f'* Running \t"{c}"')
@@ -113,7 +113,7 @@ def update(firmware: str, experimental):
 
     commands = """
         dfu-programmer at32uc3a3256s erase
-        dfu-programmer at32uc3a3256s flash --suppress-bootloader-mem $FIRMWARE$
+        dfu-programmer at32uc3a3256s flash --suppress-bootloader-mem $FIRMWARE
         dfu-programmer at32uc3a3256s start
         """
 
@@ -121,13 +121,14 @@ def update(firmware: str, experimental):
                 'Check your udev rules in case of connection issues.')
     local_print(f'Using firmware path: {firmware}')
     # note: this is just for presentation - actual argument replacement is done in process_runner
-    local_print(f'Commands to be executed: {commands.replace("$FIRMWARE$", f"{firmware}")}')
+    # the string form cannot be used, as it could contain space which would break dfu-programmer's call
+    args = {'FIRMWARE': firmware}
+    local_print(f'Commands to be executed: {string.Template(commands).substitute(args)}')
     if not click.confirm("Do you want to perform the firmware update now?"):
         logger.info("Update cancelled by user")
         raise click.Abort()
 
     commands_clean = commands.strip().split('\n')
-    args = {'FIRMWARE': firmware}
     for c in commands_clean:
         c = c.strip()
         if not c: continue
