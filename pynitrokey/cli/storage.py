@@ -147,7 +147,7 @@ def update(firmware: str, experimental):
 
 @click.command()
 def list():
-    """list connected devices"""
+    """List connected devices"""
 
     local_print(":: 'Nitrokey Storage' keys:")
     devices = NitrokeyStorage.list_devices()
@@ -164,7 +164,7 @@ def list():
 
 @click.command()
 def enable_update():
-    """enable firmware update for NK Storage device
+    """Enable firmware update for NK Storage device
 
     If the Firmware Password is not in the environment variable NITROPY_FIRMWARE_PASSWORD, it will be prompted from stdin
     """
@@ -206,7 +206,7 @@ def close_encrypted():
 
 @click.command()
 def open_hidden():
-    """Unlock an hidden volume
+    """Unlock a hidden volume
 
     If the hidden volume passphrase is not in the environment variable NITROPY_HIDDEN_PASSPHRASE, it will be prompted from stdin
     """
@@ -244,7 +244,7 @@ def close_hidden():
 )
 @click.argument("end", type=int)
 def create_hidden(slot, begin, end):
-    """Create an hidden volume
+    """Create a hidden volume
 
     SLOT is the slot used for the hidden volume (1-4)\n
     START is where the volume begins expressed in percent of total available storage (0-99)\n
