@@ -6,7 +6,6 @@
 # http://apache.org/licenses/LICENSE-2.0> or the MIT license <LICENSE-MIT or
 # http://opensource.org/licenses/MIT>, at your option. This file may not be
 # copied, modified, or distributed except according to those terms.
-import dataclasses
 import logging
 import platform
 import string
@@ -15,13 +14,15 @@ import time
 from typing import Optional
 
 import click
+import dataclasses
 import usb1
+from tqdm import tqdm
 from usb1 import USBDevice
 
 from pynitrokey.cli.exceptions import CliException
 from pynitrokey.helpers import AskUser, local_critical, local_print
 from pynitrokey.libnk import BaseLibNitrokey, DeviceNotFound, NitrokeyStorage, RetCode
-from tqdm import tqdm
+
 
 def connect_nkstorage():
     try:
@@ -116,14 +117,16 @@ def is_connected() -> ConnectedDevices:
 
     devs = {}
     usb_id = {
-        'update_mode': UsbId(0x03eb, 0x2ff1),
-        'application_mode': UsbId(0x20a0, 0x4109),
+        "update_mode": UsbId(0x03EB, 0x2FF1),
+        "application_mode": UsbId(0x20A0, 0x4109),
     }
     with usb1.USBContext() as context:
         for k, v in usb_id.items():
             res = context.getByVendorIDAndProductID(vendor_id=v.vid, product_id=v.pid)
             devs[k] = 1 if res else 0
-    return ConnectedDevices(application_mode=devs['application_mode'], update_mode=devs['update_mode'])
+    return ConnectedDevices(
+        application_mode=devs["application_mode"], update_mode=devs["update_mode"]
+    )
 
 
 @click.command()
@@ -197,7 +200,9 @@ def update(firmware: str, experimental):
 
 def check_for_update_mode():
     connected = is_connected()
-    assert connected.application_mode + connected.update_mode > 0, "No connected Nitrokey Storage devices found"
+    assert (
+        connected.application_mode + connected.update_mode > 0
+    ), "No connected Nitrokey Storage devices found"
     if connected.application_mode and not connected.update_mode:
         # execute bootloader
         storage.commands["enable-update"].callback()
@@ -207,7 +212,9 @@ def check_for_update_mode():
             time.sleep(1)
         time.sleep(1)
     else:
-        local_print('Nitrokey Storage in update mode found in the USB list (not connected yet)')
+        local_print(
+            "Nitrokey Storage in update mode found in the USB list (not connected yet)"
+        )
 
 
 @click.command()
@@ -241,7 +248,9 @@ def enable_update():
     if nks.enable_firmware_update(password) == 0:
         local_print("setting firmware update mode - success!")
     else:
-        local_critical('Enabling firmware update has failed. Check your firmware password.')
+        local_critical(
+            "Enabling firmware update has failed. Check your firmware password."
+        )
 
 
 @click.command()
