@@ -49,7 +49,7 @@ def process_runner(c: str, args: Optional[dict] = None) -> str:
         output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode()
     except subprocess.CalledProcessError as e:
         logger.error(f'Output for "{c}": {e.output}')
-        local_print(f'Output for "{c}": {e.output.decode()}')
+        local_print(f'\tOutput for "{c}": "{e.output.strip().decode()}"')
         raise
     logger.debug(f'Output for "{c}": {output}')
     return output
