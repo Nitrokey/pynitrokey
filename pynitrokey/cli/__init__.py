@@ -106,10 +106,15 @@ nitropy.add_command(ls)
 
 
 def main() -> None:
+    development = os.environ.get("NKDEV")
     try:
         nitropy()
     except CliException as e:
+        if development:
+            raise
         e.show()
     except Exception as e:
+        if development:
+            raise
         logger.warning("An unhandled exception occurred", exc_info=True)
         local_critical("An unhandled exception occurred", e)
