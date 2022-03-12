@@ -33,6 +33,37 @@ def storage():
     pass
 
 
+def process_runner(c: str) -> str:
+    """Wrapper for running command and returning output, both logged"""
+    logger.debug(f'Running {c}')
+    local_print(f'* Running \t"{c}"')
+    try:
+        output = subprocess.check_output(c.split(), stderr=subprocess.STDOUT).decode()
+    except subprocess.CalledProcessError as e:
+        logger.error(f'Output for "{c}": {e.output}')
+        local_print(f'Output for "{c}": {e.output.decode()}')
+        raise
+    logger.debug(f'Output for "{c}": {output}')
+    return output
+
+
+class DfuTool:
+    name = 'dfu-programmer'
+
+    @classmethod
+    def is_available(cls):
+        """Check whether `name` is on PATH and marked as executable."""
+        from shutil import which
+        return which(cls.name) is not None
+
+    @classmethod
+    def get_version(cls) -> str:
+        c = f'{cls.name} --version'
+        output = process_runner(c).strip()
+        return output
+
+
+
 @click.command()
 @click.argument('firmware', type=click.Path(exists=True, readable=True))
 @click.option(
@@ -49,13 +80,20 @@ def update(firmware: str, experimental):
         raise click.Abort()
     assert firmware.endswith('.hex')
 
+    if not DfuTool.is_available():
+        local_print(f"{DfuTool.name} is not available. Please install it or use another tool for update.")
+        raise click.Abort()
+
+    local_print('')
+    local_print(f'Tool found: {DfuTool.get_version()}')
+    local_print('')
+
     commands = f"""
         dfu-programmer at32uc3a3256s erase
         dfu-programmer at32uc3a3256s flash --suppress-bootloader-mem "{firmware}"
         dfu-programmer at32uc3a3256s launch
         """
 
-    local_print('')
     local_print('Note: During the execution update program will try to connect to the device. '
                 'Check your udev rules in case of connection issues.')
     local_print(f'Using firmware path: {firmware}')
@@ -69,8 +107,7 @@ def update(firmware: str, experimental):
         c = c.strip()
         if not c: continue
         try:
-            local_print(f'* Running \t"{c}"')
-            output = subprocess.check_output(c.split())
+            output = process_runner(c)
             if output:
                 local_print(output)
         except subprocess.CalledProcessError as e:
