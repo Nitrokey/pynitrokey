@@ -36,7 +36,7 @@ logger = logging.getLogger()
 @click.option("-y", "--yes", default=False, is_flag=True, help="agree to everything")
 @click.option("-f", "--force", default=False, is_flag=True, help="force")
 def update(serial, yes, force):
-    """Update Nitrokey key to latest firmware version."""
+    """Update Nitrokey FIDO2 device to the latest firmware version."""
 
     # @fixme: print this and allow user to cancel (if not -y is active)
     # update_url = 'https://update.nitrokey.com/'

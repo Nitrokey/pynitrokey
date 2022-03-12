@@ -98,7 +98,7 @@ class Context:
 @click.option("-p", "--path", "path", help="The path of the Nitrokey 3 device")
 @click.pass_context
 def nk3(ctx: click.Context, path: Optional[str]) -> None:
-    """Interact with Nitrokey 3, see subcommands."""
+    """Interact with Nitrokey 3 device, see subcommands."""
     ctx.obj = Context(path)
 
 
@@ -166,7 +166,7 @@ def _reboot_to_bootloader(device: Nitrokey3Device) -> None:
 )
 @click.pass_obj
 def rng(ctx: Context, length: int) -> None:
-    """Generate random data on the key."""
+    """Generate random data on the device."""
     with ctx.connect_device() as device:
         while length > 0:
             rng = device.rng()
@@ -498,7 +498,7 @@ def _perform_update(device: Nitrokey3Bootloader, image: bytes) -> None:
 @nk3.command()
 @click.pass_obj
 def version(ctx: Context) -> None:
-    """Query the firmware version of the key."""
+    """Query the firmware version of the device."""
     with ctx.connect_device() as device:
         version = device.version()
         local_print(version)
@@ -507,6 +507,6 @@ def version(ctx: Context) -> None:
 @nk3.command()
 @click.pass_obj
 def wink(ctx: Context) -> None:
-    """Send wink command to the key (blinks LED a few times)."""
+    """Send wink command to the device (blinks LED a few times)."""
     with ctx.connect_device() as device:
         device.wink()

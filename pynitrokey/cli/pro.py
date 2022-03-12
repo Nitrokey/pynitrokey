@@ -15,7 +15,7 @@ vendor = "20a0:42b4"
 
 @click.group()
 def pro():
-    """Interact with Nitrokey Pro keys, see subcommands."""
+    """Interact with Nitrokey Pro devices, see subcommands."""
     pass
 
 
