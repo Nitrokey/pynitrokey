@@ -9,6 +9,7 @@
 import logging
 import platform
 import subprocess
+from typing import Optional
 
 import click
 
@@ -33,12 +34,19 @@ def storage():
     pass
 
 
-def process_runner(c: str) -> str:
+def process_runner(c: str, args: Optional[dict] = None) -> str:
     """Wrapper for running command and returning output, both logged"""
+    cmd = c.split()
+    if args and any(f'${key}$' in c for key in args.keys()):
+        for k, v in args.items():
+            for i, cpart in enumerate(cmd):
+                if cpart == f'${k}$':
+                    cmd[i] = v
+
     logger.debug(f'Running {c}')
     local_print(f'* Running \t"{c}"')
     try:
-        output = subprocess.check_output(c.split(), stderr=subprocess.STDOUT).decode()
+        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT).decode()
     except subprocess.CalledProcessError as e:
         logger.error(f'Output for "{c}": {e.output}')
         local_print(f'Output for "{c}": {e.output.decode()}')
@@ -103,26 +111,28 @@ def update(firmware: str, experimental):
 
     DfuTool.self_check()
 
-    commands = f"""
+    commands = """
         dfu-programmer at32uc3a3256s erase
-        dfu-programmer at32uc3a3256s flash --suppress-bootloader-mem "{firmware}"
+        dfu-programmer at32uc3a3256s flash --suppress-bootloader-mem $FIRMWARE$
         dfu-programmer at32uc3a3256s start
         """
 
     local_print('Note: During the execution update program will try to connect to the device. '
                 'Check your udev rules in case of connection issues.')
     local_print(f'Using firmware path: {firmware}')
-    local_print(f'Commands to be executed: {commands}')
+    # note: this is just for presentation - actual argument replacement is done in process_runner
+    local_print(f'Commands to be executed: {commands.replace("$FIRMWARE$", f"{firmware}")}')
     if not click.confirm("Do you want to perform the firmware update now?"):
         logger.info("Update cancelled by user")
         raise click.Abort()
 
     commands_clean = commands.strip().split('\n')
+    args = {'FIRMWARE': firmware}
     for c in commands_clean:
         c = c.strip()
         if not c: continue
         try:
-            output = process_runner(c)
+            output = process_runner(c, args)
             if output:
                 local_print(output)
         except subprocess.CalledProcessError as e:
