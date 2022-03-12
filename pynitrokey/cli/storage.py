@@ -62,6 +62,27 @@ class DfuTool:
         output = process_runner(c).strip()
         return output
 
+    @classmethod
+    def check_version(cls) -> bool:
+        # todo choose and use specialized package for version strings management, e.g:
+        #   from packaging import version
+        ver_string = cls.get_version()
+        ver = ver_string.split()[1]
+        ver_found = (*map(int, ver.split('.')),)
+        ver_required = (0, 6, 1)
+        local_print(f'Tool found: {ver_string} -> {ver_found}')
+        return ver_found >= ver_required
+
+    @classmethod
+    def self_check(cls) -> bool:
+        if not cls.is_available():
+            local_print(f"{cls.name} is not available. Please install it or use another tool for update.")
+            raise click.Abort()
+
+        local_print('')
+        cls.check_version()
+        local_print('')
+        return True
 
 
 @click.command()
@@ -80,13 +101,7 @@ def update(firmware: str, experimental):
         raise click.Abort()
     assert firmware.endswith('.hex')
 
-    if not DfuTool.is_available():
-        local_print(f"{DfuTool.name} is not available. Please install it or use another tool for update.")
-        raise click.Abort()
-
-    local_print('')
-    local_print(f'Tool found: {DfuTool.get_version()}')
-    local_print('')
+    DfuTool.self_check()
 
     commands = f"""
         dfu-programmer at32uc3a3256s erase
