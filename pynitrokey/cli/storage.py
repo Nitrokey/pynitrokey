@@ -50,13 +50,14 @@ def update(firmware: str, experimental):
     assert firmware.endswith('.hex')
 
     commands = f"""
-        sudo dfu-programmer at32uc3a3256s erase
-        sudo dfu-programmer at32uc3a3256s flash --suppress-bootloader-mem {firmware}
-        sudo dfu-programmer at32uc3a3256s launch
+        dfu-programmer at32uc3a3256s erase
+        dfu-programmer at32uc3a3256s flash --suppress-bootloader-mem "{firmware}"
+        dfu-programmer at32uc3a3256s launch
         """
 
     local_print('')
-    local_print('During the execution you will be asked to enter password to use sudo')
+    local_print('Note: During the execution update program will try to connect to the device. '
+                'Check your udev rules in case of connection issues.')
     local_print(f'Using firmware path: {firmware}')
     local_print(f'Commands to be executed: {commands}')
     if not click.confirm("Do you want to perform the firmware update now?"):
