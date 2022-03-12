@@ -106,7 +106,7 @@ def update(firmware: str, experimental):
     commands = f"""
         dfu-programmer at32uc3a3256s erase
         dfu-programmer at32uc3a3256s flash --suppress-bootloader-mem "{firmware}"
-        dfu-programmer at32uc3a3256s launch
+        dfu-programmer at32uc3a3256s start
         """
 
     local_print('Note: During the execution update program will try to connect to the device. '
