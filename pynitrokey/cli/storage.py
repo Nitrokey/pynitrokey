@@ -78,7 +78,8 @@ def update(firmware: str, experimental):
 
     local_print('')
     local_print('Finished!')
-    local_print('Run "nitropy storage list" to check for communication')
+    storage.commands["list"].callback()
+
 
 
 @click.command()
