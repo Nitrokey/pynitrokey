@@ -22,6 +22,7 @@ from pynitrokey.confconsts import (
     GH_ISSUES_URL,
     LOG_FN,
     SUPPORT_EMAIL,
+    SUPPORT_URL,
     VERBOSE,
     Verbosity,
 )
@@ -197,18 +198,25 @@ def local_critical(*messages, support_hint=True, ret_code=1, **kwargs):
         # @fixme: not the best solution
         STDOUT_PRINT = False
         local_print("listing all connected devices:")
-        from pynitrokey.cli import nitropy
 
-        nitropy.commands["list"].callback()
+        try:
+            from pynitrokey.cli import nitropy
+
+            nitropy.commands["list"].callback()
+        except Exception:
+            local_print("Unable to list devices. See log for the details.")
+            logger = logging.getLogger()
+            logger.exception("Unable to list devices")
+
         STDOUT_PRINT = True
 
         local_print(
             "",
             "-" * 80,
             "Critical error occurred, exiting now",
-            "Unexpected? Is this a bug? Do you would like to get support/help?",
-            f"- You can report issues at: {GH_ISSUES_URL}",
-            f"- Writing an e-mail to: {SUPPORT_EMAIL} is also possible",
+            "Unexpected? Is this a bug? Would you like to get support/help?",
+            f"- You can report issues at: {SUPPORT_URL}",
+            f"- Writing an e-mail to {SUPPORT_EMAIL} is also possible",
             f"- Please attach the log: '{LOG_FN}' with any support/help request!",
             "-" * 80,
             "",

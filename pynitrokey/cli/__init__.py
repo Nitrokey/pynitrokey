@@ -86,6 +86,7 @@ def _list():
     fido2.commands["list"].callback()
     start.commands["list"].callback()
     nk3.commands["list"].callback()
+    # TODO add other handled models
 
 
 @click.command()
@@ -110,5 +111,5 @@ def main() -> None:
     except CliException as e:
         e.show()
     except Exception as e:
-        logger.warning("An unhandled exception occured", exc_info=True)
-        local_critical("An unhandled exception occured", e)
+        logger.warning("An unhandled exception occurred", exc_info=True)
+        local_critical("An unhandled exception occurred", e)
