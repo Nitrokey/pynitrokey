@@ -37,7 +37,7 @@ from pynitrokey.start.usb_strings import get_devices as get_devices_strings
 # https://pocoo-click.readthedocs.io/en/latest/commands/#nested-handling-and-contexts
 @click.group()
 def start():
-    """Interact with 'Nitrokey Start' devices, see subcommands."""
+    """Interact with Nitrokey Start devices, see subcommands."""
     pass
 
 

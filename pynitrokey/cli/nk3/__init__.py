@@ -98,7 +98,7 @@ class Context:
 @click.option("-p", "--path", "path", help="The path of the Nitrokey 3 device")
 @click.pass_context
 def nk3(ctx: click.Context, path: Optional[str]) -> None:
-    """Interact with Nitrokey 3 device, see subcommands."""
+    """Interact with Nitrokey 3 devices, see subcommands."""
     ctx.obj = Context(path)
 
 
