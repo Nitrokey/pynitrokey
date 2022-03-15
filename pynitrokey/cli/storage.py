@@ -26,7 +26,7 @@ def connect_nkstorage():
 
 @click.group()
 def storage():
-    """(experimental) 'Nitrokey Storage' keys, see subcommands."""
+    """Interact with Nitrokey Storage devices, see subcommands."""
     pass
 
 

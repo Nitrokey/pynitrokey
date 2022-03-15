@@ -45,7 +45,7 @@ from pynitrokey.helpers import AskUser, local_critical, local_print
 # https://pocoo-click.readthedocs.io/en/latest/commands/#nested-handling-and-contexts
 @click.group()
 def fido2():
-    """Interact with Nitrokey FIDO2 keys, see subcommands."""
+    """Interact with Nitrokey FIDO2 devices, see subcommands."""
     pass
 
 
@@ -159,7 +159,7 @@ def mergehex(
 
 @click.group()
 def rng():
-    """Access TRNG on key, see subcommands."""
+    """Access TRNG on device, see subcommands."""
     pass
 
 
@@ -474,7 +474,7 @@ def probe(serial, udp, hash_type, filename):
 )
 @click.option("-y", "--yes", help="Agree to all questions", is_flag=True)
 def reset(serial, yes):
-    """Reset key - wipes all credentials!!!"""
+    """Reset device - wipes all credentials!!!"""
     local_print(
         "Reset is only possible 10secs after plugging in the device.",
         "Please (re-)plug in your Nitrokey FIDO2 now!",
@@ -501,7 +501,7 @@ def reset(serial, yes):
 )
 # @click.option("--new-pin", help="change current pin")
 def change_pin(serial):
-    """Change pin of current key"""
+    """Change pin of current device"""
 
     old_pin = AskUser.hidden("Please enter old pin: ")
     new_pin = AskUser.hidden("Please enter new pin: ")
@@ -533,7 +533,7 @@ def change_pin(serial):
 )
 # @click.option("--new-pin", help="change current pin")
 def set_pin(serial):
-    """Set pin of current key"""
+    """Set pin of current device"""
     new_pin = AskUser.hidden("Please enter new pin: ")
     confirm_pin = AskUser.hidden("Please confirm new pin: ")
     if new_pin != confirm_pin:
@@ -568,13 +568,13 @@ def set_pin(serial):
     "--udp", is_flag=True, default=False, help="Communicate over UDP with software key"
 )
 def verify(serial, udp):
-    """Verify key is valid Nitrokey 'Start' or 'FIDO2' key."""
+    """Verify if connected Nitrokey FIDO2 device is genuine."""
 
     # if not pin:
     #    pin = AskUser("PIN required: ", repeat=0, hide_input=True).ask()
 
     # Any longer and this needs to go in a submodule
-    local_print("please press the button on your Nitrokey key")
+    local_print("please press the button on your Nitrokey device")
 
     cert = None
     try:
@@ -649,7 +649,7 @@ def verify(serial, udp):
     "--udp", is_flag=True, default=False, help="Communicate over UDP with software key"
 )
 def version(serial, udp):
-    """Version of firmware on key."""
+    """Version of firmware on device."""
 
     try:
         res = nkfido2.find(serial, udp=udp).solo_version()
@@ -684,7 +684,7 @@ def version(serial, udp):
     "--udp", is_flag=True, default=False, help="Communicate over UDP with software key"
 )
 def wink(serial, udp):
-    """Send wink command to key (blinks LED a few times)."""
+    """Send wink command to device (blinks LED a few times)."""
 
     nkfido2.find(serial, udp=udp).wink()
 
@@ -699,7 +699,7 @@ def wink(serial, udp):
     "--udp", is_flag=True, default=False, help="Communicate over UDP with software key"
 )
 def reboot(serial, udp):
-    """Send reboot command to key (development command)"""
+    """Send reboot command to device (development command)"""
     local_print("Reboot", "Press key to confirm!")
 
     CTAP_REBOOT = 0x53

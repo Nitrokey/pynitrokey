@@ -47,7 +47,7 @@ def program():
 )
 @click.argument("firmware")  # , help="firmware (bundle) to program")
 def bootloader(serial, firmware):
-    """Program via Nitrokey bootloader interface.
+    """Program via Nitrokey FIDO2 bootloader interface.
 
     \b
     FIRMWARE argument should be either a .hex or .json file.

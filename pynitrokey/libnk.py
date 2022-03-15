@@ -310,7 +310,7 @@ class BaseLibNitrokey:
 
     @con_ret_code
     def connect(self, path=None, cpu_id=None):
-        """base-class uses 'auto' to connect to any key, or by path/id"""
+        """base-class uses 'auto' to connect to any device, or by path/id"""
         if path:
             ret = self.api.NK_connect_with_path(c_enc(path))
         elif cpu_id:

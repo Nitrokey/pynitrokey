@@ -59,7 +59,7 @@ def nitropy():
     logging.basicConfig(format=LOG_FORMAT, level=logging.DEBUG, handlers=[handler])
 
     print(
-        f"Nitrokey tool for Nitrokey FIDO2, Nitrokey Start, Nitrokey 3 & NetHSM {pynitrokey.__version__}",
+        f"Command line tool to interact with Nitrokey devices {pynitrokey.__version__}",
         file=sys.stderr,
     )
     check_root()
@@ -90,7 +90,7 @@ def _list():
 
 @click.command()
 def list():
-    """List Nitrokey keys (in firmware or bootloader mode)"""
+    """List Nitrokey devices (in firmware or bootloader mode)"""
     _list()
 
 

@@ -79,7 +79,7 @@ def print_table(headers, data):
 )
 @click.pass_context
 def nethsm(ctx, host, version, username, password, verify_tls):
-    """Interact with NetHSM, see subcommands."""
+    """Interact with NetHSM devices, see subcommands."""
     ctx.ensure_object(dict)
 
     ctx.obj["NETHSM_HOST"] = host

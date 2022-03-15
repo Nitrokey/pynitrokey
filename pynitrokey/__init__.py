@@ -8,7 +8,7 @@
 # copied, modified, or distributed except according to those terms.
 #
 
-"""Python Library for Nitrokey FIDO2 & Nitrokey Start."""
+"""Python Library for Nitrokey devices."""
 
 import pathlib
 
