@@ -9,6 +9,7 @@
 
 import logging
 import os
+import platform
 import sys
 import time
 from getpass import getpass
@@ -23,6 +24,7 @@ from pynitrokey.confconsts import (
     LOG_FN,
     SUPPORT_EMAIL,
     SUPPORT_URL,
+    UDEV_URL,
     VERBOSE,
     Verbosity,
 )
@@ -210,6 +212,7 @@ def local_critical(*messages, support_hint=True, ret_code=1, **kwargs):
 
         STDOUT_PRINT = True
 
+        linux = "linux" in platform.platform().lower()
         local_print(
             "",
             "-" * 80,
@@ -218,7 +221,9 @@ def local_critical(*messages, support_hint=True, ret_code=1, **kwargs):
             f"- You can report issues at: {SUPPORT_URL}",
             f"- Writing an e-mail to {SUPPORT_EMAIL} is also possible",
             f"- Please attach the log: '{LOG_FN}' with any support/help request!",
-            "-" * 80,
+            f"- Please check if you have udev rules installed: {UDEV_URL}"
+            if linux
+            else "" "-" * 80,
             "",
         )
     sys.exit(ret_code)

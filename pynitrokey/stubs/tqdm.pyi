@@ -7,14 +7,17 @@
 # http://opensource.org/licenses/MIT>, at your option. This file may not be
 # copied, modified, or distributed except according to those terms.
 
-from typing import Optional
+from typing import Iterable, Optional
 
 class tqdm:
     def __init__(
         self,
+        iter: Optional[Iterable] = None,
         total: Optional[int] = None,
         unit: Optional[str] = None,
         unit_scale: Optional[bool] = None,
+        leave: Optional[bool] = None,
     ) -> None: ...
     def update(self, n: int) -> None: ...
     def close(self) -> None: ...
+    def __iter__(self): ...
