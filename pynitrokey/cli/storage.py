@@ -15,7 +15,6 @@ from shutil import which
 from typing import Optional
 
 import click
-import dataclasses
 import usb1
 from tqdm import tqdm
 
@@ -101,18 +100,25 @@ class DfuTool:
         return True
 
 
-@dataclasses.dataclass
 class ConnectedDevices:
     application_mode: int
     update_mode: int
 
+    def __init__(self, application_mode, update_mode):
+        self.application_mode = application_mode
+        self.update_mode = update_mode
+
+
+class UsbId:
+    vid: int
+    pid: int
+
+    def __init__(self, vid, pid):
+        self.vid = vid
+        self.pid = pid
+
 
 def is_connected() -> ConnectedDevices:
-    @dataclasses.dataclass
-    class UsbId:
-        vid: int
-        pid: int
-
     devs = {}
     usb_id = {
         "update_mode": UsbId(0x03EB, 0x2FF1),
