@@ -20,6 +20,9 @@ class Version:
         self.minor = minor
         self.patch = patch
 
+    def __hash__(self) -> int:
+        return hash(self._as_tuple())
+
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Version):
             return NotImplemented
@@ -31,7 +34,7 @@ class Version:
         return self._as_tuple() < other._as_tuple()
 
     def __repr__(self) -> str:
-        return f"Version(major={self.major}, minor={self.minor}, patch={self.patch}"
+        return f"Version(major={self.major}, minor={self.minor}, patch={self.patch})"
 
     def __str__(self) -> str:
         return f"v{self.major}.{self.minor}.{self.patch}"

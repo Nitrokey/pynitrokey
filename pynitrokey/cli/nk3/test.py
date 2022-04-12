@@ -14,27 +14,44 @@ import sys
 from enum import Enum, auto, unique
 from hashlib import sha256
 from types import TracebackType
-from typing import Callable, Optional, Tuple, Type, Union
+from typing import Callable, List, Optional, Tuple, Type, Union
 
 from pynitrokey.fido2 import device_path_to_str
 from pynitrokey.helpers import local_print
 from pynitrokey.nk3.base import Nitrokey3Base
 from pynitrokey.nk3.device import Nitrokey3Device
+from pynitrokey.nk3.utils import Version
 
 logger = logging.getLogger(__name__)
 
 
 TEST_CASES = []
 
-FIDO2_CERT_HASH = "ad8fd1d16f59104b9e06ef323cc03f777ed5303cd421a101c9cb00bb3fdf722d"
+FIDO2_CERT_HASHES = {
+    Version(0, 1, 0): [
+        "ad8fd1d16f59104b9e06ef323cc03f777ed5303cd421a101c9cb00bb3fdf722d"
+    ],
+    Version(1, 0, 3): [
+        "aa1cb760c2879530e7d7fed3da75345d25774be9cfdbbcbd36fdee767025f34b"
+    ],
+}
 
 
 ExcInfo = Tuple[Type[BaseException], BaseException, TracebackType]
 
 
+def get_fido2_cert_hashes(version: Version) -> Optional[List[str]]:
+    versions = [v for v in FIDO2_CERT_HASHES if version >= v]
+    if versions:
+        return FIDO2_CERT_HASHES[max(versions)]
+    else:
+        return None
+
+
 class TestContext:
     def __init__(self, pin: Optional[str]) -> None:
         self.pin = pin
+        self.firmware_version: Optional[Version] = None
 
 
 @unique
@@ -101,6 +118,7 @@ def test_firmware_version_query(ctx: TestContext, device: Nitrokey3Base) -> Test
     if not isinstance(device, Nitrokey3Device):
         return TestResult(TestStatus.SKIPPED)
     version = device.version()
+    ctx.firmware_version = version
     return TestResult(TestStatus.SUCCESS, str(version))
 
 
@@ -137,9 +155,14 @@ def test_fido2(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
         )
     cert = make_credential_result.attestation_object.att_statement["x5c"]
     cert_hash = sha256(cert[0]).digest().hex()
-    data = ""
-    if cert_hash != FIDO2_CERT_HASH:
-        data = cert_hash
+
+    if ctx.firmware_version:
+        expected_cert_hashes = get_fido2_cert_hashes(ctx.firmware_version)
+        if expected_cert_hashes and cert_hash not in expected_cert_hashes:
+            return TestResult(
+                TestStatus.FAILURE,
+                f"Unexpected FIDO2 cert hash for version {ctx.firmware_version}: {cert_hash}",
+            )
 
     auth_data = server.register_complete(
         state,
@@ -167,7 +190,7 @@ def test_fido2(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
         get_assertion_response.signature,
     )
 
-    return TestResult(TestStatus.SUCCESS, data)
+    return TestResult(TestStatus.SUCCESS)
 
 
 def run_tests(ctx: TestContext, device: Nitrokey3Base) -> bool:
