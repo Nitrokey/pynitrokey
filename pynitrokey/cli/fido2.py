@@ -327,6 +327,12 @@ def make_credential(
 ) -> None:
     """Generate a credential.
 
+    Derived from an internal salt, `user` and `host`.
+
+    The result is a unique string, which can be used to verify ownership for the
+    FIDO2 key used for creation in combination with the provided `user` and `host`,
+    using `challenge-response`.
+
     Pass `--prompt ""` to output only the `credential_id` as hex.
     """
 
@@ -383,7 +389,10 @@ def challenge_response(
     This means that we first need to setup a credential_id; this depends on the
     specific authenticator used. To do this, use `nitropy fido2 make-credential`.
 
-    If so desired, user and relying party can be changed from the defaults.
+    `User` and relying party (`hostname`) can be changed from the defaults. In order
+    to later use the credential for `challenge-response` requests, the `hostname`
+    (in contrast to the `username`) has to be strictly identical, otherwise the
+    operation fails with 'DEVICE_INELIGIBLE' during the `challenge-repsonse` request.
 
     The prompt can be suppressed using `--prompt ""`.
     """
