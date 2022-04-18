@@ -520,7 +520,6 @@ def reset(serial: Optional[str], yes: bool) -> None:
         local_print("....aaaand they're gone")
 
 
-# @fixme: lacking functionality? remove? implement?
 @click.command()
 @click.option(
     "-s",
@@ -534,16 +533,20 @@ def change_pin(
 ) -> None:
     """Change pin of current device"""
 
-    old_pin = AskUser.hidden("Please enter old pin: ")
-    new_pin = AskUser.hidden("Please enter new pin: ")
-    confirm_pin = AskUser.hidden("Please confirm new pin: ")
+    old_pin = old_pin or AskUser.hidden("Please enter old pin: ")
+    if new_pin is None:
+        new_pin = AskUser.hidden("Please enter new pin: ")
+        confirm_pin = AskUser.hidden("Please confirm new pin: ")
 
-    if new_pin != confirm_pin:
-        local_critical(
-            "new pin does not match confirm-pin",
-            "please try again!",
-            support_hint=False,
-        )
+        if new_pin != confirm_pin:
+            local_critical(
+                "new pin does not match confirm-pin",
+                "please try again!",
+                support_hint=False,
+            )
+    else:
+        confirm_pin = new_pin
+
     try:
         # @fixme: move this (function) into own fido2-client-class
         client = nkfido2.find(serial).client
