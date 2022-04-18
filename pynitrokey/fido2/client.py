@@ -92,7 +92,7 @@ class NKFido2Client:
         try:
             self.client: Optional[Fido2Client] = Fido2Client(dev, self.origin)
         except CtapError:
-            print("Not using FIDO2 interface.")
+            local_print("Not using FIDO2 interface.")
             self.client = None
 
         if self.exchange == self.exchange_hid:
@@ -178,7 +178,7 @@ class NKFido2Client:
     def write_flash(self, addr: int, data: bytes) -> None:
         self.exchange(SoloBootloader.write, addr, data)
 
-    def boot_pubkey(self) -> None:
+    def boot_pubkey(self) -> bytes:
         return self.exchange(SoloBootloader.boot_pubkey)
 
     def get_rng(self, num: int = 0) -> bytes:
@@ -214,8 +214,7 @@ class NKFido2Client:
         output: bool = True,
         udp: bool = False,
         fingerprint_only: bool = False,
-    ) -> str:
-
+    ) -> bytes:
         """
         fingerprint_only bool Return sha256 digest of the certificate, in a hex string format. Useful for detecting
             device's model and firmware.
@@ -314,11 +313,9 @@ class NKFido2Client:
 
         return output
 
-    def cred_mgmt(self, pin: str) -> CredentialManagement:
-        client = self.get_current_fido_client()
-        token = client.client_pin.get_pin_token(pin)
-        ctap2 = CTAP2(self.get_current_hid_device())
-        return CredentialManagement(ctap2, client.client_pin.protocol, token)
+    def get_resident_keys(self, pin: str) -> CredentialManagement:
+        token = self.client_pin.get_pin_token(pin)
+        return CredentialManagement(self.client.ctap2, self.client_pin.protocol, token)
 
     def enter_solo_bootloader(self) -> None:
         """
@@ -344,7 +341,7 @@ class NKFido2Client:
             else:
                 raise (e)
 
-    def is_solo_bootloader(self) -> None:
+    def is_solo_bootloader(self) -> bool:
         try:
             self.bootloader_version()
             return True
@@ -393,7 +390,7 @@ class NKFido2Client:
         def parseField(f: bytes) -> bytes:
             return base64.b64decode(helpers.from_websafe(f).encode())
 
-        def isCorrectVersion(current: str, target: str) -> bool:
+        def isCorrectVersion(current: Tuple[int, int, int], target: Tuple[int, int, int]) -> bool:
             """current is tuple (x,y,z).  target is string '>=x.y.z'.
             Return True if current satisfies the target expression.
             """
