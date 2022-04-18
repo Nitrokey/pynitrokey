@@ -756,6 +756,42 @@ def reboot(serial: Optional[str], udp: bool) -> None:
     except CtapError as e:
         local_critical(f"...failed ({str(e)})")
 
+@click.command()
+@click.option(
+    "-s",
+    "--serial",
+    help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
+)
+@click.option("--pin", help="PIN for device access, use '-' for a prompt", default=None)
+def resident_keys(serial: Optional[str], pin: Optional[str]):
+    """Information about the Resident Keys on the device
+
+    Also known as "credential-management", experimental...
+    """
+
+    if pin == "-":
+       pin = AskUser("PIN required: ", repeat=0, hide_input=True).ask()
+
+    if not isinstance(pin, str):
+        local_critical("Please provide a valid pin for this operation")
+
+    cred_obj = nkfido2.find(serial).get_resident_keys(pin)
+
+    meta = cred_obj.get_metadata()
+    rk_count, rk_capacity = meta[1], meta[1] + meta[2]
+
+    local_print("--- Resident Keys / FIDO2 Saved Credentials ---")
+    local_print(f"    (key count: {rk_count} of max: {rk_capacity})")
+    print()
+
+    for rp in cred_obj.enumerate_rps():
+        info = rp[3]
+        rp_hash = rp[4]
+        local_print(f"RP-item - id={info['id']} name={info['name']} entries={rp[5]} hash={rp_hash.hex()}")
+        for item in cred_obj.enumerate_creds(rp_hash):
+            name, dname, key_type = item[6]["name"], item[6]["displayName"], item[7]["type"]
+            local_print(f"    RK-entry: name={name} displayname={dname} key-type={key_type}")
+
 
 fido2.add_command(rng)
 
@@ -779,6 +815,8 @@ fido2.add_command(wink)
 
 fido2.add_command(set_pin)
 fido2.add_command(change_pin)
+
+fido2.add_command(resident_keys)
 
 fido2.add_command(util)
 
