@@ -590,7 +590,7 @@ def set_pin(serial: Optional[str], new_pin: Optional[str]) -> None:
 
 
 @click.command()
-# @click.option("--pin", help="PIN for to access key", default=None)
+@click.option("--pin", help="PIN for device access, use '-' for a prompt", default=None)
 @click.option(
     "-s",
     "--serial",
@@ -602,15 +602,15 @@ def set_pin(serial: Optional[str], new_pin: Optional[str]) -> None:
 def verify(serial: Optional[str], udp: bool, pin: Optional[str]) -> None:
     """Verify if connected Nitrokey FIDO2 device is genuine."""
 
-    # if not pin:
-    #    pin = AskUser("PIN required: ", repeat=0, hide_input=True).ask()
+    if pin == "-":
+       pin = AskUser("PIN required: ", repeat=0, hide_input=True).ask()
 
     # Any longer and this needs to go in a submodule
     local_print("please press the button on your Nitrokey device")
 
     cert = None
     try:
-        cert = nkfido2.find(serial, udp=udp).make_credential(fingerprint_only=True)
+        cert = nkfido2.find(serial, udp=udp).make_credential(fingerprint_only=True, pin=pin)
 
     except Fido2ClientError as e:
         cause = str(e.cause)
@@ -648,7 +648,7 @@ def verify(serial: Optional[str], udp: bool, pin: Optional[str]) -> None:
             )
 
         # pin required error
-        if "PIN required" in str(e):
+        if "PIN required" in cause:
             local_critical("your key has a PIN set - pass it using `--pin <PIN>`", e)
 
         local_critical("unexpected Fido2Client (CTAP) error", e)
