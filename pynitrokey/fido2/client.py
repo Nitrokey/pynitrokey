@@ -15,7 +15,7 @@ import struct
 import sys
 import tempfile
 import time
-from typing import Optional
+from typing import Optional, List, Tuple, Union, Callable
 
 import secrets
 from fido2.client import Fido2Client
@@ -31,39 +31,31 @@ from pynitrokey.fido2.commands import SoloBootloader, SoloExtension
 
 
 class NKFido2Client:
-    def __init__(
-        self,
-    ):
+    def __init__(self):
         self.origin = "https://example.org"
         self.host = "example.org"
         self.user_id = b"they"
         self.exchange = self.exchange_hid
         self.do_reboot = True
 
-    def use_u2f(
-        self,
-    ):
+    def use_u2f(self) -> None:
         self.exchange = self.exchange_u2f
 
-    def use_hid(
-        self,
-    ):
+    def use_hid(self) -> None:
         self.exchange = self.exchange_hid
 
-    def set_reboot(self, val):
+    def set_reboot(self, val) -> None:
         """option to reboot after programming"""
         self.do_reboot = val
 
-    def reboot(
-        self,
-    ):
+    def reboot(self) -> None:
         """option to reboot after programming"""
         try:
             self.exchange(SoloBootloader.reboot)
         except OSError:
             pass
 
-    def find_device(self, dev=None, solo_serial: str = None):
+    def find_device(self, dev: Optional[str]=None, solo_serial: Optional[str]=None) -> CtapHidDevice:
         devices = []
         if dev is None:
             if solo_serial is not None:
@@ -104,7 +96,7 @@ class NKFido2Client:
         return self.dev
 
     @staticmethod
-    def format_request(cmd, addr=0, data=b"A" * 16):
+    def format_request(cmd: int, addr: int=0, data: bytes=b"A" * 16) -> bytes:
         # not sure why this is here?
         # arr = b"\x00" * 9
         addr = struct.pack("<L", addr)
@@ -113,18 +105,18 @@ class NKFido2Client:
 
         return cmd + addr[:3] + SoloBootloader.TAG + length + data
 
-    def send_only_hid(self, cmd, data):
+    def send_only_hid(self, cmd: int, data: bytes=b"A" * 16) -> None:
         if not isinstance(data, bytes):
             data = struct.pack("%dB" % len(data), *[ord(x) for x in data])
         self.dev._dev.InternalSend(0x80 | cmd, bytearray(data))
 
-    def send_data_hid(self, cmd, data):
+    def send_data_hid(self, cmd: int, data: bytes=b"A" * 16) -> bytes:
         if not isinstance(data, bytes):
             data = struct.pack("%dB" % len(data), *[ord(x) for x in data])
         with helpers.Timeout(1.0) as event:
             return self.dev.call(cmd, data, event)
 
-    def exchange_hid(self, cmd, addr=0, data=b"A" * 16):
+    def exchange_hid(self, cmd: int, addr: int=0, data: bytes=b"A" * 16) -> bytes:
         req = NKFido2Client.format_request(cmd, addr, data)
 
         data = self.send_data_hid(SoloBootloader.HIDCommandBoot, req)
@@ -135,7 +127,7 @@ class NKFido2Client:
 
         return data[1:]
 
-    def exchange_u2f(self, cmd, addr=0, data=b"A" * 16):
+    def exchange_u2f(self, cmd: int, addr: int=0, data: bytes=b"A" * 16) -> bytes:
         appid = b"A" * 32
         chal = b"B" * 32
 
@@ -149,7 +141,7 @@ class NKFido2Client:
 
         return res.signature[1:]
 
-    def exchange_fido2(self, cmd, addr=0, data=b"A" * 16):
+    def exchange_fido2(self, cmd: str, addr: int=0, data: bytes=b"A" * 16) -> bytes:
         chal = b"B" * 32
 
         req = NKFido2Client.format_request(cmd, addr, data)
@@ -165,39 +157,35 @@ class NKFido2Client:
 
         return res.signature[1:]
 
-    def bootloader_version(
-        self,
-    ):
+    def bootloader_version(self) -> Tuple[int, int, int]:
         data = self.exchange(SoloBootloader.version)
         if len(data) > 2:
             return (data[0], data[1], data[2])
         return (0, 0, data[0])
 
-    def solo_version(
-        self,
-    ):
+    def solo_version(self) -> Union[bytes, Tuple[int, int, int]]:
         try:
             return self.send_data_hid(0x61, b"")
         except CtapError:
             data = self.exchange(SoloExtension.version)
             return (data[0], data[1], data[2])
 
-    def write_flash(self, addr, data):
+    def write_flash(self, addr: int, data: bytes) -> None:
         self.exchange(SoloBootloader.write, addr, data)
 
-    def boot_pubkey(self):
+    def boot_pubkey(self) -> None:
         return self.exchange(SoloBootloader.boot_pubkey)
 
-    def get_rng(self, num=0):
+    def get_rng(self, num: int=0) -> bytes:
         ret = self.send_data_hid(SoloBootloader.HIDCommandRNG, struct.pack("B", num))
         return ret
 
-    def get_status(self, num=0):
+    def get_status(self, num: int=0) -> bytes:
         ret = self.send_data_hid(SoloBootloader.HIDCommandStatus, struct.pack("B", num))
         # print(ret[:8])
         return ret
 
-    def verify_flash(self, sig):
+    def verify_flash(self, sig: bytes) -> None:
         """
         Tells device to check signature against application.  If it passes,
         the application will boot.
@@ -205,27 +193,24 @@ class NKFido2Client:
         """
         self.exchange(SoloBootloader.done, 0, sig)
 
-    def wink(
-        self,
-    ):
+    def wink(self) -> None:
         self.send_data_hid(CTAPHID.WINK, b"")
 
-    def reset(
-        self,
-    ):
+    def reset(self) -> None:
         self.ctap2.reset()
 
     def make_credential(
         self,
-        host="nitrokeys.dev",
-        user_id="they",
-        serial=None,
-        pin=None,
-        prompt="Touch your authenticator to generate a credential...",
-        output=True,
-        udp=False,
-        fingerprint_only=False,
-    ):
+        host: str="nitrokeys.dev",
+        user_id: str="they",
+        serial: Optional[str]=None,
+        pin: Optional[str]=None,
+        prompt: str="Touch your authenticator to generate a credential...",
+        output: bool=True,
+        udp: bool=False,
+        fingerprint_only: bool=False,
+    ) -> str:
+
         """
         fingerprint_only bool Return sha256 digest of the certificate, in a hex string format. Useful for detecting
             device's model and firmware.
@@ -275,16 +260,17 @@ class NKFido2Client:
 
     def simple_secret(
         self,
-        credential_id,
-        secret_input,
-        host="nitrokeys.dev",
-        user_id="they",
-        serial=None,
-        pin=None,
-        prompt="Touch your authenticator to generate a response...",
-        output=True,
-        udp=False,
-    ):
+        credential_id: str,
+        secret_input: str,
+        host: str="nitrokeys.dev",
+        user_id: str="they",
+        serial: Optional[str]=None,
+        pin: Optional[str]=None,
+        prompt: Optional[str]="Touch your authenticator to generate a response...",
+        output: bool=True,
+        udp: bool=False,
+    ) -> bytes:
+
         user_id = user_id.encode()
 
         client = self.client
@@ -323,15 +309,13 @@ class NKFido2Client:
 
         return output
 
-    def cred_mgmt(self, pin):
+    def cred_mgmt(self, pin: str) -> CredentialManagement:
         client = self.get_current_fido_client()
         token = client.client_pin.get_pin_token(pin)
         ctap2 = CTAP2(self.get_current_hid_device())
         return CredentialManagement(ctap2, client.client_pin.protocol, token)
 
-    def enter_solo_bootloader(
-        self,
-    ):
+    def enter_solo_bootloader(self) -> None:
         """
         If Nitrokey is configured as Nitrokey hacker or something similar,
         this command will tell the token to boot directly to the bootloader
@@ -341,7 +325,7 @@ class NKFido2Client:
             self.send_data_hid(CTAPHID.INIT, "\x11\x11\x11\x11\x11\x11\x11\x11")
         self.send_data_hid(SoloBootloader.HIDCommandEnterBoot, "")
 
-    def enter_bootloader_or_die(self):
+    def enter_bootloader_or_die(self) -> None:
         try:
             self.enter_solo_bootloader()
         # except OSError:
@@ -355,9 +339,7 @@ class NKFido2Client:
             else:
                 raise (e)
 
-    def is_solo_bootloader(
-        self,
-    ):
+    def is_solo_bootloader(self) -> None:
         try:
             self.bootloader_version()
             return True
@@ -372,9 +354,7 @@ class NKFido2Client:
             pass
         return False
 
-    def enter_st_dfu(
-        self,
-    ):
+    def enter_st_dfu(self) -> None:
         """
         If Nitrokey is configured as Nitrokey hacker or something similar,
         this command will tell the token to boot directly to the st DFU
@@ -388,9 +368,7 @@ class NKFido2Client:
         else:
             self.send_only_hid(SoloBootloader.HIDCommandEnterSTBoot, "")
 
-    def disable_solo_bootloader(
-        self,
-    ):
+    def disable_solo_bootloader(self) -> bool:
         """
         Disables the Nitrokey bootloader.  Only do this if you want to void the possibility
         of any updates.
@@ -406,11 +384,11 @@ class NKFido2Client:
         self.exchange(SoloBootloader.do_reboot)
         return True
 
-    def program_file(self, name):
-        def parseField(f):
+    def program_file(self, name: str) -> bytes:
+        def parseField(f: bytes) -> bytes:
             return base64.b64decode(helpers.from_websafe(f).encode())
 
-        def isCorrectVersion(current, target):
+        def isCorrectVersion(current: str, target: str) -> bool:
             """current is tuple (x,y,z).  target is string '>=x.y.z'.
             Return True if current satisfies the target expression.
             """
@@ -518,7 +496,7 @@ class NKFido2Client:
 
         return sig
 
-    def check_only(self, name):
+    def check_only(self, name: str) -> None:
         # FIXME refactor
         # copy from program_file
         if name.lower().endswith(".json"):
