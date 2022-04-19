@@ -1,15 +1,15 @@
 import socket
 import time
-from typing import Callable, Dict, List, Optional, Tuple, Union
+from typing import Union, Callable, Tuple, Dict, List, Optional
 
 import usb
-from fido2.hid import CtapHidDevice
 
 from pynitrokey.exceptions import NoSoloFoundError
 
 # from pynitrokey.fido2 import hmac_secret
 from pynitrokey.fido2.client import NKFido2Client
 
+from fido2.hid import CtapHidDevice
 
 def hot_patch_windows_libusb() -> None:
     # hot patch for windows libusb backend
