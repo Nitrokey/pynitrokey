@@ -15,11 +15,10 @@ import platform
 import struct
 import sys
 from time import sleep, time
+from typing import List, Literal, Optional
 
 import cbor
 import click
-
-from typing import List, Literal
 
 if "linux" in platform.platform().lower():
     import fcntl
@@ -99,7 +98,9 @@ def genkey(input_seed_file: Optional[str], output_pem_file: str) -> None:
     default=20,
     type=int,
 )
-def sign(verifying_key: str, app_hex: str, output_json: str, end_page: int, pages: int) -> None:
+def sign(
+    verifying_key: str, app_hex: str, output_json: str, end_page: int, pages: int
+) -> None:
     """Signs a fw-hex file, outputs a .json file that can be used for signed update."""
 
     msg = pynitrokey.fido2.operations.sign_firmware(
@@ -321,7 +322,9 @@ def feedkernel(count: int, serial: Optional[str]) -> None:
     default="Touch your authenticator to generate a credential...",
     show_default=True,
 )
-def make_credential(serial: Optional[str], host: str, user: str, udp: bool, prompt: str, pin: str) -> None:
+def make_credential(
+    serial: Optional[str], host: str, user: str, udp: bool, prompt: str, pin: str
+) -> None:
     """Generate a credential.
 
     Pass `--prompt ""` to output only the `credential_id` as hex.
@@ -361,7 +364,16 @@ def make_credential(serial: Optional[str], host: str, user: str, udp: bool, prom
 )
 @click.argument("credential-id")
 @click.argument("challenge")
-def challenge_response(serial: Optional[str], host: str, user: str, prompt: str, credential_id: str, challenge: str, udp: bool, pin: str) -> None:
+def challenge_response(
+    serial: Optional[str],
+    host: str,
+    user: str,
+    prompt: str,
+    credential_id: str,
+    challenge: str,
+    udp: bool,
+    pin: str,
+) -> None:
     """Uses `hmac-secret` to implement a challenge-response mechanism.
 
     We abuse hmac-secret, which gives us `HMAC(K, hash(challenge))`, where `K`
@@ -407,7 +419,12 @@ def challenge_response(serial: Optional[str], host: str, user: str, prompt: str,
 )
 @click.argument("hash-type")
 @click.argument("filename")
-def probe(serial: Optional[str], udp: bool, hash_type: Literal["SHA256", "SHA512", "RSA2048"], filename: str) -> None:
+def probe(
+    serial: Optional[str],
+    udp: bool,
+    hash_type: Literal["SHA256", "SHA512", "RSA2048"],
+    filename: str,
+) -> None:
     """Calculate HASH"""
 
     # @todo: move to constsconf.py
@@ -503,7 +520,9 @@ def reset(serial: Optional[str], yes: bool) -> None:
 )
 @click.option("--new-pin", help="change current pin to this value", default=None)
 @click.option("--old-pin", help="provide old pin, instead of prompting", default=None)
-def change_pin(serial: Optional[str], old_pin: Optional[str], new_pin: Optional[str]) -> None:
+def change_pin(
+    serial: Optional[str], old_pin: Optional[str], new_pin: Optional[str]
+) -> None:
     """Change pin of current device"""
 
     old_pin = AskUser.hidden("Please enter old pin: ")

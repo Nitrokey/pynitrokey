@@ -15,7 +15,7 @@ import time
 from getpass import getpass
 from numbers import Real
 from threading import Event, Timer
-from typing import List, Optional, Dict, Union, Any, NoReturn, TypeVar, Tuple
+from typing import Any, Dict, List, NoReturn, Optional, Tuple, TypeVar, Union
 
 from tqdm import tqdm
 

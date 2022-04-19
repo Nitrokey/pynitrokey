@@ -9,13 +9,17 @@
 
 import binascii
 import struct
+from typing import Dict, Optional
 
+import ecdsa
 from intelhex import IntelHex
 
 from pynitrokey import helpers
 
 
-def genkey(output_pem_file, input_seed_file=None):
+def genkey(
+    output_pem_file: str, input_seed_file: Optional[str] = None
+) -> ecdsa.VerifyingKey:
     from ecdsa import NIST256p, SigningKey
     from ecdsa.util import randrange_from_seed__trytryagain
 
@@ -75,14 +79,14 @@ hacker_attestation_cert = b"".join(
 
 
 def mergehex(
-    input_hex_files,
-    output_hex_file,
-    attestation_key=None,
-    attestation_cert=None,
-    APPLICATION_END_PAGE=20,
-    PAGES=128,
-    lock=False,
-):
+    input_hex_files: str,
+    output_hex_file: str,
+    attestation_key: Optional[str] = None,
+    attestation_cert: Optional[str] = None,
+    APPLICATION_END_PAGE: int = 20,
+    PAGES: int = 128,
+    lock: bool = False,
+) -> None:
     """Merges hex files, and patches in the attestation key.
 
     If no attestation key is passed, uses default Nitrokey Hacker one.
@@ -179,7 +183,9 @@ def mergehex(
     first.tofile(output_hex_file, format="hex")
 
 
-def sign_firmware(sk_name, hex_file, APPLICATION_END_PAGE=20, PAGES=128):
+def sign_firmware(
+    sk_name: str, hex_file: str, APPLICATION_END_PAGE: int = 20, PAGES: int = 128
+) -> Dict:
     v1 = sign_firmware_for_version(sk_name, hex_file, 19)
     v2 = sign_firmware_for_version(sk_name, hex_file, 20, PAGES=PAGES)
 
@@ -198,7 +204,9 @@ def sign_firmware(sk_name, hex_file, APPLICATION_END_PAGE=20, PAGES=128):
     }
 
 
-def sign_firmware_for_version(sk_name, hex_file, APPLICATION_END_PAGE, PAGES=128):
+def sign_firmware_for_version(
+    sk_name: str, hex_file: str, APPLICATION_END_PAGE: int, PAGES: int = 128
+) -> Dict["firmware", "signature"]:
     # Maybe this is not the optimal module...
 
     import base64
