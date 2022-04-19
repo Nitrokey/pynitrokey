@@ -15,13 +15,13 @@ import struct
 import sys
 import tempfile
 import time
-from typing import Optional, List, Tuple, Union, Callable
+from typing import Callable, List, Optional, Tuple, Union
 
 import secrets
 from fido2.client import Fido2Client
 from fido2.ctap import CtapError
 from fido2.ctap1 import CTAP1
-from fido2.ctap2 import CTAP2
+from fido2.ctap2 import CTAP2, CredentialManagement
 from fido2.hid import CTAPHID, CtapHidDevice, open_device
 from intelhex import IntelHex
 
@@ -31,7 +31,7 @@ from pynitrokey.fido2.commands import SoloBootloader, SoloExtension
 
 
 class NKFido2Client:
-    def __init__(self):
+    def __init__(self) -> None:
         self.origin = "https://example.org"
         self.host = "example.org"
         self.user_id = b"they"
@@ -55,7 +55,9 @@ class NKFido2Client:
         except OSError:
             pass
 
-    def find_device(self, dev: Optional[str]=None, solo_serial: Optional[str]=None) -> CtapHidDevice:
+    def find_device(
+        self, dev: Optional[str] = None, solo_serial: Optional[str] = None
+    ) -> CtapHidDevice:
         devices = []
         if dev is None:
             if solo_serial is not None:
@@ -96,7 +98,7 @@ class NKFido2Client:
         return self.dev
 
     @staticmethod
-    def format_request(cmd: int, addr: int=0, data: bytes=b"A" * 16) -> bytes:
+    def format_request(cmd: int, addr: int = 0, data: bytes = b"A" * 16) -> bytes:
         # not sure why this is here?
         # arr = b"\x00" * 9
         addr = struct.pack("<L", addr)
@@ -105,18 +107,18 @@ class NKFido2Client:
 
         return cmd + addr[:3] + SoloBootloader.TAG + length + data
 
-    def send_only_hid(self, cmd: int, data: bytes=b"A" * 16) -> None:
+    def send_only_hid(self, cmd: int, data: bytes = b"A" * 16) -> None:
         if not isinstance(data, bytes):
             data = struct.pack("%dB" % len(data), *[ord(x) for x in data])
         self.dev._dev.InternalSend(0x80 | cmd, bytearray(data))
 
-    def send_data_hid(self, cmd: int, data: bytes=b"A" * 16) -> bytes:
+    def send_data_hid(self, cmd: int, data: bytes = b"A" * 16) -> bytes:
         if not isinstance(data, bytes):
             data = struct.pack("%dB" % len(data), *[ord(x) for x in data])
         with helpers.Timeout(1.0) as event:
             return self.dev.call(cmd, data, event)
 
-    def exchange_hid(self, cmd: int, addr: int=0, data: bytes=b"A" * 16) -> bytes:
+    def exchange_hid(self, cmd: int, addr: int = 0, data: bytes = b"A" * 16) -> bytes:
         req = NKFido2Client.format_request(cmd, addr, data)
 
         data = self.send_data_hid(SoloBootloader.HIDCommandBoot, req)
@@ -127,7 +129,7 @@ class NKFido2Client:
 
         return data[1:]
 
-    def exchange_u2f(self, cmd: int, addr: int=0, data: bytes=b"A" * 16) -> bytes:
+    def exchange_u2f(self, cmd: int, addr: int = 0, data: bytes = b"A" * 16) -> bytes:
         appid = b"A" * 32
         chal = b"B" * 32
 
@@ -141,7 +143,7 @@ class NKFido2Client:
 
         return res.signature[1:]
 
-    def exchange_fido2(self, cmd: str, addr: int=0, data: bytes=b"A" * 16) -> bytes:
+    def exchange_fido2(self, cmd: str, addr: int = 0, data: bytes = b"A" * 16) -> bytes:
         chal = b"B" * 32
 
         req = NKFido2Client.format_request(cmd, addr, data)
@@ -176,11 +178,11 @@ class NKFido2Client:
     def boot_pubkey(self) -> None:
         return self.exchange(SoloBootloader.boot_pubkey)
 
-    def get_rng(self, num: int=0) -> bytes:
+    def get_rng(self, num: int = 0) -> bytes:
         ret = self.send_data_hid(SoloBootloader.HIDCommandRNG, struct.pack("B", num))
         return ret
 
-    def get_status(self, num: int=0) -> bytes:
+    def get_status(self, num: int = 0) -> bytes:
         ret = self.send_data_hid(SoloBootloader.HIDCommandStatus, struct.pack("B", num))
         # print(ret[:8])
         return ret
@@ -201,14 +203,14 @@ class NKFido2Client:
 
     def make_credential(
         self,
-        host: str="nitrokeys.dev",
-        user_id: str="they",
-        serial: Optional[str]=None,
-        pin: Optional[str]=None,
-        prompt: str="Touch your authenticator to generate a credential...",
-        output: bool=True,
-        udp: bool=False,
-        fingerprint_only: bool=False,
+        host: str = "nitrokeys.dev",
+        user_id: str = "they",
+        serial: Optional[str] = None,
+        pin: Optional[str] = None,
+        prompt: str = "Touch your authenticator to generate a credential...",
+        output: bool = True,
+        udp: bool = False,
+        fingerprint_only: bool = False,
     ) -> str:
 
         """
@@ -262,13 +264,13 @@ class NKFido2Client:
         self,
         credential_id: str,
         secret_input: str,
-        host: str="nitrokeys.dev",
-        user_id: str="they",
-        serial: Optional[str]=None,
-        pin: Optional[str]=None,
-        prompt: Optional[str]="Touch your authenticator to generate a response...",
-        output: bool=True,
-        udp: bool=False,
+        host: str = "nitrokeys.dev",
+        user_id: str = "they",
+        serial: Optional[str] = None,
+        pin: Optional[str] = None,
+        prompt: Optional[str] = "Touch your authenticator to generate a response...",
+        output: bool = True,
+        udp: bool = False,
     ) -> bytes:
 
         user_id = user_id.encode()
