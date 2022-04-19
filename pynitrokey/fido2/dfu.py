@@ -11,6 +11,8 @@ import struct
 import time
 from typing import List, Optional
 
+from typing import Optional, List
+
 import usb._objfinalizer
 import usb.core
 import usb.util

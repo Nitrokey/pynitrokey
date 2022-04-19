@@ -9,7 +9,8 @@
 
 import binascii
 import struct
-from typing import Dict, Optional
+from typing import Optional, Dict
+import ecdsa
 
 import ecdsa
 from intelhex import IntelHex
