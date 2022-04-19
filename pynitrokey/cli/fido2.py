@@ -392,13 +392,10 @@ def challenge_response(
     `User` and relying party (`hostname`) can be changed from the defaults. In order
     to later use the credential for `challenge-response` requests, the `hostname`
     (in contrast to the `username`) has to be strictly identical, otherwise the
-    operation fails with 'DEVICE_INELIGIBLE' during the `challenge-repsonse` request.
+    operation fails with 'DEVICE_INELIGIBLE'.
 
     The prompt can be suppressed using `--prompt ""`.
     """
-
-    if not pin:
-        pin = AskUser.hidden("Please provide pin: ")
 
     nkfido2.find().simple_secret(
         credential_id,
@@ -409,7 +406,6 @@ def challenge_response(
         prompt=prompt,
         output=True,
         udp=udp,
-        pin=pin,
     )
 
 
