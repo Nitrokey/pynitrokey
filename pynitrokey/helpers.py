@@ -13,9 +13,9 @@ import platform
 import sys
 import time
 from getpass import getpass
-from numbers import Number
+from numbers import Real
 from threading import Event, Timer
-from typing import List, Optional
+from typing import List, Optional, Dict, Union, Any, NoReturn, TypeVar, Tuple
 
 from tqdm import tqdm
 
@@ -31,14 +31,14 @@ from pynitrokey.confconsts import (
 STDOUT_PRINT = True
 
 
-def to_websafe(data):
+def to_websafe(data: str) -> str:
     data = data.replace("+", "-")
     data = data.replace("/", "_")
     data = data.replace("=", "")
     return data
 
 
-def from_websafe(data):
+def from_websafe(data: str) -> str:
     data = data.replace("-", "+")
     data = data.replace("_", "/")
     return data + "=="[: (3 * len(data)) % 4]
@@ -50,7 +50,7 @@ class ProgressBar:
     is not available before the first iteration.
     """
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, **kwargs: Any) -> None:
         self.bar: Optional[tqdm] = None
         self.kwargs = kwargs
         self.sum = 0
@@ -58,7 +58,7 @@ class ProgressBar:
     def __enter__(self) -> "ProgressBar":
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    def __exit__(self, exc_type: None, exc_val: None, exc_tb: None) -> None:
         self.close()
 
     def update(self, n: int, total: int) -> None:
@@ -96,20 +96,20 @@ class Timeout(object):
     :ivar timer: The Timer associated with the Timeout, if any.
     """
 
-    def __init__(self, time_or_event):
-        if isinstance(time_or_event, Number):
+    def __init__(self, time_or_event: Union[Real, Event]) -> None:
+        if isinstance(time_or_event, Real):
             self.event = Event()
-            self.timer = Timer(time_or_event, self.event.set)
+            self.timer: Optional[Timer] = Timer(float(time_or_event), self.event.set)
         else:
             self.event = time_or_event
             self.timer = None
 
-    def __enter__(self):
+    def __enter__(self) -> Event:
         if self.timer:
             self.timer.start()
         return self.event
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: None, exc_val: None, exc_tb: None) -> None:
         if self.timer:
             self.timer.join()
             self.timer.cancel()
@@ -153,13 +153,9 @@ class Retries:
 # @todo: introduce granularization: dbg, info, err (warn?)
 #        + machine-readable
 #        + logfile-only (partly solved)
-def local_print(*messages, **kwargs):
-    """
-    application-wide logging function
-    `messages`:   `str`         -> log single string
-                  `Exception`   -> log exception
-                  `list of ...` -> list of either `str` or `Exception` handle serialized
-    """
+def local_print(*messages: Any, **kwargs: Any) -> None:
+    """Application-wide logging function"""
+
     passed_exc = None
     logger = logging.getLogger()
 
@@ -189,10 +185,14 @@ def local_print(*messages, **kwargs):
         raise passed_exc
 
 
-def local_critical(*messages, support_hint=True, ret_code=1, **kwargs):
+def local_critical(
+    *messages: Any, support_hint: bool = True, ret_code: int = 1, **kwargs: Any
+) -> NoReturn:
+
     global STDOUT_PRINT
-    messages = ["Critical error:"] + list(messages)
+    messages = ("Critical error:",) + tuple(messages)
     local_print(*messages, **kwargs)
+
     if support_hint:
 
         # list all connected devices to logfile
@@ -204,6 +204,7 @@ def local_critical(*messages, support_hint=True, ret_code=1, **kwargs):
             from pynitrokey.cli import nitropy
 
             nitropy.commands["list"].callback()
+
         except Exception:
             local_print("Unable to list devices. See log for the details.")
             logger = logging.getLogger()
@@ -248,12 +249,12 @@ class AskUser:
         options: List[str] = None,
         strict: bool = False,
         repeat: int = 3,
-        adapt_question=True,
-        hide_input=False,
+        adapt_question: bool = True,
+        hide_input: bool = False,
         envvar: str = None,
-    ):
+    ) -> None:
 
-        self.data = None
+        self.data: Optional[str] = None
 
         self.question = question
         self.adapt_question = adapt_question
@@ -278,23 +279,27 @@ class AskUser:
         self.envvar = envvar
 
     @classmethod
-    def yes_no(cls, what: str, strict: bool = False):
+    def yes_no(cls, what: str, strict: bool = False) -> bool:
         opts = ["yes", "no"]
         return cls(what, options=opts, strict=strict).ask() == opts[0]
 
     @classmethod
-    def strict_yes_no(cls, what: str):
+    def strict_yes_no(cls, what: str) -> bool:
         return cls.yes_no(what, strict=True)
 
     @classmethod
-    def plain(cls, what):
+    def plain(cls, what: str) -> str:
         return cls(what).ask()
 
     @classmethod
-    def hidden(cls, what):
+    def hidden(cls, what: str) -> str:
         return cls(what, hide_input=True).ask()
 
-    def get_input(self, pre_str=None, hide_input=None):
+    def get_input(
+        self,
+        pre_str: Optional[str] = None,
+        hide_input: Optional[Union[str, bool]] = None,
+    ) -> str:
         pre_input_string = pre_str or self.final_question
         hide_input = hide_input if hide_input is not None else self.hide_input
         return (
@@ -303,7 +308,7 @@ class AskUser:
             else getpass(pre_input_string)
         )
 
-    def ask(self):
+    def ask(self) -> str:
         answer = None
         if self.envvar is not None:
             fromvar = os.environ.get(self.envvar)
@@ -341,4 +346,4 @@ class AskUser:
             local_critical("max tries exceeded - exiting...")
 
         assert self.data is None, "expecting `self.data` to be None at this point!"
-        return self.data
+        return self.data or ""

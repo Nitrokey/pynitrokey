@@ -57,10 +57,11 @@ def find_all():
         for d in hid_devices
         if (d.descriptor.vid, d.descriptor.pid)
         in [
-            ## @FIXME: move magic numbers
-            (1155, 41674),
-            (0x20A0, 0x42B3),
-            (0x20A0, 0x42B1),
+           #(  1155,  41674),     <- replacing with 0x-notation
+            (0x0483, 0xA2CA),     #
+            (0x20A0, 0x42B3),     # ...
+            (0x20A0, 0x42B1),     # NK FIDO2
+           #(0x20A0, 0x42B2),     # NK3
         ]
     ]
     return [find(raw_device=device) for device in solo_devices]
