@@ -20,6 +20,22 @@ Signed Commits
 
 If you have an OpenPGP key, please sign all your commits with it.  We require all commits on the master branch to be signed.  If you don’t have an OpenPGP key, a developer that reviewed your commits will sign them for you.
 
+Commit Hooks
+--------------
+
+For the local quick checks of the formatting you use pre-commit:
+
+- https://pre-commit.com/
+
+Setup:
+
+```
+pip install pre-commit
+```
+
+Checks configured in `.pre-commit-config.yaml` will be executed before each commit, and on-demand when calling `pre-commit` from the command line.
+
+
 Design Patterns
 ---------------
 
