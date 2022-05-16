@@ -23,17 +23,22 @@ If you have an OpenPGP key, please sign all your commits with it.  We require al
 Commit Hooks
 --------------
 
-For the local quick checks of the formatting you use pre-commit:
+For the local quick checks of the formatting you can use pre-commit:
 
 - https://pre-commit.com/
 
 Setup:
 
-```
-pip install pre-commit
-```
+``
+$ pip install pre-commit -U
+$ pre-commit install
+``
 
-Checks configured in `.pre-commit-config.yaml` will be executed before each commit, and on-demand when calling `pre-commit` from the command line.
+Usage:
+
+- https://pre-commit.com/#usage
+
+Checks configured in ``.pre-commit-config.yaml`` will be executed before each commit, and on-demand when calling ``pre-commit`` from the command line.
 
 
 Design Patterns
