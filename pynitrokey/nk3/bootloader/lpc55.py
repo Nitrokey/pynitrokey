@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2021 Nitrokey Developers
+# Copyright 2021-2022 Nitrokey Developers
 #
 # Licensed under the Apache License, Version 2.0, <LICENSE-APACHE or
 # http://apache.org/licenses/LICENSE-2.0> or the MIT license <LICENSE-MIT or
@@ -18,8 +18,8 @@ from spsdk.mboot.properties import PropertyTag
 from spsdk.sbfile.sb2.images import BootImageV21
 from spsdk.utils.usbfilter import USBDeviceFilter
 
-from .base import Nitrokey3Base
-from .utils import Version
+from ..base import Nitrokey3Base
+from ..utils import Version
 
 RKHT = bytes.fromhex("050aad3e77791a81e59c5b2ba5a158937e9460ee325d8ccba09734b8fdebb171")
 KEK = bytes([0xAA] * 32)
@@ -28,22 +28,22 @@ UUID_LEN = 4
 logger = logging.getLogger(__name__)
 
 
-class Nitrokey3Bootloader(Nitrokey3Base):
-    """A Nitrokey 3 device running the bootloader."""
+class Nitrokey3BootloaderLpc55(Nitrokey3Base):
+    """A Nitrokey 3 device running the NXP bootloader."""
 
     def __init__(self, device: RawHid):
-        from . import PID_NITROKEY3_BOOTLOADER, VID_NITROKEY
+        from .. import PID_NITROKEY3_NXP_BOOTLOADER, VID_NITROKEY
 
-        if (device.vid, device.pid) != (VID_NITROKEY, PID_NITROKEY3_BOOTLOADER):
+        if (device.vid, device.pid) != (VID_NITROKEY, PID_NITROKEY3_NXP_BOOTLOADER):
             raise ValueError(
                 "Not a Nitrokey 3 device: expected VID:PID "
-                f"{VID_NITROKEY:x}:{PID_NITROKEY3_BOOTLOADER:x}, "
+                f"{VID_NITROKEY:x}:{PID_NITROKEY3_NXP_BOOTLOADER:x}, "
                 f"got {device.vid:x}:{device.pid:x}"
             )
         self._path = device.path
         self.device = McuBoot(device)
 
-    def __enter__(self) -> "Nitrokey3Bootloader":
+    def __enter__(self) -> "Nitrokey3BootloaderLpc55":
         self.device.open()
         return self
 
@@ -55,7 +55,7 @@ class Nitrokey3Bootloader(Nitrokey3Base):
 
     @property
     def name(self) -> str:
-        return "Nitrokey 3 Bootloader"
+        return "Nitrokey 3 Bootloader (LPC55)"
 
     @property
     def status(self) -> Tuple[int, str]:
@@ -100,26 +100,26 @@ class Nitrokey3Bootloader(Nitrokey3Base):
         )
 
     @staticmethod
-    def list() -> List["Nitrokey3Bootloader"]:
-        from . import PID_NITROKEY3_BOOTLOADER, VID_NITROKEY
+    def list() -> List["Nitrokey3BootloaderLpc55"]:
+        from .. import PID_NITROKEY3_NXP_BOOTLOADER, VID_NITROKEY
 
         device_filter = USBDeviceFilter(
-            f"0x{VID_NITROKEY:x}:0x{PID_NITROKEY3_BOOTLOADER:x}"
+            f"0x{VID_NITROKEY:x}:0x{PID_NITROKEY3_NXP_BOOTLOADER:x}"
         )
         devices = []
         for device in RawHid.enumerate(device_filter):
             # TODO: remove assert if https://github.com/NXPmicro/spsdk/issues/32 is fixed
             assert isinstance(device, RawHid)
             try:
-                devices.append(Nitrokey3Bootloader(device))
+                devices.append(Nitrokey3BootloaderLpc55(device))
             except ValueError:
                 logger.warn(
-                    f"Invalid Nitrokey 3 bootloader returned by enumeration: {device}"
+                    f"Invalid Nitrokey 3 LPC55 bootloader returned by enumeration: {device}"
                 )
         return devices
 
     @staticmethod
-    def open(path: str) -> Optional["Nitrokey3Bootloader"]:
+    def open(path: str) -> Optional["Nitrokey3BootloaderLpc55"]:
         device_filter = USBDeviceFilter(path)
         devices = RawHid.enumerate(device_filter)
         if len(devices) == 0:
@@ -132,7 +132,7 @@ class Nitrokey3Bootloader(Nitrokey3Base):
         try:
             # TODO: remove assert if https://github.com/NXPmicro/spsdk/issues/32 is fixed
             assert isinstance(devices[0], RawHid)
-            return Nitrokey3Bootloader(devices[0])
+            return Nitrokey3BootloaderLpc55(devices[0])
         except ValueError:
             logger.warn(
                 f"No Nitrokey 3 bootloader at path {path}", exc_info=sys.exc_info()

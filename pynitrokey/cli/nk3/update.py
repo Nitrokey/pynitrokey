@@ -23,9 +23,9 @@ from pynitrokey.helpers import (
     confirm,
     local_print,
 )
-from pynitrokey.nk3.bootloader import (
+from pynitrokey.nk3.bootloader.lpc55 import (
     FirmwareMetadata,
-    Nitrokey3Bootloader,
+    Nitrokey3BootloaderLpc55,
     check_firmware_image,
 )
 from pynitrokey.nk3.device import Nitrokey3Device
@@ -76,7 +76,7 @@ def update(ctx: Context, image: Optional[str]) -> Version:
                 if platform.system() == "Linux":
                     msgs += ["Are the Nitrokey udev rules installed and active?"]
                 raise CliException(*msgs, exc)
-        elif isinstance(device, Nitrokey3Bootloader):
+        elif isinstance(device, Nitrokey3BootloaderLpc55):
             metadata, data = _get_update(firmware_or_release, current_version)
             _perform_update(device, data)
         else:
@@ -207,7 +207,7 @@ def _print_update_warning() -> None:
         raise click.Abort()
 
 
-def _perform_update(device: Nitrokey3Bootloader, image: bytes) -> None:
+def _perform_update(device: Nitrokey3BootloaderLpc55, image: bytes) -> None:
     logger.debug("Starting firmware update")
     with ProgressBar(desc="Perform firmware update", unit="B", unit_scale=True) as bar:
         result = device.update(image, callback=bar.update_sum)

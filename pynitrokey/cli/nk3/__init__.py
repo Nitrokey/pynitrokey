@@ -18,7 +18,11 @@ from pynitrokey.helpers import DownloadProgressBar, Retries, local_print
 from pynitrokey.nk3 import list as list_nk3
 from pynitrokey.nk3 import open as open_nk3
 from pynitrokey.nk3.base import Nitrokey3Base
-from pynitrokey.nk3.bootloader import RKHT, FirmwareMetadata, Nitrokey3Bootloader
+from pynitrokey.nk3.bootloader.lpc55 import (
+    RKHT,
+    FirmwareMetadata,
+    Nitrokey3BootloaderLpc55,
+)
 from pynitrokey.nk3.device import BootMode, Nitrokey3Device
 from pynitrokey.nk3.exceptions import TimeoutException
 from pynitrokey.nk3.updates import REPOSITORY, get_firmware_update
@@ -82,8 +86,8 @@ class Context:
     def await_device(self) -> Nitrokey3Device:
         return self._await("Nitrokey 3", Nitrokey3Device)
 
-    def await_bootloader(self) -> Nitrokey3Bootloader:
-        return self._await("Nitrokey 3 bootloader", Nitrokey3Bootloader)
+    def await_bootloader(self) -> Nitrokey3BootloaderLpc55:
+        return self._await("Nitrokey 3 bootloader", Nitrokey3BootloaderLpc55)
 
 
 @click.group()
