@@ -9,8 +9,8 @@
 
 from typing import List, Optional
 
+from . import bootloader
 from .base import Nitrokey3Base
-from .bootloader.lpc55 import Nitrokey3BootloaderLpc55
 from .device import Nitrokey3Device
 
 VID_NITROKEY = 0x20A0
@@ -20,18 +20,18 @@ PID_NITROKEY3_NXP_BOOTLOADER = 0x42DD
 
 def list() -> List[Nitrokey3Base]:
     devices: List[Nitrokey3Base] = []
-    devices.extend(Nitrokey3BootloaderLpc55.list())
+    devices.extend(bootloader.list())
     devices.extend(Nitrokey3Device.list())
     return devices
 
 
 def open(path: str) -> Optional[Nitrokey3Base]:
     device = Nitrokey3Device.open(path)
-    bootloader = Nitrokey3BootloaderLpc55.open(path)
-    if device and bootloader:
+    bootloader_device = bootloader.open(path)
+    if device and bootloader_device:
         raise Exception(f"Found multiple devices at path {path}")
     if device:
         return device
-    if bootloader:
-        return bootloader
+    if bootloader_device:
+        return bootloader_device
     return None

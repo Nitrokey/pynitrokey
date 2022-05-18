@@ -15,18 +15,21 @@ import click
 from spsdk.mboot.exceptions import McuBootConnectionError
 
 from pynitrokey.cli.exceptions import CliException
-from pynitrokey.cli.nk3 import Context, reboot_to_bootloader
+from pynitrokey.cli.nk3 import VARIANT_CHOICE, Context, reboot_to_bootloader
 from pynitrokey.helpers import (
     DownloadProgressBar,
     ProgressBar,
     Retries,
     confirm,
     local_print,
+    prompt,
 )
-from pynitrokey.nk3.bootloader.lpc55 import (
+from pynitrokey.nk3.bootloader import (
     FirmwareMetadata,
-    Nitrokey3BootloaderLpc55,
-    check_firmware_image,
+    Nitrokey3Bootloader,
+    Variant,
+    detect_variant,
+    validate_firmware_image,
 )
 from pynitrokey.nk3.device import Nitrokey3Device
 from pynitrokey.nk3.updates import REPOSITORY, get_firmware_update
@@ -36,12 +39,12 @@ from pynitrokey.updates import Release
 logger = logging.getLogger(__name__)
 
 
-def update(ctx: Context, image: Optional[str]) -> Version:
+def update(ctx: Context, image: Optional[str], variant: Optional[Variant]) -> Version:
     with ctx.connect() as device:
         current_version = (
             device.version() if isinstance(device, Nitrokey3Device) else None
         )
-        firmware_or_release = _prepare_update(image, current_version)
+        firmware_or_release = _prepare_update(image, current_version, variant)
         _print_update_warning()
 
         if isinstance(device, Nitrokey3Device):
@@ -64,7 +67,7 @@ def update(ctx: Context, image: Optional[str]) -> Version:
                 try:
                     with ctx.await_bootloader() as bootloader:
                         metadata, data = _get_update(
-                            firmware_or_release, current_version
+                            firmware_or_release, current_version, bootloader.variant
                         )
                         _perform_update(bootloader, data)
                     break
@@ -76,8 +79,10 @@ def update(ctx: Context, image: Optional[str]) -> Version:
                 if platform.system() == "Linux":
                     msgs += ["Are the Nitrokey udev rules installed and active?"]
                 raise CliException(*msgs, exc)
-        elif isinstance(device, Nitrokey3BootloaderLpc55):
-            metadata, data = _get_update(firmware_or_release, current_version)
+        elif isinstance(device, Nitrokey3Bootloader):
+            metadata, data = _get_update(
+                firmware_or_release, current_version, bootloader.variant
+            )
             _perform_update(device, data)
         else:
             raise CliException(f"Unexpected Nitrokey 3 device: {device}")
@@ -86,12 +91,19 @@ def update(ctx: Context, image: Optional[str]) -> Version:
 
 
 def _prepare_update(
-    image: Optional[str], current_version: Optional[Version]
+    image: Optional[str], current_version: Optional[Version], variant: Optional[Variant]
 ) -> Union[Tuple[FirmwareMetadata, bytes], Release]:
     if image:
+        if not variant:
+            variant = detect_variant(image)
+        if not variant:
+            variant = Variant.from_str(
+                prompt("Firmware image variant", type=VARIANT_CHOICE)
+            )
+
         with open(image, "rb") as f:
             data = f.read()
-        metadata = check_firmware_image(data)
+        metadata = validate_firmware_image(variant, data)
         _print_version_warning(metadata, current_version)
         return (metadata, data)
     else:
@@ -112,21 +124,25 @@ def _prepare_update(
 def _get_update(
     firmware_or_release: Union[Tuple[FirmwareMetadata, bytes], Release],
     current_version: Optional[Version],
+    variant: Variant,
 ) -> Tuple[FirmwareMetadata, bytes]:
     if isinstance(firmware_or_release, Release):
         release = firmware_or_release
-        return _download_update(release, current_version)
+        return _download_update(release, current_version, variant)
     else:
         return firmware_or_release
 
 
 def _download_update(
-    release: Release, current_version: Optional[Version]
+    release: Release, current_version: Optional[Version], variant: Variant
 ) -> Tuple[FirmwareMetadata, bytes]:
     try:
-        update = get_firmware_update(release)
+        update = get_firmware_update(release, variant)
     except Exception as e:
-        raise CliException("Failed to find firmware image for release {release}", e)
+        raise CliException(
+            f"Failed to find firmware image for release {release} and variant {variant}",
+            e,
+        )
 
     try:
         logger.info(f"Trying to download firmware update from URL: {update.url}")
@@ -137,7 +153,7 @@ def _download_update(
     except Exception as e:
         raise CliException(f"Failed to download latest firmware update {update.tag}", e)
 
-    metadata = check_firmware_image(data)
+    metadata = validate_firmware_image(variant, data)
     if Version.from_v_str(release.tag) != metadata.version:
         raise CliException(
             f"The firmware image for the release {release} has the unexpected product "
@@ -207,15 +223,12 @@ def _print_update_warning() -> None:
         raise click.Abort()
 
 
-def _perform_update(device: Nitrokey3BootloaderLpc55, image: bytes) -> None:
+def _perform_update(device: Nitrokey3Bootloader, image: bytes) -> None:
     logger.debug("Starting firmware update")
     with ProgressBar(desc="Perform firmware update", unit="B", unit_scale=True) as bar:
-        result = device.update(image, callback=bar.update_sum)
-    logger.debug(f"Firmware update finished with status {device.status}")
-
-    if result:
-        logger.debug("Firmware update finished successfully")
-        device.reboot()
-    else:
-        (code, message) = device.status
-        raise CliException(f"Firmware update failed with status code {code}: {message}")
+        try:
+            device.update(image, callback=bar.update_sum)
+        except Exception as e:
+            raise CliException("Failed to perform firmware update", e)
+    logger.debug("Firmware update finished successfully")
+    device.reboot()

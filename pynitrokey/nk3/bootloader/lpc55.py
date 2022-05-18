@@ -9,6 +9,7 @@
 
 import logging
 import platform
+import re
 import sys
 from typing import Callable, List, Optional, Tuple
 
@@ -18,17 +19,18 @@ from spsdk.mboot.properties import PropertyTag
 from spsdk.sbfile.sb2.images import BootImageV21
 from spsdk.utils.usbfilter import USBDeviceFilter
 
-from ..base import Nitrokey3Base
 from ..utils import Version
+from . import FirmwareMetadata, Nitrokey3Bootloader, Variant
 
 RKHT = bytes.fromhex("050aad3e77791a81e59c5b2ba5a158937e9460ee325d8ccba09734b8fdebb171")
 KEK = bytes([0xAA] * 32)
 UUID_LEN = 4
+FILENAME_PATTERN = re.compile("\\.sb2$")
 
 logger = logging.getLogger(__name__)
 
 
-class Nitrokey3BootloaderLpc55(Nitrokey3Base):
+class Nitrokey3BootloaderLpc55(Nitrokey3Bootloader):
     """A Nitrokey 3 device running the NXP bootloader."""
 
     def __init__(self, device: RawHid):
@@ -46,6 +48,10 @@ class Nitrokey3BootloaderLpc55(Nitrokey3Base):
     def __enter__(self) -> "Nitrokey3BootloaderLpc55":
         self.device.open()
         return self
+
+    @property
+    def variant(self) -> Variant:
+        return Variant.LPC55
 
     @property
     def path(self) -> str:
@@ -92,12 +98,18 @@ class Nitrokey3BootloaderLpc55(Nitrokey3Base):
         image: bytes,
         callback: Optional[Callable[[int, int], None]] = None,
         check_errors: bool = False,
-    ) -> bool:
-        return self.device.receive_sb_file(
+    ) -> None:
+        success = self.device.receive_sb_file(
             image,
             progress_callback=callback,
             check_errors=check_errors,
         )
+        logger.debug(f"Firmware update finished with status {self.status}")
+        if not success:
+            (code, message) = self.status
+            raise Exception(
+                f"Firmware update failed with status code {code}: {message}"
+            )
 
     @staticmethod
     def list() -> List["Nitrokey3BootloaderLpc55"]:
@@ -140,45 +152,14 @@ class Nitrokey3BootloaderLpc55(Nitrokey3Base):
             return None
 
 
-class FirmwareMetadata:
-    def __init__(self, version: Version, rkht: Optional[bytes]) -> None:
-        self.version = version
-        self.rkht = rkht
-
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, FirmwareMetadata):
-            return NotImplemented
-        return self.version == other.version and self.rkht == other.rkht
-
-    def __repr__(self) -> str:
-        rkht = self.rkht.hex() if self.rkht else None
-        return f"FirmwareMetadata(version={self.version}, rkht={rkht})"
-
-    @classmethod
-    def from_image(cls, image: BootImageV21) -> "FirmwareMetadata":
-        return cls(
-            version=Version.from_bcd_version(image.header.product_version),
-            rkht=image.cert_block.rkht if image.cert_block else None,
-        )
-
-    @classmethod
-    def from_image_data(cls, data: bytes) -> "FirmwareMetadata":
-        return FirmwareMetadata.from_image(BootImageV21.parse(data, kek=KEK))
-
-
-def check_firmware_image(data: bytes) -> FirmwareMetadata:
-    try:
-        metadata = FirmwareMetadata.from_image_data(data)
-    except Exception:
-        logger.exception("Failed to parse firmware image", exc_info=sys.exc_info())
-        raise Exception("Failed to parse firmware image")
-
-    if not metadata.rkht:
-        raise Exception("Firmware image is not signed")
-
-    if metadata.rkht != RKHT:
-        raise Exception(
-            f"Firmware image is not signed by Nitrokey (RKHT: {metadata.rkht.hex()})"
-        )
-
+def parse_firmware_image(data: bytes) -> FirmwareMetadata:
+    image = BootImageV21.parse(data, kek=KEK)
+    version = Version.from_bcd_version(image.header.product_version)
+    metadata = FirmwareMetadata(version=version)
+    if image.cert_block:
+        if image.cert_block.rkht == RKHT:
+            metadata.signed_by = "Nitrokey"
+            metadata.signed_by_nitrokey = True
+        else:
+            metadata.signed_by = f"unknown issuer (RKHT: {image.cert_block.rkht.hex()})"
     return metadata

@@ -14,14 +14,15 @@ from typing import List, Optional, Type, TypeVar
 import click
 
 from pynitrokey.cli.exceptions import CliException
-from pynitrokey.helpers import DownloadProgressBar, Retries, local_print
+from pynitrokey.helpers import DownloadProgressBar, Retries, local_print, prompt
 from pynitrokey.nk3 import list as list_nk3
 from pynitrokey.nk3 import open as open_nk3
 from pynitrokey.nk3.base import Nitrokey3Base
-from pynitrokey.nk3.bootloader.lpc55 import (
-    RKHT,
-    FirmwareMetadata,
-    Nitrokey3BootloaderLpc55,
+from pynitrokey.nk3.bootloader import (
+    Nitrokey3Bootloader,
+    Variant,
+    detect_variant,
+    parse_firmware_image,
 )
 from pynitrokey.nk3.device import BootMode, Nitrokey3Device
 from pynitrokey.nk3.exceptions import TimeoutException
@@ -31,6 +32,17 @@ from pynitrokey.updates import OverwriteError
 T = TypeVar("T", bound=Nitrokey3Base)
 
 logger = logging.getLogger(__name__)
+
+VARIANT_CHOICE = click.Choice(
+    [variant.value for variant in Variant],
+    case_sensitive=False,
+)
+
+
+def variant_callback(
+    _ctx: object, _param: object, value: Optional[str]
+) -> Optional[Variant]:
+    return Variant.from_str(value) if value else None
 
 
 class Context:
@@ -86,8 +98,9 @@ class Context:
     def await_device(self) -> Nitrokey3Device:
         return self._await("Nitrokey 3", Nitrokey3Device)
 
-    def await_bootloader(self) -> Nitrokey3BootloaderLpc55:
-        return self._await("Nitrokey 3 bootloader", Nitrokey3BootloaderLpc55)
+    def await_bootloader(self) -> Nitrokey3Bootloader:
+        # mypy does not allow abstract types here, but this is still valid
+        return self._await("Nitrokey 3 bootloader", Nitrokey3Bootloader)  # type: ignore
 
 
 @click.group()
@@ -213,6 +226,13 @@ def test(ctx: Context, pin: Optional[str]) -> None:
 @nk3.command()
 @click.argument("path", default=".")
 @click.option(
+    "--variant",
+    type=VARIANT_CHOICE,
+    callback=variant_callback,
+    required=True,
+    help="The variant to fetch the update for",
+)
+@click.option(
     "-f",
     "--force",
     is_flag=True,
@@ -220,7 +240,9 @@ def test(ctx: Context, pin: Optional[str]) -> None:
     help="Overwrite the firmware image if it already exists",
 )
 @click.option("--version", help="Download this version instead of the latest one")
-def fetch_update(path: str, force: bool, version: Optional[str]) -> None:
+def fetch_update(
+    path: str, force: bool, variant: Variant, version: Optional[str]
+) -> None:
     """
     Fetches a firmware update for the Nitrokey 3 and stores it at the given path.
 
@@ -234,7 +256,7 @@ def fetch_update(path: str, force: bool, version: Optional[str]) -> None:
     """
     try:
         release = REPOSITORY.get_release_or_latest(version)
-        update = get_firmware_update(release)
+        update = get_firmware_update(release, variant)
     except Exception as e:
         if version:
             raise CliException(f"Failed to find firmware update {version}", e)
@@ -266,32 +288,48 @@ def fetch_update(path: str, force: bool, version: Optional[str]) -> None:
 
 @nk3.command()
 @click.argument("image")
-def validate_update(image: str) -> None:
+@click.option(
+    "--variant",
+    type=VARIANT_CHOICE,
+    callback=variant_callback,
+    help="The variant of the given firmage image",
+)
+def validate_update(image: str, variant: Optional[Variant]) -> None:
     """
     Validates the given firmware image and prints the firmware version and the signer.
+
+    If the name of the firmware image name is changed so that the device variant can no longer be
+    detected from the filename, it has to be set explictly with --variant.
     """
+    if not variant:
+        variant = detect_variant(image)
+    if not variant:
+        variant = Variant.from_str(
+            prompt("Firmware image variant", type=VARIANT_CHOICE)
+        )
+
     with open(image, "rb") as f:
         data = f.read()
 
     try:
-        metadata = FirmwareMetadata.from_image_data(data)
+        metadata = parse_firmware_image(variant, data)
     except Exception as e:
         raise CliException("Failed to parse and validate firmware image", e)
 
-    if metadata.rkht:
-        if metadata.rkht == RKHT:
-            signature = "Nitrokey"
-        else:
-            signature = f"unknown issuer (RKHT: {metadata.rkht.hex()})"
-    else:
-        signature = "unsigned"
+    signed_by = metadata.signed_by or "unsigned"
 
     print(f"version:    {metadata.version}")
-    print(f"signed by:  {signature}")
+    print(f"signed by:  {signed_by}")
 
 
 @nk3.command()
 @click.argument("image", required=False)
+@click.option(
+    "--variant",
+    type=VARIANT_CHOICE,
+    callback=variant_callback,
+    help="The variant of the given firmage image",
+)
 @click.option(
     "--experimental",
     default=False,
@@ -300,7 +338,9 @@ def validate_update(image: str) -> None:
     hidden=True,
 )
 @click.pass_obj
-def update(ctx: Context, image: Optional[str], experimental: bool) -> None:
+def update(
+    ctx: Context, image: Optional[str], variant: Optional[Variant], experimental: bool
+) -> None:
     """
     Update the firmware of the device using the given image.
 
@@ -309,7 +349,9 @@ def update(ctx: Context, image: Optional[str], experimental: bool) -> None:
     not be removed during the update.  Also, additional Nitrokey 3 devices may not be connected
     during the update.
 
-    If no firmware image is given, the latest firmware release is downloaded automatically.
+    If no firmware image is given, the latest firmware release is downloaded automatically.  If a
+    firmware image is given and its name is changed so that the device variant can no longer be
+    detected from the filename, it has to be set explictly with --variant.
 
     If the connected Nitrokey 3 device is in firmware mode, the user is prompted to touch the
     device’s button to confirm rebooting to bootloader mode.
@@ -320,7 +362,7 @@ def update(ctx: Context, image: Optional[str], experimental: bool) -> None:
 
     from .update import update
 
-    update_version = update(ctx, image)
+    update_version = update(ctx, image, variant)
 
     local_print("")
     with ctx.await_device() as device:
