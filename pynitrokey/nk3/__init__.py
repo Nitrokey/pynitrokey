@@ -16,6 +16,7 @@ from .device import Nitrokey3Device
 VID_NITROKEY = 0x20A0
 PID_NITROKEY3_DEVICE = 0x42B2
 PID_NITROKEY3_NXP_BOOTLOADER = 0x42DD
+PID_NITROKEY3_NRF_BOOTLOADER = 0x42E8
 
 
 def list() -> List[Nitrokey3Base]:

@@ -11,7 +11,7 @@ import logging
 import platform
 import re
 import sys
-from typing import Callable, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 from spsdk.mboot import McuBoot, StatusCode
 from spsdk.mboot.interfaces import RawHid
@@ -20,12 +20,12 @@ from spsdk.sbfile.sb2.images import BootImageV21
 from spsdk.utils.usbfilter import USBDeviceFilter
 
 from ..utils import Version
-from . import FirmwareMetadata, Nitrokey3Bootloader, Variant
+from . import FirmwareMetadata, Nitrokey3Bootloader, ProgressCallback, Variant
 
 RKHT = bytes.fromhex("050aad3e77791a81e59c5b2ba5a158937e9460ee325d8ccba09734b8fdebb171")
 KEK = bytes([0xAA] * 32)
 UUID_LEN = 4
-FILENAME_PATTERN = re.compile("\\.sb2$")
+FILENAME_PATTERN = re.compile("firmware-nk3..-lpc55-.*\\.sb2$")
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +97,7 @@ class Nitrokey3BootloaderLpc55(Nitrokey3Bootloader):
     def update(
         self,
         image: bytes,
-        callback: Optional[Callable[[int, int], None]] = None,
+        callback: Optional[ProgressCallback] = None,
         check_errors: bool = False,
     ) -> None:
         success = self.device.receive_sb_file(
