@@ -1,4 +1,3 @@
-import logging
 import platform
 import sys
 
@@ -142,7 +141,7 @@ def update(firmware_path: str):
         except nkdfu.dfu.DFUBadSate as e:
             print(f"Cannot connect to the device: {device} -> {e}")
             print(
-                f"Reinsert device to the USB port and try again (DFU connects, but reports invalid state)"
+                "Reinsert device to the USB port and try again (DFU connects, but reports invalid state)"
             )
             sys.exit(1)
         except Exception as e:

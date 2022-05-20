@@ -9,8 +9,6 @@
 
 """Monkey patch FIDO2 backend to get serial number."""
 
-import sys
-
 ########################################################
 # removed as fido._pyu2f is not part of fido2 anymore...
 ####################################################

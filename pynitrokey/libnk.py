@@ -21,13 +21,11 @@ SPDX-License-Identifier: LGPL-3.0
 """
 import os
 import sys
-from datetime import datetime as dt
 from enum import IntEnum
 from functools import wraps
 from pathlib import Path
 from random import randint
 from time import time as timestamp
-from typing import List, Tuple
 
 import cffi
 

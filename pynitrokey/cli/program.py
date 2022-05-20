@@ -7,13 +7,12 @@
 # http://opensource.org/licenses/MIT>, at your option. This file may not be
 # copied, modified, or distributed except according to those terms.
 
-import sys
 import time
 
 import click
 from fido2.ctap import CtapError
 
-from pynitrokey.fido2 import find, hot_patch_windows_libusb
+from pynitrokey.fido2 import find
 from pynitrokey.helpers import local_critical, local_print
 
 

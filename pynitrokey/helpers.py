@@ -20,7 +20,6 @@ from typing import List, Optional
 from tqdm import tqdm
 
 from pynitrokey.confconsts import (
-    GH_ISSUES_URL,
     LOG_FN,
     SUPPORT_EMAIL,
     SUPPORT_URL,

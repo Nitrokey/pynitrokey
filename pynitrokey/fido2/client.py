@@ -18,9 +18,6 @@ import time
 from typing import Optional
 
 import secrets
-from cryptography import x509
-from cryptography.hazmat.backends import default_backend
-from fido2.attestation import Attestation
 from fido2.client import Fido2Client
 from fido2.ctap import CtapError
 from fido2.ctap1 import CTAP1
