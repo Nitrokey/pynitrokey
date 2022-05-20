@@ -45,7 +45,7 @@ dev = [
   "flit >=3.2,<4",
   "ipython",
   "isort",
-  "mypy",
+  "mypy >= 0.900",
   "types-requests",
 ]
 
@@ -57,3 +57,38 @@ nitropy = "pynitrokey.cli:main"
 
 [tool.isort]
 profile = "black"
+
+[tool.mypy]
+mypy_path = "pynitrokey/stubs"
+
+# enable strict checks for new code
+[[tool.mypy.overrides]]
+module = [
+    "pynitrokey.cli.nk3.*",
+    "pynitrokey.nk3.*",
+    "pynitrokey.updates.*",
+]
+disallow_untyped_defs = true
+
+# pynitrokey.nethsm.client is auto-generated
+[[tool.mypy.overrides]]
+module = "pynitrokey.nethsm.client.*"
+ignore_errors = true
+
+# libraries without annotations
+[[tool.mypy.overrides]]
+module = [
+    "cbor.*",
+    "cffi.*",
+    "click.*",
+    "ecdsa.*",
+    "intelhex.*",
+    "nacl.*",
+    "nkdfu.*",
+    "ruamel.*",
+    "serial.*",
+    "urllib3.*",
+    "usb.*",
+    "usb1.*",
+]
+ignore_missing_imports = true
