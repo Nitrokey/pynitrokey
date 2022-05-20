@@ -11,7 +11,7 @@ We use `flake8`_ for style checks, `black`_ for code formatting, `isort`_ for im
 .. _isort: https://github.com/PyCQA/isort
 .. _mypy: https://github.com/python/mypy
 
-mypy is configured to only check annotated code.  If you add new code, please consider adding type annotations and enabling strict checks for your modules in ``mypy.ini``.
+mypy is configured to only check annotated code.  If you add new code, please consider adding type annotations and enabling strict checks for your modules in ``pyproject.toml``.
 
 Please make sure that all checks pass for your code before opening a PR.
 

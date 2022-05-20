@@ -6,7 +6,6 @@ VENV=venv
 BLACK_FLAGS=-t py35 --extend-exclude pynitrokey/nethsm/client
 FLAKE8_FLAGS=--extend-exclude pynitrokey/nethsm/client
 ISORT_FLAGS=--py 35 --extend-skip pynitrokey/nethsm/client
-MYPY_FLAGS=--config-file mypy.ini
 
 # whitelist of directories for flake8
 FLAKE8_DIRS=pynitrokey/nethsm pynitrokey/cli/nk3 pynitrokey/nk3
@@ -30,7 +29,7 @@ isort:
 
 lint:
 	$(VENV)/bin/python3 -m flake8 $(FLAKE8_FLAGS) $(FLAKE8_DIRS)
-	MYPYPATH=pynitrokey/stubs $(VENV)/bin/python3 -m mypy $(MYPY_FLAGS) $(PACKAGE_NAME)
+	$(VENV)/bin/python3 -m mypy $(PACKAGE_NAME)
 
 semi-clean:
 	rm -rf **/__pycache__
