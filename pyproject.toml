@@ -24,7 +24,7 @@ dependencies = [
   "cbor",
   "cffi",
   "click >=7.0",
-  "cryptography >=3.4.4",
+  "cryptography >=3.4.4,<37",
   "ecdsa",
   "fido2 >=0.9.3",
   "intelhex",
