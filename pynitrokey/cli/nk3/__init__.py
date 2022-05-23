@@ -16,7 +16,13 @@ import click
 from spsdk.mboot.exceptions import McuBootConnectionError
 
 from pynitrokey.cli.exceptions import CliException
-from pynitrokey.helpers import DownloadProgressBar, ProgressBar, Retries, local_print
+from pynitrokey.helpers import (
+    DownloadProgressBar,
+    ProgressBar,
+    Retries,
+    confirm,
+    local_print,
+)
 from pynitrokey.nk3 import list as list_nk3
 from pynitrokey.nk3 import open as open_nk3
 from pynitrokey.nk3.base import Nitrokey3Base
@@ -433,13 +439,13 @@ def _print_download_warning(
             support_hint=False,
         )
     elif current_version and current_version == release_version:
-        click.confirm(
+        confirm(
             "You are already running the latest firmware release on the device.  Do you want "
             f"to continue and download the firmware version {release_version} anyway?",
             abort=True,
         )
     else:
-        click.confirm(
+        confirm(
             f"Do you want to download the firmware version {release_version}?",
             default=True,
             abort=True,
@@ -461,7 +467,7 @@ def _print_version_warning(
                 support_hint=False,
             )
         elif current_version == metadata.version:
-            if not click.confirm(
+            if not confirm(
                 "The version of the firmware image is the same as on the device.  Do you want "
                 "to continue anyway?"
             ):
@@ -474,7 +480,7 @@ def _print_update_warning() -> None:
         "Please do not remove the Nitrokey 3 or insert any other Nitrokey 3 devices "
         "during the update. Doing so may damage the Nitrokey 3."
     )
-    if not click.confirm("Do you want to perform the firmware update now?"):
+    if not confirm("Do you want to perform the firmware update now?"):
         logger.info("Update cancelled by user")
         raise click.Abort()
 

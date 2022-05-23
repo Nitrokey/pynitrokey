@@ -7,6 +7,7 @@
 # http://opensource.org/licenses/MIT>, at your option. This file may not be
 # copied, modified, or distributed except according to those terms.
 
+import functools
 import logging
 import os
 import platform
@@ -17,6 +18,7 @@ from numbers import Number
 from threading import Event, Timer
 from typing import List, Optional
 
+import click
 from tqdm import tqdm
 
 from pynitrokey.confconsts import (
@@ -297,11 +299,11 @@ class AskUser:
     def get_input(self, pre_str=None, hide_input=None):
         pre_input_string = pre_str or self.final_question
         hide_input = hide_input if hide_input is not None else self.hide_input
-        return (
-            input(pre_input_string).strip()
-            if not hide_input
-            else getpass(pre_input_string)
-        )
+        if hide_input:
+            return getpass(pre_input_string)
+        else:
+            print(pre_input_string, end="", file=sys.stderr)
+            return input(pre_input_string).strip()
 
     def ask(self):
         answer = None
@@ -342,3 +344,7 @@ class AskUser:
 
         assert self.data is None, "expecting `self.data` to be None at this point!"
         return self.data
+
+
+confirm = functools.partial(click.confirm, err=True)
+prompt = functools.partial(click.prompt, err=True)
