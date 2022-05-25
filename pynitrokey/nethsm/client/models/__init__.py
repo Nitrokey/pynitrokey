@@ -15,6 +15,9 @@ from pynitrokey.nethsm.client.model.decrypt_data import DecryptData
 from pynitrokey.nethsm.client.model.decrypt_mode import DecryptMode
 from pynitrokey.nethsm.client.model.decrypt_request_data import DecryptRequestData
 from pynitrokey.nethsm.client.model.distinguished_name import DistinguishedName
+from pynitrokey.nethsm.client.model.encrypt_data import EncryptData
+from pynitrokey.nethsm.client.model.encrypt_mode import EncryptMode
+from pynitrokey.nethsm.client.model.encrypt_request_data import EncryptRequestData
 from pynitrokey.nethsm.client.model.health_state_data import HealthStateData
 from pynitrokey.nethsm.client.model.id import ID
 from pynitrokey.nethsm.client.model.info_data import InfoData
@@ -25,6 +28,7 @@ from pynitrokey.nethsm.client.model.key_mechanism import KeyMechanism
 from pynitrokey.nethsm.client.model.key_mechanisms import KeyMechanisms
 from pynitrokey.nethsm.client.model.key_private_data import KeyPrivateData
 from pynitrokey.nethsm.client.model.key_public_data import KeyPublicData
+from pynitrokey.nethsm.client.model.key_restrictions import KeyRestrictions
 from pynitrokey.nethsm.client.model.key_type import KeyType
 from pynitrokey.nethsm.client.model.log_level import LogLevel
 from pynitrokey.nethsm.client.model.logging_config import LoggingConfig
@@ -42,7 +46,10 @@ from pynitrokey.nethsm.client.model.switch import Switch
 from pynitrokey.nethsm.client.model.system_info import SystemInfo
 from pynitrokey.nethsm.client.model.system_state import SystemState
 from pynitrokey.nethsm.client.model.system_update_data import SystemUpdateData
+from pynitrokey.nethsm.client.model.tag_list import TagList
 from pynitrokey.nethsm.client.model.time_config import TimeConfig
+from pynitrokey.nethsm.client.model.tls_key_generate_request_data import TlsKeyGenerateRequestData
+from pynitrokey.nethsm.client.model.tls_key_type import TlsKeyType
 from pynitrokey.nethsm.client.model.unattended_boot_config import UnattendedBootConfig
 from pynitrokey.nethsm.client.model.unlock_passphrase_config import UnlockPassphraseConfig
 from pynitrokey.nethsm.client.model.unlock_request_data import UnlockRequestData
