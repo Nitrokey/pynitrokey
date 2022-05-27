@@ -37,6 +37,7 @@ ROLE_TYPE = make_enum_type(pynitrokey.nethsm.Role)
 LOG_LEVEL_TYPE = make_enum_type(pynitrokey.nethsm.LogLevel)
 UNATTENDED_BOOT_STATUS_TYPE = make_enum_type(pynitrokey.nethsm.UnattendedBootStatus)
 TYPE_TYPE = make_enum_type(pynitrokey.nethsm.KeyType)
+TYPE_TLS_KEY_TYPE = make_enum_type(pynitrokey.nethsm.TlsKeyType)
 MECHANISM_TYPE = make_enum_type(pynitrokey.nethsm.KeyMechanism)
 DECRYPT_MODE_TYPE = make_enum_type(pynitrokey.nethsm.DecryptMode)
 SIGN_MODE_TYPE = make_enum_type(pynitrokey.nethsm.SignMode)
@@ -974,6 +975,39 @@ def csr(
                 email_address=email_address,
             )
         print(csr)
+
+
+@nethsm.command()
+@click.option(
+    "type",
+    "-t",
+    "--type",
+    type=TYPE_TLS_KEY_TYPE,
+    prompt=True,
+    help="The type for the generated key",
+)
+@click.option(
+    "-l",
+    "--length",
+    type=int,
+    help="The length of the generated key",
+)
+@click.pass_context
+def generate_tls_key(ctx, type, length):
+    """Generate key pair for NetHSM HTTPS API.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    if type == "RSA":
+        if not length:
+            length = int(click.prompt("Length"))
+    else:
+        if length:
+            raise click.ClickException("-l/--length may only be set for RSA keys")
+
+    with connect(ctx) as nethsm:
+        key_id = nethsm.generate_tls_key(type, length)
+        print(f"Key for HTTPS API generated on NetHSM {nethsm.host}")
 
 
 @nethsm.command()
