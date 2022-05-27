@@ -402,6 +402,20 @@ class NetHSM:
                 },
             )
 
+    def add_operator_tag(self, user_id, tag):
+        try:
+            return self.get_api().users_user_id_tags_tag_put(user_id=user_id, tag=tag)
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR],
+                messages={
+                    404: f"User {user_id} not found",
+                    304: f"Tag is already present for {user_id}",
+                },
+            )
+
     def get_info(self):
         try:
             data = self.get_api().info_get()
