@@ -130,6 +130,15 @@ class SignMode(enum.Enum):
     ECDSA = "ECDSA"
 
 
+class TlsKeyType(enum.Enum):
+    RSA = "RSA"
+    CURVE25519 = "Curve25519"
+    EC_P224 = "EC_P224"
+    EC_P256 = "EC_P256"
+    EC_P384 = "EC_P384"
+    EC_P521 = "EC_P521"
+
+
 class SystemInfo:
     def __init__(self, firmware_version, software_version, hardware_version, build_tag):
         self.firmware_version = firmware_version
@@ -671,6 +680,31 @@ class NetHSM:
         )
         try:
             return self.get_api().config_tls_csr_pem_put(body=body)
+        except ApiException as e:
+            _handle_api_exception(
+                e, state=State.OPERATIONAL, roles=[Role.ADMINISTRATOR]
+            )
+
+    def generate_tls_key(
+        self,
+        type,
+        length,
+    ):
+        from .client.model.tls_key_generate_request_data import TlsKeyGenerateRequestData
+        from .client.model.tls_key_type import TlsKeyType
+
+        if type == "RSA":
+            body = TlsKeyGenerateRequestData(
+                type=TlsKeyType(type),
+                length=length,
+            )
+        else:
+            body = TlsKeyGenerateRequestData(
+                type=TlsKeyType(type),
+            )
+
+        try:
+            return self.get_api().config_tls_generate_post(body=body)
         except ApiException as e:
             _handle_api_exception(
                 e, state=State.OPERATIONAL, roles=[Role.ADMINISTRATOR]
