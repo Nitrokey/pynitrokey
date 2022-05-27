@@ -389,6 +389,19 @@ class NetHSM:
                 },
             )
 
+    def list_operator_tags(self, user_id):
+        try:
+            return self.get_api().users_user_id_tags_get(user_id=user_id)
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR],
+                messages={
+                    404: f"User {user_id} not found",
+                },
+            )
+
     def get_info(self):
         try:
             data = self.get_api().info_get()

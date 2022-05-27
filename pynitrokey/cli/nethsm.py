@@ -310,6 +310,23 @@ def set_passphrase(ctx, user_id, passphrase):
 
 
 @nethsm.command()
+@click.argument("user-id")
+@click.pass_context
+def list_operator_tags(ctx, user_id):
+    """List the tags for an operator user ID on the NetHSM.
+
+    This command requires authentication as a user with the Administrator role."""
+    with connect(ctx) as nethsm:
+        tags = nethsm.list_operator_tags(user_id=user_id)
+        if tags.value:
+            print(f"Tags for user {user_id}:")
+            for tag in tags.value:
+                print(f"- {tag}")
+        else:
+            print(f"No tags set for user {user_id}.")
+
+
+@nethsm.command()
 @click.pass_context
 def info(ctx):
     """Query the vendor and product information for a NetHSM."""
