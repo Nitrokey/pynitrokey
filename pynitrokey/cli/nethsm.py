@@ -327,6 +327,20 @@ def list_operator_tags(ctx, user_id):
 
 
 @nethsm.command()
+@click.argument("user-id")
+@click.argument("tag")
+@click.pass_context
+def add_operator_tag(ctx, user_id, tag):
+    """Add a tag for an operator user on the NetHSM.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    with connect(ctx) as nethsm:
+        nethsm.add_operator_tag(user_id=user_id, tag=tag)
+        print(f"Added tag {tag} for user {user_id} on the NetHSM {nethsm.host}")
+
+
+@nethsm.command()
 @click.pass_context
 def info(ctx):
     """Query the vendor and product information for a NetHSM."""
