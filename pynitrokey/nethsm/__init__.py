@@ -106,6 +106,8 @@ class KeyMechanism(enum.Enum):
     RSA_SIGNATURE_PSS_SHA512 = "RSA_Signature_PSS_SHA512"
     EDDSA_SIGNATURE = "EdDSA_Signature"
     ECDSA_SIGNATURE = "ECDSA_Signature"
+    AES_ENCRYPTION_CBC = "AES_Encryption_CBC"
+    AES_DECRYPTION_CBC = "AES_Decryption_CBC"
 
 
 class DecryptMode(enum.Enum):
