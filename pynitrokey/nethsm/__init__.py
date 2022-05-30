@@ -117,6 +117,7 @@ class DecryptMode(enum.Enum):
     OAEP_SHA256 = "OAEP_SHA256"
     OAEP_SHA384 = "OAEP_SHA384"
     OAEP_SHA512 = "OAEP_SHA512"
+    AES_CBC = "AES_CBC"
 
 
 class SignMode(enum.Enum):
