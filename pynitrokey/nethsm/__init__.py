@@ -85,6 +85,7 @@ class KeyType(enum.Enum):
     EC_P256 = "EC_P256"
     EC_P384 = "EC_P384"
     EC_P521 = "EC_P521"
+    GENERIC = "Generic"
 
 
 class KeyMechanism(enum.Enum):
