@@ -739,19 +739,23 @@ class NetHSM:
         common_name,
         email_address,
     ):
-        from .client.model.distinguished_name import DistinguishedName
-
-        body = DistinguishedName(
-            country_name=country,
-            state_or_province_name=state_or_province,
-            locality_name=locality,
-            organization_name=organization,
-            organizational_unit_name=organizational_unit,
-            common_name=common_name,
-            email_address=email_address,
-        )
+        data = {
+            "countryName": country,
+            "stateOrProvinceName": state_or_province,
+            "localityName": locality,
+            "organizationName": organization,
+            "organizationalUnitName": organizational_unit,
+            "commonName": common_name,
+            "emailAddress": email_address,
+        }
         try:
-            return self.get_api().config_tls_csr_pem_put(body=body)
+            response = self.request(
+                "POST",
+                "config/tls/csr.pem",
+                json=data,
+                mime_type='application/json',
+            )
+            return response.content.decode("utf-8")
         except ApiException as e:
             _handle_api_exception(
                 e, state=State.OPERATIONAL, roles=[Role.ADMINISTRATOR]
