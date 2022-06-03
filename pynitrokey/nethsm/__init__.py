@@ -444,6 +444,19 @@ class NetHSM:
                 },
             )
 
+    def delete_key_tag(self, key_id, tag):
+        try:
+            return self.get_api().keys_key_id_restrictions_tags_tag_delete(key_id=key_id, tag=tag)
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR],
+                messages={
+                    404: f"Key {key_id} or tag {tag} not found",
+                },
+            )
+
     def get_info(self):
         try:
             data = self.get_api().info_get()

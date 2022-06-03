@@ -369,6 +369,20 @@ def add_key_tag(ctx, key_id, tag):
 
 
 @nethsm.command()
+@click.argument("key_id")
+@click.argument("tag")
+@click.pass_context
+def delete_key_tag(ctx, key_id, tag):
+    """Delete a tag for a key on the NetHSM.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    with connect(ctx) as nethsm:
+        nethsm.delete_key_tag(key_id=key_id, tag=tag)
+        print(f"Deleted tag {tag} for key {key_id} on the NetHSM {nethsm.host}")
+
+
+@nethsm.command()
 @click.pass_context
 def info(ctx):
     """Query the vendor and product information for a NetHSM."""
