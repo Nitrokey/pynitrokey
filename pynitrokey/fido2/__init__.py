@@ -34,7 +34,7 @@ def _UDP_InternalPlatformSwitch(
 def find(
     solo_serial: Optional[str] = None,
     retries: int = 5,
-    raw_device: Optional["CtapHidDevice"] = None,
+    raw_device: Optional[CtapHidDevice] = None,
     udp: bool = False,
 ) -> NKFido2Client:
     if udp:

@@ -319,7 +319,7 @@ def feedkernel(count: int, serial: Optional[str]) -> None:
     show_default=True,
 )
 def make_credential(
-    serial: Optional[str], host: str, user: str, udp: bool, prompt: str, pin: str
+    serial: Optional[str], host: str, user: str, udp: bool, prompt: str, pin: Optional[str]
 ) -> None:
     """Generate a credential.
 
@@ -368,7 +368,7 @@ def challenge_response(
     credential_id: str,
     challenge: str,
     udp: bool,
-    pin: str,
+    pin: Optional[str],
 ) -> None:
     """Uses `hmac-secret` to implement a challenge-response mechanism.
 
@@ -418,7 +418,7 @@ def challenge_response(
 def probe(
     serial: Optional[str],
     udp: bool,
-    hash_type: Literal["SHA256", "SHA512", "RSA2048"],
+    hash_type: str,
     filename: str,
 ) -> None:
     """Calculate HASH"""

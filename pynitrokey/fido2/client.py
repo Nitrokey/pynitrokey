@@ -341,7 +341,7 @@ class NKFido2Client:
             else:
                 raise (e)
 
-    def is_solo_bootloader(self) -> None:
+    def is_solo_bootloader(self) -> bool:
         try:
             self.bootloader_version()
             return True

@@ -45,7 +45,7 @@ def find(
     raise Exception("no DFU found")
 
 
-def find_all():
+def find_all() -> List[DFUDevice]:
     st_dfus = usb.core.find(idVendor=0x0483, idProduct=0xDF11, find_all=True)
     return [find(raw_device=st_dfu) for st_dfu in st_dfus]
 
@@ -55,7 +55,7 @@ class DFUDevice:
         pass
 
     @staticmethod
-    def addr2list(a: int) -> List[int, int, int, int]:
+    def addr2list(a: int) -> List[int]:
         return [a & 0xFF, (a >> 8) & 0xFF, (a >> 16) & 0xFF, (a >> 24) & 0xFF]
 
     @staticmethod
@@ -73,7 +73,7 @@ class DFUDevice:
         return addr
 
     def find(
-        self, altsetting: int = 0, ser: Optional[str] = None, dev: Optional[str] = None
+        self, altsetting: int = 0, ser: Optional[str] = None, dev: Optional[usb.core.Device] = None
     ) -> None:
 
         if dev is not None:
@@ -134,7 +134,7 @@ class DFUDevice:
     def close(self) -> None:
         pass
 
-    def get_status(self) -> int:
+    def get_status(self) -> DFU.status:
         # bmReqType, bmReq, wValue, wIndex, data/size
         s = self.dev.ctrl_transfer(
             DFU.type.RECEIVE, DFU.bmReq.GETSTATUS, 0, self.intNum, 6
@@ -148,7 +148,7 @@ class DFUDevice:
         # bmReqType, bmReq, wValue, wIndex, data/size
         self.dev.ctrl_transfer(DFU.type.SEND, DFU.bmReq.CLRSTATUS, 0, self.intNum, None)
 
-    def upload(self, block: bytes, size: int) -> int:
+    def upload(self, block: int, size: int) -> List[int]:
         """
         address is  ((block – 2) × size) + 0x08000000
         """
@@ -161,7 +161,7 @@ class DFUDevice:
         # must get_status after to take effect
         return self.dnload(0x0, [0x21] + DFUDevice.addr2list(addr))
 
-    def dnload(self, block: bytes, data: bytes) -> int:
+    def dnload(self, block: int, data: List[int]) -> int:
         # bmReqType, bmReq, wValue, wIndex, data/size
         return self.dev.ctrl_transfer(
             DFU.type.SEND, DFU.bmReq.DNLOAD, block, self.intNum, data
@@ -171,7 +171,7 @@ class DFUDevice:
         d = [0x41, a & 0xFF, (a >> 8) & 0xFF, (a >> 16) & 0xFF, (a >> 24) & 0xFF]
         return self.dnload(0x0, d)
 
-    def mass_erase(self) -> bool:
+    def mass_erase(self) -> None:
         # self.set_addr(0x08000000)
         # self.block_on_state(DFU.state.DOWNLOAD_BUSY)
         # assert(DFU.state.DOWNLOAD_IDLE == self.state())
@@ -179,7 +179,7 @@ class DFUDevice:
         self.block_on_state(DFU.state.DOWNLOAD_BUSY)
         assert DFU.state.DOWNLOAD_IDLE == self.state()
 
-    def write_page(self, addr: int, data: bytes) -> bool:
+    def write_page(self, addr: int, data: List[int]) -> None:
         if self.state() not in (DFU.state.IDLE, DFU.state.DOWNLOAD_IDLE):
             self.clear_status()
             self.clear_status()
@@ -193,7 +193,7 @@ class DFUDevice:
         self.block_on_state(DFU.state.DOWNLOAD_BUSY)
         assert DFU.state.DOWNLOAD_IDLE == self.state()
 
-    def read_mem(self, addr: int, size: int) -> int:
+    def read_mem(self, addr: int, size: int) -> List[int]:
         addr = DFUDevice.addr2block(addr, size)
 
         if self.state() not in (DFU.state.IDLE, DFU.state.UPLOAD_IDLE):
@@ -210,17 +210,17 @@ class DFUDevice:
             time.sleep(s.timeout / 1000.0)
             s = self.get_status()
 
-    def read_option_bytes(self) -> int:
+    def read_option_bytes(self) -> List[int]:
         ptr = 0x1FFF7800  # option byte address for STM32l432
         self.set_addr(ptr)
         self.block_on_state(DFU.state.DOWNLOAD_BUSY)
         m = self.read_mem(0, 16)
         return m
 
-    def write_option_bytes(self, m: bytes) -> None:
+    def write_option_bytes(self, m: List[int]) -> None:
         self.block_on_state(DFU.state.DOWNLOAD_BUSY)
         try:
-            m = self.write_page(0, m)
+            self.write_page(0, m)
             self.block_on_state(DFU.state.DOWNLOAD_BUSY)
         except OSError:
             print("Warning: OSError with write_page")
@@ -233,7 +233,10 @@ class DFUDevice:
         #
 
         m = self.read_option_bytes()
-        op = struct.unpack("<L", m[:4])[0]
+
+        # unneccessary, but mypy...
+        _m = b"".join(map(lambda x: x.to_bytes(1, 'big'), m))
+        op = struct.unpack("<L", _m[:4])[0]
         oldop = op
         op |= STM32L4.options.nBOOT0
         op &= ~STM32L4.options.nSWBOOT0
