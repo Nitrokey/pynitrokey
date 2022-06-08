@@ -17,6 +17,7 @@ import requests
 import urllib3
 
 import pynitrokey.nethsm
+from pynitrokey.helpers import prompt
 
 
 def make_enum_type(enum_cls):
@@ -104,9 +105,9 @@ def connect(ctx, require_auth=True):
         username = ctx.obj["NETHSM_USERNAME"]
         password = ctx.obj["NETHSM_PASSWORD"]
         if not username:
-            username = click.prompt(f"[auth] User name for NetHSM {host}")
+            username = prompt(f"[auth] User name for NetHSM {host}")
         if not password:
-            password = click.prompt(
+            password = prompt(
                 f"[auth] Password for user {username} on NetHSM {host}", hide_input=True
             )
 
@@ -139,7 +140,7 @@ def unlock(ctx, passphrase):
     """Bring a locked NetHSM into operational state."""
     with connect(ctx, require_auth=False) as nethsm:
         if not passphrase:
-            passphrase = click.prompt(
+            passphrase = prompt(
                 f"Unlock passphrase for NetHSM {nethsm.host}", hide_input=True
             )
         nethsm.unlock(passphrase)
@@ -458,7 +459,7 @@ def prompt_mechanisms(type):
         if mechanisms:
             prompt += " (or empty string to continue)"
             default = ""
-        mechanism = click.prompt(
+        mechanism = prompt(
             prompt,
             type=mechanism_type,
             default=default,
@@ -531,11 +532,11 @@ def add_key(ctx, type, mechanisms, prime_p, prime_q, public_exponent, data, key_
         if data:
             raise click.ClickException("-d/--data must not be set for RSA keys")
         if not prime_p:
-            prime_p = click.prompt("Prime p")
+            prime_p = prompt("Prime p")
         if not prime_q:
-            prime_q = click.prompt("Prime q")
+            prime_q = prompt("Prime q")
         if not public_exponent:
-            public_exponent = click.prompt("Public exponent")
+            public_exponent = prompt("Public exponent")
     else:
         if prime_p:
             raise click.ClickException("-p/--prime-p may only be set for RSA keys")
@@ -546,7 +547,7 @@ def add_key(ctx, type, mechanisms, prime_p, prime_q, public_exponent, data, key_
                 "-e/--public-exponent may only be set for RSA keys"
             )
         if not data:
-            data = click.prompt("Key data")
+            data = prompt("Key data")
 
     with connect(ctx) as nethsm:
         key_id = nethsm.add_key(
@@ -806,14 +807,14 @@ def get_api_or_key_id(api, key_id):
 
     if not api and not key_id:
         choice = click.Choice(["api", "key"], case_sensitive=False)
-        method = click.prompt(
+        method = prompt(
             "For stored key or for NetHSM HTTPS API?",
             type=choice,
         )
         if method == "api":
             api = True
         elif method == "key":
-            key_id = click.prompt("Key ID")
+            key_id = prompt("Key ID")
         else:
             raise ValueError("Unexpected method")
 

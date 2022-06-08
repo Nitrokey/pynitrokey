@@ -19,7 +19,7 @@ import usb1
 from tqdm import tqdm
 
 from pynitrokey.cli.exceptions import CliException
-from pynitrokey.helpers import AskUser, local_critical, local_print
+from pynitrokey.helpers import AskUser, confirm, local_critical, local_print
 from pynitrokey.libnk import DeviceNotFound, NitrokeyStorage, RetCode
 
 
@@ -170,7 +170,7 @@ def update(firmware: str, experimental):
     local_print(
         f"Commands to be executed: {string.Template(commands).substitute(args)}"
     )
-    if not click.confirm("Do you want to perform the firmware update now?"):
+    if not confirm("Do you want to perform the firmware update now?"):
         logger.info("Update cancelled by user")
         raise click.Abort()
 
