@@ -24,6 +24,8 @@ if "linux" in platform.platform().lower():
 from fido2.client import ClientError as Fido2ClientError
 from fido2.ctap import CtapError
 from fido2.ctap1 import ApduError
+from fido2.ctap2 import Ctap2
+from fido2.ctap2.pin import ClientPin
 
 import pynitrokey
 import pynitrokey.fido2 as nkfido2
@@ -511,8 +513,10 @@ def change_pin(serial):
         )
     try:
         # @fixme: move this (function) into own fido2-client-class
-        client = nkfido2.find(serial).client
-        client.client_pin.change_pin(old_pin, new_pin)
+        dev = nkfido2.find(serial)
+        client = dev.client
+        client_pin = ClientPin(dev.ctap2)
+        client_pin.change_pin(old_pin, new_pin)
         local_print("done - please use new pin to verify key")
 
     except Exception as e:
@@ -540,8 +544,10 @@ def set_pin(serial):
         )
     try:
         # @fixme: move this (function) into own fido2-client-class
-        client = nkfido2.find(serial).client
-        client.client_pin.set_pin(new_pin)
+        dev = nkfido2.find(serial)
+        client = dev.client
+        client_pin = ClientPin(dev.ctap2)
+        client_pin.set_pin(new_pin)
         local_print("done - please use new pin to verify key")
 
     except Exception as e:

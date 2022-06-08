@@ -20,8 +20,8 @@ from typing import Optional
 import secrets
 from fido2.client import Fido2Client
 from fido2.ctap import CtapError
-from fido2.ctap1 import CTAP1
-from fido2.ctap2 import CTAP2
+from fido2.ctap1 import Ctap1
+from fido2.ctap2 import Ctap2
 from fido2.hid import CTAPHID, CtapHidDevice, open_device
 from intelhex import IntelHex
 
@@ -85,10 +85,10 @@ class NKFido2Client:
             raise RuntimeError("No FIDO device found")
         self.dev = dev
 
-        self.ctap1 = CTAP1(dev)
+        self.ctap1 = Ctap1(dev)
 
         try:
-            self.ctap2: Optional[CTAP2] = CTAP2(dev)
+            self.ctap2: Optional[Ctap2] = Ctap2(dev)
         except CtapError as e:
             self.ctap2 = None
 
@@ -324,10 +324,15 @@ class NKFido2Client:
         return output
 
     def cred_mgmt(self, pin):
-        client = self.get_current_fido_client()
-        token = client.client_pin.get_pin_token(pin)
-        ctap2 = CTAP2(self.get_current_hid_device())
-        return CredentialManagement(ctap2, client.client_pin.protocol, token)
+        # anyways unused code @todo
+        # client = self.get_current_fido_client()
+        dev = nkfido2.find(serial)
+        client = dev.client
+        client_pin = ClientPin(dev.ctap2)
+        client_pin.change_pin(old_pin, new_pin)
+        token = client_pin.get_pin_token(pin)
+        ctap2 = Ctap2(self.get_current_hid_device())
+        return CredentialManagement(ctap2, client_pin.protocol, token)
 
     def enter_solo_bootloader(
         self,

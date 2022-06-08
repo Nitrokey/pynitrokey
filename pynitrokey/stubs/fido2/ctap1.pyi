@@ -9,7 +9,7 @@
 
 from fido2.hid import CtapHidDevice
 
-class CTAP1:
+class Ctap1:
     def __init__(self, device: CtapHidDevice) -> None: ...
 
 class ApduError(Exception): ...

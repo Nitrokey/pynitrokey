@@ -11,7 +11,7 @@ from typing import Any, Dict
 
 from fido2.hid import CtapHidDevice
 
-class CTAP2:
+class Ctap2:
     def __init__(self, device: CtapHidDevice, strict_cbor: bool = True): ...
 
 class PinProtocolV1: ...
