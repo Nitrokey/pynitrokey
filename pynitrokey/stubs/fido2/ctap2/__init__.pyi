@@ -18,7 +18,7 @@ class PinProtocolV1: ...
 
 class AttestationObject(bytes):
     auth_data: AuthenticatorData
-    att_statement: Dict[str, Any]
+    att_stmt: Dict[str, Any]
 
 class AttestedCredentialData(bytes): ...
 
