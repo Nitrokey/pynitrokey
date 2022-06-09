@@ -14,7 +14,7 @@ import sys
 from enum import Enum, auto, unique
 from hashlib import sha256
 from types import TracebackType
-from typing import Callable, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, List, Optional, Tuple, Type, Union
 
 from pynitrokey.fido2 import device_path_to_str
 from pynitrokey.helpers import local_print
@@ -129,10 +129,28 @@ def test_fido2(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
 
     # Based on https://github.com/Yubico/python-fido2/blob/142587b3e698ca0e253c78d75758fda635cac51a/examples/credential.py
 
-    from fido2.client import Fido2Client, PinRequiredError
+    from fido2.client import Fido2Client, PinRequiredError, UserInteraction
     from fido2.server import Fido2Server
 
-    client = Fido2Client(device.device, "https://example.com")
+    class NoInteraction(UserInteraction):
+        def __init__(self, pin: Optional[str]) -> None:
+            self.pin = pin
+
+        def prompt_up(self) -> None:
+            pass
+
+        def request_pin(self, permissions: Any, rd_id: Any) -> str:
+            if self.pin:
+                return self.pin
+            else:
+                raise PinRequiredError()
+
+        def request_uv(self, permissions: Any, rd_id: Any) -> bool:
+            return True
+
+    client = Fido2Client(
+        device.device, "https://example.com", user_interaction=NoInteraction(ctx.pin)
+    )
     server = Fido2Server(
         {"id": "example.com", "name": "Example RP"}, attestation="direct"
     )
@@ -145,15 +163,13 @@ def test_fido2(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
 
     local_print("Please press the touch button on the device ...")
     try:
-        make_credential_result = client.make_credential(
-            create_options["publicKey"], pin=ctx.pin
-        )
+        make_credential_result = client.make_credential(create_options["publicKey"])
     except PinRequiredError:
         return TestResult(
             TestStatus.FAILURE,
             "PIN activated -- please set the --pin option",
         )
-    cert = make_credential_result.attestation_object.att_statement["x5c"]
+    cert = make_credential_result.attestation_object.att_stmt["x5c"]
     cert_hash = sha256(cert[0]).digest().hex()
 
     if ctx.firmware_version:
@@ -176,9 +192,7 @@ def test_fido2(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
     )
 
     local_print("Please press the touch button on the device ...")
-    get_assertion_result = client.get_assertion(
-        request_options["publicKey"], pin=ctx.pin
-    )
+    get_assertion_result = client.get_assertion(request_options["publicKey"])
     get_assertion_response = get_assertion_result.get_response(0)
 
     server.authenticate_complete(
