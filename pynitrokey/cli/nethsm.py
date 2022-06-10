@@ -450,7 +450,13 @@ def list_keys(ctx, details):
             for key_id in key_ids:
                 key = nethsm.get_key(key_id=key_id.value)
                 data.append(
-                    [key_id, key.type, ", ".join(key.mechanisms), key.operations, ", ".join(key.tags) if key.tags is not None else ""]
+                    [
+                        key_id,
+                        key.type,
+                        ", ".join(key.mechanisms),
+                        key.operations,
+                        ", ".join(key.tags) if key.tags is not None else "",
+                    ]
                 )
         else:
             data = [[key_id] for key_id in key_ids]
@@ -1076,13 +1082,13 @@ def generate_tls_key(ctx, type, length):
     role."""
     if type == "RSA":
         if not length:
-            length = int(click.prompt("Length"))
+            length = click.prompt("Length", type=int)
     else:
         if length:
             raise click.ClickException("-l/--length may only be set for RSA keys")
 
     with connect(ctx) as nethsm:
-        key_id = nethsm.generate_tls_key(type, length)
+        nethsm.generate_tls_key(type, length)
         print(f"Key for HTTPS API generated on NetHSM {nethsm.host}")
 
 
