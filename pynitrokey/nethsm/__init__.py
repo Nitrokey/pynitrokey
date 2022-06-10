@@ -160,12 +160,13 @@ class User:
 
 class Key:
     def __init__(
-        self, key_id, mechanisms, type, operations, modulus, public_exponent, data
+        self, key_id, mechanisms, type, operations, tags, modulus, public_exponent, data
     ):
         self.key_id = key_id
         self.mechanisms = mechanisms
         self.type = type
         self.operations = operations
+        self.tags = tags
         self.modulus = modulus
         self.public_exponent = public_exponent
         self.data = data
@@ -510,6 +511,7 @@ class NetHSM:
                 mechanisms=[mechanism.value for mechanism in key.mechanisms.value],
                 type=key.type.value,
                 operations=key.operations,
+                tags=[tag.value for tag in key.restrictions.tags.value] if hasattr(key.restrictions, 'tags') else None,
                 modulus=getattr(key.key, "modulus", None),
                 public_exponent=getattr(key.key, "public_exponent", None),
                 data=getattr(key.key, "data", None),

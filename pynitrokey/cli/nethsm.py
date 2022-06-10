@@ -445,12 +445,12 @@ def list_keys(ctx, details):
 
         headers = ["Key ID"]
         if details:
-            headers += ["Type", "Mechanisms", "Operations"]
+            headers += ["Type", "Mechanisms", "Operations", "Tags"]
             data = []
             for key_id in key_ids:
                 key = nethsm.get_key(key_id=key_id.value)
                 data.append(
-                    [key_id, key.type, ", ".join(key.mechanisms), key.operations]
+                    [key_id, key.type, ", ".join(key.mechanisms), key.operations, ", ".join(key.tags) if key.tags is not None else ""]
                 )
         else:
             data = [[key_id] for key_id in key_ids]
@@ -477,6 +477,9 @@ def get_key(ctx, key_id, public_key):
             print(f"Type:            {key.type}")
             print(f"Mechanisms:      {mechanisms}")
             print(f"Operations:      {key.operations}")
+            if key.tags:
+                tags = ", ".join(key.tags)
+                print(f"Tags:            {tags}")
             if key.modulus:
                 print(f"Modulus:         {key.modulus}")
             if key.public_exponent:
