@@ -20,19 +20,22 @@ Signed Commits
 
 If you have an OpenPGP key, please sign all your commits with it.  We require all commits on the master branch to be signed.  If you don’t have an OpenPGP key, a developer that reviewed your commits will sign them for you.
 
+Supported Python Versions
+-------------------------
+
+The current minimum required Python version is documented in the readme.  Make sure that your code works with this Python version.  The minimum required Python version is selected to be compatible with the latest Ubuntu LTS and regular releases and with the latest Debian stable release.
+
 Commit Hooks
 --------------
 
-For the local quick checks of the formatting you can use pre-commit:
+For local quick checks of the formatting you can use `pre-commit`_.
 
-- https://pre-commit.com/
+.. _pre-commit: https://pre-commit.com/
 
-Setup:
+Setup::
 
-``
-$ pip install pre-commit -U
-$ pre-commit install
-``
+   $ pip install pre-commit -U
+   $ pre-commit install
 
 Usage:
 
