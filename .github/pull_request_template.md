@@ -8,7 +8,7 @@ This PR...
 
 ## Checklist
 
-- [ ] tested with Python3.6
+- [ ] tested with Python3.9
 - [ ] run `make check` or `make fix` for the formatting check
 - [ ] signed commits
 - [ ] updated documentation (e.g. parameter description, inline doc, docs.nitrokey)

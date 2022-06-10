@@ -8,17 +8,16 @@ authors = [
   { name = "Nitrokey", email = "pypi@nitrokey.com" },
 ]
 readme = "README.md"
-requires-python = ">=3.6"
+requires-python = ">=3.9"
 classifiers = [
   "License :: OSI Approved :: MIT License",
   "License :: OSI Approved :: Apache Software License",
   "Intended Audience :: Developers",
   "Intended Audience :: End Users/Desktop",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.6",
-  "Programming Language :: Python :: 3.7",
-  "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
 ]
 dependencies = [
   "cbor",

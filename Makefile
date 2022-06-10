@@ -79,6 +79,7 @@ $(VENV):
 	python3 -m venv $(VENV)
 	$(VENV)/bin/python3 -m pip install -U pip
 
+
 # re-run if dev or runtime dependencies change,
 # or when adding new scripts
 update-venv: $(VENV)
@@ -128,6 +129,6 @@ wine-build: wine-build/pynitrokey-$(VERSION).msi wine-build/nitropy-$(VERSION).e
 
 wine-build/pynitrokey-$(VERSION).msi wine-build/nitropy-$(VERSION).exe:
 	bash build-wine.sh
-	cp wine-build/out/pynitrokey-$(VERSION)-win32.msi wine-build
+	#cp wine-build/out/pynitrokey-$(VERSION)-win32.msi wine-build
 	cp wine-build/out/nitropy-$(VERSION).exe wine-build
 
