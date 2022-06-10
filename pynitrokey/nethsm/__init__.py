@@ -423,7 +423,9 @@ class NetHSM:
 
     def delete_operator_tag(self, user_id, tag):
         try:
-            return self.get_api().users_user_id_tags_tag_delete(user_id=user_id, tag=tag)
+            return self.get_api().users_user_id_tags_tag_delete(
+                user_id=user_id, tag=tag
+            )
         except ApiException as e:
             _handle_api_exception(
                 e,
@@ -431,12 +433,14 @@ class NetHSM:
                 roles=[Role.ADMINISTRATOR],
                 messages={
                     404: f"User {user_id} or tag {tag} not found",
-                }
+                },
             )
 
     def add_key_tag(self, key_id, tag):
         try:
-            return self.get_api().keys_key_id_restrictions_tags_tag_put(key_id=key_id, tag=tag)
+            return self.get_api().keys_key_id_restrictions_tags_tag_put(
+                key_id=key_id, tag=tag
+            )
         except ApiException as e:
             _handle_api_exception(
                 e,
@@ -451,7 +455,9 @@ class NetHSM:
 
     def delete_key_tag(self, key_id, tag):
         try:
-            return self.get_api().keys_key_id_restrictions_tags_tag_delete(key_id=key_id, tag=tag)
+            return self.get_api().keys_key_id_restrictions_tags_tag_delete(
+                key_id=key_id, tag=tag
+            )
         except ApiException as e:
             _handle_api_exception(
                 e,
@@ -511,7 +517,9 @@ class NetHSM:
                 mechanisms=[mechanism.value for mechanism in key.mechanisms.value],
                 type=key.type.value,
                 operations=key.operations,
-                tags=[tag.value for tag in key.restrictions.tags.value] if hasattr(key.restrictions, 'tags') else None,
+                tags=[tag.value for tag in key.restrictions.tags.value]
+                if hasattr(key.restrictions, "tags")
+                else None,
                 modulus=getattr(key.key, "modulus", None),
                 public_exponent=getattr(key.key, "public_exponent", None),
                 data=getattr(key.key, "data", None),
@@ -755,7 +763,7 @@ class NetHSM:
                 "POST",
                 "config/tls/csr.pem",
                 json=data,
-                mime_type='application/json',
+                mime_type="application/json",
             )
             return response.content.decode("utf-8")
         except ApiException as e:
@@ -768,7 +776,9 @@ class NetHSM:
         type,
         length,
     ):
-        from .client.model.tls_key_generate_request_data import TlsKeyGenerateRequestData
+        from .client.model.tls_key_generate_request_data import (
+            TlsKeyGenerateRequestData,
+        )
         from .client.model.tls_key_type import TlsKeyType
 
         if type == "RSA":
