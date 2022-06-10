@@ -94,8 +94,6 @@ py -m PyInstaller --noconfirm --clean --name nitropy-${PYNITROKEY_VERSION} --one
 #cp dist/pynitrokey-${PYNITROKEY_VERSION}-win32.msi /build/wine_base/drive_c/build
 #cp dist/pynitrokey-${PYNITROKEY_VERSION}-win32.msi /build/wine_base/drive_c/build/pynitrokey.msi
 #cp dist/nitropy-${PYNITROKEY_VERSION}.exe /build/wine_base/drive_c/build
-cp /opt/wineprefix/drive_c/build/pynitrokey/dist/nitropy-0.4.23.exe /opt/wineprefix/drive_c/build/
+cp /opt/wineprefix/drive_c/build/pynitrokey/dist/nitropy-*.exe /opt/wineprefix/drive_c/build/
 
 popd
-
-
