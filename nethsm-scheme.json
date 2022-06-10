@@ -338,6 +338,15 @@
             }
           },
           {
+            "name": "tags",
+            "required": false,
+            "in": "query",
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/ID"
+            }
+          },
+          {
             "x-amf-mediaType": "application/json",
             "in": "body",
             "name": "body",
@@ -355,12 +364,8 @@
           }
         ],
         "responses": {
-          "200": {
-            "description": "Successful import of a private key. The response contains a Location header, e.g. \"https://nethsm.local/v1/keys/I8mhHYJ1T3uk2lXrwXehVaw9KZzg7K\".",
-            "x-amf-mediaType": "application/json",
-            "schema": {
-              "$ref": "#/definitions/KeyItem"
-            }
+          "201": {
+            "description": "Successful import of a private key. The response contains a Location header, e.g. \"https://nethsm.local/v1/keys/I8mhHYJ1T3uk2lXrwXehVaw9KZzg7K\"."
           },
           "400": {
             "description": "Bad request (specified properties are invalid)."
@@ -482,11 +487,37 @@
         "description": "Import a private key into NetHSM and store it under the <i>KeyID</i> path. The public key will be automatically derived.",
         "parameters": [
           {
+            "name": "mechanisms",
+            "required": false,
+            "in": "query",
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/KeyMechanism"
+            }
+          },
+          {
+            "name": "tags",
+            "required": false,
+            "in": "query",
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/ID"
+            }
+          },
+          {
             "x-amf-mediaType": "application/json",
             "in": "body",
             "name": "body",
             "schema": {
               "$ref": "#/definitions/PrivateKey"
+            }
+          }
+        ],
+        "x-amf-requestPayloads": [
+          {
+            "mediaType": "application/x-pem-file",
+            "schema": {
+              "$ref": "#/definitions/PemPrivateKey"
             }
           }
         ],
@@ -786,7 +817,6 @@
       ],
       "get": {
         "description": "Retrieve stored certificate. The content-type header will display the media type of the stored data.",
-        "produces": ["application/x-pem-file", "application/x-x509-ca-cert", "application/pgp-keys"],
         "responses": {
           "200": {
             "description": "",
@@ -901,6 +931,99 @@
           },
           "404": {
             "description": "Certificate with this KeyID not found."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      }
+    },
+    "/keys/{KeyID}/restrictions": {
+      "x-amf-description": "<b>R-Administrator</b> can set up access restrictions for keys",
+      "parameters": [
+        {
+          "name": "KeyID",
+          "required": true,
+          "in": "path",
+          "type": "string"
+        }
+      ]
+    },
+    "/keys/{KeyID}/restrictions/tags/{Tag}": {
+      "x-amf-description": "Tag-based restriction requires the Operator user to have at least one matching tag to use the key.",
+      "parameters": [
+        {
+          "name": "KeyID",
+          "required": true,
+          "in": "path",
+          "type": "string"
+        },
+        {
+          "name": "Tag",
+          "required": true,
+          "in": "path",
+          "type": "string"
+        }
+      ],
+      "put": {
+        "description": "Add a tag to the authorized set",
+        "responses": {
+          "204": {
+            "description": "Successful addition of the tag."
+          },
+          "400": {
+            "description": "Bad request, tag format is invalid."
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "404": {
+            "description": "KeyID not found."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      },
+      "delete": {
+        "description": "Delete a tag from the authorized set",
+        "responses": {
+          "204": {
+            "description": "Successful deletion of the tag."
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          },
+          "404": {
+            "description": "Tag or keyID not found."
           }
         },
         "security": [
@@ -1169,6 +1292,137 @@
         ]
       }
     },
+    "/users/{UserID}/tags": {
+      "parameters": [
+        {
+          "name": "UserID",
+          "required": true,
+          "in": "path",
+          "type": "string"
+        }
+      ],
+      "get": {
+        "description": "Get the list of tags set to an Operator user.",
+        "responses": {
+          "200": {
+            "description": "",
+            "x-amf-mediaType": "application/json",
+            "schema": {
+              "$ref": "#/definitions/TagList"
+            }
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          },
+          "404": {
+            "description": "User not found for this user-ID."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator",
+          "Operator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      }
+    },
+    "/users/{UserID}/tags/{Tag}": {
+      "x-amf-description": "Tags: <b>R-Administrator</b> can PUT and DELETE the tags for everyone.",
+      "parameters": [
+        {
+          "name": "UserID",
+          "required": true,
+          "in": "path",
+          "type": "string"
+        },
+        {
+          "name": "Tag",
+          "required": true,
+          "in": "path",
+          "type": "string"
+        }
+      ],
+      "put": {
+        "description": "Add a tag to the Operator user.",
+        "responses": {
+          "204": {
+            "description": "Successful addition of the tag."
+          },
+          "304": {
+            "description": "Tag is already present for this UserID."
+          },
+          "400": {
+            "description": "Bad request, tag format is invalid or user is not an operator."
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "404": {
+            "description": "UserID not found."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      },
+      "delete": {
+        "description": "Delete a tag from the Operator user",
+        "responses": {
+          "204": {
+            "description": "Successful deletion of the tag."
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          },
+          "404": {
+            "description": "Tag or user not found."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      }
+    },
     "/config": {
       "x-amf-description": "Role: <b>R-Administrator</b>"
     },
@@ -1400,7 +1654,7 @@
       }
     },
     "/config/tls/csr.pem": {
-      "put": {
+      "post": {
         "description": "Get NetHSM certificate signing request e.g. to replace self-signed intital certificate.",
         "produces": ["application/x-pem-file"],
         "parameters": [
@@ -1420,6 +1674,49 @@
             "schema": {
               "$ref": "#/definitions/PemCSR"
             }
+          },
+          "401": {
+            "description": "Authentication required but none provided."
+          },
+          "403": {
+            "description": "Access denied."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
+          }
+        },
+        "security": [
+          {
+            "basic": []
+          }
+        ],
+        "x-role": [
+          "Administrator"
+        ],
+        "x-state": [
+          "Operational"
+        ]
+      }
+    },
+    "/config/tls/generate": {
+      "post": {
+        "description": "Generate a new pair of public and private key for NetHSM's https API.",
+        "parameters": [
+          {
+            "x-amf-mediaType": "application/json",
+            "in": "body",
+            "name": "body",
+            "schema": {
+              "$ref": "#/definitions/TlsKeyGenerateRequestData"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful creation of new public and private key pair for NetHSM's https API."
+          },
+          "400": {
+            "description": "Bad request (specified properties are invalid)."
           },
           "401": {
             "description": "Authentication required but none provided."
@@ -2020,6 +2317,26 @@
     }
   },
   "definitions": {
+    "TlsKeyGenerateRequestData": {
+      "example": {
+        "type": "RSA",
+        "length": 2048
+      },
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/TlsKeyType"
+        },
+        "length": {
+          "type": "integer",
+          "minimum": 128,
+          "maximum": 8192
+        }
+      }
+    },
     "KeyPublicData": {
       "type": "object",
       "properties": {
@@ -2052,7 +2369,9 @@
         "RSA_Signature_PSS_SHA384",
         "RSA_Signature_PSS_SHA512",
         "EdDSA_Signature",
-        "ECDSA_Signature"
+        "ECDSA_Signature",
+        "AES_Encryption_CBC",
+        "AES_Decryption_CBC"
       ],
       "type": "string"
     },
@@ -2173,6 +2492,25 @@
         }
       }
     },
+    "EncryptData": {
+      "example": {
+        "encrypted": "IBCS8Sc4NkG/O+kqInz7mq/+Pr+5eJUJ/QpfwMp7pPjLn02U7ggyUrxJfN97MChHGekvGEK4Q1LCJ2juHTgjxJ94/QoEAN0dWZ7x3NxjlUgw7yBm7ylldVvToum3lWOVo3wPm5ozSGxpslrqgz2Rid9+uH5ytV8//CrkMOlqlUoj0DWMYbp/sUbYDGwG8lcfvKua67AxT3X/exSKCAwBuxPBr2p3DCTHepdmZCyexL809ZvBRopOQ41ve9X1jXqKzihrCPeoCwEok06EGYhPt3/EKFoer401S0MYtz5J1BvO1cv7ITDOYUCG4Ze8aXEjtnt6MMRx4jY7IqssYO8GrA==",
+        "iv": "MTIzNDU2Nzg5MDEyMzQ1Ng=="
+      },
+      "type": "object",
+      "required": [
+        "encrypted",
+        "iv"
+      ],
+      "properties": {
+        "encrypted": {
+          "$ref": "#/definitions/Base64"
+        },
+        "iv": {
+          "$ref": "#/definitions/Base64"
+        }
+      }
+    },
     "UserItem": {
       "type": "object",
       "required": [
@@ -2211,6 +2549,12 @@
           "type": "string"
         }
       }
+    },
+    "EncryptMode": {
+      "enum": [
+        "AES_CBC"
+      ],
+      "type": "string"
     },
     "ProvisionRequestData": {
       "example": {
@@ -2257,6 +2601,11 @@
       }
     },
     "KeyList": {
+      "example": [
+        {
+          "key": "KeyID"
+        }
+      ],
       "type": "array",
       "items": {
         "$ref": "#/definitions/KeyItem"
@@ -2278,6 +2627,9 @@
       }
     },
     "KeyItem": {
+      "example": {
+        "key": "KeyID"
+      },
       "type": "object",
       "required": [
         "key"
@@ -2318,9 +2670,9 @@
         ],
         "type": "RSA",
         "key": {
-          "primeP": "frtz7u89gft89uz",
-          "primeQ": "FhJQl11CiY0ifRHXeAqFh4rdSl6",
-          "publicExponent": "w367rg90jhj0asdf98gz"
+          "primeP": "AOnWFZ+JrI/xOXJU04uYCZOiPVUWd6CSbVseEYrYQYxc7dVroePshz29tc+VEOUP5T0O8lXMEkjFAwjW6C9QTAsPyl6jwyOQluMRIkdN4/7BAg3HAMuGd7VmkGyYrnZWW54sLWp1JD6XJG33kF+9OSar9ETPoVyBgK5punfiUFEL",
+          "primeQ": "ANT1kWDdP9hZoFKT49dwdM/S+3ZDnxQa7kZk9p+JKU5RaU9e8pS2GOJljHwkES1FH6CUGeIaUi81tRKe2XZhe/163sEyMcxkaaRbBbTc1v6ZDKILFKKt4eX7LAQfhL/iFlgi6pcyUM8QDrm1QeFgGz11ChM0JuQw1WwkX06lg8iv",
+          "publicExponent": "AQAB"
         }
       },
       "type": "object",
@@ -2341,8 +2693,29 @@
         }
       }
     },
+    "TagList": {
+      "example": [
+        "berlin",
+        "frankfurt"
+      ],
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/ID"
+      }
+    },
     "PemCSR": {
       "example": "-----BEGIN CERTIFICATE REQUEST-----\nMIICpzCCAY8CAQAwYjFgMAkGA1UEBhMCREUwDQYDVQQHDAZCZXJsaW4wDwYDVQQK\nDAhOaXRyb2tleTATBgNVBAMMDG5ldGhzbS5sb2NhbDAeBgkqhkiG9w0BCQEWEWlu\nZm9Abml0cm9rZXkuY29tMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA\nx7ghfro+VEepYmy2V7HPn5PSRdmGzxewcpmzxTtrZ10BygbEqhPsAr4fWI9pG7iR\nXzeza7DMjrQptzKsfSy6dBFmSEZer+hJxuOdhBG/FX6pjwRrZpbOQxyr+aTlE3jm\n2XP12Cqx0wsYGIoJlWHbGb90IAx9zpdYQgHoJZ4x5ims5vo7h3puPEyVycJH5fMB\nB9h+2Bxc4BxaPKMm15JR1B7ToB3g16SJY2B1t/aqNmqSBZC4HP1fCuSbBm83OgqR\nhdk1P6r/vqOVKrxVupDqKkdcf/dRBiQalJ9tQbVbs9OOYfQ6n25GvJTvGtqOEugg\nit32tV16JXCZjnYePAvtNwIDAQABoAAwDQYJKoZIhvcNAQELBQADggEBABVz67ib\nngef9acHkwTYHHQk3MHxQRSLOxUKoDjk1URMgJ2hgL5HR91yQ3gBPxVuEGWdEQXJ\nC4sM9S3OoM5yFJFj56Y8MaASHFo58V5N1FaFqf3BbVKNzM4Jgrtghw1teJU45xZR\n0+sjA0YjVJwGnNXfBJdQVNXgWJcXy4bmPSaF7khxDnoP7dmxMcpQ2HKL8X9E/kef\nKOhz+HtlCWoqwD77aR3wKrYWdn+fwMeTRGNpJLPdKl7vyleb8pjtWUYnNTIP4Zh+\nBLX93udZxl8sVpJBnLcIWplwJB16hxk5ZODjWUOrhkwZ0MbiPFbKkihc8GMLLEyp\ndHRjrbgAUrx5DuY=\n-----END CERTIFICATE REQUEST-----\n",
+      "type": "string"
+    },
+    "TlsKeyType": {
+      "enum": [
+        "RSA",
+        "Curve25519",
+        "EC_P224",
+        "EC_P256",
+        "EC_P384",
+        "EC_P521"
+      ],
       "type": "string"
     },
     "DecryptRequestData": {
@@ -2361,6 +2734,9 @@
         },
         "encrypted": {
           "$ref": "#/definitions/Base64"
+        },
+        "iv": {
+          "type": "string"
         }
       }
     },
@@ -2377,6 +2753,14 @@
         "ECDSA"
       ],
       "type": "string"
+    },
+    "KeyRestrictions": {
+      "type": "object",
+      "properties": {
+        "tags": {
+          "$ref": "#/definitions/TagList"
+        }
+      }
     },
     "UserPostData": {
       "example": {
@@ -2412,6 +2796,28 @@
         "$ref": "#/definitions/KeyMechanism"
       }
     },
+    "EncryptRequestData": {
+      "example": {
+        "mode": "AES_CBC",
+        "message": "nhrfotu32409ru0rgert45z54z099u23r03498uhtr=="
+      },
+      "type": "object",
+      "required": [
+        "mode",
+        "message"
+      ],
+      "properties": {
+        "mode": {
+          "$ref": "#/definitions/EncryptMode"
+        },
+        "message": {
+          "$ref": "#/definitions/Base64"
+        },
+        "iv": {
+          "type": "string"
+        }
+      }
+    },
     "DecryptMode": {
       "enum": [
         "RAW",
@@ -2421,7 +2827,8 @@
         "OAEP_SHA224",
         "OAEP_SHA256",
         "OAEP_SHA384",
-        "OAEP_SHA512"
+        "OAEP_SHA512",
+        "AES_CBC"
       ],
       "type": "string"
     },
@@ -2609,6 +3016,11 @@
           "RSA_Signature_PSS_SHA256"
         ],
         "type": "RSA",
+        "restrictions": {
+          "tags": [
+            "berlin"
+          ]
+        },
         "key": {
           "modulus": "FhJQl11CiY0ifRHXeAqFh4rdSl6",
           "publicExponent": "FhJQl11CiY0ifRHXeAqFh4rdSl6"
@@ -2619,6 +3031,7 @@
       "required": [
         "mechanisms",
         "type",
+        "restrictions",
         "key",
         "operations"
       ],
@@ -2628,6 +3041,9 @@
         },
         "type": {
           "$ref": "#/definitions/KeyType"
+        },
+        "restrictions": {
+          "$ref": "#/definitions/KeyRestrictions"
         },
         "key": {
           "$ref": "#/definitions/KeyPublicData"
@@ -2692,11 +3108,19 @@
         },
         "length": {
           "type": "integer",
-          "minimum": 1024,
+          "minimum": 128,
           "maximum": 8192
         },
         "id": {
           "type": "string"
+        },
+        "restrictions": {
+          "type": "object",
+          "x-amf-merge": [
+            {
+              "$ref": "#/definitions/KeyRestrictions"
+            }
+          ]
         }
       }
     },
@@ -2707,7 +3131,8 @@
         "EC_P224",
         "EC_P256",
         "EC_P384",
-        "EC_P521"
+        "EC_P521",
+        "Generic"
       ],
       "type": "string"
     },

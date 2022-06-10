@@ -85,6 +85,7 @@ class KeyType(enum.Enum):
     EC_P256 = "EC_P256"
     EC_P384 = "EC_P384"
     EC_P521 = "EC_P521"
+    GENERIC = "Generic"
 
 
 class KeyMechanism(enum.Enum):
@@ -105,6 +106,8 @@ class KeyMechanism(enum.Enum):
     RSA_SIGNATURE_PSS_SHA512 = "RSA_Signature_PSS_SHA512"
     EDDSA_SIGNATURE = "EdDSA_Signature"
     ECDSA_SIGNATURE = "ECDSA_Signature"
+    AES_ENCRYPTION_CBC = "AES_Encryption_CBC"
+    AES_DECRYPTION_CBC = "AES_Decryption_CBC"
 
 
 class DecryptMode(enum.Enum):
@@ -116,6 +119,7 @@ class DecryptMode(enum.Enum):
     OAEP_SHA256 = "OAEP_SHA256"
     OAEP_SHA384 = "OAEP_SHA384"
     OAEP_SHA512 = "OAEP_SHA512"
+    AES_CBC = "AES_CBC"
 
 
 class SignMode(enum.Enum):
@@ -128,6 +132,15 @@ class SignMode(enum.Enum):
     PSS_SHA512 = "PSS_SHA512"
     EDDSA = "EdDSA"
     ECDSA = "ECDSA"
+
+
+class TlsKeyType(enum.Enum):
+    RSA = "RSA"
+    CURVE25519 = "Curve25519"
+    EC_P224 = "EC_P224"
+    EC_P256 = "EC_P256"
+    EC_P384 = "EC_P384"
+    EC_P521 = "EC_P521"
 
 
 class SystemInfo:
@@ -147,12 +160,13 @@ class User:
 
 class Key:
     def __init__(
-        self, key_id, mechanisms, type, operations, modulus, public_exponent, data
+        self, key_id, mechanisms, type, operations, tags, modulus, public_exponent, data
     ):
         self.key_id = key_id
         self.mechanisms = mechanisms
         self.type = type
         self.operations = operations
+        self.tags = tags
         self.modulus = modulus
         self.public_exponent = public_exponent
         self.data = data
@@ -380,6 +394,80 @@ class NetHSM:
                 },
             )
 
+    def list_operator_tags(self, user_id):
+        try:
+            return self.get_api().users_user_id_tags_get(user_id=user_id)
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR],
+                messages={
+                    404: f"User {user_id} not found",
+                },
+            )
+
+    def add_operator_tag(self, user_id, tag):
+        try:
+            return self.get_api().users_user_id_tags_tag_put(user_id=user_id, tag=tag)
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR],
+                messages={
+                    404: f"User {user_id} not found",
+                    304: f"Tag is already present for {user_id}",
+                },
+            )
+
+    def delete_operator_tag(self, user_id, tag):
+        try:
+            return self.get_api().users_user_id_tags_tag_delete(
+                user_id=user_id, tag=tag
+            )
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR],
+                messages={
+                    404: f"User {user_id} or tag {tag} not found",
+                },
+            )
+
+    def add_key_tag(self, key_id, tag):
+        try:
+            return self.get_api().keys_key_id_restrictions_tags_tag_put(
+                key_id=key_id, tag=tag
+            )
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR],
+                messages={
+                    304: f"Tag is already present for {key_id}",
+                    400: f"Tag {tag} has invalid format",
+                    404: f"Key {key_id} not found",
+                },
+            )
+
+    def delete_key_tag(self, key_id, tag):
+        try:
+            return self.get_api().keys_key_id_restrictions_tags_tag_delete(
+                key_id=key_id, tag=tag
+            )
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.ADMINISTRATOR],
+                messages={
+                    404: f"Key {key_id} or tag {tag} not found",
+                },
+            )
+
     def get_info(self):
         try:
             data = self.get_api().info_get()
@@ -429,6 +517,9 @@ class NetHSM:
                 mechanisms=[mechanism.value for mechanism in key.mechanisms.value],
                 type=key.type.value,
                 operations=key.operations,
+                tags=[tag.value for tag in key.restrictions.tags.value]
+                if hasattr(key.restrictions, "tags")
+                else None,
                 modulus=getattr(key.key, "modulus", None),
                 public_exponent=getattr(key.key, "public_exponent", None),
                 data=getattr(key.key, "data", None),
@@ -658,19 +749,50 @@ class NetHSM:
         common_name,
         email_address,
     ):
-        from .client.model.distinguished_name import DistinguishedName
-
-        body = DistinguishedName(
-            country_name=country,
-            state_or_province_name=state_or_province,
-            locality_name=locality,
-            organization_name=organization,
-            organizational_unit_name=organizational_unit,
-            common_name=common_name,
-            email_address=email_address,
-        )
+        data = {
+            "countryName": country,
+            "stateOrProvinceName": state_or_province,
+            "localityName": locality,
+            "organizationName": organization,
+            "organizationalUnitName": organizational_unit,
+            "commonName": common_name,
+            "emailAddress": email_address,
+        }
         try:
-            return self.get_api().config_tls_csr_pem_put(body=body)
+            response = self.request(
+                "POST",
+                "config/tls/csr.pem",
+                json=data,
+                mime_type="application/json",
+            )
+            return response.content.decode("utf-8")
+        except ApiException as e:
+            _handle_api_exception(
+                e, state=State.OPERATIONAL, roles=[Role.ADMINISTRATOR]
+            )
+
+    def generate_tls_key(
+        self,
+        type,
+        length,
+    ):
+        from .client.model.tls_key_generate_request_data import (
+            TlsKeyGenerateRequestData,
+        )
+        from .client.model.tls_key_type import TlsKeyType
+
+        if type == "RSA":
+            body = TlsKeyGenerateRequestData(
+                type=TlsKeyType(type),
+                length=length,
+            )
+        else:
+            body = TlsKeyGenerateRequestData(
+                type=TlsKeyType(type),
+            )
+
+        try:
+            return self.get_api().config_tls_generate_post(body=body)
         except ApiException as e:
             _handle_api_exception(
                 e, state=State.OPERATIONAL, roles=[Role.ADMINISTRATOR]

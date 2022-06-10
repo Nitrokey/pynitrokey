@@ -24,7 +24,10 @@ from pynitrokey.nethsm.client.model_utils import (  # noqa: F401
     file_type,
     none_type,
     validate_get_composed_info,
+    OpenApiModel
 )
+from pynitrokey.nethsm.client.exceptions import ApiAttributeError
+
 
 
 class KeyType(ModelSimple):
@@ -55,6 +58,7 @@ class KeyType(ModelSimple):
             'EC_P256': "EC_P256",
             'EC_P384': "EC_P384",
             'EC_P521': "EC_P521",
+            'GENERIC': "Generic",
         },
     }
 
@@ -86,6 +90,8 @@ class KeyType(ModelSimple):
 
     attribute_map = {}
 
+    read_only_vars = set()
+
     _composed_schemas = None
 
     required_properties = set([
@@ -104,10 +110,10 @@ class KeyType(ModelSimple):
         Note that value can be passed either in args or in kwargs, but not in both.
 
         Args:
-            args[0] (str):, must be one of ["RSA", "Curve25519", "EC_P224", "EC_P256", "EC_P384", "EC_P521", ]  # noqa: E501
+            args[0] (str):, must be one of ["RSA", "Curve25519", "EC_P224", "EC_P256", "EC_P384", "EC_P521", "Generic", ]  # noqa: E501
 
         Keyword Args:
-            value (str):, must be one of ["RSA", "Curve25519", "EC_P224", "EC_P256", "EC_P384", "EC_P521", ]  # noqa: E501
+            value (str):, must be one of ["RSA", "Curve25519", "EC_P224", "EC_P256", "EC_P384", "EC_P521", "Generic", ]  # noqa: E501
             _check_type (bool): if True, values for parameters in openapi_types
                                 will be type checked and a TypeError will be
                                 raised if the wrong type is input.
@@ -160,14 +166,18 @@ class KeyType(ModelSimple):
         _visited_composed_classes = kwargs.pop('_visited_composed_classes', ())
 
         if args:
-            raise ApiTypeError(
-                "Invalid positional arguments=%s passed to %s. Remove those invalid positional arguments." % (
-                    args,
-                    self.__class__.__name__,
-                ),
-                path_to_item=_path_to_item,
-                valid_classes=(self.__class__,),
-            )
+            for arg in args:
+                if isinstance(arg, dict):
+                    kwargs.update(arg)
+                else:
+                    raise ApiTypeError(
+                        "Invalid positional arguments=%s passed to %s. Remove those invalid positional arguments." % (
+                            args,
+                            self.__class__.__name__,
+                        ),
+                        path_to_item=_path_to_item,
+                        valid_classes=(self.__class__,),
+                    )
 
         self._data_store = {}
         self._check_type = _check_type
@@ -185,3 +195,101 @@ class KeyType(ModelSimple):
                 path_to_item=_path_to_item,
                 valid_classes=(self.__class__,),
             )
+
+    @classmethod
+    @convert_js_args_to_python_args
+    def _from_openapi_data(cls, *args, **kwargs):
+        """KeyType - a model defined in OpenAPI
+
+        Note that value can be passed either in args or in kwargs, but not in both.
+
+        Args:
+            args[0] (str):, must be one of ["RSA", "Curve25519", "EC_P224", "EC_P256", "EC_P384", "EC_P521", "Generic", ]  # noqa: E501
+
+        Keyword Args:
+            value (str):, must be one of ["RSA", "Curve25519", "EC_P224", "EC_P256", "EC_P384", "EC_P521", "Generic", ]  # noqa: E501
+            _check_type (bool): if True, values for parameters in openapi_types
+                                will be type checked and a TypeError will be
+                                raised if the wrong type is input.
+                                Defaults to True
+            _path_to_item (tuple/list): This is a list of keys or values to
+                                drill down to the model in received_data
+                                when deserializing a response
+            _spec_property_naming (bool): True if the variable names in the input data
+                                are serialized names, as specified in the OpenAPI document.
+                                False if the variable names in the input data
+                                are pythonic names, e.g. snake case (default)
+            _configuration (Configuration): the instance to use when
+                                deserializing a file_type parameter.
+                                If passed, type conversion is attempted
+                                If omitted no type conversion is done.
+            _visited_composed_classes (tuple): This stores a tuple of
+                                classes that we have traveled through so that
+                                if we see that class again we will not use its
+                                discriminator again.
+                                When traveling through a discriminator, the
+                                composed schema that is
+                                is traveled through is added to this set.
+                                For example if Animal has a discriminator
+                                petType and we pass in "Dog", and the class Dog
+                                allOf includes Animal, we move through Animal
+                                once using the discriminator, and pick Dog.
+                                Then in Dog, we will make an instance of the
+                                Animal class but this time we won't travel
+                                through its discriminator because we passed in
+                                _visited_composed_classes = (Animal,)
+        """
+        # required up here when default value is not given
+        _path_to_item = kwargs.pop('_path_to_item', ())
+
+        self = super(OpenApiModel, cls).__new__(cls)
+
+        if 'value' in kwargs:
+            value = kwargs.pop('value')
+        elif args:
+            args = list(args)
+            value = args.pop(0)
+        else:
+            raise ApiTypeError(
+                "value is required, but not passed in args or kwargs and doesn't have default",
+                path_to_item=_path_to_item,
+                valid_classes=(self.__class__,),
+            )
+
+        _check_type = kwargs.pop('_check_type', True)
+        _spec_property_naming = kwargs.pop('_spec_property_naming', False)
+        _configuration = kwargs.pop('_configuration', None)
+        _visited_composed_classes = kwargs.pop('_visited_composed_classes', ())
+
+        if args:
+            for arg in args:
+                if isinstance(arg, dict):
+                    kwargs.update(arg)
+                else:
+                    raise ApiTypeError(
+                        "Invalid positional arguments=%s passed to %s. Remove those invalid positional arguments." % (
+                            args,
+                            self.__class__.__name__,
+                        ),
+                        path_to_item=_path_to_item,
+                        valid_classes=(self.__class__,),
+                    )
+
+        self._data_store = {}
+        self._check_type = _check_type
+        self._spec_property_naming = _spec_property_naming
+        self._path_to_item = _path_to_item
+        self._configuration = _configuration
+        self._visited_composed_classes = _visited_composed_classes + (self.__class__,)
+        self.value = value
+        if kwargs:
+            raise ApiTypeError(
+                "Invalid named arguments=%s passed to %s. Remove those invalid named arguments." % (
+                    kwargs,
+                    self.__class__.__name__,
+                ),
+                path_to_item=_path_to_item,
+                valid_classes=(self.__class__,),
+            )
+
+        return self

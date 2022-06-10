@@ -37,6 +37,7 @@ ROLE_TYPE = make_enum_type(pynitrokey.nethsm.Role)
 LOG_LEVEL_TYPE = make_enum_type(pynitrokey.nethsm.LogLevel)
 UNATTENDED_BOOT_STATUS_TYPE = make_enum_type(pynitrokey.nethsm.UnattendedBootStatus)
 TYPE_TYPE = make_enum_type(pynitrokey.nethsm.KeyType)
+TYPE_TLS_KEY_TYPE = make_enum_type(pynitrokey.nethsm.TlsKeyType)
 MECHANISM_TYPE = make_enum_type(pynitrokey.nethsm.KeyMechanism)
 DECRYPT_MODE_TYPE = make_enum_type(pynitrokey.nethsm.DecryptMode)
 SIGN_MODE_TYPE = make_enum_type(pynitrokey.nethsm.SignMode)
@@ -309,6 +310,79 @@ def set_passphrase(ctx, user_id, passphrase):
 
 
 @nethsm.command()
+@click.argument("user-id")
+@click.pass_context
+def list_operator_tags(ctx, user_id):
+    """List the tags for an operator user ID on the NetHSM.
+
+    This command requires authentication as a user with the Administrator role."""
+    with connect(ctx) as nethsm:
+        tags = nethsm.list_operator_tags(user_id=user_id)
+        if tags.value:
+            print(f"Tags for user {user_id}:")
+            for tag in tags.value:
+                print(f"- {tag}")
+        else:
+            print(f"No tags set for user {user_id}.")
+
+
+@nethsm.command()
+@click.argument("user-id")
+@click.argument("tag")
+@click.pass_context
+def add_operator_tag(ctx, user_id, tag):
+    """Add a tag for an operator user on the NetHSM.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    with connect(ctx) as nethsm:
+        nethsm.add_operator_tag(user_id=user_id, tag=tag)
+        print(f"Added tag {tag} for user {user_id} on the NetHSM {nethsm.host}")
+
+
+@nethsm.command()
+@click.argument("user-id")
+@click.argument("tag")
+@click.pass_context
+def delete_operator_tag(ctx, user_id, tag):
+    """Delete a tag for an operator user on the NetHSM.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    with connect(ctx) as nethsm:
+        nethsm.delete_operator_tag(user_id=user_id, tag=tag)
+        print(f"Deleted tag {tag} for user {user_id} on the NetHSM {nethsm.host}")
+
+
+@nethsm.command()
+@click.argument("key_id")
+@click.argument("tag")
+@click.pass_context
+def add_key_tag(ctx, key_id, tag):
+    """Add a tag for a key on the NetHSM.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    with connect(ctx) as nethsm:
+        nethsm.add_key_tag(key_id=key_id, tag=tag)
+        print(f"Added tag {tag} for key {key_id} on the NetHSM {nethsm.host}")
+
+
+@nethsm.command()
+@click.argument("key_id")
+@click.argument("tag")
+@click.pass_context
+def delete_key_tag(ctx, key_id, tag):
+    """Delete a tag for a key on the NetHSM.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    with connect(ctx) as nethsm:
+        nethsm.delete_key_tag(key_id=key_id, tag=tag)
+        print(f"Deleted tag {tag} for key {key_id} on the NetHSM {nethsm.host}")
+
+
+@nethsm.command()
 @click.pass_context
 def info(ctx):
     """Query the vendor and product information for a NetHSM."""
@@ -371,12 +445,18 @@ def list_keys(ctx, details):
 
         headers = ["Key ID"]
         if details:
-            headers += ["Type", "Mechanisms", "Operations"]
+            headers += ["Type", "Mechanisms", "Operations", "Tags"]
             data = []
             for key_id in key_ids:
                 key = nethsm.get_key(key_id=key_id.value)
                 data.append(
-                    [key_id, key.type, ", ".join(key.mechanisms), key.operations]
+                    [
+                        key_id,
+                        key.type,
+                        ", ".join(key.mechanisms),
+                        key.operations,
+                        ", ".join(key.tags) if key.tags is not None else "",
+                    ]
                 )
         else:
             data = [[key_id] for key_id in key_ids]
@@ -403,6 +483,9 @@ def get_key(ctx, key_id, public_key):
             print(f"Type:            {key.type}")
             print(f"Mechanisms:      {mechanisms}")
             print(f"Operations:      {key.operations}")
+            if key.tags:
+                tags = ", ".join(key.tags)
+                print(f"Tags:            {tags}")
             if key.modulus:
                 print(f"Modulus:         {key.modulus}")
             if key.public_exponent:
@@ -974,6 +1057,39 @@ def csr(
                 email_address=email_address,
             )
         print(csr)
+
+
+@nethsm.command()
+@click.option(
+    "type",
+    "-t",
+    "--type",
+    type=TYPE_TLS_KEY_TYPE,
+    prompt=True,
+    help="The type for the generated key",
+)
+@click.option(
+    "-l",
+    "--length",
+    type=int,
+    help="The length of the generated key",
+)
+@click.pass_context
+def generate_tls_key(ctx, type, length):
+    """Generate key pair for NetHSM HTTPS API.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    if type == "RSA":
+        if not length:
+            length = click.prompt("Length", type=int)
+    else:
+        if length:
+            raise click.ClickException("-l/--length may only be set for RSA keys")
+
+    with connect(ctx) as nethsm:
+        nethsm.generate_tls_key(type, length)
+        print(f"Key for HTTPS API generated on NetHSM {nethsm.host}")
 
 
 @nethsm.command()
