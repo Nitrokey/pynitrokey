@@ -455,12 +455,12 @@ def prompt_mechanisms(type):
     cont = True
     while cont:
         default = None
-        prompt = "Add mechanism"
+        prompt_text = "Add mechanism"
         if mechanisms:
-            prompt += " (or empty string to continue)"
+            prompt_text += " (or empty string to continue)"
             default = ""
         mechanism = prompt(
-            prompt,
+            prompt_text,
             type=mechanism_type,
             default=default,
             show_choices=False,
