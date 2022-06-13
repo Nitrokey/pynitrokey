@@ -294,6 +294,15 @@
       "x-amf-description": "Role: <b>R-Operator</b> can GET keys. <b>R-Administrator</b> can GET and POST keys, and also POST /generate.",
       "get": {
         "description": "Get a list of the identifiers of all keys that are currently stored in NetHSM. Separate requests need to be made to request the individual key data.",
+        "parameters": [
+          {
+            "name": "filter",
+            "description": "Only return keys that are can be used by the requester, according to restrictions.",
+            "required": false,
+            "in": "query",
+            "type": "string"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful request for the list of keys.",
@@ -463,11 +472,11 @@
           "403": {
             "description": "Access denied."
           },
-          "412": {
-            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
-          },
           "404": {
             "description": "Key for KeyID not found."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
           }
         },
         "security": [
@@ -534,11 +543,11 @@
           "403": {
             "description": "Access denied."
           },
-          "412": {
-            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
-          },
           "409": {
             "description": "Conflict, key already exists for this keyID."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
           }
         },
         "security": [
@@ -565,11 +574,11 @@
           "403": {
             "description": "Access denied."
           },
-          "412": {
-            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
-          },
           "404": {
             "description": "Key for KeyID not found."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
           }
         },
         "security": [
@@ -596,7 +605,6 @@
       ],
       "get": {
         "description": "Retrieve public key in PEM format.",
-        "produces": ["application/x-pem-file"],
         "responses": {
           "200": {
             "description": "",
@@ -611,11 +619,11 @@
           "403": {
             "description": "Access denied."
           },
-          "412": {
-            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
-          },
           "404": {
             "description": "Key for KeyID not found."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
           }
         },
         "security": [
@@ -629,6 +637,9 @@
         ],
         "x-state": [
           "Operational"
+        ],
+        "produces": [
+          "application/x-pem-file"
         ]
       }
     },
@@ -643,7 +654,6 @@
       ],
       "post": {
         "description": "Retrieve a certificate signing request in PEM format.",
-        "produces": ["application/x-pem-file"],
         "parameters": [
           {
             "x-amf-mediaType": "application/json",
@@ -668,11 +678,11 @@
           "403": {
             "description": "Access denied."
           },
-          "412": {
-            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
-          },
           "404": {
             "description": "Key for KeyID not found."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
           }
         },
         "security": [
@@ -686,6 +696,9 @@
         ],
         "x-state": [
           "Operational"
+        ],
+        "produces": [
+          "application/x-pem-file"
         ]
       }
     },
@@ -718,20 +731,20 @@
               "$ref": "#/definitions/DecryptData"
             }
           },
+          "400": {
+            "description": "Bad Request, e.g. invalid encryption mode."
+          },
           "401": {
             "description": "Authentication required but none provided."
           },
           "403": {
             "description": "Access denied."
           },
-          "412": {
-            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
-          },
           "404": {
             "description": "Key for KeyID not found."
           },
-          "400": {
-            "description": "Bad Request, e.g. invalid encryption mode."
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
           }
         },
         "security": [
@@ -776,20 +789,20 @@
               "$ref": "#/definitions/SignData"
             }
           },
+          "400": {
+            "description": "Bad Request, e.g. invalid signing mode."
+          },
           "401": {
             "description": "Authentication required but none provided."
           },
           "403": {
             "description": "Access denied."
           },
-          "412": {
-            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
-          },
           "404": {
             "description": "Key for KeyID not found."
           },
-          "400": {
-            "description": "Bad Request, e.g. invalid signing mode."
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
           }
         },
         "security": [
@@ -842,11 +855,11 @@
           "403": {
             "description": "Access denied."
           },
-          "412": {
-            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
-          },
           "404": {
             "description": "Certificate for KeyID not found."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
           }
         },
         "security": [
@@ -860,6 +873,11 @@
         ],
         "x-state": [
           "Operational"
+        ],
+        "produces": [
+          "application/x-pem-file",
+          "application/x-x509-ca-cert",
+          "application/pgp-keys"
         ]
       },
       "put": {
@@ -895,11 +913,11 @@
           "403": {
             "description": "Access denied."
           },
-          "412": {
-            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
-          },
           "409": {
             "description": "Conflict, certificate already exists for this KeyID."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
           }
         },
         "security": [
@@ -926,11 +944,11 @@
           "403": {
             "description": "Access denied."
           },
-          "412": {
-            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
-          },
           "404": {
             "description": "Certificate with this KeyID not found."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
           }
         },
         "security": [
@@ -979,6 +997,9 @@
           "204": {
             "description": "Successful addition of the tag."
           },
+          "304": {
+            "description": "Tag is already present for this key."
+          },
           "400": {
             "description": "Bad request, tag format is invalid."
           },
@@ -1019,11 +1040,11 @@
           "403": {
             "description": "Access denied."
           },
-          "412": {
-            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
-          },
           "404": {
             "description": "Tag or keyID not found."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
           }
         },
         "security": [
@@ -1141,11 +1162,11 @@
           "403": {
             "description": "Access denied."
           },
-          "412": {
-            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
-          },
           "404": {
             "description": "User for UserID not found."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
           }
         },
         "security": [
@@ -1186,11 +1207,11 @@
           "403": {
             "description": "Access denied."
           },
-          "412": {
-            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
-          },
           "409": {
             "description": "Conflict - user already exists for this user-ID."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
           }
         },
         "security": [
@@ -1217,11 +1238,11 @@
           "403": {
             "description": "Access denied."
           },
-          "412": {
-            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
-          },
           "404": {
             "description": "User not found for this user-ID."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
           }
         },
         "security": [
@@ -1271,11 +1292,11 @@
           "403": {
             "description": "Access denied."
           },
-          "412": {
-            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
-          },
           "404": {
             "description": "User not found for this user-ID."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
           }
         },
         "security": [
@@ -1317,11 +1338,11 @@
           "403": {
             "description": "Access denied."
           },
-          "412": {
-            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
-          },
           "404": {
             "description": "User not found for this user-ID."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
           }
         },
         "security": [
@@ -1403,11 +1424,11 @@
           "403": {
             "description": "Access denied."
           },
-          "412": {
-            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
-          },
           "404": {
             "description": "Tag or user not found."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
           }
         },
         "security": [
@@ -1548,7 +1569,6 @@
     "/config/tls/public.pem": {
       "get": {
         "description": "Get public key for NetHSMs https API.",
-        "produces": ["application/x-pem-file"],
         "responses": {
           "200": {
             "description": "Successful retrieval of public key.",
@@ -1577,13 +1597,15 @@
         ],
         "x-state": [
           "Operational"
+        ],
+        "produces": [
+          "application/x-pem-file"
         ]
       }
     },
     "/config/tls/cert.pem": {
       "get": {
         "description": "Get certificate for NetHSMs https API.",
-        "produces": ["application/x-pem-file"],
         "responses": {
           "200": {
             "description": "Successful retrieval of certificate.",
@@ -1612,6 +1634,9 @@
         ],
         "x-state": [
           "Operational"
+        ],
+        "produces": [
+          "application/x-pem-file"
         ]
       },
       "put": {
@@ -1656,7 +1681,6 @@
     "/config/tls/csr.pem": {
       "post": {
         "description": "Get NetHSM certificate signing request e.g. to replace self-signed intital certificate.",
-        "produces": ["application/x-pem-file"],
         "parameters": [
           {
             "x-amf-mediaType": "application/json",
@@ -1695,6 +1719,9 @@
         ],
         "x-state": [
           "Operational"
+        ],
+        "produces": [
+          "application/x-pem-file"
         ]
       }
     },
@@ -2106,7 +2133,7 @@
         ]
       }
     },
-    "/system/reset": {
+    "/system/factory-reset": {
       "post": {
         "description": "Reset NetHSM to factory settings.",
         "responses": {
@@ -2161,11 +2188,11 @@
           "403": {
             "description": "Access denied."
           },
-          "412": {
-            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
-          },
           "409": {
             "description": "Conflict - Major version downgrade is not allowed."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Operational</i>)."
           }
         },
         "security": [
@@ -2269,6 +2296,9 @@
         ],
         "x-state": [
           "Operational"
+        ],
+        "produces": [
+          "application/octet-stream"
         ]
       }
     },
@@ -2300,11 +2330,11 @@
           "204": {
             "description": "Successful restore from backup data."
           },
-          "412": {
-            "description": "Precondition failed (NetHSM was not <i>Unprovisioned</i>)."
-          },
           "400": {
             "description": "Bad request - restore did not apply."
+          },
+          "412": {
+            "description": "Precondition failed (NetHSM was not <i>Unprovisioned</i>)."
           }
         },
         "x-role": [
@@ -2673,6 +2703,11 @@
           "primeP": "AOnWFZ+JrI/xOXJU04uYCZOiPVUWd6CSbVseEYrYQYxc7dVroePshz29tc+VEOUP5T0O8lXMEkjFAwjW6C9QTAsPyl6jwyOQluMRIkdN4/7BAg3HAMuGd7VmkGyYrnZWW54sLWp1JD6XJG33kF+9OSar9ETPoVyBgK5punfiUFEL",
           "primeQ": "ANT1kWDdP9hZoFKT49dwdM/S+3ZDnxQa7kZk9p+JKU5RaU9e8pS2GOJljHwkES1FH6CUGeIaUi81tRKe2XZhe/163sEyMcxkaaRbBbTc1v6ZDKILFKKt4eX7LAQfhL/iFlgi6pcyUM8QDrm1QeFgGz11ChM0JuQw1WwkX06lg8iv",
           "publicExponent": "AQAB"
+        },
+        "restrictions": {
+          "tags": [
+            "berlin"
+          ]
         }
       },
       "type": "object",
@@ -2690,6 +2725,14 @@
         },
         "key": {
           "$ref": "#/definitions/KeyPrivateData"
+        },
+        "restrictions": {
+          "type": "object",
+          "x-amf-merge": [
+            {
+              "$ref": "#/definitions/KeyRestrictions"
+            }
+          ]
         }
       }
     },
@@ -2757,9 +2800,7 @@
     "KeyRestrictions": {
       "type": "object",
       "properties": {
-        "tags": {
-          "$ref": "#/definitions/TagList"
-        }
+        "tags": {}
       }
     },
     "UserPostData": {
@@ -2917,13 +2958,7 @@
       },
       "type": "object",
       "required": [
-        "countryName",
-        "stateOrProvinceName",
-        "localityName",
-        "organizationName",
-        "organizationalUnitName",
-        "commonName",
-        "emailAddress"
+        "commonName"
       ],
       "properties": {
         "countryName": {

@@ -81,12 +81,12 @@ class DistinguishedName(ModelNormal):
                 and the value is attribute type.
         """
         return {
+            'common_name': (str,),  # noqa: E501
             'country_name': (str,),  # noqa: E501
             'state_or_province_name': (str,),  # noqa: E501
             'locality_name': (str,),  # noqa: E501
             'organization_name': (str,),  # noqa: E501
             'organizational_unit_name': (str,),  # noqa: E501
-            'common_name': (str,),  # noqa: E501
             'email_address': (str,),  # noqa: E501
         }
 
@@ -96,12 +96,12 @@ class DistinguishedName(ModelNormal):
 
 
     attribute_map = {
+        'common_name': 'commonName',  # noqa: E501
         'country_name': 'countryName',  # noqa: E501
         'state_or_province_name': 'stateOrProvinceName',  # noqa: E501
         'locality_name': 'localityName',  # noqa: E501
         'organization_name': 'organizationName',  # noqa: E501
         'organizational_unit_name': 'organizationalUnitName',  # noqa: E501
-        'common_name': 'commonName',  # noqa: E501
         'email_address': 'emailAddress',  # noqa: E501
     }
 
@@ -112,17 +112,11 @@ class DistinguishedName(ModelNormal):
 
     @classmethod
     @convert_js_args_to_python_args
-    def _from_openapi_data(cls, country_name, state_or_province_name, locality_name, organization_name, organizational_unit_name, common_name, email_address, *args, **kwargs):  # noqa: E501
+    def _from_openapi_data(cls, common_name, *args, **kwargs):  # noqa: E501
         """DistinguishedName - a model defined in OpenAPI
 
         Args:
-            country_name (str):
-            state_or_province_name (str):
-            locality_name (str):
-            organization_name (str):
-            organizational_unit_name (str):
             common_name (str):
-            email_address (str):
 
         Keyword Args:
             _check_type (bool): if True, values for parameters in openapi_types
@@ -155,6 +149,12 @@ class DistinguishedName(ModelNormal):
                                 Animal class but this time we won't travel
                                 through its discriminator because we passed in
                                 _visited_composed_classes = (Animal,)
+            country_name (str): [optional]  # noqa: E501
+            state_or_province_name (str): [optional]  # noqa: E501
+            locality_name (str): [optional]  # noqa: E501
+            organization_name (str): [optional]  # noqa: E501
+            organizational_unit_name (str): [optional]  # noqa: E501
+            email_address (str): [optional]  # noqa: E501
         """
 
         _check_type = kwargs.pop('_check_type', True)
@@ -186,13 +186,7 @@ class DistinguishedName(ModelNormal):
         self._configuration = _configuration
         self._visited_composed_classes = _visited_composed_classes + (self.__class__,)
 
-        self.country_name = country_name
-        self.state_or_province_name = state_or_province_name
-        self.locality_name = locality_name
-        self.organization_name = organization_name
-        self.organizational_unit_name = organizational_unit_name
         self.common_name = common_name
-        self.email_address = email_address
         for var_name, var_value in kwargs.items():
             if var_name not in self.attribute_map and \
                         self._configuration is not None and \
@@ -213,17 +207,11 @@ class DistinguishedName(ModelNormal):
     ])
 
     @convert_js_args_to_python_args
-    def __init__(self, country_name, state_or_province_name, locality_name, organization_name, organizational_unit_name, common_name, email_address, *args, **kwargs):  # noqa: E501
+    def __init__(self, common_name, *args, **kwargs):  # noqa: E501
         """DistinguishedName - a model defined in OpenAPI
 
         Args:
-            country_name (str):
-            state_or_province_name (str):
-            locality_name (str):
-            organization_name (str):
-            organizational_unit_name (str):
             common_name (str):
-            email_address (str):
 
         Keyword Args:
             _check_type (bool): if True, values for parameters in openapi_types
@@ -256,6 +244,12 @@ class DistinguishedName(ModelNormal):
                                 Animal class but this time we won't travel
                                 through its discriminator because we passed in
                                 _visited_composed_classes = (Animal,)
+            country_name (str): [optional]  # noqa: E501
+            state_or_province_name (str): [optional]  # noqa: E501
+            locality_name (str): [optional]  # noqa: E501
+            organization_name (str): [optional]  # noqa: E501
+            organizational_unit_name (str): [optional]  # noqa: E501
+            email_address (str): [optional]  # noqa: E501
         """
 
         _check_type = kwargs.pop('_check_type', True)
@@ -285,13 +279,7 @@ class DistinguishedName(ModelNormal):
         self._configuration = _configuration
         self._visited_composed_classes = _visited_composed_classes + (self.__class__,)
 
-        self.country_name = country_name
-        self.state_or_province_name = state_or_province_name
-        self.locality_name = locality_name
-        self.organization_name = organization_name
-        self.organizational_unit_name = organizational_unit_name
         self.common_name = common_name
-        self.email_address = email_address
         for var_name, var_value in kwargs.items():
             if var_name not in self.attribute_map and \
                         self._configuration is not None and \

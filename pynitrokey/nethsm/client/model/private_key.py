@@ -94,6 +94,7 @@ class PrivateKey(ModelNormal):
             'mechanisms': (KeyMechanisms,),  # noqa: E501
             'type': (KeyType,),  # noqa: E501
             'key': (KeyPrivateData,),  # noqa: E501
+            'restrictions': (bool, date, datetime, dict, float, int, list, str, none_type,),  # noqa: E501
         }
 
     @cached_property
@@ -105,6 +106,7 @@ class PrivateKey(ModelNormal):
         'mechanisms': 'mechanisms',  # noqa: E501
         'type': 'type',  # noqa: E501
         'key': 'key',  # noqa: E501
+        'restrictions': 'restrictions',  # noqa: E501
     }
 
     read_only_vars = {
@@ -153,6 +155,7 @@ class PrivateKey(ModelNormal):
                                 Animal class but this time we won't travel
                                 through its discriminator because we passed in
                                 _visited_composed_classes = (Animal,)
+            restrictions (bool, date, datetime, dict, float, int, list, str, none_type): [optional]  # noqa: E501
         """
 
         _check_type = kwargs.pop('_check_type', True)
@@ -246,6 +249,7 @@ class PrivateKey(ModelNormal):
                                 Animal class but this time we won't travel
                                 through its discriminator because we passed in
                                 _visited_composed_classes = (Animal,)
+            restrictions (bool, date, datetime, dict, float, int, list, str, none_type): [optional]  # noqa: E501
         """
 
         _check_type = kwargs.pop('_check_type', True)

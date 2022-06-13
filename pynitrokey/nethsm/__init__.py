@@ -1029,9 +1029,9 @@ class NetHSM:
                 roles=[Role.ADMINISTRATOR],
             )
 
-    def reset(self):
+    def factory_reset(self):
         try:
-            self.get_api().system_reset_post()
+            self.get_api().system_factory_reset_post()
         except ApiException as e:
             _handle_api_exception(
                 e,

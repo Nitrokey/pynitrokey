@@ -108,6 +108,9 @@ CI-test:
 
 OPENAPI_OUTPUT_DIR=${PWD}/tmp/openapi-client
 
+nethsm-scheme.json:
+	curl "https://nethsmdemo.nitrokey.com/api_docs/gen_nethsm_api_oas20.json" --output nethsm-scheme.json
+
 # Generates the OpenAPI client for the NetHSM REST API
 .PHONY: nethsm-client
 nethsm-client: nethsm-scheme.json
@@ -118,11 +121,6 @@ nethsm-client: nethsm-scheme.json
 		-i=/out/scheme.json \
 		-g=python -o=/out/python --package-name=pynitrokey.nethsm.client
 	cp -r "${OPENAPI_OUTPUT_DIR}/python/pynitrokey/nethsm/client" pynitrokey/nethsm
-
-	# TODO: We would like to use the upstream scheme definition, but it currently
-	# misses proper mime type definitions for operations that return other data
-	# than JSON
-		# -i=https://nethsmdemo.nitrokey.com/api_docs/gen_nethsm_api_oas20.json \
 
 .PHONY: wine-build
 wine-build: wine-build/pynitrokey-$(VERSION).msi wine-build/nitropy-$(VERSION).exe
