@@ -34,7 +34,7 @@ from pynitrokey.nk3.bootloader import (
 )
 from pynitrokey.nk3.device import BootMode, Nitrokey3Device
 from pynitrokey.nk3.exceptions import TimeoutException
-from pynitrokey.nk3.updates import get_repo
+from pynitrokey.nk3.updates import REPOSITORY, get_firmware_update
 from pynitrokey.nk3.utils import Version
 from pynitrokey.updates import OverwriteError
 
@@ -243,7 +243,8 @@ def fetch_update(path: str, force: bool, version: Optional[str]) -> None:
     download a specific version, use the --version option.
     """
     try:
-        update = get_repo().get_update_or_latest(version)
+        release = REPOSITORY.get_release_or_latest(version)
+        update = get_firmware_update(release)
     except Exception as e:
         if version:
             raise CliException(f"Failed to find firmware update {version}", e)
@@ -397,13 +398,13 @@ def update(ctx: Context, image: Optional[str], experimental: bool) -> None:
 
 def _download_latest_update(device: Nitrokey3Base) -> Tuple[Version, bytes]:
     try:
-        update = get_repo().get_latest_update()
-        logger.info(f"Latest firmware version: {update.tag}")
+        release = REPOSITORY.get_latest_release()
+        logger.info(f"Latest firmware version: {release.tag}")
     except Exception as e:
-        raise CliException("Failed to find latest firmware update", e)
+        raise CliException("Failed to find latest firmware release", e)
 
     try:
-        release_version = Version.from_v_str(update.tag)
+        release_version = Version.from_v_str(release.tag)
 
         if isinstance(device, Nitrokey3Device):
             current_version = device.version()
@@ -412,6 +413,11 @@ def _download_latest_update(device: Nitrokey3Base) -> Tuple[Version, bytes]:
             _print_download_warning(release_version)
     except ValueError as e:
         logger.warning("Failed to parse version from release tag", e)
+
+    try:
+        update = get_firmware_update(release)
+    except Exception as e:
+        raise CliException("Failed to find firmware update for release {release}", e)
 
     try:
         logger.info(f"Trying to download firmware update from URL: {update.url}")

@@ -9,14 +9,13 @@
 
 import re
 
-from pynitrokey.updates import Repository
+from pynitrokey.updates import Asset, Release, Repository
 
 REPOSITORY_OWNER = "Nitrokey"
 REPOSITORY_NAME = "nitrokey-3-firmware"
+REPOSITORY = Repository(owner=REPOSITORY_OWNER, name=REPOSITORY_NAME)
 UPDATE_PATTERN = re.compile("\\.sb2$")
 
 
-def get_repo() -> Repository:
-    return Repository(
-        owner=REPOSITORY_OWNER, name=REPOSITORY_NAME, update_pattern=UPDATE_PATTERN
-    )
+def get_firmware_update(release: Release) -> Asset:
+    return release.require_asset(UPDATE_PATTERN)
