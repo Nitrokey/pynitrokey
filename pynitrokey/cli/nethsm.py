@@ -1219,14 +1219,14 @@ def shutdown(ctx):
 
 @nethsm.command()
 @click.pass_context
-def reset(ctx):
-    """Reset a NetHSM instance.
+def factory_reset(ctx):
+    """Perform a factory reset for a NetHSM instance.
 
     This command requires authentication as a user with the Administrator
     role."""
     with connect(ctx) as nethsm:
-        nethsm.reset()
-        print(f"NetHSM {nethsm.host} is about to reset")
+        nethsm.factory_reset()
+        print(f"NetHSM {nethsm.host} is about to perform a factory reset")
 
 
 @nethsm.command()
