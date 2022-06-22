@@ -74,7 +74,7 @@ class Nitrokey3Device(Nitrokey3Base):
     def close(self) -> None:
         self.device.close()
 
-    def reboot(self, mode: BootMode = BootMode.FIRMWARE) -> None:
+    def reboot(self, mode: BootMode = BootMode.FIRMWARE) -> bool:
         try:
             if mode == BootMode.FIRMWARE:
                 self._call(Command.REBOOT)
@@ -91,6 +91,7 @@ class Nitrokey3Device(Nitrokey3Base):
         except OSError as e:
             # OS error is expected as the device does not respond during the reboot
             self.logger.debug("ignoring OSError after reboot", exc_info=e)
+        return True
 
     def uuid(self) -> Optional[int]:
         uuid = self._call(Command.UUID)

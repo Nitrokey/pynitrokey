@@ -72,13 +72,14 @@ class Nitrokey3BootloaderLpc55(Nitrokey3Bootloader):
     def close(self) -> None:
         self.device.close()
 
-    def reboot(self) -> None:
+    def reboot(self) -> bool:
         if not self.device.reset(reopen=False):
             # On Windows, this function returns false even if the reset was successful
             if platform.system() == "Windows":
                 logger.warning("Failed to reboot Nitrokey 3 bootloader")
             else:
                 raise Exception("Failed to reboot Nitrokey 3 bootloader")
+        return True
 
     def uuid(self) -> Optional[int]:
         uuid = self.device.get_property(PropertyTag.UNIQUE_DEVICE_IDENT)  # type: ignore[arg-type]

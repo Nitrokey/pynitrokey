@@ -142,22 +142,29 @@ def reboot(ctx: Context, bootloader: bool) -> None:
     with ctx.connect() as device:
         if bootloader:
             if isinstance(device, Nitrokey3Device):
-                reboot_to_bootloader(device)
+                success = reboot_to_bootloader(device)
             else:
                 raise CliException(
                     "A Nitrokey 3 device in bootloader mode can only reboot into firmware mode.",
                     support_hint=False,
                 )
         else:
-            device.reboot()
+            success = device.reboot()
+
+    if not success:
+        raise CliException(
+            "The connected device cannot be rebooted automatically.  Remove and reinsert the "
+            "device to reboot it.",
+            support_hint=False,
+        )
 
 
-def reboot_to_bootloader(device: Nitrokey3Device) -> None:
+def reboot_to_bootloader(device: Nitrokey3Device) -> bool:
     local_print(
         "Please press the touch button to reboot the device into bootloader mode ..."
     )
     try:
-        device.reboot(BootMode.BOOTROM)
+        return device.reboot(BootMode.BOOTROM)
     except TimeoutException:
         raise CliException(
             "The reboot was not confirmed with the touch button.",

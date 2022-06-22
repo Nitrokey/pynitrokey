@@ -37,7 +37,7 @@ class Nitrokey3Base(ABC):
         ...
 
     @abstractmethod
-    def reboot(self) -> None:
+    def reboot(self) -> bool:
         ...
 
     @abstractmethod
