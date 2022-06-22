@@ -2,14 +2,6 @@
 
 A command line interface for the Nitrokey FIDO2, Nitrokey Start, Nitrokey 3 and NetHSM.
 
-## Current state
-Update to the latest firmware versions on the Nitrokey Start and Nitrokey FIDO2 devices was tested. Windows support for Nitrokey Start is not added yet.
-
-Additional features:
-- handle `status` command for displaying touch button status (2.0.0 firmware and later);
-- firmware signing adjusted for Nitrokey FIDO2 bootloader
-- monitor command with timestamps
-
 ## Quickstart
 
 ```
