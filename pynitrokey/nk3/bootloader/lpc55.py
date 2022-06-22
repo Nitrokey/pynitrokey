@@ -105,7 +105,9 @@ class Nitrokey3BootloaderLpc55(Nitrokey3Bootloader):
             check_errors=check_errors,
         )
         logger.debug(f"Firmware update finished with status {self.status}")
-        if not success:
+        if success:
+            self.reboot()
+        else:
             (code, message) = self.status
             raise Exception(
                 f"Firmware update failed with status code {code}: {message}"

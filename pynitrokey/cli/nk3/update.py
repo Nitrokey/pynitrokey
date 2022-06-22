@@ -231,4 +231,3 @@ def _perform_update(device: Nitrokey3Bootloader, image: bytes) -> None:
         except Exception as e:
             raise CliException("Failed to perform firmware update", e)
     logger.debug("Firmware update finished successfully")
-    device.reboot()
