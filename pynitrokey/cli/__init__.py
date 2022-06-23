@@ -46,7 +46,7 @@ def check_root():
                     "We suggest using: https://raw.githubusercontent.com/Nitrokey/libnitrokey/master/data/41-nitrokey.rules"
                 )
                 print(
-                    "For more information, see: https://docs.nitrokey.com/fido2/linux/index.html#troubleshooting"
+                    "For more information, see: https://docs.nitrokey.com/software/nitropy/linux/udev.html"
                 )
                 print()
             print("Set ALLOW_ROOT=1 environment variable to disable this warning.")
