@@ -7,16 +7,15 @@
 # http://opensource.org/licenses/MIT>, at your option. This file may not be
 # copied, modified, or distributed except according to those terms.
 
-import re
+from pynitrokey.updates import Asset, Release, Repository
 
-from pynitrokey.updates import Repository
+from .bootloader import Variant, get_firmware_filename_pattern
 
 REPOSITORY_OWNER = "Nitrokey"
 REPOSITORY_NAME = "nitrokey-3-firmware"
-UPDATE_PATTERN = re.compile("\\.sb2$")
+REPOSITORY = Repository(owner=REPOSITORY_OWNER, name=REPOSITORY_NAME)
 
 
-def get_repo() -> Repository:
-    return Repository(
-        owner=REPOSITORY_OWNER, name=REPOSITORY_NAME, update_pattern=UPDATE_PATTERN
-    )
+def get_firmware_update(release: Release, variant: Variant) -> Asset:
+    pattern = get_firmware_filename_pattern(variant)
+    return release.require_asset(pattern)

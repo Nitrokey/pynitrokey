@@ -12,6 +12,7 @@ import urllib.parse
 from typing import BinaryIO, Callable, Dict, Generator, Optional, Pattern
 
 import requests
+from dataclasses import dataclass
 
 API_BASE_URL = "https://api.github.com"
 
@@ -30,10 +31,10 @@ class OverwriteError(Exception):
         self.path = path
 
 
-class FirmwareUpdate:
-    def __init__(self, tag: str, url: str) -> None:
-        self.tag = tag
-        self.url = url
+@dataclass
+class Asset:
+    tag: str
+    url: str
 
     def download(
         self, f: BinaryIO, callback: Optional[ProgressCallback] = None
@@ -84,55 +85,70 @@ class FirmwareUpdate:
         response.raise_for_status()
         return response
 
-    def __repr__(self) -> str:
-        return f"FirmwareUpdate(tag={self.tag}, url={self.url})"
+    def __str__(self) -> str:
+        return self.url
+
+
+@dataclass
+class Release:
+    tag: str
+    assets: list[str]
 
     def __str__(self) -> str:
         return self.tag
 
-    @classmethod
-    def _from_release(cls, release: dict, url_pattern: Pattern) -> "FirmwareUpdate":
-        return cls._from_assets(release["assets"], release["tag_name"], url_pattern)
-
-    @classmethod
-    def _from_assets(
-        cls, assets: list, tag: str, url_pattern: Pattern
-    ) -> "FirmwareUpdate":
+    def find_asset(self, url_pattern: Pattern) -> Optional[Asset]:
         urls = []
-        for asset in assets:
-            url = asset["browser_download_url"]
-            if url_pattern.search(url):
-                urls.append(url)
+        for asset in self.assets:
+            if url_pattern.search(asset):
+                urls.append(asset)
 
         if len(urls) == 1:
-            return cls(tag=tag, url=urls[0])
-        elif len(urls) == 0:
-            raise ValueError(f"Failed to find update file for firmware release {tag}")
+            return Asset(tag=self.tag, url=urls[0])
+        elif len(urls) > 1:
+            raise ValueError(
+                f"Found multiple assets for release {self.tag} matching {url_pattern}"
+            )
         else:
-            raise ValueError(f"Found multiple update files for firmware release {tag}")
+            return None
+
+    def require_asset(self, url_pattern: Pattern) -> Asset:
+        update = self.find_asset(url_pattern)
+        if not update:
+            raise ValueError(
+                f"Failed to find asset for release {self.tag} matching {url_pattern}"
+            )
+        return update
+
+    @classmethod
+    def _from_api_response(cls, release: dict) -> "Release":
+        tag = release["tag_name"]
+        assets = [asset["browser_download_url"] for asset in release["assets"]]
+        if not assets:
+            raise ValueError(f"No update files for firmware release {tag}")
+        return cls(tag=tag, assets=assets)
 
 
+@dataclass
 class Repository:
-    def __init__(self, owner: str, name: str, update_pattern: Pattern) -> None:
-        self.owner = owner
-        self.name = name
-        self.update_pattern = update_pattern
+    owner: str
+    name: str
 
-    def get_latest_update(self) -> FirmwareUpdate:
+    def get_latest_release(self) -> Release:
         release = self._call(f"/repos/{self.owner}/{self.name}/releases/latest")
-        return FirmwareUpdate._from_release(release, self.update_pattern)
+        return Release._from_api_response(release)
 
-    def get_update(self, tag: str) -> FirmwareUpdate:
+    def get_release(self, tag: str) -> Release:
         release = self._call(
             f"/repos/{self.owner}/{self.name}/releases/tags/{tag}",
             {404: f"Failed to find firmware release {tag}"},
         )
-        return FirmwareUpdate._from_release(release, self.update_pattern)
+        return Release._from_api_response(release)
 
-    def get_update_or_latest(self, tag: Optional[str] = None) -> FirmwareUpdate:
+    def get_release_or_latest(self, tag: Optional[str] = None) -> Release:
         if tag:
-            return self.get_update(tag)
-        return self.get_latest_update()
+            return self.get_release(tag)
+        return self.get_latest_release()
 
     def _call(self, path: str, errors: Dict[int, str] = dict()) -> dict:
         url = self._get_url(path)
