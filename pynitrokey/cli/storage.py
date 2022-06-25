@@ -16,6 +16,7 @@ from typing import Optional
 
 import click
 import usb1
+from intelhex import IntelHex
 from tqdm import tqdm
 
 from pynitrokey.cli.exceptions import CliException
@@ -352,6 +353,89 @@ def create_hidden(slot, begin, end):
         raise CliException("Error creating the hidden volume: {}".format(str(ret)))
 
 
+class MemoryConstants:
+    # user data start
+    USER_DATA_START = 0x3DE00
+    # user data end, last page is for the bootloader data (as per dfu-programmer manual)
+    USER_DATA_END = 0x3FE00
+
+
+def input_format(x: str):
+    return "hex" if x.endswith("hex") else "bin"
+
+
+def empty_check_user_data(ih: IntelHex):
+    empty = 0
+    for i in range(MemoryConstants.USER_DATA_START, MemoryConstants.USER_DATA_END):
+        empty += ih[i] not in [0xFF, 0x00]
+    return empty == 0
+
+
+@click.command()
+@click.argument("firmware", type=click.Path(exists=True))
+def check(firmware: str):
+    """Check if provided binary image contains user data in the proper region
+
+    Use it on downloaded full image with `--force` flag, as in: \n
+    $ dfu-programmer at32uc3a3256s read --bin --force > dump.bin
+    """
+    current_firmware_read = IntelHex()
+    current_firmware_read.loadfile(firmware, format=input_format(firmware))
+
+    if empty_check_user_data(current_firmware_read):
+        raise click.ClickException(
+            "Provided dumped binary image does not contain user data"
+        )
+    click.echo("User data seem to be present")
+
+
+@click.command()
+@click.argument("dumped_firmware", type=click.Path(exists=True))
+@click.argument("new_firmware_file", type=click.Path(exists=True))
+@click.argument("firmware_with_user_data", type=click.File("w"))
+@click.option("--overlap", type=click.Choice(["error", "ignore"]), default="error")
+def merge(
+    dumped_firmware: str,
+    new_firmware_file: str,
+    firmware_with_user_data: click.File,
+    overlap: str,
+):
+    """Simple tool to merge user data into the new firmware binary"""
+    if not firmware_with_user_data.name.endswith("hex"):
+        raise click.ClickException(
+            "Provided firmware_with_user_data path has to end in .hex"
+        )
+
+    current_firmware_read = IntelHex()
+    current_firmware_read.loadfile(
+        dumped_firmware, format=input_format(dumped_firmware)
+    )
+
+    if empty_check_user_data(current_firmware_read):
+        raise click.ClickException(
+            "Provided dumped binary image does not contain user data"
+        )
+
+    new_firmware = IntelHex()
+    new_firmware.loadfile(new_firmware_file, format=input_format(new_firmware_file))
+    new_firmware.merge(
+        current_firmware_read[
+            MemoryConstants.USER_DATA_START : MemoryConstants.USER_DATA_END
+        ],
+        overlap=overlap,
+    )
+    new_firmware.write_hex_file(firmware_with_user_data)
+
+
+@click.group()
+def user_data():
+    """experimental: commands to check and manipulate user data in the downloaded binary images"""
+    pass
+
+
+user_data.add_command(merge)
+user_data.add_command(check)
+
 storage.add_command(list)
 storage.add_command(enable_update)
 storage.add_command(open_encrypted)
@@ -360,3 +444,4 @@ storage.add_command(open_hidden)
 storage.add_command(close_hidden)
 storage.add_command(create_hidden)
 storage.add_command(update)
+storage.add_command(user_data)
