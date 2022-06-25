@@ -392,19 +392,17 @@ def check(firmware: str):
 @click.command()
 @click.argument("dumped_firmware", type=click.Path(exists=True))
 @click.argument("new_firmware_file", type=click.Path(exists=True))
-@click.argument("firmware_with_user_data", type=click.File("w"))
+@click.argument("output", type=click.File("w"))
 @click.option("--overlap", type=click.Choice(["error", "ignore"]), default="error")
 def merge(
     dumped_firmware: str,
     new_firmware_file: str,
-    firmware_with_user_data: click.File,
+    output: click.File,
     overlap: str,
 ):
     """Simple tool to merge user data into the new firmware binary"""
-    if not firmware_with_user_data.name.endswith("hex"):
-        raise click.ClickException(
-            "Provided firmware_with_user_data path has to end in .hex"
-        )
+    if not output.name.endswith("hex"):
+        raise click.ClickException("Provided output path has to end in .hex")
 
     current_firmware_read = IntelHex()
     current_firmware_read.loadfile(
@@ -424,7 +422,8 @@ def merge(
         ],
         overlap=overlap,
     )
-    new_firmware.write_hex_file(firmware_with_user_data)
+    new_firmware.write_hex_file(output)
+    click.echo(f'Done. Results written to "{output.name}".')
 
 
 @click.group()
