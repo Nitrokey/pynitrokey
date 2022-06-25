@@ -398,8 +398,6 @@ def check(firmware: str):
 def compare(fw1_path: str, fw2_path: str, region: str, max_diff: int):
     """Compare two binary images"""
 
-    assert input_format(fw1_path) == input_format(fw2_path)
-
     fw1 = IntelHex()
     fw1.loadfile(fw1_path, format=input_format(fw1_path))
     fw2 = IntelHex()
@@ -410,6 +408,11 @@ def compare(fw1_path: str, fw2_path: str, region: str, max_diff: int):
         offset[f] = 0
         if f.minaddr() >= MemoryConstants.HEX_OFFSET:
             offset[f] = MemoryConstants.HEX_OFFSET
+
+    if fw1.minaddr() != fw2.minaddr():
+        click.echo(
+            f"Warning: different offsets found - this could make the operation fail: {hex(fw1.minaddr())} {hex(fw2.minaddr())}"
+        )
 
     diff_count = 0
     non_empty_count = 0
@@ -441,10 +444,8 @@ def compare(fw1_path: str, fw2_path: str, region: str, max_diff: int):
 
     if diff_count > 0:
         raise click.ClickException(f"Binaries differ")
-
     if non_empty_count == 0:
         raise click.ClickException(f"Binaries contain no data")
-
     click.echo(f"Non-empty bytes count: {non_empty_count}")
     click.echo("Binary images are identical")
 
