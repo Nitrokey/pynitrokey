@@ -354,10 +354,11 @@ def create_hidden(slot, begin, end):
 
 
 class MemoryConstants:
-    # user data start
-    USER_DATA_START = 0x3DE00
+    HEX_OFFSET = 0x80000000
+    APPLICATION_DATA_START = 0x2000
+    USER_DATA_START = 495 * 512  # 0x3DE00
     # user data end, last page is for the bootloader data (as per dfu-programmer manual)
-    USER_DATA_END = 0x3FE00
+    USER_DATA_END = 511 * 512  # 0x3FE00
 
 
 def input_format(x: str):
@@ -384,9 +385,68 @@ def check(firmware: str):
 
     if empty_check_user_data(current_firmware_read):
         raise click.ClickException(
-            "Provided dumped binary image does not contain user data"
+            f"{firmware}: Provided dumped binary image does not contain user data"
         )
-    click.echo("User data seem to be present")
+    click.echo(f"{firmware}: User data seem to be present")
+
+
+@click.command()
+@click.argument("fw1_path", type=click.Path(exists=True))
+@click.argument("fw2_path", type=click.Path(exists=True))
+@click.argument("region", type=click.Choice(["application", "user"]))
+@click.option("--max-diff", type=int, default=10)
+def compare(fw1_path: str, fw2_path: str, region: str, max_diff: int):
+    """Compare two binary images"""
+
+    assert input_format(fw1_path) == input_format(fw2_path)
+
+    fw1 = IntelHex()
+    fw1.loadfile(fw1_path, format=input_format(fw1_path))
+    fw2 = IntelHex()
+    fw2.loadfile(fw2_path, format=input_format(fw2_path))
+
+    offset = {}
+    for f in [fw1, fw2]:
+        offset[f] = 0
+        if f.minaddr() >= MemoryConstants.HEX_OFFSET:
+            offset[f] = MemoryConstants.HEX_OFFSET
+
+    diff_count = 0
+    non_empty_count = 0
+    if region == "application":
+        data_start = MemoryConstants.APPLICATION_DATA_START
+        data_stop = MemoryConstants.USER_DATA_START
+    elif region == "user":
+        data_start = MemoryConstants.USER_DATA_START
+        data_stop = MemoryConstants.USER_DATA_END
+    else:
+        raise click.ClickException(f"Wrong type")
+
+    def geti(f, i):
+        return f[i + offset[f]]
+
+    click.echo(f"Checking binary images in range {hex(data_start)}:{hex(data_stop)}")
+    for i in range(data_start, data_stop):
+        fw1_i = geti(fw1, i)
+        fw2_i = geti(fw2, i)
+        data_equal = fw1_i == fw2_i or fw1_i in [0xFF, 0x00] and fw2_i in [0xFF, 0x00]
+        diff_count += not data_equal
+        non_empty_count += fw1_i not in [0xFF, 0x00]
+        if not data_equal:
+            click.echo(
+                f"Binaries differ at {hex(i)} (page {i // 512}): {hex(fw1_i)} {hex(fw2_i)}"
+            )
+        if diff_count > max_diff:
+            raise click.ClickException(f"Maximum diff count reached")
+
+    if diff_count > 0:
+        raise click.ClickException(f"Binaries differ")
+
+    if non_empty_count == 0:
+        raise click.ClickException(f"Binaries contain no data")
+
+    click.echo(f"Non-empty bytes count: {non_empty_count}")
+    click.echo("Binary images are identical")
 
 
 @click.command()
@@ -434,6 +494,7 @@ def user_data():
 
 user_data.add_command(merge)
 user_data.add_command(check)
+user_data.add_command(compare)
 
 storage.add_command(list)
 storage.add_command(enable_update)
