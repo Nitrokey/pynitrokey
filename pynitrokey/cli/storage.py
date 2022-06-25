@@ -16,6 +16,7 @@ from typing import Optional
 
 import click
 import usb1
+from intelhex import IntelHex
 from tqdm import tqdm
 
 from pynitrokey.cli.exceptions import CliException
@@ -352,6 +353,150 @@ def create_hidden(slot, begin, end):
         raise CliException("Error creating the hidden volume: {}".format(str(ret)))
 
 
+class MemoryConstants:
+    HEX_OFFSET = 0x80000000
+    APPLICATION_DATA_START = 0x2000
+    USER_DATA_START = 495 * 512  # 0x3DE00
+    # user data end, last page is for the bootloader data (as per dfu-programmer manual)
+    USER_DATA_END = 511 * 512  # 0x3FE00
+
+
+def input_format(x: str):
+    return "hex" if x.endswith("hex") else "bin"
+
+
+def empty_check_user_data(ih: IntelHex):
+    empty = 0
+    for i in range(MemoryConstants.USER_DATA_START, MemoryConstants.USER_DATA_END):
+        empty += ih[i] not in [0xFF, 0x00]
+    return empty == 0
+
+
+@click.command()
+@click.argument("firmware", type=click.Path(exists=True))
+def check(firmware: str):
+    """Check if provided binary image contains user data in the proper region
+
+    Use it on downloaded full image with `--force` flag, as in: \n
+    $ dfu-programmer at32uc3a3256s read --bin --force > dump.bin
+    """
+    current_firmware_read = IntelHex()
+    current_firmware_read.loadfile(firmware, format=input_format(firmware))
+
+    if empty_check_user_data(current_firmware_read):
+        raise click.ClickException(
+            f"{firmware}: Provided dumped binary image does not contain user data"
+        )
+    click.echo(f"{firmware}: User data seem to be present")
+
+
+@click.command()
+@click.argument("fw1_path", type=click.Path(exists=True))
+@click.argument("fw2_path", type=click.Path(exists=True))
+@click.argument("region", type=click.Choice(["application", "user"]))
+@click.option("--max-diff", type=int, default=10)
+def compare(fw1_path: str, fw2_path: str, region: str, max_diff: int):
+    """Compare two binary images"""
+
+    fw1 = IntelHex()
+    fw1.loadfile(fw1_path, format=input_format(fw1_path))
+    fw2 = IntelHex()
+    fw2.loadfile(fw2_path, format=input_format(fw2_path))
+
+    offset = {}
+    for f in [fw1, fw2]:
+        offset[f] = 0
+        if f.minaddr() >= MemoryConstants.HEX_OFFSET:
+            offset[f] = MemoryConstants.HEX_OFFSET
+
+    if fw1.minaddr() != fw2.minaddr():
+        click.echo(
+            f"Warning: different offsets found - this could make the operation fail: {hex(fw1.minaddr())} {hex(fw2.minaddr())}"
+        )
+
+    diff_count = 0
+    non_empty_count = 0
+    if region == "application":
+        data_start = MemoryConstants.APPLICATION_DATA_START
+        data_stop = MemoryConstants.USER_DATA_START
+    elif region == "user":
+        data_start = MemoryConstants.USER_DATA_START
+        data_stop = MemoryConstants.USER_DATA_END
+    else:
+        raise click.ClickException(f"Wrong type")
+
+    def geti(f, i):
+        return f[i + offset[f]]
+
+    click.echo(f"Checking binary images in range {hex(data_start)}:{hex(data_stop)}")
+    for i in range(data_start, data_stop):
+        fw1_i = geti(fw1, i)
+        fw2_i = geti(fw2, i)
+        data_equal = fw1_i == fw2_i or fw1_i in [0xFF, 0x00] and fw2_i in [0xFF, 0x00]
+        diff_count += not data_equal
+        non_empty_count += fw1_i not in [0xFF, 0x00]
+        if not data_equal:
+            click.echo(
+                f"Binaries differ at {hex(i)} (page {i // 512}): {hex(fw1_i)} {hex(fw2_i)}"
+            )
+        if diff_count > max_diff:
+            raise click.ClickException(f"Maximum diff count reached")
+
+    if diff_count > 0:
+        raise click.ClickException(f"Binaries differ")
+    if non_empty_count == 0:
+        raise click.ClickException(f"Binaries contain no data")
+    click.echo(f"Non-empty bytes count: {non_empty_count}")
+    click.echo("Binary images are identical")
+
+
+@click.command()
+@click.argument("dumped_firmware", type=click.Path(exists=True))
+@click.argument("new_firmware_file", type=click.Path(exists=True))
+@click.argument("output", type=click.File("w"))
+@click.option("--overlap", type=click.Choice(["error", "ignore"]), default="error")
+def merge(
+    dumped_firmware: str,
+    new_firmware_file: str,
+    output: click.File,
+    overlap: str,
+):
+    """Simple tool to merge user data into the new firmware binary"""
+    if not output.name.endswith("hex"):
+        raise click.ClickException("Provided output path has to end in .hex")
+
+    current_firmware_read = IntelHex()
+    current_firmware_read.loadfile(
+        dumped_firmware, format=input_format(dumped_firmware)
+    )
+
+    if empty_check_user_data(current_firmware_read):
+        raise click.ClickException(
+            "Provided dumped binary image does not contain user data"
+        )
+
+    new_firmware = IntelHex()
+    new_firmware.loadfile(new_firmware_file, format=input_format(new_firmware_file))
+    new_firmware.merge(
+        current_firmware_read[
+            MemoryConstants.USER_DATA_START : MemoryConstants.USER_DATA_END
+        ],
+        overlap=overlap,
+    )
+    new_firmware.write_hex_file(output)
+    click.echo(f'Done. Results written to "{output.name}".')
+
+
+@click.group()
+def user_data():
+    """experimental: commands to check and manipulate user data in the downloaded binary images"""
+    pass
+
+
+user_data.add_command(merge)
+user_data.add_command(check)
+user_data.add_command(compare)
+
 storage.add_command(list)
 storage.add_command(enable_update)
 storage.add_command(open_encrypted)
@@ -360,3 +505,4 @@ storage.add_command(open_hidden)
 storage.add_command(close_hidden)
 storage.add_command(create_hidden)
 storage.add_command(update)
+storage.add_command(user_data)
