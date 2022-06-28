@@ -22,8 +22,12 @@ from ..utils import Version
 logger = logging.getLogger(__name__)
 
 
+ProgressCallback = Callable[[int, int], None]
+
+
 class Variant(enum.Enum):
     LPC55 = "lpc55"
+    NRF52 = "nrf52"
 
     @classmethod
     def from_str(cls, s: str) -> "Variant":
@@ -45,7 +49,7 @@ class Nitrokey3Bootloader(Nitrokey3Base):
     def update(
         self,
         image: bytes,
-        callback: Optional[Callable[[int, int], None]] = None,
+        callback: Optional[ProgressCallback] = None,
     ) -> None:
         ...
 
@@ -57,23 +61,37 @@ class Nitrokey3Bootloader(Nitrokey3Base):
 
 def list() -> List[Nitrokey3Bootloader]:
     from .lpc55 import Nitrokey3BootloaderLpc55
+    from .nrf52 import Nitrokey3BootloaderNrf52
 
     devices: List[Nitrokey3Bootloader] = []
     devices.extend(Nitrokey3BootloaderLpc55.list())
+    devices.extend(Nitrokey3BootloaderNrf52.list())
     return devices
 
 
 def open(path: str) -> Optional[Nitrokey3Bootloader]:
     from .lpc55 import Nitrokey3BootloaderLpc55
+    from .nrf52 import Nitrokey3BootloaderNrf52
 
-    return Nitrokey3BootloaderLpc55.open(path)
+    lpc55 = Nitrokey3BootloaderLpc55.open(path)
+    if lpc55:
+        return lpc55
+
+    nrf52 = Nitrokey3BootloaderNrf52.open(path)
+    if nrf52:
+        return nrf52
+
+    return None
 
 
 def get_firmware_filename_pattern(variant: Variant) -> Pattern:
     from .lpc55 import FILENAME_PATTERN as FILENAME_PATTERN_LPC55
+    from .nrf52 import FILENAME_PATTERN as FILENAME_PATTERN_NRF52
 
     if variant == Variant.LPC55:
         return FILENAME_PATTERN_LPC55
+    elif variant == Variant.NRF52:
+        return FILENAME_PATTERN_NRF52
     else:
         raise ValueError(f"Unexpected variant {variant}")
 
@@ -106,8 +124,11 @@ def validate_firmware_image(variant: Variant, data: bytes) -> FirmwareMetadata:
 
 def parse_firmware_image(variant: Variant, data: bytes) -> FirmwareMetadata:
     from .lpc55 import parse_firmware_image as parse_firmware_image_lpc55
+    from .nrf52 import parse_firmware_image as parse_firmware_image_nrf52
 
     if variant == Variant.LPC55:
         return parse_firmware_image_lpc55(data)
+    elif variant == Variant.NRF52:
+        return parse_firmware_image_nrf52(data)
     else:
         raise ValueError(f"Unexpected variant {variant}")

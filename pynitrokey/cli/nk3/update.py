@@ -81,7 +81,7 @@ def update(ctx: Context, image: Optional[str], variant: Optional[Variant]) -> Ve
                 raise CliException(*msgs, exc)
         elif isinstance(device, Nitrokey3Bootloader):
             metadata, data = _get_update(
-                firmware_or_release, current_version, bootloader.variant
+                firmware_or_release, current_version, device.variant
             )
             _perform_update(device, data)
         else:
