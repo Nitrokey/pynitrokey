@@ -199,7 +199,7 @@ class CallbackWrapper:
 
 
 def _list_ports() -> list[tuple[str, int]]:
-    from .. import PID_NITROKEY3_NRF_BOOTLOADER, VID_NITROKEY
+    from .. import PID_NITROKEY3_NRF52_BOOTLOADER, VID_NITROKEY
 
     ports = []
     for device in DeviceLister().enumerate():
@@ -210,7 +210,7 @@ def _list_ports() -> list[tuple[str, int]]:
             logger.warn(
                 f"Nitrokey 3 NRF52 bootloader has multiple com ports: {device.com_ports}"
             )
-        if vendor_id == VID_NITROKEY and product_id == PID_NITROKEY3_NRF_BOOTLOADER:
+        if vendor_id == VID_NITROKEY and product_id == PID_NITROKEY3_NRF52_BOOTLOADER:
             port = device.com_ports[0]
             serial = int(device.serial_number, base=16)
             logger.debug(f"Found Nitrokey 3 NRF52 bootloader with port {port}")

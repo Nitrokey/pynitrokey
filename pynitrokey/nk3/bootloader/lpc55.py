@@ -31,15 +31,15 @@ logger = logging.getLogger(__name__)
 
 
 class Nitrokey3BootloaderLpc55(Nitrokey3Bootloader):
-    """A Nitrokey 3 device running the NXP bootloader."""
+    """A Nitrokey 3 device running the LPC55 bootloader."""
 
     def __init__(self, device: RawHid):
-        from .. import PID_NITROKEY3_NXP_BOOTLOADER, VID_NITROKEY
+        from .. import PID_NITROKEY3_LPC55_BOOTLOADER, VID_NITROKEY
 
-        if (device.vid, device.pid) != (VID_NITROKEY, PID_NITROKEY3_NXP_BOOTLOADER):
+        if (device.vid, device.pid) != (VID_NITROKEY, PID_NITROKEY3_LPC55_BOOTLOADER):
             raise ValueError(
                 "Not a Nitrokey 3 device: expected VID:PID "
-                f"{VID_NITROKEY:x}:{PID_NITROKEY3_NXP_BOOTLOADER:x}, "
+                f"{VID_NITROKEY:x}:{PID_NITROKEY3_LPC55_BOOTLOADER:x}, "
                 f"got {device.vid:x}:{device.pid:x}"
             )
         self._path = device.path
@@ -116,10 +116,10 @@ class Nitrokey3BootloaderLpc55(Nitrokey3Bootloader):
 
     @staticmethod
     def list() -> List["Nitrokey3BootloaderLpc55"]:
-        from .. import PID_NITROKEY3_NXP_BOOTLOADER, VID_NITROKEY
+        from .. import PID_NITROKEY3_LPC55_BOOTLOADER, VID_NITROKEY
 
         device_filter = USBDeviceFilter(
-            f"0x{VID_NITROKEY:x}:0x{PID_NITROKEY3_NXP_BOOTLOADER:x}"
+            f"0x{VID_NITROKEY:x}:0x{PID_NITROKEY3_LPC55_BOOTLOADER:x}"
         )
         devices = []
         for device in RawHid.enumerate(device_filter):
