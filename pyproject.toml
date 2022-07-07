@@ -28,8 +28,7 @@ dependencies = [
   "fido2 >=1.0.0,<2",
   "intelhex",
   "nkdfu",
-  "nrfutil >=6.0.0a1",
-  "protobuf <=3.20.0",  # for nrfutil, see https://github.com/NordicSemiconductor/pc-nrfutil/pull/375
+  "nrfutil >=6.1.4,<7",
   "python-dateutil",
   "pyusb",
   "requests",
