@@ -540,6 +540,13 @@ class NitrokeyStorage(BaseLibNitrokey):
             slot, start_percent, end_percent, c_enc(password)
         )
 
+    @ret_code
+    def change_firmware_password(self, old_password, new_password):
+        """Change the firmware update password."""
+        return self.api.NK_change_update_password(
+            c_enc(old_password), c_enc(new_password)
+        )
+
 
 class NitrokeyPro(BaseLibNitrokey):
     friendly_name = "Nitrokey Pro"
@@ -552,6 +559,13 @@ class NitrokeyPro(BaseLibNitrokey):
     def enable_firmware_update(self, password):
         """set nk storage device to firmware update"""
         return self.api.NK_enable_firmware_update_pro(c_enc(password))
+
+    @ret_code
+    def change_firmware_password(self, old_password, new_password):
+        """Change the firmware update password."""
+        return self.api.NK_change_firmware_password_pro(
+            c_enc(old_password), c_enc(new_password)
+        )
 
 
 class BaseSlots:

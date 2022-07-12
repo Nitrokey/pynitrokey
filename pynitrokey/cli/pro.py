@@ -5,8 +5,8 @@ import click
 import intelhex as ih
 import nkdfu
 
-from pynitrokey.helpers import local_print
-from pynitrokey.libnk import DeviceNotFound, NitrokeyPro
+from pynitrokey.helpers import local_critical, local_print, prompt
+from pynitrokey.libnk import DeviceNotFound, NitrokeyPro, RetCode
 
 print = local_print
 vendor = "20a0:42b4"
@@ -64,6 +64,48 @@ def enable_update(password):
     except DeviceNotFound:
         local_print(f"No {nks.friendly_name} device found")
         local_print("If connected, perhaps already in update mode?")
+
+
+@click.command()
+def change_firmware_password():
+    """
+    Change the firmware update password.
+
+    This is only supported by devices with the firmware version 0.11 or later.
+
+    The user is prompted for the old and the new firmware update password.  Per
+    default, the firmware update password is 12345678.
+    """
+    nk = NitrokeyPro()
+    try:
+        nk.connect()
+    except DeviceNotFound:
+        local_critical(f"No {nk.friendly_name} device found", support_hint=False)
+
+    (_major, minor) = nk.fw_version
+    if minor < 11:
+        local_critical(
+            f"The connected {nk.friendly_name} does not support firmware updates",
+            support_hint=False,
+        )
+
+    old_password = prompt(
+        "Old firmware update password", default="12345678", hide_input=True
+    )
+    new_password = prompt(
+        "New firmware update password", hide_input=True, confirmation_prompt=True
+    )
+    ret = nk.change_firmware_password(old_password, new_password)
+    if ret.ok:
+        local_print("Successfully updated the firmware password")
+    elif ret == RetCode.WRONG_PASSWORD:
+        local_critical("Wrong firmware update password", support_hint=False)
+    elif ret == RetCode.TooLongStringException:
+        local_critical(
+            "The new firmware update password is too long", support_hint=False
+        )
+    else:
+        local_critical(f"Failed to update the firmware password ({ret.name})")
 
 
 @click.command()
@@ -152,3 +194,4 @@ def update(firmware_path: str):
 pro.add_command(update)
 pro.add_command(list)
 pro.add_command(enable_update)
+pro.add_command(change_firmware_password)

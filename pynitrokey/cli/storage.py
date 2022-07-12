@@ -20,7 +20,7 @@ from intelhex import IntelHex
 from tqdm import tqdm
 
 from pynitrokey.cli.exceptions import CliException
-from pynitrokey.helpers import AskUser, confirm, local_critical, local_print
+from pynitrokey.helpers import AskUser, confirm, local_critical, local_print, prompt
 from pynitrokey.libnk import DeviceNotFound, NitrokeyStorage, RetCode
 
 
@@ -256,6 +256,35 @@ def enable_update():
         local_critical(
             "Enabling firmware update has failed. Check your firmware password."
         )
+
+
+@click.command()
+def change_firmware_password():
+    """
+    Change the firmware update password.
+
+    The user is prompted for the old and the new firmware update password.  Per
+    default, the firmware update password is 12345678.
+    """
+    nk = connect_nkstorage()
+
+    old_password = prompt(
+        "Old firmware update password", default="12345678", hide_input=True
+    )
+    new_password = prompt(
+        "New firmware update password", hide_input=True, confirmation_prompt=True
+    )
+    ret = nk.change_firmware_password(old_password, new_password)
+    if ret.ok:
+        local_print("Successfully updated the firmware password")
+    elif ret == RetCode.WRONG_PASSWORD:
+        local_critical("Wrong firmware update password", support_hint=False)
+    elif ret == RetCode.TooLongStringException:
+        local_critical(
+            "The new firmware update password is too long", support_hint=False
+        )
+    else:
+        local_critical(f"Failed to update the firmware password ({ret.name})")
 
 
 @click.command()
@@ -499,6 +528,7 @@ user_data.add_command(compare)
 
 storage.add_command(list)
 storage.add_command(enable_update)
+storage.add_command(change_firmware_password)
 storage.add_command(open_encrypted)
 storage.add_command(close_encrypted)
 storage.add_command(open_hidden)
