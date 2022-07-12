@@ -4,7 +4,7 @@ pynitrokey Developer Guide
 Linters
 -------
 
-We use `flake8`_ for style checks, `black`_ for code formatting, `isort`_ for import sorting and `mypy`_ for static type analysis.  To run all checks, execute ``make check``.  (Before using it for the first time, you have to call ``make init`` to setup a virtual environment and install the required dependencies.)
+We use `flake8`_ for style checks, `black`_ for code formatting, `isort`_ for import sorting and `mypy`_ for static type analysis.  To run all checks, execute ``make check``. Before using it for the first time, you have to call ``make init`` to setup a virtual environment and install the required dependencies.
 
 .. _flake8: https://flake8.pycqa.org/en/latest/
 .. _black: https://github.com/psf/black
@@ -23,7 +23,7 @@ If you have an OpenPGP key, please sign all your commits with it.  We require al
 Supported Python Versions
 -------------------------
 
-The current minimum required Python version is documented in the readme.  Make sure that your code works with this Python version.  The minimum required Python version is selected to be compatible with the latest Ubuntu LTS and regular releases and with the latest Debian stable release.
+The current minimum required Python version is documented in the readme.  Make sure that your code works with this Python version.  The minimum required Python version is selected to be compatible with the latest Ubuntu LTS and regular releases and with the latest Debian stable release. If there has not been a point release for the latest Ubuntu LTS release yet, we also support the second-latest Ubuntu LTS release.
 
 Commit Hooks
 --------------
