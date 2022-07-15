@@ -1,6 +1,11 @@
 pynitrokey Developer Guide
 ==========================
 
+Setting Up The Environment
+--------------------------
+
+Use ``make init`` to install ``pynitrokey``, its dependencies and the development tools inside a virtual environment in the ``venv`` folder.  This virtual environment is also used by other targets in the Makefile like ``make check``.  ``pynitrokey`` is installed in editable mode so that all changes to the source code also apply to the ``nitropy`` executable in the virtual environment.  If dependencies are changed, run ``make update-venv`` to update the virtual environment.
+
 Linters
 -------
 
