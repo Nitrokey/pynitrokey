@@ -16,7 +16,7 @@ import click
 from tqdm import tqdm
 from usb.core import USBError
 
-from pynitrokey.helpers import local_critical, local_print
+from pynitrokey.helpers import confirm_keyboard_interrupt, local_critical, local_print
 from pynitrokey.start.gnuk_token import get_gnuk_device
 from pynitrokey.start.threaded_log import ThreadLog
 from pynitrokey.start.upgrade_by_passwd import (
@@ -198,11 +198,12 @@ def update(
             "use one from: https://github.com/Nitrokey/nitrokey-start-firmware)",
         )
 
-    if IS_LINUX:
-        with ThreadLog(logger.getChild("dmesg"), "dmesg -w"):
+    with confirm_keyboard_interrupt("Cancelling the update may brick your device."):
+        if IS_LINUX:
+            with ThreadLog(logger.getChild("dmesg"), "dmesg -w"):
+                start_update(*args)
+        else:
             start_update(*args)
-    else:
-        start_update(*args)
 
 
 @click.command()
