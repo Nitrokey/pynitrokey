@@ -7,7 +7,9 @@
 # http://opensource.org/licenses/MIT>, at your option. This file may not be
 # copied, modified, or distributed except according to those terms.
 
-
+import fnmatch
+import os
+import os.path
 from subprocess import check_output
 from sys import stderr, stdout
 from time import sleep
@@ -164,6 +166,12 @@ def set_identity(identity):
     default=False,
     help="Use firmware for early 'Nitrokey Start' key hardware revisions",
 )
+@click.option(
+    "--force",
+    is_flag=True,
+    default=False,
+    help="Execute the firmware update even if environment sanity checks fail",
+)
 def update(
     regnual,
     gnuk,
@@ -175,8 +183,23 @@ def update(
     yes,
     skip_bootloader,
     green_led,
+    force,
 ):
     """update device's firmware"""
+
+    if not find_udev_rules():
+        if force:
+            local_print(
+                "Warning: Could not find Nitrokey udev rules but will continue anyway as --force is set."
+            )
+        else:
+            local_critical(
+                "Failed to find Nitrokey udev rules.  These udev rules are required for the update.",
+                "Please see the nitropy documentation for information on installing these rules:",
+                "    https://docs.nitrokey.com/software/nitropy/linux/udev.html",
+                "If you want to continue anyway, you can use the --force option.",
+                support_hint=False,
+            )
 
     args = (
         regnual,
@@ -204,6 +227,22 @@ def update(
                 start_update(*args)
         else:
             start_update(*args)
+
+
+def find_udev_rules() -> bool:
+    dirs = [
+        "/usr/lib/udev/rules.d",
+        "/usr/local/lib/udev/rules.d",
+        "/run/udev/rules.d",
+        "/etc/udev/rules.d",
+    ]
+    for d in dirs:
+        if os.path.isdir(d):
+            for name in os.listdir(d):
+                if fnmatch.fnmatch(name, "??-nitrokey.rules"):
+                    logger.info(f"Found matching udev file at {os.path.join(d, name)}")
+                    return True
+    return False
 
 
 @click.command()
