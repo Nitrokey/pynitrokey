@@ -279,7 +279,7 @@ def get_latest_release_data():
     try:
         # @todo: move to confconsts.py
         r = requests.get(
-            "https://api.github.com/repos/Nitrokey/nitrokey-start-firmware/releases"
+            "https://api.github.com/repos/Nitrokey/nitrokey-start-firmware/releases/latest"
         )
         json = r.json()
         if r.status_code == 403:
@@ -287,7 +287,7 @@ def get_latest_release_data():
                 f"JSON raw data: {json}",
                 f"No Github API access, status code: {r.status_code}",
             )
-        latest_tag = json[0]
+        latest_tag = json
 
     except Exception as e:
         local_critical("Failed getting release data", e)
