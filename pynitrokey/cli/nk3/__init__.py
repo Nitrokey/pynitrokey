@@ -367,9 +367,9 @@ def update(
     if experimental:
         "The --experimental switch is not required to run this command anymore and can be safely removed."
 
-    from .update import update
+    from .update import update as exec_update
 
-    update_version = update(ctx, image, variant)
+    update_version = exec_update(ctx, image, variant)
 
     local_print("")
     with ctx.await_device() as device:
