@@ -14,6 +14,7 @@ class CtapDevice: ...
 
 class CtapError(Exception):
     class UNKNOWN_ERR(int): ...
+
     @unique
     class ERR(IntEnum):
         INVALID_LENGTH: int
