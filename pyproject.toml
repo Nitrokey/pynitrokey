@@ -22,7 +22,7 @@ classifiers = [
 dependencies = [
   "cbor",
   "cffi",
-  "click >=7.0",
+  "click >=7.0,<9",
   "cryptography >=3.4.4,<37",
   "ecdsa",
   "fido2 >=1.0.0,<2",
