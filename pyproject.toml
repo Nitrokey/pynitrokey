@@ -20,7 +20,6 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
 ]
 dependencies = [
-  "cbor",
   "cffi",
   "click >=7.0",
   "cryptography >=3.4.4,<37",
