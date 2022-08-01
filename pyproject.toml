@@ -40,7 +40,7 @@ dynamic = ["version", "description"]
 
 [project.optional-dependencies]
 dev = [
-  "black ==21.12b0",
+  "black >=21.12b0,<23",
   "flake8",
   "flit >=3.2,<4",
   "ipython",
