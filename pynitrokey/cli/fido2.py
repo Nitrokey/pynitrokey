@@ -14,13 +14,13 @@ import struct
 import sys
 from time import sleep, time
 
-import cbor
 import click
 
 if "linux" in platform.platform().lower():
     import fcntl
 
 # @fixme: 1st layer `nkfido2` lower layer `fido2` not to be used here !
+from fido2.cbor import dump_dict
 from fido2.client import ClientError as Fido2ClientError
 from fido2.ctap import CtapError
 from fido2.ctap1 import ApduError
@@ -431,7 +431,7 @@ def probe(serial, udp, hash_type, filename):
 
     p = nkfido2.find(serial, udp=udp)
 
-    serialized_command = cbor.dumps({"subcommand": hash_type, "data": data})
+    serialized_command = dump_dict({"subcommand": hash_type, "data": data})
     result = p.send_data_hid(SoloBootloader.HIDCommandProbe, serialized_command)
     result_hex = result.hex()
     local_print(result_hex)
