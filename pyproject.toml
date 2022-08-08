@@ -22,7 +22,7 @@ classifiers = [
 dependencies = [
   "cbor",
   "cffi",
-  "click >=7.0,<9",
+  "click >=8.0.0,<9",
   "cryptography >=3.4.4,<37",
   "ecdsa",
   "fido2 >=1.0.0,<2",
@@ -32,7 +32,7 @@ dependencies = [
   "python-dateutil",
   "pyusb",
   "requests",
-  "spsdk >=1.6.0,<1.8.0",
+  "spsdk >=1.7.0,<1.8.0",
   "tqdm",
   "urllib3",
 ]
@@ -40,7 +40,7 @@ dynamic = ["version", "description"]
 
 [project.optional-dependencies]
 dev = [
-  "black >=21.12b0,<23",
+  "black >=22.1.0,<23",
   "flake8",
   "flit >=3.2,<4",
   "ipython",
