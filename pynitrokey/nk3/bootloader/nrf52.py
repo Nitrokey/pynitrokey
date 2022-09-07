@@ -55,7 +55,14 @@ class SignatureKey:
             return False
 
 
+# openssl ec -in dfu_public.pem -inform pem -pubin -outform der | xxd -p
 SIGNATURE_KEYS = [
+    # Nitrokey production key
+    SignatureKey(
+        name="Nitrokey",
+        is_official=True,
+        der="3059301306072a8648ce3d020106082a8648ce3d03010703420004a0849b19007ccd4661c01c533804b7fd0c4d8c0e7583653f1f36a8331afff298b542bd00a3dc47c16bf428ac4d2864137d63f702d89e5b42674e0549b4232618",
+    ),
     # Nitrokey test key
     SignatureKey(
         name="Nitrokey Test",
