@@ -267,6 +267,7 @@ def test_fido2(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
     cert = make_credential_result.attestation_object.att_stmt["x5c"]
     cert_hash = sha256(cert[0]).digest().hex()
     local_print(f"Cert hash found: {cert_hash}")
+    print(f"Cert hash found: {cert_hash}")
 
     firmware_version = ctx.firmware_version or device.version()
     if firmware_version:
