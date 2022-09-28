@@ -124,6 +124,16 @@ def test_firmware_version_query(ctx: TestContext, device: Nitrokey3Base) -> Test
     return TestResult(TestStatus.SUCCESS, str(version))
 
 
+@test_case("Bootloader configuration")
+def test_bootloader_configuration(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
+    if not isinstance(device, Nitrokey3Device):
+        return TestResult(TestStatus.SKIPPED)
+    if device.is_locked():
+        return TestResult(TestStatus.SUCCESS)
+    else:
+        return TestResult(TestStatus.FAILURE, "bootloader not locked")
+
+
 @test_case("FIDO2")
 def test_fido2(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
     if not isinstance(device, Nitrokey3Device):
