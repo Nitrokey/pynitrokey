@@ -192,12 +192,19 @@ def rng(ctx: Context, length: int) -> None:
 
 @nk3.command()
 @click.option(
+    "--lpc55",
+    "lpc55",
+    is_flag=True,
+    default=False,
+    help="Enable lpc55-only checks",
+)
+@click.option(
     "--pin",
     "pin",
     help="The FIDO2 PIN of the device (if enabled)",
 )
 @click.pass_obj
-def test(ctx: Context, pin: Optional[str]) -> None:
+def test(ctx: Context, lpc55: bool, pin: Optional[str]) -> None:
     """Run some tests on all connected Nitrokey 3 devices."""
     from .test import TestContext, log_devices, log_system, run_tests
 
@@ -213,7 +220,7 @@ def test(ctx: Context, pin: Optional[str]) -> None:
         local_print(f"- {device.name} at {device.path}")
 
     results = []
-    test_ctx = TestContext(pin=pin)
+    test_ctx = TestContext(lpc55=lpc55, pin=pin)
     for device in devices:
         results.append(run_tests(test_ctx, device))
 

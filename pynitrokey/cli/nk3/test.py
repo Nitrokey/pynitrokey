@@ -58,8 +58,9 @@ def get_fido2_cert_hashes(version: Version) -> Optional[List[str]]:
 
 
 class TestContext:
-    def __init__(self, pin: Optional[str]) -> None:
+    def __init__(self, lpc55: bool, pin: Optional[str]) -> None:
         self.pin = pin
+        self.lpc55 = lpc55
         self.firmware_version: Optional[Version] = None
 
 
@@ -137,6 +138,8 @@ def test_bootloader_configuration(
 ) -> TestResult:
     if not isinstance(device, Nitrokey3Device):
         return TestResult(TestStatus.SKIPPED)
+    if not ctx.lpc55:
+        return TestResult(TestStatus.SKIPPED, "--lpc55 not set")
     if device.is_locked():
         return TestResult(TestStatus.SUCCESS)
     else:
