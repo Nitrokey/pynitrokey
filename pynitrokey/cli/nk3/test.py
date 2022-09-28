@@ -16,6 +16,10 @@ from hashlib import sha256
 from types import TracebackType
 from typing import Any, Callable, List, Optional, Tuple, Type, Union
 
+from smartcard import System
+from smartcard.CardConnection import CardConnection
+from smartcard.Exceptions import NoCardException
+
 from pynitrokey.fido2 import device_path_to_str
 from pynitrokey.helpers import local_print
 from pynitrokey.nk3.base import Nitrokey3Base
@@ -37,6 +41,9 @@ FIDO2_CERT_HASHES = {
         "f1ed1aba24b16e8e3fabcda72b10cbfa54488d3b778bda552162d60c6dd7b4fa",  # NK3AM/nrf52 test
     ],
 }
+
+AID_ADMIN = [0xA0, 0x00, 0x00, 0x08, 0x47, 0x00, 0x00, 0x00, 0x01]
+AID_PROVISIONER = [0xA0, 0x00, 0x00, 0x08, 0x47, 0x01, 0x00, 0x00, 0x01]
 
 
 ExcInfo = Tuple[Type[BaseException], BaseException, TracebackType]
@@ -125,13 +132,55 @@ def test_firmware_version_query(ctx: TestContext, device: Nitrokey3Base) -> Test
 
 
 @test_case("Bootloader configuration")
-def test_bootloader_configuration(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
+def test_bootloader_configuration(
+    ctx: TestContext, device: Nitrokey3Base
+) -> TestResult:
     if not isinstance(device, Nitrokey3Device):
         return TestResult(TestStatus.SKIPPED)
     if device.is_locked():
         return TestResult(TestStatus.SUCCESS)
     else:
         return TestResult(TestStatus.FAILURE, "bootloader not locked")
+
+
+def find_smartcard(uuid: int) -> CardConnection:
+    for reader in System.readers():
+        conn = reader.createConnection()
+        try:
+            conn.connect()
+        except NoCardException:
+            continue
+        if not select(conn, AID_ADMIN):
+            continue
+        data, sw1, sw2 = conn.transmit([0x00, 0x62, 0x00, 0x00, 16])
+        if (sw1, sw2) != (0x90, 0x00):
+            continue
+        if len(data) != 16:
+            continue
+        if uuid != int.from_bytes(data, "big"):
+            continue
+        return conn
+    raise Exception(f"No smartcard with UUID {uuid:X} found")
+
+
+def select(conn: CardConnection, aid: list[int]) -> bool:
+    apdu = [0x00, 0xA4, 0x04, 0x00]
+    apdu.append(len(aid))
+    apdu.extend(aid)
+    _, sw1, sw2 = conn.transmit(apdu)
+    return (sw1, sw2) == (0x90, 0x00)
+
+
+@test_case("Firmware mode")
+def test_firmware_mode(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
+    uuid = device.uuid()
+    if not uuid:
+        return TestResult(TestStatus.SKIPPED, "no UUID")
+    conn = find_smartcard(uuid)
+    if select(conn, AID_PROVISIONER):
+        return TestResult(TestStatus.FAILURE, "provisioner application active")
+    else:
+        return TestResult(TestStatus.SUCCESS)
 
 
 @test_case("FIDO2")
