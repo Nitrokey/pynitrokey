@@ -38,6 +38,7 @@ class Command(Enum):
     RNG = 0x60
     VERSION = 0x61
     UUID = 0x62
+    LOCKED = 0x63
 
 
 @enum.unique
@@ -112,6 +113,10 @@ class Nitrokey3Device(Nitrokey3Base):
 
     def rng(self) -> bytes:
         return self._call(Command.RNG, response_len=RNG_LEN)
+
+    def is_locked(self) -> bool:
+        response = self._call(Command.LOCKED, response_len=1)
+        return response[0] == 1
 
     def _call(self, command: Command, response_len: Optional[int] = None) -> bytes:
         response = self.device.call(command.value)
