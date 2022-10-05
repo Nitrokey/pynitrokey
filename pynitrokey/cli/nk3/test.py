@@ -87,14 +87,15 @@ TestCaseFn = Callable[[TestContext, Nitrokey3Base], TestResult]
 
 
 class TestCase:
-    def __init__(self, name: str, fn: TestCaseFn) -> None:
+    def __init__(self, name: str, description: str, fn: TestCaseFn) -> None:
         self.name = name
+        self.description = description
         self.fn = fn
 
 
-def test_case(name: str) -> Callable[[TestCaseFn], TestCaseFn]:
+def test_case(name: str, description: str) -> Callable[[TestCaseFn], TestCaseFn]:
     def decorator(func: TestCaseFn) -> TestCaseFn:
-        TEST_CASES.append(TestCase(name, func))
+        TEST_CASES.append(TestCase(name, description, func))
         return func
 
     return decorator
@@ -116,14 +117,14 @@ def log_system() -> None:
     logger.info(f"uname: {platform.uname()}")
 
 
-@test_case("UUID query")
+@test_case("uuid", "UUID query")
 def test_uuid_query(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
     uuid = device.uuid()
     uuid_str = f"{uuid:X}" if uuid else "[not supported]"
     return TestResult(TestStatus.SUCCESS, uuid_str)
 
 
-@test_case("Firmware version query")
+@test_case("version", "Firmware version query")
 def test_firmware_version_query(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
     if not isinstance(device, Nitrokey3Device):
         return TestResult(TestStatus.SKIPPED)
@@ -132,7 +133,7 @@ def test_firmware_version_query(ctx: TestContext, device: Nitrokey3Base) -> Test
     return TestResult(TestStatus.SUCCESS, str(version))
 
 
-@test_case("Bootloader configuration")
+@test_case("bootloader", "Bootloader configuration")
 def test_bootloader_configuration(
     ctx: TestContext, device: Nitrokey3Base
 ) -> TestResult:
@@ -174,7 +175,7 @@ def select(conn: CardConnection, aid: list[int]) -> bool:
     return (sw1, sw2) == (0x90, 0x00)
 
 
-@test_case("Firmware mode")
+@test_case("provisioner", "Firmware mode")
 def test_firmware_mode(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
     uuid = device.uuid()
     if not uuid:
@@ -186,7 +187,7 @@ def test_firmware_mode(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
         return TestResult(TestStatus.SUCCESS)
 
 
-@test_case("FIDO2")
+@test_case("fido2", "FIDO2")
 def test_fido2(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
     if not isinstance(device, Nitrokey3Device):
         return TestResult(TestStatus.SKIPPED)
@@ -281,6 +282,7 @@ def run_tests(ctx: TestContext, device: Nitrokey3Base) -> bool:
     n = len(TEST_CASES)
     idx_len = len(str(n))
     name_len = max([len(test_case.name) for test_case in TEST_CASES]) + 2
+    description_len = max([len(test_case.description) for test_case in TEST_CASES]) + 2
     status_len = max([len(status.name) for status in TestStatus]) + 2
 
     for (i, test_case) in enumerate(TEST_CASES):
@@ -292,6 +294,7 @@ def run_tests(ctx: TestContext, device: Nitrokey3Base) -> bool:
 
         idx = str(i + 1).rjust(idx_len)
         name = test_case.name.ljust(name_len)
+        description = test_case.description.ljust(description_len)
         status = result.status.name.ljust(status_len)
         msg = ""
         if result.data:
@@ -303,7 +306,7 @@ def run_tests(ctx: TestContext, device: Nitrokey3Base) -> bool:
             )
             msg = str(result.exc_info[1])
 
-        local_print(f"[{idx}/{n}]\t{name}\t{status}\t{msg}")
+        local_print(f"[{idx}/{n}]\t{name}\t{description}\t{status}\t{msg}")
 
     success = len([result for result in results if result.status == TestStatus.SUCCESS])
     skipped = len([result for result in results if result.status == TestStatus.SKIPPED])
