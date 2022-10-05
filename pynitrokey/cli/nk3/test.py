@@ -14,12 +14,14 @@ import sys
 from enum import Enum, auto, unique
 from hashlib import sha256
 from types import TracebackType
-from typing import Any, Callable, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, Iterable, List, Optional, Tuple, Type, Union
 
+from dataclasses import dataclass
 from smartcard import System
 from smartcard.CardConnection import CardConnection
 from smartcard.Exceptions import NoCardException
 
+from pynitrokey.cli.exceptions import CliException
 from pynitrokey.fido2 import device_path_to_str
 from pynitrokey.helpers import local_print
 from pynitrokey.nk3.base import Nitrokey3Base
@@ -45,6 +47,8 @@ FIDO2_CERT_HASHES = {
 AID_ADMIN = [0xA0, 0x00, 0x00, 0x08, 0x47, 0x00, 0x00, 0x00, 0x01]
 AID_PROVISIONER = [0xA0, 0x00, 0x00, 0x08, 0x47, 0x01, 0x00, 0x00, 0x01]
 
+DEFAULT_EXCLUDES = ["bootloader"]
+
 
 ExcInfo = Tuple[Type[BaseException], BaseException, TracebackType]
 
@@ -58,9 +62,8 @@ def get_fido2_cert_hashes(version: Version) -> Optional[List[str]]:
 
 
 class TestContext:
-    def __init__(self, lpc55: bool, pin: Optional[str]) -> None:
+    def __init__(self, pin: Optional[str]) -> None:
         self.pin = pin
-        self.lpc55 = lpc55
         self.firmware_version: Optional[Version] = None
 
 
@@ -87,17 +90,47 @@ TestCaseFn = Callable[[TestContext, Nitrokey3Base], TestResult]
 
 
 class TestCase:
-    def __init__(self, name: str, fn: TestCaseFn) -> None:
+    def __init__(self, name: str, description: str, fn: TestCaseFn) -> None:
         self.name = name
+        self.description = description
         self.fn = fn
 
 
-def test_case(name: str) -> Callable[[TestCaseFn], TestCaseFn]:
+def test_case(name: str, description: str) -> Callable[[TestCaseFn], TestCaseFn]:
     def decorator(func: TestCaseFn) -> TestCaseFn:
-        TEST_CASES.append(TestCase(name, func))
+        TEST_CASES.append(TestCase(name, description, func))
         return func
 
     return decorator
+
+
+def filter_test_cases(
+    test_cases: list[TestCase], names: Iterable[str]
+) -> Iterable[TestCase]:
+    for test_case in test_cases:
+        if test_case.name in names:
+            yield test_case
+
+
+@dataclass
+class TestSelector:
+    only: Iterable[str] = ()
+    all: bool = False
+    include: Iterable[str] = ()
+    exclude: Iterable[str] = ()
+
+    def select(self) -> list[TestCase]:
+        if self.only:
+            return list(filter_test_cases(TEST_CASES, self.only))
+
+        selected = []
+        for test_case in TEST_CASES:
+            if test_case.name in self.include:
+                selected.append(test_case)
+            elif test_case.name not in self.exclude:
+                if self.all or test_case.name not in DEFAULT_EXCLUDES:
+                    selected.append(test_case)
+        return selected
 
 
 def log_devices() -> None:
@@ -116,14 +149,14 @@ def log_system() -> None:
     logger.info(f"uname: {platform.uname()}")
 
 
-@test_case("UUID query")
+@test_case("uuid", "UUID query")
 def test_uuid_query(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
     uuid = device.uuid()
     uuid_str = f"{uuid:X}" if uuid else "[not supported]"
     return TestResult(TestStatus.SUCCESS, uuid_str)
 
 
-@test_case("Firmware version query")
+@test_case("version", "Firmware version query")
 def test_firmware_version_query(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
     if not isinstance(device, Nitrokey3Device):
         return TestResult(TestStatus.SKIPPED)
@@ -132,14 +165,12 @@ def test_firmware_version_query(ctx: TestContext, device: Nitrokey3Base) -> Test
     return TestResult(TestStatus.SUCCESS, str(version))
 
 
-@test_case("Bootloader configuration")
+@test_case("bootloader", "Bootloader configuration")
 def test_bootloader_configuration(
     ctx: TestContext, device: Nitrokey3Base
 ) -> TestResult:
     if not isinstance(device, Nitrokey3Device):
         return TestResult(TestStatus.SKIPPED)
-    if not ctx.lpc55:
-        return TestResult(TestStatus.SKIPPED, "--lpc55 not set")
     if device.is_locked():
         return TestResult(TestStatus.SUCCESS)
     else:
@@ -174,7 +205,7 @@ def select(conn: CardConnection, aid: list[int]) -> bool:
     return (sw1, sw2) == (0x90, 0x00)
 
 
-@test_case("Firmware mode")
+@test_case("provisioner", "Firmware mode")
 def test_firmware_mode(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
     uuid = device.uuid()
     if not uuid:
@@ -186,7 +217,7 @@ def test_firmware_mode(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
         return TestResult(TestStatus.SUCCESS)
 
 
-@test_case("FIDO2")
+@test_case("fido2", "FIDO2")
 def test_fido2(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
     if not isinstance(device, Nitrokey3Device):
         return TestResult(TestStatus.SKIPPED)
@@ -236,12 +267,13 @@ def test_fido2(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
     cert = make_credential_result.attestation_object.att_stmt["x5c"]
     cert_hash = sha256(cert[0]).digest().hex()
 
-    if ctx.firmware_version:
-        expected_cert_hashes = get_fido2_cert_hashes(ctx.firmware_version)
+    firmware_version = ctx.firmware_version or device.version()
+    if firmware_version:
+        expected_cert_hashes = get_fido2_cert_hashes(firmware_version)
         if expected_cert_hashes and cert_hash not in expected_cert_hashes:
             return TestResult(
                 TestStatus.FAILURE,
-                f"Unexpected FIDO2 cert hash for version {ctx.firmware_version}: {cert_hash}",
+                f"Unexpected FIDO2 cert hash for version {firmware_version}: {cert_hash}",
             )
 
     auth_data = server.register_complete(
@@ -271,19 +303,31 @@ def test_fido2(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
     return TestResult(TestStatus.SUCCESS)
 
 
-def run_tests(ctx: TestContext, device: Nitrokey3Base) -> bool:
+def list_tests(selector: TestSelector) -> None:
+    test_cases = selector.select()
+    print(f"{len(test_cases)} test case(s) selected")
+    for test_case in test_cases:
+        print(f"- {test_case.name}: {test_case.description}")
+
+
+def run_tests(ctx: TestContext, device: Nitrokey3Base, selector: TestSelector) -> bool:
+    test_cases = selector.select()
+    if not test_cases:
+        raise CliException("No test cases selected", support_hint=False)
+
     results = []
 
     local_print("")
     local_print(f"Running tests for {device.name} at {device.path}")
     local_print("")
 
-    n = len(TEST_CASES)
+    n = len(test_cases)
     idx_len = len(str(n))
-    name_len = max([len(test_case.name) for test_case in TEST_CASES]) + 2
+    name_len = max([len(test_case.name) for test_case in test_cases]) + 2
+    description_len = max([len(test_case.description) for test_case in test_cases]) + 2
     status_len = max([len(status.name) for status in TestStatus]) + 2
 
-    for (i, test_case) in enumerate(TEST_CASES):
+    for (i, test_case) in enumerate(test_cases):
         try:
             result = test_case.fn(ctx, device)
         except Exception:
@@ -292,6 +336,7 @@ def run_tests(ctx: TestContext, device: Nitrokey3Base) -> bool:
 
         idx = str(i + 1).rjust(idx_len)
         name = test_case.name.ljust(name_len)
+        description = test_case.description.ljust(description_len)
         status = result.status.name.ljust(status_len)
         msg = ""
         if result.data:
@@ -303,7 +348,7 @@ def run_tests(ctx: TestContext, device: Nitrokey3Base) -> bool:
             )
             msg = str(result.exc_info[1])
 
-        local_print(f"[{idx}/{n}]\t{name}\t{status}\t{msg}")
+        local_print(f"[{idx}/{n}]\t{name}\t{description}\t{status}\t{msg}")
 
     success = len([result for result in results if result.status == TestStatus.SUCCESS])
     skipped = len([result for result in results if result.status == TestStatus.SKIPPED])
