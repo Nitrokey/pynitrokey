@@ -237,12 +237,13 @@ def test_fido2(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
     cert = make_credential_result.attestation_object.att_stmt["x5c"]
     cert_hash = sha256(cert[0]).digest().hex()
 
-    if ctx.firmware_version:
-        expected_cert_hashes = get_fido2_cert_hashes(ctx.firmware_version)
+    firmware_version = ctx.firmware_version or device.version()
+    if firmware_version:
+        expected_cert_hashes = get_fido2_cert_hashes(firmware_version)
         if expected_cert_hashes and cert_hash not in expected_cert_hashes:
             return TestResult(
                 TestStatus.FAILURE,
-                f"Unexpected FIDO2 cert hash for version {ctx.firmware_version}: {cert_hash}",
+                f"Unexpected FIDO2 cert hash for version {firmware_version}: {cert_hash}",
             )
 
     auth_data = server.register_complete(
