@@ -14,12 +14,14 @@ import sys
 from enum import Enum, auto, unique
 from hashlib import sha256
 from types import TracebackType
-from typing import Any, Callable, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, Iterable, List, Optional, Tuple, Type, Union
 
+from dataclasses import dataclass
 from smartcard import System
 from smartcard.CardConnection import CardConnection
 from smartcard.Exceptions import NoCardException
 
+from pynitrokey.cli.exceptions import CliException
 from pynitrokey.fido2 import device_path_to_str
 from pynitrokey.helpers import local_print
 from pynitrokey.nk3.base import Nitrokey3Base
@@ -45,6 +47,8 @@ FIDO2_CERT_HASHES = {
 AID_ADMIN = [0xA0, 0x00, 0x00, 0x08, 0x47, 0x00, 0x00, 0x00, 0x01]
 AID_PROVISIONER = [0xA0, 0x00, 0x00, 0x08, 0x47, 0x01, 0x00, 0x00, 0x01]
 
+DEFAULT_EXCLUDES = ["bootloader"]
+
 
 ExcInfo = Tuple[Type[BaseException], BaseException, TracebackType]
 
@@ -58,9 +62,8 @@ def get_fido2_cert_hashes(version: Version) -> Optional[List[str]]:
 
 
 class TestContext:
-    def __init__(self, lpc55: bool, pin: Optional[str]) -> None:
+    def __init__(self, pin: Optional[str]) -> None:
         self.pin = pin
-        self.lpc55 = lpc55
         self.firmware_version: Optional[Version] = None
 
 
@@ -101,6 +104,35 @@ def test_case(name: str, description: str) -> Callable[[TestCaseFn], TestCaseFn]
     return decorator
 
 
+def filter_test_cases(
+    test_cases: list[TestCase], names: Iterable[str]
+) -> Iterable[TestCase]:
+    for test_case in test_cases:
+        if test_case.name in names:
+            yield test_case
+
+
+@dataclass
+class TestSelector:
+    only: Iterable[str] = ()
+    all: bool = False
+    include: Iterable[str] = ()
+    exclude: Iterable[str] = ()
+
+    def select(self) -> list[TestCase]:
+        if self.only:
+            return list(filter_test_cases(TEST_CASES, self.only))
+
+        selected = []
+        for test_case in TEST_CASES:
+            if test_case.name in self.include:
+                selected.append(test_case)
+            elif test_case.name not in self.exclude:
+                if self.all or test_case.name not in DEFAULT_EXCLUDES:
+                    selected.append(test_case)
+        return selected
+
+
 def log_devices() -> None:
     from fido2.hid import CtapHidDevice
 
@@ -139,8 +171,6 @@ def test_bootloader_configuration(
 ) -> TestResult:
     if not isinstance(device, Nitrokey3Device):
         return TestResult(TestStatus.SKIPPED)
-    if not ctx.lpc55:
-        return TestResult(TestStatus.SKIPPED, "--lpc55 not set")
     if device.is_locked():
         return TestResult(TestStatus.SUCCESS)
     else:
@@ -273,20 +303,24 @@ def test_fido2(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
     return TestResult(TestStatus.SUCCESS)
 
 
-def run_tests(ctx: TestContext, device: Nitrokey3Base) -> bool:
+def run_tests(ctx: TestContext, device: Nitrokey3Base, selector: TestSelector) -> bool:
+    test_cases = selector.select()
+    if not test_cases:
+        raise CliException("No test cases selected", support_hint=False)
+
     results = []
 
     local_print("")
     local_print(f"Running tests for {device.name} at {device.path}")
     local_print("")
 
-    n = len(TEST_CASES)
+    n = len(test_cases)
     idx_len = len(str(n))
-    name_len = max([len(test_case.name) for test_case in TEST_CASES]) + 2
-    description_len = max([len(test_case.description) for test_case in TEST_CASES]) + 2
+    name_len = max([len(test_case.name) for test_case in test_cases]) + 2
+    description_len = max([len(test_case.description) for test_case in test_cases]) + 2
     status_len = max([len(status.name) for status in TestStatus]) + 2
 
-    for (i, test_case) in enumerate(TEST_CASES):
+    for (i, test_case) in enumerate(test_cases):
         try:
             result = test_case.fn(ctx, device)
         except Exception:

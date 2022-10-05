@@ -192,21 +192,56 @@ def rng(ctx: Context, length: int) -> None:
 
 @nk3.command()
 @click.option(
-    "--lpc55",
-    "lpc55",
-    is_flag=True,
-    default=False,
-    help="Enable lpc55-only checks",
-)
-@click.option(
     "--pin",
     "pin",
     help="The FIDO2 PIN of the device (if enabled)",
 )
+@click.option(
+    "--only",
+    "only",
+    help="Run only the specified tests (may not be used with --all, --include or --exclude)",
+)
+@click.option(
+    "--all",
+    "all",
+    is_flag=True,
+    default=False,
+    help="Run all tests (except those specified with --exclude)",
+)
+@click.option(
+    "--include",
+    "include",
+    help="Also run the specified tests",
+)
+@click.option(
+    "--exclude",
+    "exclude",
+    help="Do not run the specified tests",
+)
 @click.pass_obj
-def test(ctx: Context, lpc55: bool, pin: Optional[str]) -> None:
+def test(
+    ctx: Context,
+    pin: Optional[str],
+    only: Optional[str],
+    all: bool,
+    include: Optional[str],
+    exclude: Optional[str],
+) -> None:
     """Run some tests on all connected Nitrokey 3 devices."""
-    from .test import TestContext, log_devices, log_system, run_tests
+    from .test import TestContext, TestSelector, log_devices, log_system, run_tests
+
+    test_selector = TestSelector(all=all)
+    if only:
+        if all or include or exclude:
+            raise CliException(
+                "--only may not be used together with --all, --include or --exclude.",
+                support_hint=False,
+            )
+        test_selector.only = only.split(",")
+    if include:
+        test_selector.include = include.split(",")
+    if exclude:
+        test_selector.exclude = exclude.split(",")
 
     log_system()
     devices = ctx.list()
@@ -220,9 +255,9 @@ def test(ctx: Context, lpc55: bool, pin: Optional[str]) -> None:
         local_print(f"- {device.name} at {device.path}")
 
     results = []
-    test_ctx = TestContext(lpc55=lpc55, pin=pin)
+    test_ctx = TestContext(pin=pin)
     for device in devices:
-        results.append(run_tests(test_ctx, device))
+        results.append(run_tests(test_ctx, device, test_selector))
 
     n = len(devices)
     success = sum(results)
