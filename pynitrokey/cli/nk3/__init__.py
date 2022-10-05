@@ -218,6 +218,13 @@ def rng(ctx: Context, length: int) -> None:
     "exclude",
     help="Do not run the specified tests",
 )
+@click.option(
+    "--list",
+    "list_",
+    is_flag=True,
+    default=False,
+    help="List the selected tests instead of running them",
+)
 @click.pass_obj
 def test(
     ctx: Context,
@@ -226,9 +233,17 @@ def test(
     all: bool,
     include: Optional[str],
     exclude: Optional[str],
+    list_: bool,
 ) -> None:
     """Run some tests on all connected Nitrokey 3 devices."""
-    from .test import TestContext, TestSelector, log_devices, log_system, run_tests
+    from .test import (
+        TestContext,
+        TestSelector,
+        list_tests,
+        log_devices,
+        log_system,
+        run_tests,
+    )
 
     test_selector = TestSelector(all=all)
     if only:
@@ -242,6 +257,10 @@ def test(
         test_selector.include = include.split(",")
     if exclude:
         test_selector.exclude = exclude.split(",")
+
+    if list_:
+        list_tests(test_selector)
+        return
 
     log_system()
     devices = ctx.list()

@@ -303,6 +303,13 @@ def test_fido2(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
     return TestResult(TestStatus.SUCCESS)
 
 
+def list_tests(selector: TestSelector) -> None:
+    test_cases = selector.select()
+    print(f"{len(test_cases)} test case(s) selected")
+    for test_case in test_cases:
+        print(f"- {test_case.name}: {test_case.description}")
+
+
 def run_tests(ctx: TestContext, device: Nitrokey3Base, selector: TestSelector) -> bool:
     test_cases = selector.select()
     if not test_cases:
