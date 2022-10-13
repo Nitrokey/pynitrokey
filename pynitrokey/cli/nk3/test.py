@@ -17,9 +17,6 @@ from types import TracebackType
 from typing import Any, Callable, Iterable, List, Optional, Tuple, Type, Union
 
 from dataclasses import dataclass
-from smartcard import System
-from smartcard.CardConnection import CardConnection
-from smartcard.Exceptions import NoCardException
 
 from pynitrokey.cli.exceptions import CliException
 from pynitrokey.fido2 import device_path_to_str
@@ -177,44 +174,51 @@ def test_bootloader_configuration(
         return TestResult(TestStatus.FAILURE, "bootloader not locked")
 
 
-def find_smartcard(uuid: int) -> CardConnection:
-    for reader in System.readers():
-        conn = reader.createConnection()
-        try:
-            conn.connect()
-        except NoCardException:
-            continue
-        if not select(conn, AID_ADMIN):
-            continue
-        data, sw1, sw2 = conn.transmit([0x00, 0x62, 0x00, 0x00, 16])
-        if (sw1, sw2) != (0x90, 0x00):
-            continue
-        if len(data) != 16:
-            continue
-        if uuid != int.from_bytes(data, "big"):
-            continue
-        return conn
-    raise Exception(f"No smartcard with UUID {uuid:X} found")
+try:
+    from smartcard import System
+    from smartcard.CardConnection import CardConnection
+    from smartcard.Exceptions import NoCardException
 
+    def find_smartcard(uuid: int) -> CardConnection:
+        for reader in System.readers():
+            conn = reader.createConnection()
+            try:
+                conn.connect()
+            except NoCardException:
+                continue
+            if not select(conn, AID_ADMIN):
+                continue
+            data, sw1, sw2 = conn.transmit([0x00, 0x62, 0x00, 0x00, 16])
+            if (sw1, sw2) != (0x90, 0x00):
+                continue
+            if len(data) != 16:
+                continue
+            if uuid != int.from_bytes(data, "big"):
+                continue
+            return conn
+        raise Exception(f"No smartcard with UUID {uuid:X} found")
 
-def select(conn: CardConnection, aid: list[int]) -> bool:
-    apdu = [0x00, 0xA4, 0x04, 0x00]
-    apdu.append(len(aid))
-    apdu.extend(aid)
-    _, sw1, sw2 = conn.transmit(apdu)
-    return (sw1, sw2) == (0x90, 0x00)
+    def select(conn: CardConnection, aid: list[int]) -> bool:
+        apdu = [0x00, 0xA4, 0x04, 0x00]
+        apdu.append(len(aid))
+        apdu.extend(aid)
+        _, sw1, sw2 = conn.transmit(apdu)
+        return (sw1, sw2) == (0x90, 0x00)
 
+    @test_case("provisioner", "Firmware mode")
+    def test_firmware_mode(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
+        uuid = device.uuid()
+        if not uuid:
+            return TestResult(TestStatus.SKIPPED, "no UUID")
+        conn = find_smartcard(uuid)
+        if select(conn, AID_PROVISIONER):
+            return TestResult(TestStatus.FAILURE, "provisioner application active")
+        else:
+            return TestResult(TestStatus.SUCCESS)
 
-@test_case("provisioner", "Firmware mode")
-def test_firmware_mode(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
-    uuid = device.uuid()
-    if not uuid:
-        return TestResult(TestStatus.SKIPPED, "no UUID")
-    conn = find_smartcard(uuid)
-    if select(conn, AID_PROVISIONER):
-        return TestResult(TestStatus.FAILURE, "provisioner application active")
-    else:
-        return TestResult(TestStatus.SUCCESS)
+except ImportError:
+    logger.debug("pcsc feature is deactivated, skipping firmware mode test")
+    pass
 
 
 @test_case("fido2", "FIDO2")

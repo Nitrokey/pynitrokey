@@ -29,7 +29,6 @@ dependencies = [
   "nkdfu",
   "nrfutil >=6.1.4,<7",
   "python-dateutil",
-  "pyscard >=2.0.0,<3",
   "pyusb",
   "requests",
   "spsdk >=1.7.0,<1.8.0",
@@ -48,6 +47,7 @@ dev = [
   "mypy >= 0.900",
   "types-requests",
 ]
+pcsc = ["pyscard >=2.0.0,<3"]
 
 [project.urls]
 Source = "https://github.com/Nitrokey/pynitrokey"
