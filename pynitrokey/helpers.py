@@ -7,6 +7,7 @@
 # http://opensource.org/licenses/MIT>, at your option. This file may not be
 # copied, modified, or distributed except according to those terms.
 
+import ctypes
 import functools
 import logging
 import os
@@ -348,3 +349,12 @@ class AskUser:
 
 confirm = functools.partial(click.confirm, err=True)
 prompt = functools.partial(click.prompt, err=True)
+
+
+def require_windows_admin() -> None:
+    if os.name == "nt":
+        if ctypes.windll.shell32.IsUserAnAdmin() == 0:  # type: ignore
+            local_print(
+                "Warning: It is recommended to execute nitropy with admin privileges "
+                "to be able to access Nitrokey 3 and Nitrokey FIDO 2 devices."
+            )

@@ -34,7 +34,12 @@ from pynitrokey.cli.monitor import monitor
 from pynitrokey.cli.program import program
 from pynitrokey.cli.update import update
 from pynitrokey.fido2.commands import SoloBootloader
-from pynitrokey.helpers import AskUser, local_critical, local_print
+from pynitrokey.helpers import (
+    AskUser,
+    local_critical,
+    local_print,
+    require_windows_admin,
+)
 
 # @todo: in version 0.4 UDP & anything earlier inside fido2.__init__ is broken/removed
 #        - check if/what is needed here
@@ -44,7 +49,7 @@ from pynitrokey.helpers import AskUser, local_critical, local_print
 @click.group()
 def fido2():
     """Interact with Nitrokey FIDO2 devices, see subcommands."""
-    pass
+    require_windows_admin()
 
 
 @click.group()
