@@ -14,7 +14,13 @@ from typing import List, Optional, Type, TypeVar
 import click
 
 from pynitrokey.cli.exceptions import CliException
-from pynitrokey.helpers import DownloadProgressBar, Retries, local_print, prompt
+from pynitrokey.helpers import (
+    DownloadProgressBar,
+    Retries,
+    local_print,
+    prompt,
+    require_windows_admin,
+)
 from pynitrokey.nk3 import list as list_nk3
 from pynitrokey.nk3 import open as open_nk3
 from pynitrokey.nk3.base import Nitrokey3Base
@@ -109,6 +115,7 @@ class Context:
 def nk3(ctx: click.Context, path: Optional[str]) -> None:
     """Interact with Nitrokey 3 devices, see subcommands."""
     ctx.obj = Context(path)
+    require_windows_admin()
 
 
 @nk3.command()
