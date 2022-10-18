@@ -1218,15 +1218,27 @@ def reboot(ctx, force):
 
 
 @nethsm.command()
+@click.option(
+    "-f",
+    "--force",
+    is_flag=True,
+    help="Force shutdown",
+)
 @click.pass_context
-def shutdown(ctx):
+def shutdown(ctx, force):
     """Shutdown a NetHSM instance.
 
     This command requires authentication as a user with the Administrator
     role."""
     with connect(ctx) as nethsm:
-        nethsm.shutdown()
-        print(f"NetHSM {nethsm.host} is about to shutdown")
+        print(f"NetHSM {nethsm.host} will be shutdown.")
+        shutdown = force or click.confirm("Do you want to continue?")
+
+        if shutdown:
+            nethsm.shutdown()
+            print(f"NetHSM {nethsm.host} is about to shutdown")
+        else:
+            print(f"Shutdown on NetHSM {nethsm.host} cancelled")
 
 
 @nethsm.command()
