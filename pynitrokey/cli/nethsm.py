@@ -1194,15 +1194,27 @@ def commit_update(ctx):
 
 
 @nethsm.command()
+@click.option(
+    "-f",
+    "--force",
+    is_flag=True,
+    help="Force reboot",
+)
 @click.pass_context
-def reboot(ctx):
+def reboot(ctx, force):
     """Reboot a NetHSM instance.
 
     This command requires authentication as a user with the Administrator
     role."""
     with connect(ctx) as nethsm:
-        nethsm.reboot()
-        print(f"NetHSM {nethsm.host} is about to reboot")
+        print(f"NetHSM {nethsm.host} will be rebooted.")
+        reboot = force or click.confirm("Do you want to continue?")
+
+        if reboot:
+            nethsm.reboot()
+            print(f"NetHSM {nethsm.host} is about to reboot")
+        else:
+            print(f"Reboot on NetHSM {nethsm.host} cancelled")
 
 
 @nethsm.command()
