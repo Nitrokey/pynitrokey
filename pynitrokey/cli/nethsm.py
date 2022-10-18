@@ -1242,15 +1242,28 @@ def shutdown(ctx, force):
 
 
 @nethsm.command()
+@click.option(
+    "-f",
+    "--force",
+    is_flag=True,
+    help="Force shutdown",
+)
 @click.pass_context
-def factory_reset(ctx):
+def factory_reset(ctx, force):
     """Perform a factory reset for a NetHSM instance.
 
     This command requires authentication as a user with the Administrator
     role."""
     with connect(ctx) as nethsm:
-        nethsm.factory_reset()
-        print(f"NetHSM {nethsm.host} is about to perform a factory reset")
+        print(f"NetHSM {nethsm.host} will be set to factory defaults.")
+        print(f"All data will be lost!")
+        factory_reset = force or click.confirm("Do you want to continue?")
+
+        if factory_reset:
+            nethsm.factory_reset()
+            print(f"NetHSM {nethsm.host} is about to perform a factory reset")
+        else:
+            print(f"Factory reset on NetHSM {nethsm.host} cancelled")
 
 
 @nethsm.command()
