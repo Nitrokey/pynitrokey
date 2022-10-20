@@ -2,6 +2,7 @@
 
 PACKAGE_NAME=pynitrokey
 VENV=venv
+PYTHON3=python3
 
 BLACK_FLAGS=-t py35 --extend-exclude pynitrokey/nethsm/client
 FLAKE8_FLAGS=--extend-exclude pynitrokey/nethsm/client
@@ -59,16 +60,16 @@ publish:
 	$(VENV)/bin/python3 -m flit --repository pypi publish
 
 system-pip-install-upgrade:
-	python -m pip install -U pynitrokey
+	$(PYTHON3) -m pip install -U pynitrokey
 
 system-pip-install-last-version:
-	python -m pip install pynitrokey==$(VERSION)
+	$(PYTHON3) -m pip install pynitrokey==$(VERSION)
 
 system-pip-install:
-	python -m pip install pynitrokey
+	$(PYTHON3) -m pip install pynitrokey
 
 system-pip-uninstall:
-	python -m pip uninstall pynitrokey -y
+	$(PYTHON3) -m pip uninstall pynitrokey -y
 
 system-nitropy-test-simple:
 	which nitropy
@@ -76,7 +77,7 @@ system-nitropy-test-simple:
 
 
 $(VENV):
-	python3 -m venv $(VENV)
+	$(PYTHON3) -m venv $(VENV)
 	$(VENV)/bin/python3 -m pip install -U pip
 
 
