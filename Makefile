@@ -126,17 +126,17 @@ CI-test:
 
 OPENAPI_OUTPUT_DIR=${PWD}/tmp/openapi-client
 
-nethsm-scheme.json:
-	curl "https://nethsmdemo.nitrokey.com/api_docs/gen_nethsm_api_oas20.json" --output nethsm-scheme.json
+nethsm-api.yaml:
+	curl "https://nethsmdemo.nitrokey.com/api_docs/nethsm-api.yaml" --output nethsm-api.yaml
 
 # Generates the OpenAPI client for the NetHSM REST API
 .PHONY: nethsm-client
-nethsm-client: nethsm-scheme.json
+nethsm-client: nethsm-api.yaml
 	mkdir -p "${OPENAPI_OUTPUT_DIR}"
-	cp nethsm-scheme.json "${OPENAPI_OUTPUT_DIR}/scheme.json"
+	cp nethsm-api.yaml "${OPENAPI_OUTPUT_DIR}/nethsm-api.yaml"
 	docker run --rm -ti -v "${OPENAPI_OUTPUT_DIR}:/out" \
 		openapitools/openapi-generator-cli generate \
-		-i=/out/scheme.json \
+		-i=/out/nethsm-api.yaml \
 		-g=python -o=/out/python --package-name=pynitrokey.nethsm.client
 	cp -r "${OPENAPI_OUTPUT_DIR}/python/pynitrokey/nethsm/client" pynitrokey/nethsm
 
