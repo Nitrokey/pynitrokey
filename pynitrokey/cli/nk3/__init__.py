@@ -6,12 +6,13 @@
 # http://apache.org/licenses/LICENSE-2.0> or the MIT license <LICENSE-MIT or
 # http://opensource.org/licenses/MIT>, at your option. This file may not be
 # copied, modified, or distributed except according to those terms.
-
 import logging
 import os.path
+from base64 import b32decode
 from typing import List, Optional, Type, TypeVar
 
 import click
+import fido2
 
 from pynitrokey.cli.exceptions import CliException
 from pynitrokey.helpers import (
@@ -32,6 +33,7 @@ from pynitrokey.nk3.bootloader import (
 )
 from pynitrokey.nk3.device import BootMode, Nitrokey3Device
 from pynitrokey.nk3.exceptions import TimeoutException
+from pynitrokey.nk3.otp_app import Algorithm, Kind, OTPApp
 from pynitrokey.nk3.updates import REPOSITORY, get_firmware_update
 from pynitrokey.updates import OverwriteError
 
@@ -466,3 +468,170 @@ def wink(ctx: Context) -> None:
     """Send wink command to the device (blinks LED a few times)."""
     with ctx.connect_device() as device:
         device.wink()
+
+
+@nk3.group()
+@click.pass_context
+def otp(ctx: click.Context) -> None:
+    """Manage OTP secrets on the device."""
+    pass
+
+
+@otp.command()
+@click.pass_obj
+@click.argument(
+    "name",
+    type=click.STRING,
+)
+@click.argument(
+    "secret",
+    type=click.STRING,
+    # help="The shared secret string (by default in base32)",
+)
+@click.option(
+    "--digits_str",
+    "digits_str",
+    type=click.Choice(["6", "8"]),
+    help="Digits count",
+    default="6",
+)
+@click.option(
+    "--kind",
+    "kind",
+    type=click.Choice(["TOTP", "HOTP"]),
+    help="OTP mechanism to use",
+    default="TOTP",
+)
+@click.option(
+    "--hash",
+    "hash",
+    type=click.Choice(["SHA1", "SHA256"]),
+    help="Hash algorithm to use",
+    default="SHA1",
+)
+@click.option(
+    "--counter_start",
+    "counter_start",
+    type=click.INT,
+    help="Starting value for the counter (HOTP only)",
+    default=0,
+)
+def register(
+    ctx: Context,
+    name: str,
+    secret: str,
+    digits_str: str,
+    kind: str,
+    hash: str,
+    counter_start: int,
+) -> None:
+    """Register OTP credential.
+
+    Write SECRET under the NAME.
+    SECRET should be encoded in base32 format.
+    """
+    digits = int(digits_str)
+    secret_bytes = b32decode(secret)
+    otp_kind = Kind.Totp if kind == "TOTP" else Kind.Hotp
+    hash_algorithm = Algorithm.Sha1 if hash == "SHA1" else Algorithm.Sha256
+    with ctx.connect_device() as device:
+        app = OTPApp(device)
+        app.register(
+            name.encode(),
+            secret_bytes,
+            digits,
+            kind=otp_kind,
+            algo=hash_algorithm,
+            initial_counter_value=counter_start,
+        )
+
+
+@otp.command()
+@click.pass_obj
+@click.option(
+    "--hex",
+    "hex",
+    type=click.BOOL,
+    help="Use hex representation",
+    default=False,
+    is_flag=True,
+)
+def show(ctx: Context, hex: bool) -> None:
+    """List registered OTP credentials."""
+    with ctx.connect_device() as device:
+        app = OTPApp(device)
+        for e in app.list():
+            local_print(e.hex() if hex else e)
+
+
+@otp.command()
+@click.pass_obj
+@click.argument(
+    "name",
+    type=click.STRING,
+)
+def remove(ctx: Context, name: str) -> None:
+    """Remove OTP credential."""
+    with ctx.connect_device() as device:
+        app = OTPApp(device)
+        app.delete(name.encode())
+
+
+@otp.command()
+@click.pass_obj
+@click.option(
+    "--force",
+    is_flag=True,
+    help="Do not ask for confirmation",
+)
+def reset(ctx: Context, force: bool) -> None:
+    """Remove all OTP credentials from the device."""
+    confirmed = force or click.confirm("Do you want to continue?")
+    if not confirmed:
+        local_print("Operation cancelled")
+        click.Abort()
+    with ctx.connect_device() as device:
+        app = OTPApp(device)
+        app.reset()
+        local_print("Operation executed")
+
+
+@otp.command()
+@click.pass_obj
+@click.argument(
+    "name",
+    type=click.STRING,
+)
+@click.option(
+    "--timestamp",
+    "timestamp",
+    type=click.INT,
+    help="The timestamp to use instead of the local time (TOTP only)",
+    default=0,
+)
+@click.option(
+    "--period",
+    "period",
+    type=click.INT,
+    help="The period to use in seconds (TOTP only)",
+    default=30,
+)
+def get(ctx: Context, name: str, timestamp: int, period: int) -> None:
+    """Generate OTP code from registered credential."""
+    # TODO: for TOTP get the time from a timeserver via NTP, instead of the local clock
+    from datetime import datetime
+
+    now = datetime.now()
+    timestamp = timestamp if timestamp else int(datetime.timestamp(now))
+    with ctx.connect_device() as device:
+        app = OTPApp(device)
+        try:
+            code = app.calculate(name.encode(), timestamp // period)
+            local_print(
+                f"Timestamp: {datetime.isoformat(now, timespec='seconds')} ({timestamp}), period: {period}"
+            )
+            local_print(code.decode())
+        except fido2.ctap.CtapError as e:
+            local_print(
+                f"Device returns error: {e}. This credential id might not be registered."
+            )

@@ -34,6 +34,7 @@ dependencies = [
   "spsdk >=1.7.0,<1.8.0",
   "tqdm",
   "urllib3",
+  "tlv8"
 ]
 dynamic = ["version", "description"]
 
@@ -46,6 +47,8 @@ dev = [
   "isort",
   "mypy >= 0.900",
   "types-requests",
+  "pytest",
+  "oath"
 ]
 pcsc = ["pyscard >=2.0.0,<3"]
 
@@ -60,6 +63,7 @@ profile = "black"
 
 [tool.mypy]
 mypy_path = "pynitrokey/stubs"
+show_error_codes = true
 
 # enable strict checks for new code
 [[tool.mypy.overrides]]
@@ -90,5 +94,7 @@ module = [
     "urllib3.*",
     "usb.*",
     "usb1.*",
+    "tlv8.*",
+    "pytest.*",
 ]
 ignore_missing_imports = true
