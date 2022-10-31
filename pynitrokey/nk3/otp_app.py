@@ -25,6 +25,7 @@ class Instruction(Enum):
     Validate = 0xA3
     CalculateAll = 0xA4
     SendRemaining = 0xA5
+    VerifyCode = 0xB1
 
 
 class Tag(Enum):
@@ -32,6 +33,7 @@ class Tag(Enum):
     NameList = 0x72
     Key = 0x73
     Challenge = 0x74
+    Response = 0x75
     InitialCounter = 0x7A
 
 
@@ -192,3 +194,17 @@ class OTPApp:
             f" final code: {codes!r}"
         )
         return codes
+
+    def verify_code(self, cred_id: bytes, code: bytes) -> bool:
+        """
+        Proceed with the incoming OTP code verification (aka reverse HOTP).
+        :param cred_id: The name of the credential
+        :param code: The HOTP code to verify. String representation.
+        :return: fails with CTAP1 error; returns True if code matches the value calculated internally.
+        """
+        structure = [
+            tlv8.Entry(Tag.CredentialId.value, cred_id),
+            tlv8.Entry(Tag.Response.value, code),
+        ]
+        res = self._send_receive(Instruction.VerifyCode, structure=structure)
+        return res.hex() == "7700"
