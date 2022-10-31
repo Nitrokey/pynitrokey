@@ -73,7 +73,13 @@ class OTPApp:
 
     def _send_receive_inner(self, data: bytes) -> bytes:
         self.logfn(f"Sending {data.hex() if data else data!r}")
-        result = self.dev.otp(data=data)
+
+        try:
+            result = self.dev.otp(data=data)
+        except Exception as e:
+            self.logfn(f"Got exception: {e}")
+            raise
+
         self.logfn(f"Received {result.hex() if data else data!r}")
         return result
 
