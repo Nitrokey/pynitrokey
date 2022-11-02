@@ -9,7 +9,7 @@ import hashlib
 import fido2
 import pytest
 
-from pynitrokey.conftest import CHALLENGE, CREDID, DIGITS, SECRET
+from pynitrokey.conftest import CHALLENGE, CREDID, DIGITS, HOTP_WINDOW_SIZE, SECRET
 from pynitrokey.nk3.otp_app import Algorithm, Kind
 
 
@@ -229,12 +229,66 @@ def test_reverse_hotp_failure(otpApp):
     with pytest.raises(fido2.ctap.CtapError):
         assert not otpApp.verify_code(CREDID, "1" * 9)
 
-    # TODO test that counter has moved, and it accepts the 3+1+1+1 = 6th code
 
+@pytest.mark.parametrize(
+    "start_value",
+    [0, 0xFFFF, 0xFFFFFFFF - HOTP_WINDOW_SIZE],
+)
+@pytest.mark.parametrize(
+    "offset",
+    [0, 1, HOTP_WINDOW_SIZE - 1, HOTP_WINDOW_SIZE, HOTP_WINDOW_SIZE + 1],
+)
+def test_reverse_hotp_window(otpApp, offset, start_value):
+    """
+    https://github.com/Nitrokey/nitrokey-hotp-verification#verifying-hotp-code
+    Solution contains a mean to avoid desynchronization between the host's and device's counters. Device calculates
+    up to 9 values ahead of its current counter to find the matching code (in total it calculates HOTP code for 10
+    subsequent counter positions). In case:
 
-@pytest.mark.skip(reason="not implemented")
-def test_reverse_hotp_window(otpApp):
-    pass
+     - no code would match - the on-device counter will not be changed;
+     - code would match, but with some counter's offset (up to 9) - the on-device counter will be set to matched code-generated HOTP counter and incremented by 1;
+     - code would match, and the code matches counter without offset - the counter will be incremented by 1.
+
+    Device will stop verifying the HOTP codes in case, when the difference between the host and on-device counters
+    will be greater or equal to 10.
+    """
+    oath = pytest.importorskip("oath")
+    secret = "3132333435363738393031323334353637383930"
+    secretb = binascii.a2b_hex(secret)
+    otpApp.reset()
+    otpApp.register(
+        CREDID,
+        secretb,
+        digits=6,
+        kind=Kind.Hotp,
+        algo=Algorithm.Sha1,
+        initial_counter_value=start_value,
+    )
+    lib_at = lambda t: oath.hotp(secret, counter=t, format="dec6").encode()
+    code_to_send = lib_at(start_value + offset)
+    if offset > HOTP_WINDOW_SIZE:
+        # calls with offset bigger than HOTP_WINDOW_SIZE should fail
+        with pytest.raises(fido2.ctap.CtapError):
+            otpApp.verify_code(CREDID, code_to_send)
+    else:
+        # check if this code will be accepted on the given offset
+        assert otpApp.verify_code(CREDID, code_to_send)
+        # the same code should not be accepted again, unless counted got saturated
+        is_counter_saturated = (
+            start_value == (0xFFFFFFFF - HOTP_WINDOW_SIZE)
+            and offset == HOTP_WINDOW_SIZE
+        )
+        if not is_counter_saturated:
+            with pytest.raises(fido2.ctap.CtapError):
+                otpApp.verify_code(CREDID, code_to_send)
+            # test the very next value - should be accepted
+            code_to_send = lib_at(start_value + offset + 1)
+            assert otpApp.verify_code(CREDID, code_to_send)
+        else:
+            # counter got saturated, same value will be accepted
+            assert otpApp.verify_code(CREDID, code_to_send)
+            assert otpApp.verify_code(CREDID, code_to_send)
+            assert otpApp.verify_code(CREDID, code_to_send)
 
 
 @pytest.mark.parametrize(
