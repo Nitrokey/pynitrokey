@@ -563,9 +563,16 @@ def start_update(
         passwd = password
     elif default_password:
         passwd = DEFAULT_PW3
-    if not passwd:
+    while not passwd:
         try:
             passwd = AskUser.hidden("Admin password:")
+            if not passwd:
+                if AskUser.strict_yes_no(
+                    f"Password cannot be empty. Use default: {DEFAULT_PW3} ?"
+                ):
+                    passwd = DEFAULT_PW3
+                else:
+                    continue
         except Exception as e:
             local_critical("aborting update", e)
 
