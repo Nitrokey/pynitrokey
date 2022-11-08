@@ -565,10 +565,10 @@ def start_update(
         passwd = DEFAULT_PW3
     while not passwd:
         try:
-            passwd = AskUser.hidden("Admin password:")
+            passwd = AskUser.hidden("Admin PIN:")
             if not passwd:
                 if AskUser.strict_yes_no(
-                    f"Password cannot be empty. Use default: {DEFAULT_PW3} ?"
+                    f"PIN cannot be empty. Use default: {DEFAULT_PW3} ?"
                 ):
                     passwd = DEFAULT_PW3
                 else:
