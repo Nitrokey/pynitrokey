@@ -47,6 +47,7 @@ dev = [
   "isort",
   "mypy >= 0.900,<0.990",
   "types-requests",
+  "types-tqdm",
   "pytest",
   "oath"
 ]
