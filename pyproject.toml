@@ -20,34 +20,38 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
 ]
 dependencies = [
-  "cbor",
   "cffi",
-  "click >=7.0",
+  "click >=8.0.0,<9",
   "cryptography >=3.4.4,<37",
   "ecdsa",
-  "fido2 >=1.0.0,<2",
+  "fido2 >=1.1.0,<2",
   "intelhex",
   "nkdfu",
   "nrfutil >=6.1.4,<7",
   "python-dateutil",
   "pyusb",
   "requests",
-  "spsdk >=1.6.0,<1.7.0",
+  "spsdk >=1.7.0,<1.8.0",
   "tqdm",
   "urllib3",
+  "tlv8"
 ]
 dynamic = ["version", "description"]
 
 [project.optional-dependencies]
 dev = [
-  "black ==21.12b0",
+  "black >=22.1.0,<23",
   "flake8",
   "flit >=3.2,<4",
   "ipython",
   "isort",
-  "mypy >= 0.900",
+  "mypy >= 0.900,<0.990",
   "types-requests",
+  "types-tqdm",
+  "pytest",
+  "oath"
 ]
+pcsc = ["pyscard >=2.0.0,<3"]
 
 [project.urls]
 Source = "https://github.com/Nitrokey/pynitrokey"
@@ -60,6 +64,7 @@ profile = "black"
 
 [tool.mypy]
 mypy_path = "pynitrokey/stubs"
+show_error_codes = true
 
 # enable strict checks for new code
 [[tool.mypy.overrides]]
@@ -90,5 +95,7 @@ module = [
     "urllib3.*",
     "usb.*",
     "usb1.*",
+    "tlv8.*",
+    "pytest.*",
 ]
 ignore_missing_imports = true

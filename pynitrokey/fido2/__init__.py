@@ -28,7 +28,7 @@ def _UDP_InternalPlatformSwitch(funcname, *args, **kwargs):
     return getattr(HidOverUDP, funcname)(*args, **kwargs)
 
 
-def find(solo_serial=None, retries=5, raw_device=None, udp=False):
+def find(solo_serial=None, retries=5, raw_device=None, udp=False, pin=None):
     if udp:
         force_udp_backend()
 
@@ -39,7 +39,7 @@ def find(solo_serial=None, retries=5, raw_device=None, udp=False):
 
     for i in range(retries):
         try:
-            p.find_device(dev=raw_device, solo_serial=solo_serial)
+            p.find_device(dev=raw_device, solo_serial=solo_serial, pin=pin)
             return p
         except RuntimeError:
             time.sleep(0.2)

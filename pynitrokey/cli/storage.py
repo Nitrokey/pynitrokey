@@ -200,7 +200,9 @@ def update(firmware: str, experimental):
             break
         time.sleep(1)
 
-    storage.commands["list"].callback()
+    list_cmd = storage.commands["list"]
+    assert list_cmd.callback
+    list_cmd.callback()
 
 
 def check_for_update_mode():

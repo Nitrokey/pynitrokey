@@ -15,10 +15,11 @@ import struct
 import sys
 import tempfile
 import time
-from typing import Optional
+from getpass import getpass
+from typing import Any, Optional
 
 import secrets
-from fido2.client import Fido2Client
+from fido2.client import Fido2Client, UserInteraction
 from fido2.ctap import CtapError
 from fido2.ctap1 import Ctap1
 from fido2.ctap2 import Ctap2
@@ -28,6 +29,23 @@ from intelhex import IntelHex
 import pynitrokey.exceptions
 from pynitrokey import helpers
 from pynitrokey.fido2.commands import SoloBootloader, SoloExtension
+
+
+class CliOrProvidedInteraction(UserInteraction):
+    def __init__(self, pin: Optional[str]) -> None:
+        self.pin = pin
+
+    def prompt_up(self) -> None:
+        print("Touch your authenticator device now...")
+
+    def request_pin(self, permissions: Any, rd_id: Any) -> str:
+        if self.pin:
+            return self.pin
+        else:
+            return getpass("Enter PIN: ")
+
+    def request_uv(self, permissions: Any, rd_id: Any) -> bool:
+        return True
 
 
 class NKFido2Client:
@@ -63,7 +81,7 @@ class NKFido2Client:
         except OSError:
             pass
 
-    def find_device(self, dev=None, solo_serial: str = None):
+    def find_device(self, dev=None, solo_serial: str = None, pin=None):
         devices = []
         if dev is None:
             if solo_serial is not None:
@@ -93,7 +111,9 @@ class NKFido2Client:
             self.ctap2 = None
 
         try:
-            self.client: Optional[Fido2Client] = Fido2Client(dev, self.origin)
+            self.client: Optional[Fido2Client] = Fido2Client(
+                dev, self.origin, user_interaction=CliOrProvidedInteraction(pin)
+            )
         except CtapError:
             print("Not using FIDO2 interface.")
             self.client = None
@@ -220,8 +240,6 @@ class NKFido2Client:
         host="nitrokeys.dev",
         user_id="they",
         serial=None,
-        pin=None,
-        prompt="Touch your authenticator to generate a credential...",
         output=True,
         udp=False,
         fingerprint_only=False,
@@ -241,9 +259,6 @@ class NKFido2Client:
         user = {"id": user_id, "name": "A. User"}
         challenge = secrets.token_bytes(32)
 
-        if prompt:
-            print(prompt)
-
         attestation_object = client.make_credential(
             {
                 "rp": rp,
@@ -255,15 +270,14 @@ class NKFido2Client:
                 ],
                 "extensions": {"hmacCreateSecret": True},
             },
-            pin=pin,
         ).attestation_object
 
         if fingerprint_only:
-            if "x5c" not in attestation_object.att_statement:
+            if "x5c" not in attestation_object.att_stmt:
                 raise ValueError("No x5c information available")
             from hashlib import sha256
 
-            data = attestation_object.att_statement["x5c"]
+            data = attestation_object.att_stmt["x5c"]
             return sha256(data[0]).digest().hex()
 
         credential = attestation_object.auth_data.credential_data

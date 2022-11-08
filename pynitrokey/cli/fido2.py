@@ -14,13 +14,13 @@ import struct
 import sys
 from time import sleep, time
 
-import cbor
 import click
 
 if "linux" in platform.platform().lower():
     import fcntl
 
 # @fixme: 1st layer `nkfido2` lower layer `fido2` not to be used here !
+from fido2.cbor import dump_dict
 from fido2.client import ClientError as Fido2ClientError
 from fido2.ctap import CtapError
 from fido2.ctap1 import ApduError
@@ -34,17 +34,24 @@ from pynitrokey.cli.monitor import monitor
 from pynitrokey.cli.program import program
 from pynitrokey.cli.update import update
 from pynitrokey.fido2.commands import SoloBootloader
-from pynitrokey.helpers import AskUser, local_critical, local_print
+from pynitrokey.helpers import (
+    AskUser,
+    local_critical,
+    local_print,
+    require_windows_admin,
+)
 
 # @todo: in version 0.4 UDP & anything earlier inside fido2.__init__ is broken/removed
 #        - check if/what is needed here
 #        - revive UDP support
 
 # https://pocoo-click.readthedocs.io/en/latest/commands/#nested-handling-and-contexts
+
+
 @click.group()
 def fido2():
     """Interact with Nitrokey FIDO2 devices, see subcommands."""
-    pass
+    require_windows_admin()
 
 
 @click.group()
@@ -317,7 +324,7 @@ def feedkernel(count, serial):
     default="Touch your authenticator to generate a credential...",
     show_default=True,
 )
-def make_credential(serial, host, user, udp, prompt, pin):
+def make_credential(serial, host, user, udp, prompt):
     """Generate a credential.
 
     Pass `--prompt ""` to output only the `credential_id` as hex.
@@ -331,9 +338,7 @@ def make_credential(serial, host, user, udp, prompt, pin):
         user_id=user,
         serial=serial,
         output=True,
-        prompt=prompt,
         udp=udp,
-        pin=pin,
     )
 
 
@@ -389,9 +394,9 @@ def challenge_response(serial, host, user, prompt, credential_id, challenge, udp
 
 
 ######
-###### @fixme: - excluded 'probe' for now, as command:
-######           SoloBootloader.HIDCommandProbe => 0x70 returns "INVALID_COMMAND"
-######         - decide its future asap...
+# @fixme: - excluded 'probe' for now, as command:
+# SoloBootloader.HIDCommandProbe => 0x70 returns "INVALID_COMMAND"
+# - decide its future asap...
 @click.command()
 @click.option(
     "-s",
@@ -431,7 +436,7 @@ def probe(serial, udp, hash_type, filename):
 
     p = nkfido2.find(serial, udp=udp)
 
-    serialized_command = cbor.dumps({"subcommand": hash_type, "data": data})
+    serialized_command = dump_dict({"subcommand": hash_type, "data": data})
     result = p.send_data_hid(SoloBootloader.HIDCommandProbe, serialized_command)
     result_hex = result.hex()
     local_print(result_hex)
@@ -560,7 +565,6 @@ def set_pin(serial):
 
 
 @click.command()
-# @click.option("--pin", help="PIN for to access key", default=None)
 @click.option(
     "-s",
     "--serial",
@@ -569,18 +573,15 @@ def set_pin(serial):
 @click.option(
     "--udp", is_flag=True, default=False, help="Communicate over UDP with software key"
 )
-def verify(serial, udp):
+@click.option("--pin", help="PIN for device access", default=None)
+def verify(serial, udp, pin):
     """Verify if connected Nitrokey FIDO2 device is genuine."""
-
-    # if not pin:
-    #    pin = AskUser("PIN required: ", repeat=0, hide_input=True).ask()
-
-    # Any longer and this needs to go in a submodule
-    local_print("please press the button on your Nitrokey device")
 
     cert = None
     try:
-        cert = nkfido2.find(serial, udp=udp).make_credential(fingerprint_only=True)
+        cert = nkfido2.find(serial, udp=udp, pin=pin).make_credential(
+            fingerprint_only=True
+        )
 
     except Fido2ClientError as e:
         cause = str(e.cause)
@@ -632,6 +633,8 @@ def verify(serial, udp):
         "e1f40563be291c30bc3cc381a7ef46b89ef972bdb048b716b0a888043cf9072a": "Nitrokey FIDO2 Dev 2.x ",
         "ad8fd1d16f59104b9e06ef323cc03f777ed5303cd421a101c9cb00bb3fdf722d": "Nitrokey 3",
         "44fa598fdc98681dc5c8659a804c40bd6e53f8e54a781608b0651d47a53e1c8a": "Nitrokey 3 Dev",
+        "aa1cb760c2879530e7d7fed3da75345d25774be9cfdbbcbd36fdee767025f34b": "Nitrokey 3 A NFC",
+        "4c331d7af869fd1d8217198b917a33d1fa503e9778da7638504a64a438661ae0": "Nitrokey 3 A Mini",
     }
 
     a_hex = cert

@@ -55,7 +55,7 @@ def check_root():
 
 @click.group()
 def nitropy():
-    handler = logging.FileHandler(filename=LOG_FN, delay=True)
+    handler = logging.FileHandler(filename=LOG_FN, delay=True, encoding="utf-8")
     logging.basicConfig(format=LOG_FORMAT, level=logging.DEBUG, handlers=[handler])
 
     print(

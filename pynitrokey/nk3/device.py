@@ -38,6 +38,8 @@ class Command(Enum):
     RNG = 0x60
     VERSION = 0x61
     UUID = 0x62
+    LOCKED = 0x63
+    OTP = 0x70
 
 
 @enum.unique
@@ -113,8 +115,17 @@ class Nitrokey3Device(Nitrokey3Base):
     def rng(self) -> bytes:
         return self._call(Command.RNG, response_len=RNG_LEN)
 
-    def _call(self, command: Command, response_len: Optional[int] = None) -> bytes:
-        response = self.device.call(command.value)
+    def otp(self, data: bytes = b"") -> bytes:
+        return self._call(Command.OTP, data=data)
+
+    def is_locked(self) -> bool:
+        response = self._call(Command.LOCKED, response_len=1)
+        return response[0] == 1
+
+    def _call(
+        self, command: Command, response_len: Optional[int] = None, data: bytes = b""
+    ) -> bytes:
+        response = self.device.call(command.value, data=data)
         if response_len is not None and response_len != len(response):
             raise ValueError(
                 f"The response for the CTAPHID {command.name} command has an unexpected length "

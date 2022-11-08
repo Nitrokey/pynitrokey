@@ -891,7 +891,7 @@ def get_api_or_key_id(api, key_id):
     if not api and not key_id:
         choice = click.Choice(["api", "key"], case_sensitive=False)
         method = prompt(
-            "For stored key or for NetHSM HTTPS API?",
+            "For stored key or for NetHSM TLS interface?",
             type=choice,
         )
         if method == "api":
@@ -906,7 +906,7 @@ def get_api_or_key_id(api, key_id):
 
 @nethsm.command()
 @click.option(
-    "-a", "--api", is_flag=True, help="Set the certificate for the NetHSM HTTPS API"
+    "-a", "--api", is_flag=True, help="Set the certificate for the NetHSM TLS interface"
 )
 @click.option("-k", "--key-id", help="The ID of the key to set the certificate for")
 @click.option(
@@ -920,7 +920,7 @@ def get_api_or_key_id(api, key_id):
 def set_certificate(ctx, api, key_id, mime_type, filename):
     """Set a certificate on the NetHSM.
 
-    If the --api option is set, the certificate used for the NetHSM HTTPS API
+    If the --api option is set, the certificate used for the NetHSM TLS interface
     is set.  If the --key-id option is set, the certificate for a key stored on
     the NetHSM is set.
 
@@ -955,14 +955,14 @@ def set_certificate(ctx, api, key_id, mime_type, filename):
 
 @nethsm.command()
 @click.option(
-    "-a", "--api", is_flag=True, help="Get the certificate for the NetHSM HTTPS API"
+    "-a", "--api", is_flag=True, help="Get the certificate for the NetHSM TLS interface"
 )
 @click.option("-k", "--key-id", help="The ID of the key to get the certificate for")
 @click.pass_context
 def get_certificate(ctx, api, key_id):
     """Get a certificate from the NetHSM.
 
-    If the --api option is set, the certificate used for the NetHSM HTTPS API
+    If the --api option is set, the certificate used for the NetHSM TLS interface
     is queried.  If the --key-id option is set, the certificate for a key stored on
     the NetHSM is queried.
 
@@ -998,7 +998,7 @@ def delete_certificate(ctx, key_id):
 
 @nethsm.command()
 @click.option(
-    "-a", "--api", is_flag=True, help="Generate a CSR for the NetHSM HTTPS API"
+    "-a", "--api", is_flag=True, help="Generate a CSR for the NetHSM TLS interface"
 )
 @click.option("-k", "--key-id", help="The ID of the key to generate the CSR for")
 @click.option("--country", default="", prompt=True, help="The country name")
@@ -1076,7 +1076,7 @@ def csr(
 )
 @click.pass_context
 def generate_tls_key(ctx, type, length):
-    """Generate key pair for NetHSM HTTPS API.
+    """Generate key pair for NetHSM TLS interface.
 
     This command requires authentication as a user with the Administrator
     role."""
@@ -1089,7 +1089,7 @@ def generate_tls_key(ctx, type, length):
 
     with connect(ctx) as nethsm:
         nethsm.generate_tls_key(type, length)
-        print(f"Key for HTTPS API generated on NetHSM {nethsm.host}")
+        print(f"Key for TLS interface generated on NetHSM {nethsm.host}")
 
 
 @nethsm.command()
@@ -1194,39 +1194,76 @@ def commit_update(ctx):
 
 
 @nethsm.command()
+@click.option(
+    "-f",
+    "--force",
+    is_flag=True,
+    help="Force reboot",
+)
 @click.pass_context
-def reboot(ctx):
+def reboot(ctx, force):
     """Reboot a NetHSM instance.
 
     This command requires authentication as a user with the Administrator
     role."""
     with connect(ctx) as nethsm:
-        nethsm.reboot()
-        print(f"NetHSM {nethsm.host} is about to reboot")
+        print(f"NetHSM {nethsm.host} will be rebooted.")
+        reboot = force or click.confirm("Do you want to continue?")
+
+        if reboot:
+            nethsm.reboot()
+            print(f"NetHSM {nethsm.host} is about to reboot")
+        else:
+            print(f"Reboot on NetHSM {nethsm.host} cancelled")
 
 
 @nethsm.command()
+@click.option(
+    "-f",
+    "--force",
+    is_flag=True,
+    help="Force shutdown",
+)
 @click.pass_context
-def shutdown(ctx):
+def shutdown(ctx, force):
     """Shutdown a NetHSM instance.
 
     This command requires authentication as a user with the Administrator
     role."""
     with connect(ctx) as nethsm:
-        nethsm.shutdown()
-        print(f"NetHSM {nethsm.host} is about to shutdown")
+        print(f"NetHSM {nethsm.host} will be shutdown.")
+        shutdown = force or click.confirm("Do you want to continue?")
+
+        if shutdown:
+            nethsm.shutdown()
+            print(f"NetHSM {nethsm.host} is about to shutdown")
+        else:
+            print(f"Shutdown on NetHSM {nethsm.host} cancelled")
 
 
 @nethsm.command()
+@click.option(
+    "-f",
+    "--force",
+    is_flag=True,
+    help="Force shutdown",
+)
 @click.pass_context
-def factory_reset(ctx):
+def factory_reset(ctx, force):
     """Perform a factory reset for a NetHSM instance.
 
     This command requires authentication as a user with the Administrator
     role."""
     with connect(ctx) as nethsm:
-        nethsm.factory_reset()
-        print(f"NetHSM {nethsm.host} is about to perform a factory reset")
+        print(f"NetHSM {nethsm.host} will be set to factory defaults.")
+        print(f"All data will be lost!")
+        factory_reset = force or click.confirm("Do you want to continue?")
+
+        if factory_reset:
+            nethsm.factory_reset()
+            print(f"NetHSM {nethsm.host} is about to perform a factory reset")
+        else:
+            print(f"Factory reset on NetHSM {nethsm.host} cancelled")
 
 
 @nethsm.command()
