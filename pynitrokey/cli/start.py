@@ -17,12 +17,13 @@ from tqdm import tqdm
 from usb.core import USBError
 
 from pynitrokey.helpers import local_critical, local_print
-from pynitrokey.start.gnuk_token import get_gnuk_device
+from pynitrokey.start.gnuk_token import OnlyBusyICCError, get_gnuk_device
 from pynitrokey.start.threaded_log import ThreadLog
 from pynitrokey.start.upgrade_by_passwd import (
     DEFAULT_PW3,
     DEFAULT_WAIT_FOR_REENUMERATION,
     IS_LINUX,
+    kill_smartcard_services,
     logger,
     show_kdf_details,
     start_update,
@@ -100,7 +101,7 @@ def set_identity(identity):
 
     identity = int(identity)
     if identity < 0 or identity > 2:
-        local_print("identity must be 0, 1 or 2")
+        local_critical("identity must be 0, 1 or 2")
 
     local_print(f"Setting identity to {identity}")
     for x in range(3):
@@ -113,13 +114,17 @@ def set_identity(identity):
                 local_print(f"reset done - now active identity: {identity}")
                 break
 
+        except OnlyBusyICCError:
+            local_print(
+                "Identity not changed - device is busy or the selected identity is already active"
+            )
+            break
         except ValueError as e:
             if "No ICC present" in str(e):
-                local_print("Could not connect to device, trying to close scdaemon")
-                result = check_output(
-                    ["gpg-connect-agent", "SCD KILLSCD", "SCD BYE", "/bye"]
-                )  # gpgconf --kill all might be better?
-                sleep(3)
+                local_print(
+                    "Could not connect to device, trying to close other smart card services"
+                )
+                kill_smartcard_services()
             else:
                 local_critical(e)
         except Exception as e:

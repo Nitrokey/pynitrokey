@@ -706,6 +706,9 @@ def gnuk_devices_by_vidpid():
 
 
 def get_gnuk_device(verbose=True, logger: logging.Logger = None):
+    from usb import USBError
+
+    candidates = []
     icc = None
     for (dev, config, intf) in gnuk_devices():
         try:
@@ -725,8 +728,13 @@ def get_gnuk_device(verbose=True, logger: logging.Logger = None):
                         f'Device: name: "{dev.filename}", c/i: {config.value}/{intf.interfaceNumber}'
                     )
             break
-        except:
+        except USBError as e:
+            # USBError(16, 'Resource busy')
+            candidates.append(icc)
+        except Exception:
             pass
+    if not icc and candidates:
+        raise OnlyBusyICCError("Found only busy ICC")
     if not icc:
         raise ValueError("No ICC present")
     status = icc.icc_get_status()
@@ -794,3 +802,7 @@ def parse_kdf_data(kdf_data):
             raise ValueError("data does not much")
         hash_admin = kdf_data[78:110]
     return (algo, subalgo, iters, salt, salt_reset, salt_admin, hash_user, hash_admin)
+
+
+class OnlyBusyICCError(ValueError):
+    pass
