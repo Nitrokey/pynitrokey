@@ -12,12 +12,14 @@ import functools
 import logging
 import os
 import platform
+import signal
 import sys
 import time
+from contextlib import contextmanager
 from getpass import getpass
 from numbers import Number
 from threading import Event, Timer
-from typing import List, Optional
+from typing import Any, Iterator, List, Optional
 
 import click
 from tqdm import tqdm
@@ -349,6 +351,33 @@ class AskUser:
 
 confirm = functools.partial(click.confirm, err=True)
 prompt = functools.partial(click.prompt, err=True)
+
+
+@contextmanager
+def confirm_keyboard_interrupt(msg: Optional[str] = None) -> Iterator[None]:
+    """
+    Registers a signal handler for SIGINT (i. e. Ctrl+C) that asks the user to confirm before
+    raising a KeyboardInterrupt.
+
+    If used as a context manager, it resets the signal handler after the execution.  The given
+    message is appended to the confirmation prompt.
+    """
+
+    def handle_sigint(signum: int, frame: Any) -> None:
+        text = "Do you really want to stop nitropy?"
+        if msg:
+            text += " "
+            text += msg
+        if confirm(text):
+            raise KeyboardInterrupt
+
+    handler = signal.signal(signal.SIGINT, handle_sigint)
+    try:
+        yield
+    except Exception:
+        raise
+    finally:
+        signal.signal(signal.SIGINT, handler)
 
 
 def require_windows_admin() -> None:

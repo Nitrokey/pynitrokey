@@ -279,7 +279,7 @@ def get_latest_release_data():
     try:
         # @todo: move to confconsts.py
         r = requests.get(
-            "https://api.github.com/repos/Nitrokey/nitrokey-start-firmware/releases"
+            "https://api.github.com/repos/Nitrokey/nitrokey-start-firmware/releases/latest"
         )
         json = r.json()
         if r.status_code == 403:
@@ -287,7 +287,7 @@ def get_latest_release_data():
                 f"JSON raw data: {json}",
                 f"No Github API access, status code: {r.status_code}",
             )
-        latest_tag = json[0]
+        latest_tag = json
 
     except Exception as e:
         local_critical("Failed getting release data", e)
@@ -590,6 +590,7 @@ def start_update(
         "- all data will be removed from the device!",
         "- do not interrupt update process - the device may not run properly!",
         "- the process should not take more than 1 minute",
+        "- if the update fails, do not remove the device! Repeat the update instead.",
     )
     if yes:
         local_print("Accepted automatically")
@@ -651,9 +652,9 @@ def start_update(
             "",
             "Could not proceed with the update",
             "Please execute one or all of the following and try again:",
-            "- re-insert device to the USB slot",
             "- run factory-reset on the device",
             "- close other applications, which could use it (e.g., scdaemon, pcscd)",
+            "- repeat the update",
         )
 
     dev_strings_upgraded = None
@@ -662,7 +663,10 @@ def start_update(
     for i in range(TIME_DETECT_DEVICE_AFTER_UPDATE_S):
         if i > TIME_DETECT_DEVICE_AFTER_UPDATE_LONG_S:
             if not takes_long_time:
-                local_print("", "Please reinsert device to the USB slot")
+                local_print(
+                    "",
+                    "If you have removed the device, please reinsert it to the USB slot",
+                )
                 takes_long_time = True
         time.sleep(1)
         dev_strings_upgraded = get_devices()
@@ -673,11 +677,12 @@ def start_update(
         local_print(".", end="", flush=True)
 
     if not dev_strings_upgraded:
-        local_print(
+        local_critical(
             "",
             "could not connect to the device - might be due to a failed update",
-            "please re-insert the device, check version using:",
+            "please check the device version with:",
             "$ nitropy start list",
+            "and repeat the update if necessary",
         )
 
     local_print(
