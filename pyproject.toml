@@ -45,8 +45,9 @@ dev = [
   "flit >=3.2,<4",
   "ipython",
   "isort",
-  "mypy >= 0.900",
+  "mypy >= 0.900,<0.990",
   "types-requests",
+  "types-tqdm",
   "pytest",
   "oath"
 ]
