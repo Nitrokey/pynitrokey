@@ -230,6 +230,13 @@ def test_fido2(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
 
     from fido2.client import Fido2Client, PinRequiredError, UserInteraction
     from fido2.server import Fido2Server
+    from fido2.webauthn import (
+        AttestationConveyancePreference,
+        AuthenticatorAttachment,
+        PublicKeyCredentialRpEntity,
+        PublicKeyCredentialUserEntity,
+        UserVerificationRequirement,
+    )
 
     class NoInteraction(UserInteraction):
         def __init__(self, pin: Optional[str]) -> None:
@@ -251,13 +258,16 @@ def test_fido2(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
         device.device, "https://example.com", user_interaction=NoInteraction(ctx.pin)
     )
     server = Fido2Server(
-        {"id": "example.com", "name": "Example RP"}, attestation="direct"
+        PublicKeyCredentialRpEntity(id="example.com", name="Example RP"),
+        attestation=AttestationConveyancePreference.DIRECT,
     )
-    uv = "discouraged"
-    user = {"id": b"user_id", "name": "A. User"}
+    uv = UserVerificationRequirement.DISCOURAGED
+    user = PublicKeyCredentialUserEntity(id=b"user_id", name="A. User")
 
     create_options, state = server.register_begin(
-        user, user_verification=uv, authenticator_attachment="cross-platform"
+        user=user,
+        user_verification=uv,
+        authenticator_attachment=AuthenticatorAttachment.CROSS_PLATFORM,
     )
 
     local_print("Please press the touch button on the device ...")
@@ -285,6 +295,8 @@ def test_fido2(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
         make_credential_result.client_data,
         make_credential_result.attestation_object,
     )
+    if not auth_data.credential_data:
+        return TestResult(TestStatus.FAILURE, "Missing credential data in auth data")
     credentials = [auth_data.credential_data]
 
     request_options, state = server.authenticate_begin(
@@ -294,6 +306,10 @@ def test_fido2(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
     local_print("Please press the touch button on the device ...")
     get_assertion_result = client.get_assertion(request_options["publicKey"])
     get_assertion_response = get_assertion_result.get_response(0)
+    if not get_assertion_response.credential_id:
+        return TestResult(
+            TestStatus.FAILURE, "Missing credential ID in GetAssertion response"
+        )
 
     server.authenticate_complete(
         state,

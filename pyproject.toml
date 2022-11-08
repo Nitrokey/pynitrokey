@@ -24,7 +24,7 @@ dependencies = [
   "click >=8.0.0,<9",
   "cryptography >=3.4.4,<37",
   "ecdsa",
-  "fido2 >=1.0.0,<2",
+  "fido2 >=1.1.0,<2",
   "intelhex",
   "nkdfu",
   "nrfutil >=6.1.4,<7",
