@@ -343,13 +343,24 @@ def validate_regnual(ctx, param, path: str):
 def kill_smartcard_services():
     local_print("Could not connect to the device. Attempting to close scdaemon.")
 
-    # check_output(["gpg-connect-agent",
-    #               "SCD KILLSCD", "SCD BYE", "/bye"])
     commands = [
         ("gpgconf --kill all".split(), True),
         ("sudo systemctl stop pcscd pcscd.socket".split(), IS_LINUX),
     ]
 
+    try_to_run_commands(commands)
+
+
+def restart_smartcard_services():
+    local_print("*** Restarting smartcard services")
+    commands = [
+        ("gpgconf --reload all".split(), True),
+        ("sudo systemctl restart pcscd pcscd.socket".split(), IS_LINUX),
+    ]
+    try_to_run_commands(commands)
+
+
+def try_to_run_commands(commands):
     for command, flag in commands:
         if not flag:
             continue
@@ -358,7 +369,6 @@ def kill_smartcard_services():
             check_output(command)
         except Exception as e:
             local_print("Error while running command", e)
-
     time.sleep(3)
 
 
@@ -689,3 +699,5 @@ def start_update(
     local_print(f"finishing session {datetime.now()}")
     # @todo: always output this in certain situations... (which ones? errors? warnings?)
     local_print(f"Log saved to: {LOG_FN}")
+
+    restart_smartcard_services()
