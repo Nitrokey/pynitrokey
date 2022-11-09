@@ -34,6 +34,7 @@ class Tag(Enum):
     Key = 0x73
     Challenge = 0x74
     Response = 0x75
+    Properties = 0x78
     InitialCounter = 0x7A
 
 
@@ -135,6 +136,7 @@ class OTPApp:
         kind: Kind = Kind.Hotp,
         algo: Algorithm = Algorithm.Sha1,
         initial_counter_value: int = 0,
+        touch_button_required=False,
     ) -> None:
         """
         Register new OTP credential
@@ -144,6 +146,7 @@ class OTPApp:
         :param kind: OTP variant - HOTP or TOTP
         :param algo: The hash algorithm to use - SHA1, SHA256 or SHA512
         :param initial_counter_value: The counter's initial value for the HOTP credential (HOTP only)
+        :param touch_button_required: User Presence confirmation is required to use this Credential
         :return: None
         """
         if initial_counter_value > 0xFFFFFFFF:
@@ -163,6 +166,7 @@ class OTPApp:
             tlv8.Entry(
                 Tag.Key.value, bytes([kind.value | algo.value, digits]) + secret
             ),
+            tlv8.Entry(Tag.Properties.value, 0x02 if touch_button_required else 0x00),
             tlv8.Entry(
                 Tag.InitialCounter.value, initial_counter_value.to_bytes(4, "big")
             ),
