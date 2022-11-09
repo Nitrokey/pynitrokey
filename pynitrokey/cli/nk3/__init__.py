@@ -635,3 +635,29 @@ def get(ctx: Context, name: str, timestamp: int, period: int) -> None:
             local_print(
                 f"Device returns error: {e}. This credential id might not be registered."
             )
+
+
+@otp.command()
+@click.pass_obj
+@click.argument(
+    "name",
+    type=click.STRING,
+)
+@click.option(
+    "--code",
+    "code",
+    type=click.INT,
+    help="The code to verify",
+    default=0,
+)
+def verify(ctx: Context, name: str, code: int) -> None:
+    """Proceed with the incoming OTP code verification (aka reverse HOTP)."""
+    with ctx.connect_device() as device:
+        app = OTPApp(device)
+        try:
+            # TODO use int
+            code = app.verify_code(name.encode(), str(code).encode())
+        except fido2.ctap.CtapError as e:
+            local_print(
+                f"Device returns error: {e}. This credential id might not be registered."
+            )
