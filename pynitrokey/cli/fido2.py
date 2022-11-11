@@ -25,7 +25,8 @@ from fido2.client import ClientError as Fido2ClientError
 from fido2.ctap import CtapError
 from fido2.ctap1 import ApduError
 from fido2.ctap2 import Ctap2
-from fido2.ctap2.pin import ClientPin
+from fido2.ctap2.pin import ClientPin, PinProtocol
+from fido2.ctap2 import CredentialManagement
 
 import pynitrokey
 import pynitrokey.fido2 as nkfido2
@@ -40,6 +41,7 @@ from pynitrokey.helpers import (
     local_print,
     require_windows_admin,
 )
+
 
 # @todo: in version 0.4 UDP & anything earlier inside fido2.__init__ is broken/removed
 #        - check if/what is needed here
@@ -189,6 +191,79 @@ def list():
             id_ = descr.path
 
         local_print(f"{id_}: {name}")
+
+
+@click.command()
+@click.option(
+    "-s",
+    "--serial",
+    help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
+)
+# TODO Test on device
+def list_credentials(serial):
+    """List all credentials saved on the key as well as the amount of remaining slots."""
+    device = nkfido2.find(serial)
+    client_pin = ClientPin(device.ctap2)
+    client_token = client_pin.get_pin_token()
+
+    cred_manager = CredentialManagement(device.ctap2, client_pin.protocol, client_token)
+
+    # Returns Sequence[Mapping[int, Any]]
+    cred_list = cred_manager.enumerate_creds()
+    # TODO Work in progress
+
+
+@click.command()
+@click.option(
+    "-s",
+    "--serial",
+    help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
+)
+@click.option(
+    "-cid",
+    "--cred-id",
+    help="Credential id of there Credential to be deleted"
+)
+# TODO Test on device
+def delete_credential(serial, cred_id):
+    """Delete a specific credential from the key"""
+    device = nkfido2.find(serial)
+    client_pin = ClientPin(device.ctap2)
+    client_token = client_pin.get_pin_token()
+
+    cred_manager = CredentialManagement(device.ctap2, client_pin.protocol, client_token)
+
+    try:
+        cred_manager.delete_cred(cred_id)
+    except Exception as e:
+        local_critical("Failed to delete credential")
+
+
+@click.command()
+@click.option(
+    "-s",
+    "--serial",
+    help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
+)
+@click.option(
+    "-cid",
+    "--cred-id",
+    help="Credential id of there Credential to be updated"
+)
+# TODO Test on device
+def update_credential(serial, cred_id):
+    """Update a specific credentials user info"""
+    device = nkfido2.find(serial)
+    client_pin = ClientPin(device.ctap2)
+    client_token = client_pin.get_pin_token()
+
+    cred_manager = CredentialManagement(device.ctap2, client_pin.protocol, client_token)
+
+    try:
+        # TODO Find a way to create user info
+        cred_manager.update_user_info(cred_id, )
+    except Exception as e:
+        local_critical("Failed to update credential user info")
 
 
 @click.command()
@@ -724,6 +799,10 @@ fido2.add_command(rng)
 fido2.add_command(reboot)
 fido2.add_command(list)
 
+fido2.add_command(list_credentials)
+fido2.add_command(update_credential)
+fido2.add_command(delete_credential)
+
 rng.add_command(hexbytes)
 rng.add_command(raw)
 rng.add_command(feedkernel)
@@ -750,7 +829,6 @@ util.add_command(sign)
 util.add_command(genkey)
 util.add_command(mergehex)
 util.add_command(monitor)
-
 
 # see above -> @fixme: likely to be removed?!
 # fido2.add_command(probe)
