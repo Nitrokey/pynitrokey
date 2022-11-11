@@ -4,6 +4,7 @@ Oath Authenticator client
 Used through CTAPHID transport, via the custom vendor command.
 Can be used directly over CCID as well.
 """
+import dataclasses
 import logging
 import typing
 from enum import Enum
@@ -14,6 +15,11 @@ import tlv8
 
 from pynitrokey.nk3 import Nitrokey3Device
 from pynitrokey.start.gnuk_token import iso7816_compose
+
+
+@dataclasses.dataclass
+class RawBytes:
+    data: List
 
 
 class Instruction(Enum):
@@ -74,10 +80,27 @@ class OTPApp:
             self.logfn = self.log.info  # type: ignore [assignment]
         self.dev = dev
 
+    def _custom_encode(self, structure: Optional[List] = None) -> bytes:
+        if not structure:
+            return b""
+
+        def transform(d: typing.Union[tlv8.Entry | RawBytes | None]) -> bytes:
+            if not d:
+                return b""
+            if isinstance(d, RawBytes):
+                # return b"".join(d.data)
+                return bytes(d.data)
+            if isinstance(d, tlv8.Entry):
+                return tlv8.encode([d])
+            return b""
+
+        encoded_structure = b"".join(map(transform, structure))
+        return encoded_structure
+
     def _send_receive(
         self, ins: Instruction, structure: Optional[List] = None
     ) -> bytes:
-        encoded_structure = tlv8.encode(structure) if structure else b""
+        encoded_structure = self._custom_encode(structure)
         ins_b, p1, p2 = self._encode_command(ins)
         bytes_data = iso7816_compose(ins_b, p1, p2, data=encoded_structure)
         return self._send_receive_inner(bytes_data)
@@ -165,7 +188,7 @@ class OTPApp:
             )
 
         self.logfn(
-            f"Setting new credential: {credid!r}, {secret.hex()}, {kind}, {algo}, {initial_counter_value}"
+            f"Setting new credential: {credid!r}, {secret.hex()}, {kind}, {algo}, counter: {initial_counter_value}"
         )
 
         structure = [
@@ -174,7 +197,7 @@ class OTPApp:
             tlv8.Entry(
                 Tag.Key.value, bytes([kind.value | algo.value, digits]) + secret
             ),
-            tlv8.Entry(Tag.Properties.value, 0x02 if touch_button_required else 0x00),
+            RawBytes([Tag.Properties.value, 0x02 if touch_button_required else 0x00]),
             tlv8.Entry(
                 Tag.InitialCounter.value, initial_counter_value.to_bytes(4, "big")
             ),
