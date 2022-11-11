@@ -33,7 +33,7 @@ from pynitrokey.nk3.bootloader import (
 )
 from pynitrokey.nk3.device import BootMode, Nitrokey3Device
 from pynitrokey.nk3.exceptions import TimeoutException
-from pynitrokey.nk3.otp_app import Algorithm, Kind, OTPApp
+from pynitrokey.nk3.otp_app import Algorithm, Kind, OTPApp, STRING_TO_KIND
 from pynitrokey.nk3.updates import REPOSITORY, get_firmware_update
 from pynitrokey.updates import OverwriteError
 
@@ -498,8 +498,8 @@ def otp(ctx: click.Context) -> None:
 @click.option(
     "--kind",
     "kind",
-    type=click.Choice(["TOTP", "HOTP"]),
-    help="OTP mechanism to use",
+    type=click.Choice(choices=STRING_TO_KIND.keys(), case_sensitive=False),
+    help="OTP mechanism to use. Case insensitive.",
     default="TOTP",
 )
 @click.option(
@@ -516,6 +516,13 @@ def otp(ctx: click.Context) -> None:
     help="Starting value for the counter (HOTP only)",
     default=0,
 )
+@click.option(
+    "--touch_button",
+    "touch_button",
+    type=click.BOOL,
+    help="This credential requires button press before use",
+    is_flag=True,
+)
 def register(
     ctx: Context,
     name: str,
@@ -524,6 +531,7 @@ def register(
     kind: str,
     hash: str,
     counter_start: int,
+    touch_button: bool,
 ) -> None:
     """Register OTP credential.
 
@@ -532,7 +540,7 @@ def register(
     """
     digits = int(digits_str)
     secret_bytes = b32decode(secret)
-    otp_kind = Kind.Totp if kind == "TOTP" else Kind.Hotp
+    otp_kind = STRING_TO_KIND[kind.upper()]
     hash_algorithm = Algorithm.Sha1 if hash == "SHA1" else Algorithm.Sha256
     with ctx.connect_device() as device:
         app = OTPApp(device)
@@ -543,6 +551,7 @@ def register(
             kind=otp_kind,
             algo=hash_algorithm,
             initial_counter_value=counter_start,
+            touch_button_required=touch_button,
         )
 
 
@@ -656,8 +665,8 @@ def verify(ctx: Context, name: str, code: int) -> None:
         app = OTPApp(device)
         try:
             # TODO use int
-            code = app.verify_code(name.encode(), str(code).encode())
+            app.verify_code(name.encode(), str(code).encode())
         except fido2.ctap.CtapError as e:
             local_print(
-                f"Device returns error: {e}. This credential id might not be registered."
+                f"Device returns error: {e}. This credential id might not be registered, or the provided HOTP code has not passed verification."
             )

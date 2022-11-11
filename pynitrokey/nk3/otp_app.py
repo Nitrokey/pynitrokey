@@ -41,6 +41,14 @@ class Tag(Enum):
 class Kind(Enum):
     Hotp = 0x10
     Totp = 0x20
+    HotpReverse = 0x30
+
+
+STRING_TO_KIND = {
+    "HOTP": Kind.Hotp,
+    "TOTP": Kind.Totp,
+    "HOTP_REVERSE": Kind.HotpReverse,
+}
 
 
 class Algorithm(Enum):

@@ -195,7 +195,9 @@ def test_reverse_hotp(otpApp):
     codes = [x.split()[-1].encode() for x in test_vectors.splitlines()[2:]]
 
     otpApp.reset()
-    otpApp.register(CREDID, secretb, digits=6, kind=Kind.Hotp, algo=Algorithm.Sha1)
+    otpApp.register(
+        CREDID, secretb, digits=6, kind=Kind.HotpReverse, algo=Algorithm.Sha1
+    )
     for i in range(10):
         c = bytes(codes[i])
         assert otpApp.verify_code(CREDID, c)
@@ -211,7 +213,9 @@ def test_reverse_hotp_failure(otpApp):
     codes = [str(x) for x in range(10)]
 
     otpApp.reset()
-    otpApp.register(CREDID, secretb, digits=6, kind=Kind.Hotp, algo=Algorithm.Sha1)
+    otpApp.register(
+        CREDID, secretb, digits=6, kind=Kind.HotpReverse, algo=Algorithm.Sha1
+    )
     for i in range(3):
         c = codes[i].encode()
         with pytest.raises(fido2.ctap.CtapError):
@@ -260,7 +264,7 @@ def test_reverse_hotp_window(otpApp, offset, start_value):
         CREDID,
         secretb,
         digits=6,
-        kind=Kind.Hotp,
+        kind=Kind.HotpReverse,
         algo=Algorithm.Sha1,
         initial_counter_value=start_value,
     )
