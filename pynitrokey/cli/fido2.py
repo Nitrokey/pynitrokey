@@ -209,7 +209,12 @@ def list_credentials(serial):
     cred_manager = CredentialManagement(device.ctap2, client_pin.protocol, client_token)
 
     # Returns Sequence[Mapping[int, Any]]
+    # Use this to get all existing creds
     cred_list = cred_manager.enumerate_creds()
+    # TODO Work in progress
+
+    # Use this to get the estimated remaining slots
+    slots_left = cred_manager.get_metadata()
     # TODO Work in progress
 
 
