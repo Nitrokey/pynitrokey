@@ -199,23 +199,43 @@ def list():
     "--serial",
     help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
 )
+@click.option("--pin", help="provide PIN instead of asking the user", default=None)
 # TODO Test on device
-def list_credentials(serial):
+def list_credentials(serial, pin):
     """List all credentials saved on the key as well as the amount of remaining slots."""
+
+    # Gets device and client_pin object
     device = nkfido2.find(serial)
     client_pin = ClientPin(device.ctap2)
-    client_token = client_pin.get_pin_token()
+
+    # Makes sure pin exists
+    if not pin:
+        pin = AskUser.hidden("Please provide pin: ")
+
+    client_token = client_pin.get_pin_token(pin)
 
     cred_manager = CredentialManagement(device.ctap2, client_pin.protocol, client_token)
 
     # Returns Sequence[Mapping[int, Any]]
     # Use this to get all existing creds
     cred_list = cred_manager.enumerate_creds()
-    # TODO Work in progress
+
+    if len(cred_list) == 0:
+        local_print("There are no registered credentials")
+        return
+
+    # Get amount of registered creds from first key in list (Same trick is used in the CredentialManager)
+    local_print(f"There are {cred_list[0].get(CredentialManagement.RESULT.EXISTING_CRED_COUNT)} registered creds")
+
+    for cred in cred_list:
+        cred_id = cred.get(CredentialManagement.RESULT.CREDENTIAL_ID)
+        cred_user = cred.get(CredentialManagement.RESULT.USER)
+        local_print(f"ID: {cred_id}, user: {cred_user}")
 
     # Use this to get the estimated remaining slots
-    slots_left = cred_manager.get_metadata()
-    # TODO Work in progress
+    slots_left = cred_manager.get_metadata().get(CredentialManagement.RESULT.MAX_REMAINING_COUNT)
+    local_print(f"There are {slots_left} credential slots left")
+    local_print("This is an estimate and can vary based on the algorythm used during cred creation")
 
 
 @click.command()
@@ -224,17 +244,22 @@ def list_credentials(serial):
     "--serial",
     help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
 )
+@click.option("--pin", help="provide PIN instead of asking the user", default=None)
 @click.option(
     "-cid",
     "--cred-id",
     help="Credential id of there Credential to be deleted"
 )
 # TODO Test on device
-def delete_credential(serial, cred_id):
+def delete_credential(serial, pin, cred_id):
     """Delete a specific credential from the key"""
     device = nkfido2.find(serial)
     client_pin = ClientPin(device.ctap2)
-    client_token = client_pin.get_pin_token()
+
+    if not pin:
+        pin = AskUser.hidden("Please provide pin: ")
+
+    client_token = client_pin.get_pin_token(pin)
 
     cred_manager = CredentialManagement(device.ctap2, client_pin.protocol, client_token)
 
@@ -250,23 +275,28 @@ def delete_credential(serial, cred_id):
     "--serial",
     help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
 )
+@click.option("--pin", help="provide PIN instead of asking the user", default=None)
 @click.option(
     "-cid",
     "--cred-id",
     help="Credential id of there Credential to be updated"
 )
 # TODO Test on device
-def update_credential(serial, cred_id):
+def update_credential(serial, pin, cred_id):
     """Update a specific credentials user info"""
     device = nkfido2.find(serial)
     client_pin = ClientPin(device.ctap2)
-    client_token = client_pin.get_pin_token()
+
+    if not pin:
+        pin = AskUser.hidden("Please provide pin: ")
+
+    client_token = client_pin.get_pin_token(pin)
 
     cred_manager = CredentialManagement(device.ctap2, client_pin.protocol, client_token)
 
     try:
         # TODO Find a way to create user info
-        cred_manager.update_user_info(cred_id, )
+        cred_manager.update_user_info(cred_id,)
     except Exception as e:
         local_critical("Failed to update credential user info")
 
