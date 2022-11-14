@@ -240,6 +240,7 @@ def list_credentials(serial, pin):
             cred_user = cred.get(CredentialManagement.RESULT.USER)
             local_print(f"ID: {cred_id['id'].hex()}, user: {cred_user}")
 
+    local_print("-----------------------------------")
     local_print(f"There is an estimated amount of {remaining_cred_space} credential slots left")
 
 
@@ -284,6 +285,8 @@ def delete_credential(serial, pin, cred_id):
                     cred_manager.delete_cred(tmp_cred_id)
                 except Exception as e:
                     local_critical("Failed to delete credential, was the right cred_id given?")
+                    return
+                local_print("Credential was successfully deleted")
 
 
 @click.command()
