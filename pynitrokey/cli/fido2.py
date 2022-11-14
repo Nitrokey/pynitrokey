@@ -301,6 +301,11 @@ def delete_credential(serial, pin, cred_id):
 # TODO Test on device
 def update_credential(serial, pin, cred_id):
     """Update a specific credentials user info"""
+
+    # Remove this to activate the command
+    local_print("This command is still work in progress")
+    return
+
     device = nkfido2.find(serial)
     client_pin = ClientPin(device.ctap2)
 
@@ -322,9 +327,9 @@ def update_credential(serial, pin, cred_id):
             tmp_cred_id = cred.get(CredentialManagement.RESULT.CREDENTIAL_ID)
             if tmp_cred_id['id'].hex() == cred_id:
                 user_info = cred.get(CredentialManagement.RESULT.USER)
-                # user_info['name'] = AskUser.plain("Please enter new name: ")
-                # user_info['displayName'] = AskUser.plain("Please enter new displayName")
-                print(user_info)
+                # TODO: This inexplicably fails, even when passing the user_info I just got from the key
+                # It also fails when trying to create the user myself
+                # user = {"id":  user_info['id'], "name": "name", "displayName": "name"}
                 cred_manager.update_user_info(tmp_cred_id, user_info)
 
 
