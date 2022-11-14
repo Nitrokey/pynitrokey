@@ -218,24 +218,29 @@ def list_credentials(serial, pin):
 
     # Returns Sequence[Mapping[int, Any]]
     # Use this to get all existing creds
-    cred_list = cred_manager.enumerate_creds()
+    cred_metadata = cred_manager.get_metadata()
+    cred_count = cred_metadata.get(CredentialManagement.RESULT.EXISTING_CRED_COUNT)
+    remaining_cred_space = cred_metadata.get(CredentialManagement.RESULT.MAX_REMAINING_COUNT)
 
-    if len(cred_list) == 0:
+    reliable_party_list = cred_manager.enumerate_rps()
+
+    if cred_count == 0:
         local_print("There are no registered credentials")
+        local_print(f"There is an estimated amount of {remaining_cred_space} credential slots left")
         return
 
     # Get amount of registered creds from first key in list (Same trick is used in the CredentialManager)
-    local_print(f"There are {cred_list[0].get(CredentialManagement.RESULT.EXISTING_CRED_COUNT)} registered creds")
+    local_print(f"There are {cred_count} registered credentials")
 
-    for cred in cred_list:
-        cred_id = cred.get(CredentialManagement.RESULT.CREDENTIAL_ID)
-        cred_user = cred.get(CredentialManagement.RESULT.USER)
-        local_print(f"ID: {cred_id}, user: {cred_user}")
+    for reliable_party in reliable_party_list:
+        reliable_party_hash = reliable_party.get(CredentialManagement.RESULT.RP_ID_HASH)
+        for cred in cred_manager.enumerate_creds(reliable_party_hash):
+            local_print("-----------------------------------")
+            cred_id = cred.get(CredentialManagement.RESULT.CREDENTIAL_ID)
+            cred_user = cred.get(CredentialManagement.RESULT.USER)
+            local_print(f"ID: {cred_id['id'].hex()}, user: {cred_user}")
 
-    # Use this to get the estimated remaining slots
-    slots_left = cred_manager.get_metadata().get(CredentialManagement.RESULT.MAX_REMAINING_COUNT)
-    local_print(f"There are {slots_left} credential slots left")
-    local_print("This is an estimate and can vary based on the algorythm used during cred creation")
+    local_print(f"There is an estimated amount of {remaining_cred_space} credential slots left")
 
 
 @click.command()
@@ -256,6 +261,9 @@ def delete_credential(serial, pin, cred_id):
     device = nkfido2.find(serial)
     client_pin = ClientPin(device.ctap2)
 
+    if not cred_id:
+        cred_id = AskUser.hidden("Please provide credential-id")
+
     if not pin:
         pin = AskUser.hidden("Please provide pin: ")
 
@@ -263,10 +271,19 @@ def delete_credential(serial, pin, cred_id):
 
     cred_manager = CredentialManagement(device.ctap2, client_pin.protocol, client_token)
 
-    try:
-        cred_manager.delete_cred(cred_id)
-    except Exception as e:
-        local_critical("Failed to delete credential")
+    reliable_party_list = cred_manager.enumerate_rps()
+
+    # Don't like the fact you have to loop over all keys just to delete one
+    # Maybe there is a better way
+    for reliable_party in reliable_party_list:
+        reliable_party_hash = reliable_party.get(CredentialManagement.RESULT.RP_ID_HASH)
+        for cred in cred_manager.enumerate_creds(reliable_party_hash):
+            tmp_cred_id = cred.get(CredentialManagement.RESULT.CREDENTIAL_ID)
+            if tmp_cred_id['id'].hex() == cred_id:
+                try:
+                    cred_manager.delete_cred(tmp_cred_id)
+                except Exception as e:
+                    local_critical("Failed to delete credential, was the right cred_id given?")
 
 
 @click.command()
@@ -287,6 +304,9 @@ def update_credential(serial, pin, cred_id):
     device = nkfido2.find(serial)
     client_pin = ClientPin(device.ctap2)
 
+    if not cred_id:
+        cred_id = AskUser.hidden("Please provide credential-id")
+
     if not pin:
         pin = AskUser.hidden("Please provide pin: ")
 
@@ -294,11 +314,18 @@ def update_credential(serial, pin, cred_id):
 
     cred_manager = CredentialManagement(device.ctap2, client_pin.protocol, client_token)
 
-    try:
-        # TODO Find a way to create user info
-        cred_manager.update_user_info(cred_id,)
-    except Exception as e:
-        local_critical("Failed to update credential user info")
+    reliable_party_list = cred_manager.enumerate_rps()
+
+    for reliable_party in reliable_party_list:
+        reliable_party_hash = reliable_party.get(CredentialManagement.RESULT.RP_ID_HASH)
+        for cred in cred_manager.enumerate_creds(reliable_party_hash):
+            tmp_cred_id = cred.get(CredentialManagement.RESULT.CREDENTIAL_ID)
+            if tmp_cred_id['id'].hex() == cred_id:
+                user_info = cred.get(CredentialManagement.RESULT.USER)
+                # user_info['name'] = AskUser.plain("Please enter new name: ")
+                # user_info['displayName'] = AskUser.plain("Please enter new displayName")
+                print(user_info)
+                cred_manager.update_user_info(tmp_cred_id, user_info)
 
 
 @click.command()
