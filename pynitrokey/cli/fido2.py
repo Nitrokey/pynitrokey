@@ -209,7 +209,11 @@ def list_credentials(serial, pin):
     if not pin:
         pin = AskUser.hidden("Please provide pin: ")
 
-    client_token = client_pin.get_pin_token(pin)
+    try:
+        client_token = client_pin.get_pin_token(pin)
+    except Exception as e:
+        if "PIN_NOT_SET" in str(e):
+            local_critical("Please set a pin in order to manage credentials")
 
     cred_manager = CredentialManagement(device.ctap2, client_pin.protocol, client_token)
 
@@ -235,16 +239,20 @@ def list_credentials(serial, pin):
 
     for reliable_party_result in reliable_party_list:
         reliable_party = reliable_party_result.get(CredentialManagement.RESULT.RP)
-        reliable_party_hash = reliable_party_result.get(CredentialManagement.RESULT.RP_ID_HASH)
+        reliable_party_hash = reliable_party_result.get(
+            CredentialManagement.RESULT.RP_ID_HASH
+        )
         local_print("-----------------------------------")
         local_print(f"{reliable_party['name']}: ")
         for cred in cred_manager.enumerate_creds(reliable_party_hash):
-            cred_id = cred.get(CredentialManagement.RESULT.CREDENTIAL_ID)['id']
+            cred_id = cred.get(CredentialManagement.RESULT.CREDENTIAL_ID)["id"]
             cred_user = cred.get(CredentialManagement.RESULT.USER)
-            if cred_user['name'] == cred_user['displayName']:
-                local_print(f"- {cred_id.hex()}: {cred_user['name']}\n")
+            if cred_user["name"] == cred_user["displayName"]:
+                local_print(f"- id: {cred_id.hex()}")
+                local_print(f"user: {cred_user['name']}\n")
             else:
-                local_print(f"- {cred_id}: {cred_user['displayName']} ({cred_user['name']})\n")
+                local_print(f"- id: {cred_id.hex()}")
+                local_print(f"user: {cred_user['displayName']} ({cred_user['name']})\n")
 
         local_print("-----------------------------------")
     local_print(
@@ -273,7 +281,11 @@ def delete_credential(serial, pin, cred_id):
     if not pin:
         pin = AskUser.hidden("Please provide pin: ")
 
-    client_token = client_pin.get_pin_token(pin)
+    try:
+        client_token = client_pin.get_pin_token(pin)
+    except Exception as e:
+        if "PIN_NOT_SET" in str(e):
+            local_critical("Please set a pin in order to manage credentials")
 
     cred_manager = CredentialManagement(device.ctap2, client_pin.protocol, client_token)
 
@@ -285,8 +297,6 @@ def delete_credential(serial, pin, cred_id):
         local_critical("Failed to delete credential, was the right cred_id given?")
         return
     local_print("Credential was successfully deleted")
-
-
 
 
 @click.command()
