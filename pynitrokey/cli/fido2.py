@@ -24,9 +24,8 @@ from fido2.cbor import dump_dict
 from fido2.client import ClientError as Fido2ClientError
 from fido2.ctap import CtapError
 from fido2.ctap1 import ApduError
-from fido2.ctap2 import Ctap2
+from fido2.ctap2 import CredentialManagement, Ctap2
 from fido2.ctap2.pin import ClientPin, PinProtocol
-from fido2.ctap2 import CredentialManagement
 
 import pynitrokey
 import pynitrokey.fido2 as nkfido2
@@ -41,7 +40,6 @@ from pynitrokey.helpers import (
     local_print,
     require_windows_admin,
 )
-
 
 # @todo: in version 0.4 UDP & anything earlier inside fido2.__init__ is broken/removed
 #        - check if/what is needed here
@@ -220,13 +218,17 @@ def list_credentials(serial, pin):
     # Use this to get all existing creds
     cred_metadata = cred_manager.get_metadata()
     cred_count = cred_metadata.get(CredentialManagement.RESULT.EXISTING_CRED_COUNT)
-    remaining_cred_space = cred_metadata.get(CredentialManagement.RESULT.MAX_REMAINING_COUNT)
+    remaining_cred_space = cred_metadata.get(
+        CredentialManagement.RESULT.MAX_REMAINING_COUNT
+    )
 
     reliable_party_list = cred_manager.enumerate_rps()
 
     if cred_count == 0:
         local_print("There are no registered credentials")
-        local_print(f"There is an estimated amount of {remaining_cred_space} credential slots left")
+        local_print(
+            f"There is an estimated amount of {remaining_cred_space} credential slots left"
+        )
         return
 
     # Get amount of registered creds from first key in list (Same trick is used in the CredentialManager)
@@ -241,7 +243,9 @@ def list_credentials(serial, pin):
             local_print(f"ID: {cred_id['id'].hex()}, user: {cred_user}")
 
     local_print("-----------------------------------")
-    local_print(f"There is an estimated amount of {remaining_cred_space} credential slots left")
+    local_print(
+        f"There is an estimated amount of {remaining_cred_space} credential slots left"
+    )
 
 
 @click.command()
@@ -252,9 +256,7 @@ def list_credentials(serial, pin):
 )
 @click.option("--pin", help="provide PIN instead of asking the user", default=None)
 @click.option(
-    "-cid",
-    "--cred-id",
-    help="Credential id of there Credential to be deleted"
+    "-cid", "--cred-id", help="Credential id of there Credential to be deleted"
 )
 # TODO Test on device
 def delete_credential(serial, pin, cred_id):
@@ -272,7 +274,7 @@ def delete_credential(serial, pin, cred_id):
 
     cred_manager = CredentialManagement(device.ctap2, client_pin.protocol, client_token)
 
-    tmp_cred_id = {'id': bytes.fromhex(cred_id), 'type': 'public-key'}
+    tmp_cred_id = {"id": bytes.fromhex(cred_id), "type": "public-key"}
 
     try:
         cred_manager.delete_cred(tmp_cred_id)
@@ -290,13 +292,11 @@ def delete_credential(serial, pin, cred_id):
 )
 @click.option("--pin", help="provide PIN instead of asking the user", default=None)
 @click.option(
-    "-cid",
-    "--cred-id",
-    help="Credential id of there Credential to be updated"
+    "-cid", "--cred-id", help="Credential id of there Credential to be updated"
 )
 # TODO Test on device
 def update_credential(serial, pin, cred_id):
-    """Update a specific credentials user info"""
+    """WIP - Update a specific credentials user info"""
 
     # Remove this to activate the command
     local_print("This command is still work in progress")
@@ -322,7 +322,7 @@ def update_credential(serial, pin, cred_id):
         reliable_party_hash = reliable_party.get(CredentialManagement.RESULT.RP_ID_HASH)
         for cred in cred_manager.enumerate_creds(reliable_party_hash):
             tmp_cred_id = cred.get(CredentialManagement.RESULT.CREDENTIAL_ID)
-            if tmp_cred_id['id'].hex() == cred_id:
+            if tmp_cred_id["id"].hex() == cred_id:
                 user_info = cred.get(CredentialManagement.RESULT.USER)
                 # print(tmp_cred_id)
                 # print(user_info)
