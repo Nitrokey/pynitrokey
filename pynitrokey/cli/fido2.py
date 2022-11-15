@@ -272,21 +272,14 @@ def delete_credential(serial, pin, cred_id):
 
     cred_manager = CredentialManagement(device.ctap2, client_pin.protocol, client_token)
 
-    reliable_party_list = cred_manager.enumerate_rps()
+    tmp_cred_id = {'id': bytes.fromhex(cred_id), 'type': 'public-key'}
 
-    # Don't like the fact you have to loop over all keys just to delete one
-    # Maybe there is a better way
-    for reliable_party in reliable_party_list:
-        reliable_party_hash = reliable_party.get(CredentialManagement.RESULT.RP_ID_HASH)
-        for cred in cred_manager.enumerate_creds(reliable_party_hash):
-            tmp_cred_id = cred.get(CredentialManagement.RESULT.CREDENTIAL_ID)
-            if tmp_cred_id['id'].hex() == cred_id:
-                try:
-                    cred_manager.delete_cred(tmp_cred_id)
-                except Exception as e:
-                    local_critical("Failed to delete credential, was the right cred_id given?")
-                    return
-                local_print("Credential was successfully deleted")
+    try:
+        cred_manager.delete_cred(tmp_cred_id)
+    except Exception as e:
+        local_critical("Failed to delete credential, was the right cred_id given?")
+        return
+    local_print("Credential was successfully deleted")
 
 
 @click.command()
@@ -324,12 +317,15 @@ def update_credential(serial, pin, cred_id):
 
     reliable_party_list = cred_manager.enumerate_rps()
 
+    # Don't like the looping but didn't see another way to get user info
     for reliable_party in reliable_party_list:
         reliable_party_hash = reliable_party.get(CredentialManagement.RESULT.RP_ID_HASH)
         for cred in cred_manager.enumerate_creds(reliable_party_hash):
             tmp_cred_id = cred.get(CredentialManagement.RESULT.CREDENTIAL_ID)
             if tmp_cred_id['id'].hex() == cred_id:
                 user_info = cred.get(CredentialManagement.RESULT.USER)
+                # print(tmp_cred_id)
+                # print(user_info)
                 # TODO: This inexplicably fails, even when passing the user_info I just got from the key
                 # It also fails when trying to create the user myself
                 # user = {"id":  user_info['id'], "name": "name", "displayName": "name"}
