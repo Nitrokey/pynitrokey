@@ -198,7 +198,6 @@ def list():
     help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
 )
 @click.option("--pin", help="provide PIN instead of asking the user", default=None)
-# TODO Test on device
 def list_credentials(serial, pin):
     """List all credentials saved on the key as well as the amount of remaining slots."""
 
@@ -258,7 +257,6 @@ def list_credentials(serial, pin):
 @click.option(
     "-cid", "--cred-id", help="Credential id of there Credential to be deleted"
 )
-# TODO Test on device
 def delete_credential(serial, pin, cred_id):
     """Delete a specific credential from the key"""
     device = nkfido2.find(serial)
@@ -294,7 +292,6 @@ def delete_credential(serial, pin, cred_id):
 @click.option(
     "-cid", "--cred-id", help="Credential id of there Credential to be updated"
 )
-# TODO Test on device
 def update_credential(serial, pin, cred_id):
     """WIP - Update a specific credentials user info"""
 
