@@ -233,15 +233,20 @@ def list_credentials(serial, pin):
     # Get amount of registered creds from first key in list (Same trick is used in the CredentialManager)
     local_print(f"There are {cred_count} registered credentials")
 
-    for reliable_party in reliable_party_list:
-        reliable_party_hash = reliable_party.get(CredentialManagement.RESULT.RP_ID_HASH)
+    for reliable_party_result in reliable_party_list:
+        reliable_party = reliable_party_result.get(CredentialManagement.RESULT.RP)
+        reliable_party_hash = reliable_party_result.get(CredentialManagement.RESULT.RP_ID_HASH)
+        local_print("-----------------------------------")
+        local_print(f"{reliable_party['name']}: ")
         for cred in cred_manager.enumerate_creds(reliable_party_hash):
-            local_print("-----------------------------------")
-            cred_id = cred.get(CredentialManagement.RESULT.CREDENTIAL_ID)
+            cred_id = cred.get(CredentialManagement.RESULT.CREDENTIAL_ID)['id']
             cred_user = cred.get(CredentialManagement.RESULT.USER)
-            local_print(f"ID: {cred_id['id'].hex()}, user: {cred_user}")
+            if cred_user['name'] == cred_user['displayName']:
+                local_print(f"- {cred_id.hex()}: {cred_user['name']}\n")
+            else:
+                local_print(f"- {cred_id}: {cred_user['displayName']} ({cred_user['name']})\n")
 
-    local_print("-----------------------------------")
+        local_print("-----------------------------------")
     local_print(
         f"There is an estimated amount of {remaining_cred_space} credential slots left"
     )
@@ -282,51 +287,6 @@ def delete_credential(serial, pin, cred_id):
     local_print("Credential was successfully deleted")
 
 
-@click.command()
-@click.option(
-    "-s",
-    "--serial",
-    help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
-)
-@click.option("--pin", help="provide PIN instead of asking the user", default=None)
-@click.option(
-    "-cid", "--cred-id", help="Credential id of there Credential to be updated"
-)
-def update_credential(serial, pin, cred_id):
-    """WIP - Update a specific credentials user info"""
-
-    # Remove this to activate the command
-    local_print("This command is still work in progress")
-    return
-
-    device = nkfido2.find(serial)
-    client_pin = ClientPin(device.ctap2)
-
-    if not cred_id:
-        cred_id = AskUser.hidden("Please provide credential-id")
-
-    if not pin:
-        pin = AskUser.hidden("Please provide pin: ")
-
-    client_token = client_pin.get_pin_token(pin)
-
-    cred_manager = CredentialManagement(device.ctap2, client_pin.protocol, client_token)
-
-    reliable_party_list = cred_manager.enumerate_rps()
-
-    # Don't like the looping but didn't see another way to get user info
-    for reliable_party in reliable_party_list:
-        reliable_party_hash = reliable_party.get(CredentialManagement.RESULT.RP_ID_HASH)
-        for cred in cred_manager.enumerate_creds(reliable_party_hash):
-            tmp_cred_id = cred.get(CredentialManagement.RESULT.CREDENTIAL_ID)
-            if tmp_cred_id["id"].hex() == cred_id:
-                user_info = cred.get(CredentialManagement.RESULT.USER)
-                # print(tmp_cred_id)
-                # print(user_info)
-                # TODO: This inexplicably fails, even when passing the user_info I just got from the key
-                # It also fails when trying to create the user myself
-                # user = {"id":  user_info['id'], "name": "name", "displayName": "name"}
-                cred_manager.update_user_info(tmp_cred_id, user_info)
 
 
 @click.command()
@@ -863,7 +823,6 @@ fido2.add_command(reboot)
 fido2.add_command(list)
 
 fido2.add_command(list_credentials)
-fido2.add_command(update_credential)
 fido2.add_command(delete_credential)
 
 rng.add_command(hexbytes)
