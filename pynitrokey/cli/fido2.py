@@ -33,6 +33,8 @@ import pynitrokey.fido2.operations
 from pynitrokey.cli.monitor import monitor
 from pynitrokey.cli.program import program
 from pynitrokey.cli.update import update
+from pynitrokey.fido2 import client
+from pynitrokey.fido2.client import NKFido2Client
 from pynitrokey.fido2.commands import SoloBootloader
 from pynitrokey.helpers import (
     AskUser,
@@ -201,21 +203,12 @@ def list():
 def list_credentials(serial, pin):
     """List all credentials saved on the key as well as the amount of remaining slots."""
 
-    # Gets device and client_pin object
-    device = nkfido2.find(serial)
-    client_pin = ClientPin(device.ctap2)
-
     # Makes sure pin exists
     if not pin:
         pin = AskUser.hidden("Please provide pin: ")
 
-    try:
-        client_token = client_pin.get_pin_token(pin)
-    except Exception as e:
-        if "PIN_NOT_SET" in str(e):
-            local_critical("Please set a pin in order to manage credentials")
-
-    cred_manager = CredentialManagement(device.ctap2, client_pin.protocol, client_token)
+    nk_client = NKFido2Client()
+    cred_manager = nk_client.cred_mgmt(serial, pin)
 
     # Returns Sequence[Mapping[int, Any]]
     # Use this to get all existing creds
@@ -272,8 +265,6 @@ def list_credentials(serial, pin):
 )
 def delete_credential(serial, pin, cred_id):
     """Delete a specific credential from the key"""
-    device = nkfido2.find(serial)
-    client_pin = ClientPin(device.ctap2)
 
     if not cred_id:
         cred_id = AskUser.hidden("Please provide credential-id")
@@ -281,13 +272,8 @@ def delete_credential(serial, pin, cred_id):
     if not pin:
         pin = AskUser.hidden("Please provide pin: ")
 
-    try:
-        client_token = client_pin.get_pin_token(pin)
-    except Exception as e:
-        if "PIN_NOT_SET" in str(e):
-            local_critical("Please set a pin in order to manage credentials")
-
-    cred_manager = CredentialManagement(device.ctap2, client_pin.protocol, client_token)
+    nk_client = NKFido2Client()
+    cred_manager = nk_client.cred_mgmt(serial, pin)
 
     tmp_cred_id = {"id": bytes.fromhex(cred_id), "type": "public-key"}
 

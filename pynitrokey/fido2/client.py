@@ -22,13 +22,16 @@ import secrets
 from fido2.client import Fido2Client, UserInteraction
 from fido2.ctap import CtapError
 from fido2.ctap1 import Ctap1
-from fido2.ctap2 import Ctap2
+from fido2.ctap2 import CredentialManagement, Ctap2
+from fido2.ctap2.pin import ClientPin
 from fido2.hid import CTAPHID, CtapHidDevice, open_device
 from intelhex import IntelHex
 
 import pynitrokey.exceptions
+import pynitrokey.fido2 as nkfido2
 from pynitrokey import helpers
 from pynitrokey.fido2.commands import SoloBootloader, SoloExtension
+from pynitrokey.helpers import local_critical
 
 
 class CliOrProvidedInteraction(UserInteraction):
@@ -337,16 +340,22 @@ class NKFido2Client:
 
         return output
 
-    def cred_mgmt(self, pin):
-        # anyways unused code @todo
-        # client = self.get_current_fido_client()
-        dev = nkfido2.find(serial)
-        client = dev.client
-        client_pin = ClientPin(dev.ctap2)
-        client_pin.change_pin(old_pin, new_pin)
-        token = client_pin.get_pin_token(pin)
-        ctap2 = Ctap2(self.get_current_hid_device())
-        return CredentialManagement(ctap2, client_pin.protocol, token)
+    def cred_mgmt(self, serial, pin):
+        device = nkfido2.find(serial)
+        client_pin = ClientPin(device.ctap2)
+
+        try:
+            client_token = client_pin.get_pin_token(pin)
+        except CtapError as e:
+            if str(CtapError.ERR.PIN_NOT_SET) in str(e):
+                local_critical("Please set a pin in order to manage credentials")
+            if str(CtapError.ERR.PIN_BLOCKED) in str(e):
+                local_critical(
+                    "Pin authentication has been blocked, try reinserting the key, setting a pin or "
+                    "reseting the device"
+                )
+
+        return CredentialManagement(device.ctap2, client_pin.protocol, client_token)
 
     def enter_solo_bootloader(
         self,
