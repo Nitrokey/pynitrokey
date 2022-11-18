@@ -199,7 +199,7 @@ def test_reverse_hotp(otpApp):
         CREDID, secretb, digits=6, kind=Kind.HotpReverse, algo=Algorithm.Sha1
     )
     for i in range(10):
-        c = bytes(codes[i])
+        c = int(codes[i])
         assert otpApp.verify_code(CREDID, c)
 
 
@@ -210,28 +210,28 @@ def test_reverse_hotp_failure(otpApp):
     secret = "3132333435363738393031323334353637383930"
     secretb = binascii.a2b_hex(secret)
 
-    codes = [str(x) for x in range(10)]
+    codes = [x for x in range(10)]
 
     otpApp.reset()
     otpApp.register(
         CREDID, secretb, digits=6, kind=Kind.HotpReverse, algo=Algorithm.Sha1
     )
     for i in range(3):
-        c = codes[i].encode()
+        c = codes[i]
         with pytest.raises(fido2.ctap.CtapError):
             assert not otpApp.verify_code(CREDID, c)
 
     # Test parsing too long code
     with pytest.raises(fido2.ctap.CtapError):
-        assert not otpApp.verify_code(CREDID, "1" * 7)
+        assert not otpApp.verify_code(CREDID, 10**5)
 
     otpApp.register(CREDID, secretb, digits=7, kind=Kind.Hotp, algo=Algorithm.Sha1)
     with pytest.raises(fido2.ctap.CtapError):
-        assert not otpApp.verify_code(CREDID, "1" * 8)
+        assert not otpApp.verify_code(CREDID, 10**6)
 
     otpApp.register(CREDID, secretb, digits=8, kind=Kind.Hotp, algo=Algorithm.Sha1)
     with pytest.raises(fido2.ctap.CtapError):
-        assert not otpApp.verify_code(CREDID, "1" * 9)
+        assert not otpApp.verify_code(CREDID, 10**7)
 
 
 @pytest.mark.parametrize(
@@ -270,6 +270,7 @@ def test_reverse_hotp_window(otpApp, offset, start_value):
     )
     lib_at = lambda t: oath.hotp(secret, counter=t, format="dec6").encode()
     code_to_send = lib_at(start_value + offset)
+    code_to_send = int(code_to_send)
     if offset > HOTP_WINDOW_SIZE:
         # calls with offset bigger than HOTP_WINDOW_SIZE should fail
         with pytest.raises(fido2.ctap.CtapError):
@@ -287,6 +288,7 @@ def test_reverse_hotp_window(otpApp, offset, start_value):
                 otpApp.verify_code(CREDID, code_to_send)
             # test the very next value - should be accepted
             code_to_send = lib_at(start_value + offset + 1)
+            code_to_send = int(code_to_send)
             assert otpApp.verify_code(CREDID, code_to_send)
         else:
             # counter got saturated, same value will be accepted

@@ -230,16 +230,16 @@ class OTPApp:
         )
         return codes
 
-    def verify_code(self, cred_id: bytes, code: bytes) -> bool:
+    def verify_code(self, cred_id: bytes, code: int) -> bool:
         """
         Proceed with the incoming OTP code verification (aka reverse HOTP).
         :param cred_id: The name of the credential
-        :param code: The HOTP code to verify. String representation.
+        :param code: The HOTP code to verify. u32 representation.
         :return: fails with CTAP1 error; returns True if code matches the value calculated internally.
         """
         structure = [
             tlv8.Entry(Tag.CredentialId.value, cred_id),
-            tlv8.Entry(Tag.Response.value, code),
+            tlv8.Entry(Tag.Response.value, pack(">L", code)),
         ]
         res = self._send_receive(Instruction.VerifyCode, structure=structure)
         return res.hex() == "7700"

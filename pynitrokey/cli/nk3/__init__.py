@@ -664,8 +664,7 @@ def verify(ctx: Context, name: str, code: int) -> None:
     with ctx.connect_device() as device:
         app = OTPApp(device)
         try:
-            # TODO use int
-            app.verify_code(name.encode(), str(code).encode())
+            app.verify_code(name.encode(), code)
         except fido2.ctap.CtapError as e:
             local_print(
                 f"Device returns error: {e}. This credential id might not be registered, or the provided HOTP code has not passed verification."
