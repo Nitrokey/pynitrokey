@@ -332,3 +332,47 @@ def test_calculated_codes_totp_hash_digits(otpApp, secret, algorithm, digits):
     ).encode()
     for i in range(10):
         assert otpApp.calculate(CREDID, i) == lib_at(i)
+
+
+@pytest.mark.parametrize(
+    "kind",
+    [Kind.Totp, Kind.Hotp],
+)
+def test_load(otpApp, kind: Kind):
+    """
+    Load tests to see how much OTP credentials we can store,
+    and if using of them is not broken with the full FS.
+    """
+    secret = "3132333435363738393031323334353637383930"
+    oath = pytest.importorskip("oath")
+    secretb = binascii.a2b_hex(secret)
+    otpApp.reset()
+
+    credentials_registered = 0
+
+    for i in range(100000):
+        name = f"LOAD{i}"
+        try:
+            otpApp.register(name, secretb, digits=6, kind=kind, initial_counter_value=i)
+        except Exception as e:
+            print(f"{e}")
+            print(f"Registered {i} credentials")
+            size = len(secret) + len(name)
+            print(f"Single Credential size: {size} B")
+            print(f"Total size: {size*i} B")
+            credentials_registered = i
+            break
+
+    assert (
+        credentials_registered > 100
+    ), "Expecting being able to register at least 100 OTP credentials"
+
+    lib_at = lambda t: oath.totp(secret, format="dec6", period=30, t=t * 30).encode()
+    if kind == Kind.Hotp:
+        lib_at = lambda t: oath.hotp(secret, format="dec6", counter=t).encode()
+
+    for i in range(credentials_registered):
+        # At this point device should respond to our calls, despite being full, fail otherwise
+        # Iterate over credentials and check code at given challenge
+        name = f"LOAD{i}"
+        assert otpApp.calculate(name, i) == lib_at(i)
