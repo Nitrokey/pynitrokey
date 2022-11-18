@@ -292,7 +292,7 @@ def test_reverse_hotp_window(otpApp, offset, start_value):
             code_to_send = int(code_to_send)
             assert otpApp.verify_code(CREDID, code_to_send)
         else:
-            # counter got saturated, same value will be accepted
+            # counter got saturated, error code will be returned
             assert otpApp.verify_code(CREDID, code_to_send)
             assert otpApp.verify_code(CREDID, code_to_send)
             assert otpApp.verify_code(CREDID, code_to_send)

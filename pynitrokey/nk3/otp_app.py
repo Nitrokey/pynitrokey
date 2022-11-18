@@ -4,13 +4,13 @@ Oath Authenticator client
 Used through CTAPHID transport, via the custom vendor command.
 Can be used directly over CCID as well.
 """
-import dataclasses
 import logging
 import typing
 from enum import Enum
 from struct import pack
 from typing import List, Optional
 
+import dataclasses
 import tlv8
 
 from pynitrokey.nk3 import Nitrokey3Device
@@ -84,7 +84,7 @@ class OTPApp:
         if not structure:
             return b""
 
-        def transform(d: typing.Union[tlv8.Entry | RawBytes | None]) -> bytes:
+        def transform(d: typing.Union[tlv8.Entry, RawBytes, None]) -> bytes:
             if not d:
                 return b""
             if isinstance(d, RawBytes):
@@ -167,7 +167,7 @@ class OTPApp:
         kind: Kind = Kind.Hotp,
         algo: Algorithm = Algorithm.Sha1,
         initial_counter_value: int = 0,
-        touch_button_required=False,
+        touch_button_required: bool = False,
     ) -> None:
         """
         Register new OTP credential

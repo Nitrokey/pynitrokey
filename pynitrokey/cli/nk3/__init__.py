@@ -33,7 +33,7 @@ from pynitrokey.nk3.bootloader import (
 )
 from pynitrokey.nk3.device import BootMode, Nitrokey3Device
 from pynitrokey.nk3.exceptions import TimeoutException
-from pynitrokey.nk3.otp_app import Algorithm, Kind, OTPApp, STRING_TO_KIND
+from pynitrokey.nk3.otp_app import STRING_TO_KIND, Algorithm, OTPApp
 from pynitrokey.nk3.updates import REPOSITORY, get_firmware_update
 from pynitrokey.updates import OverwriteError
 
@@ -498,7 +498,7 @@ def otp(ctx: click.Context) -> None:
 @click.option(
     "--kind",
     "kind",
-    type=click.Choice(choices=STRING_TO_KIND.keys(), case_sensitive=False),
+    type=click.Choice(choices=STRING_TO_KIND.keys(), case_sensitive=False),  # type: ignore[arg-type]
     help="OTP mechanism to use. Case insensitive.",
     default="TOTP",
 )
