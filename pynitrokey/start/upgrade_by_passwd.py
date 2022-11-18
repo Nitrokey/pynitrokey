@@ -616,6 +616,7 @@ def start_update(
 
     update_done = False
     retries = 3
+    restart_services = False
     for attempt_counter in range(retries):
         try:
             # First 4096-byte in data_upgrade is SYS, so, skip it.
@@ -642,6 +643,7 @@ def start_update(
 
             if "No ICC present" in str(e):
                 kill_smartcard_services()
+                restart_services = True
                 local_print("retrying...")
 
             else:
@@ -707,4 +709,5 @@ def start_update(
     # @todo: always output this in certain situations... (which ones? errors? warnings?)
     local_print(f"Log saved to: {LOG_FN}")
 
-    restart_smartcard_services()
+    if restart_services:
+        restart_smartcard_services()
