@@ -343,13 +343,24 @@ def validate_regnual(ctx, param, path: str):
 def kill_smartcard_services():
     local_print("Could not connect to the device. Attempting to close scdaemon.")
 
-    # check_output(["gpg-connect-agent",
-    #               "SCD KILLSCD", "SCD BYE", "/bye"])
     commands = [
         ("gpgconf --kill all".split(), True),
         ("sudo systemctl stop pcscd pcscd.socket".split(), IS_LINUX),
     ]
 
+    try_to_run_commands(commands)
+
+
+def restart_smartcard_services():
+    local_print("*** Restarting smartcard services")
+    commands = [
+        ("gpgconf --reload all".split(), True),
+        ("sudo systemctl restart pcscd pcscd.socket".split(), IS_LINUX),
+    ]
+    try_to_run_commands(commands)
+
+
+def try_to_run_commands(commands):
     for command, flag in commands:
         if not flag:
             continue
@@ -358,7 +369,6 @@ def kill_smartcard_services():
             check_output(command)
         except Exception as e:
             local_print("Error while running command", e)
-
     time.sleep(3)
 
 
@@ -553,9 +563,16 @@ def start_update(
         passwd = password
     elif default_password:
         passwd = DEFAULT_PW3
-    if not passwd:
+    while not passwd:
         try:
-            passwd = AskUser.hidden("Admin password:")
+            passwd = AskUser.hidden("Admin PIN:")
+            if not passwd:
+                if AskUser.strict_yes_no(
+                    f"PIN cannot be empty. Use default: {DEFAULT_PW3} ?"
+                ):
+                    passwd = DEFAULT_PW3
+                else:
+                    continue
         except Exception as e:
             local_critical("aborting update", e)
 
@@ -599,6 +616,7 @@ def start_update(
 
     update_done = False
     retries = 3
+    restart_services = False
     for attempt_counter in range(retries):
         try:
             # First 4096-byte in data_upgrade is SYS, so, skip it.
@@ -625,6 +643,7 @@ def start_update(
 
             if "No ICC present" in str(e):
                 kill_smartcard_services()
+                restart_services = True
                 local_print("retrying...")
 
             else:
@@ -689,3 +708,6 @@ def start_update(
     local_print(f"finishing session {datetime.now()}")
     # @todo: always output this in certain situations... (which ones? errors? warnings?)
     local_print(f"Log saved to: {LOG_FN}")
+
+    if restart_services:
+        restart_smartcard_services()
