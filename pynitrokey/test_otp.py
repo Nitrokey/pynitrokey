@@ -8,9 +8,10 @@ import hashlib
 
 import fido2
 import pytest
+import tlv8
 
 from pynitrokey.conftest import CHALLENGE, CREDID, DIGITS, HOTP_WINDOW_SIZE, SECRET
-from pynitrokey.nk3.otp_app import Algorithm, Kind, RawBytes, Instruction
+from pynitrokey.nk3.otp_app import Algorithm, Instruction, Kind, RawBytes, Tag
 
 
 def test_list(otpApp):
@@ -386,7 +387,7 @@ def test_send_rubbish(otpApp):
     otpApp.reset()
     otpApp.register(CREDID, SECRET, DIGITS)
 
-    # just randomly selected 20 bytes of non-TLV data
+    # Just randomly selected 20 bytes of non-TLV data
     invalid_data = bytes([0x11] * 20)
     for _ in range(3):
         with pytest.raises(fido2.ctap.CtapError):
@@ -401,3 +402,32 @@ def test_send_rubbish(otpApp):
             ]
             otpApp._send_receive(ins, structure)
     otpApp.list()
+
+
+def test_too_long_message(otpApp):
+    otpApp.reset()
+    otpApp.register(CREDID, SECRET, DIGITS)
+    otpApp.list()
+
+    too_long_name = b"a" * 253
+    with pytest.raises(fido2.ctap.CtapError):
+        structure = [
+            tlv8.Entry(Tag.CredentialId.value, too_long_name),
+        ]
+        otpApp._send_receive(Instruction.Put, structure)
+    otpApp.list()
+
+
+def test_too_long_message2(otpApp):
+    otpApp.reset()
+    otpApp.register(CREDID, SECRET, DIGITS)
+    otpApp.list()
+
+    too_long_name = b"a" * 256
+    additional_space = 100
+    otpApp.register(too_long_name[: -len(SECRET) - additional_space], SECRET, DIGITS)
+    # find out the maximum secret length - 126 bytes?
+    for i in range(255):
+        print(i)
+        otpApp.reset()
+        otpApp.register(CREDID, too_long_name[:i], DIGITS)
