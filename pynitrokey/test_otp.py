@@ -236,7 +236,7 @@ def test_reverse_hotp_failure(otpApp):
 
 @pytest.mark.parametrize(
     "start_value",
-    [0, 0xFFFF, 0xFFFFFFFF - HOTP_WINDOW_SIZE],
+    [0, 0xFFFF, 0xFFFFFFFF - HOTP_WINDOW_SIZE - 2],
 )
 @pytest.mark.parametrize(
     "offset",
@@ -251,7 +251,8 @@ def test_reverse_hotp_window(otpApp, offset, start_value):
 
      - no code would match - the on-device counter will not be changed;
      - code would match, but with some counter's offset (up to 9) - the on-device counter will be set to matched code-generated HOTP counter and incremented by 1;
-     - code would match, and the code matches counter without offset - the counter will be incremented by 1.
+     - code would match, and the code matches counter without offset - the counter will be incremented by 1;
+     - counter overflows while calculating the code within the specified window - error is returned, and in that case a new credential with reset counter should be registered
 
     Device will stop verifying the HOTP codes in case, when the difference between the host and on-device counters
     will be greater or equal to 10.
