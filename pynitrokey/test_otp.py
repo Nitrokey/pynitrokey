@@ -10,7 +10,7 @@ import fido2
 import pytest
 
 from pynitrokey.conftest import CHALLENGE, CREDID, DIGITS, HOTP_WINDOW_SIZE, SECRET
-from pynitrokey.nk3.otp_app import Algorithm, Kind
+from pynitrokey.nk3.otp_app import Algorithm, Kind, RawBytes, Instruction
 
 
 def test_list(otpApp):
@@ -376,3 +376,28 @@ def test_load(otpApp, kind: Kind):
         # Iterate over credentials and check code at given challenge
         name = f"LOAD{i}"
         assert otpApp.calculate(name, i) == lib_at(i)
+
+    l = otpApp.list()
+    assert len(l) == credentials_registered
+
+
+def test_send_rubbish(otpApp):
+    """Check if the application crashes, when sending unexpected data for the given command"""
+    otpApp.reset()
+    otpApp.register(CREDID, SECRET, DIGITS)
+
+    # just randomly selected 20 bytes of non-TLV data
+    invalid_data = bytes([0x11] * 20)
+    for _ in range(3):
+        with pytest.raises(fido2.ctap.CtapError):
+            otpApp._send_receive_inner(invalid_data)
+    otpApp.list()
+
+    # Reset and List commands do not parse
+    for ins in set(Instruction).difference({Instruction.Reset, Instruction.List}):
+        with pytest.raises(fido2.ctap.CtapError):
+            structure = [
+                RawBytes([0x02, 0x02]),
+            ]
+            otpApp._send_receive(ins, structure)
+    otpApp.list()
