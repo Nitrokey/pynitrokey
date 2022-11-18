@@ -523,6 +523,12 @@ def otp(ctx: click.Context) -> None:
     help="This credential requires button press before use",
     is_flag=True,
 )
+@click.option(
+    "--experimental",
+    default=False,
+    is_flag=True,
+    help="Allow to execute experimental features",
+)
 def register(
     ctx: Context,
     name: str,
@@ -532,12 +538,16 @@ def register(
     hash: str,
     counter_start: int,
     touch_button: bool,
+    experimental: bool,
 ) -> None:
     """Register OTP credential.
 
     Write SECRET under the NAME.
     SECRET should be encoded in base32 format.
+    Experimental.
     """
+    check_experimental_flag(experimental)
+
     digits = int(digits_str)
     secret_bytes = b32decode(secret)
     otp_kind = STRING_TO_KIND[kind.upper()]
@@ -553,6 +563,19 @@ def register(
             initial_counter_value=counter_start,
             touch_button_required=touch_button,
         )
+
+
+def check_experimental_flag(experimental: bool) -> None:
+    """Helper function to show common warning for the experimental features"""
+    if not experimental:
+        local_print(" ")
+        local_print(
+            "This feature is experimental, which means it was not tested thoroughly.\n"
+            "Note: data stored with it can be lost in the next firmware update.\n"
+            "Please pass --experimental switch to force running it anyway."
+        )
+        local_print(" ")
+        raise click.Abort()
 
 
 @otp.command()
@@ -625,9 +648,20 @@ def reset(ctx: Context, force: bool) -> None:
     help="The period to use in seconds (TOTP only)",
     default=30,
 )
-def get(ctx: Context, name: str, timestamp: int, period: int) -> None:
-    """Generate OTP code from registered credential."""
+@click.option(
+    "--experimental",
+    default=False,
+    is_flag=True,
+    help="Allow to execute experimental features",
+)
+def get(
+    ctx: Context, name: str, timestamp: int, period: int, experimental: bool
+) -> None:
+    """Generate OTP code from registered credential.
+    Experimental."""
     # TODO: for TOTP get the time from a timeserver via NTP, instead of the local clock
+    check_experimental_flag(experimental)
+
     from datetime import datetime
 
     now = datetime.now()
@@ -659,8 +693,17 @@ def get(ctx: Context, name: str, timestamp: int, period: int) -> None:
     help="The code to verify",
     default=0,
 )
-def verify(ctx: Context, name: str, code: int) -> None:
-    """Proceed with the incoming OTP code verification (aka reverse HOTP)."""
+@click.option(
+    "--experimental",
+    default=False,
+    is_flag=True,
+    help="Allow to execute experimental features",
+)
+def verify(ctx: Context, name: str, code: int, experimental: bool) -> None:
+    """Proceed with the incoming OTP code verification (aka reverse HOTP).
+    Experimental."""
+    check_experimental_flag(experimental)
+
     with ctx.connect_device() as device:
         app = OTPApp(device)
         try:
