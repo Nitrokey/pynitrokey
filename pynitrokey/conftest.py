@@ -1,4 +1,5 @@
 import logging
+import os
 
 import pytest
 
@@ -13,7 +14,11 @@ logging.basicConfig(
 @pytest.fixture(scope="session")
 def otpApp():
     ctx = Context(None)
-    return OTPApp(ctx.connect_device(), logfn=print)
+    app = OTPApp(ctx.connect_device(), logfn=print)
+    # app.write_corpus = os.environ.get("NK_FUZZ") is not None
+    # TODO inject functor to run on the data send
+    app.write_corpus = False
+    return app
 
 
 CREDID = "CRED ID"
