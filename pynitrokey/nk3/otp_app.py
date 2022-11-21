@@ -22,9 +22,18 @@ class RawBytes:
     data: List
 
 
+@dataclasses.dataclass
+class SelectResponse:
+    version: bytes
+    name: bytes
+    challenge: Optional[bytes]
+    algorithm: Optional[bytes]
+
+
 class Instruction(Enum):
     Put = 0x1
     Delete = 0x2
+    SetCode = 0x3
     Reset = 0x4
     List = 0xA1
     Calculate = 0xA2
@@ -32,6 +41,7 @@ class Instruction(Enum):
     CalculateAll = 0xA4
     SendRemaining = 0xA5
     VerifyCode = 0xB1
+    Select = 0xA4
 
 
 class Tag(Enum):
@@ -42,6 +52,8 @@ class Tag(Enum):
     Response = 0x75
     Properties = 0x78
     InitialCounter = 0x7A
+    Version = 0x79
+    Algorithm = 0x7B
 
 
 class Kind(Enum):
@@ -124,6 +136,9 @@ class OTPApp:
         if command == Instruction.Reset:
             p1 = 0xDE
             p2 = 0xAD
+        elif command == Instruction.Select:
+            p1 = 0x04
+            p2 = 0x00
         elif command == Instruction.Calculate or command == Instruction.CalculateAll:
             p1 = 0x00
             p2 = 0x01
@@ -243,3 +258,53 @@ class OTPApp:
         ]
         res = self._send_receive(Instruction.VerifyCode, structure=structure)
         return res.hex() == "7700"
+
+    def set_code(self, key: bytes, challenge: bytes, response: bytes) -> None:
+        """
+        Set code
+        :param key:
+        :param challenge:
+        :param response:
+        :return:
+        """
+        algo = Algorithm.Sha1.value
+        kind = Kind.Totp.value
+        structure = [
+            tlv8.Entry(Tag.Key.value, bytes([kind | algo]) + key),
+            tlv8.Entry(Tag.Challenge.value, challenge),
+            tlv8.Entry(Tag.Response.value, response),
+        ]
+        self._send_receive(Instruction.SetCode, structure=structure)
+
+    def validate(self, challenge: bytes, response: bytes) -> bytes:
+        """
+        Validate
+        :param challenge:
+        :param response:
+        :return:
+        """
+        structure = [
+            tlv8.Entry(Tag.Response.value, response),
+            tlv8.Entry(Tag.Challenge.value, challenge),
+        ]
+        raw_res = self._send_receive(Instruction.Validate, structure=structure)
+        resd: tlv8.EntryList = tlv8.decode(raw_res)
+        return resd.data
+
+    def select(self) -> SelectResponse:
+        AID = [0xA0, 0x00, 0x00, 0x05, 0x27, 0x21, 0x01]
+        structure = [RawBytes(AID)]
+        raw_res = self._send_receive(Instruction.Select, structure=structure)
+        resd: tlv8.EntryList = tlv8.decode(raw_res)
+        rd = {}
+        for e in resd:
+            e: tlv8.Entry
+            rd[e.type_id] = e.data
+
+        r = SelectResponse(
+            version=rd[Tag.Version.value],
+            name=rd[Tag.CredentialId.value],
+            challenge=rd.get(Tag.Challenge.value),
+            algorithm=rd.get(Tag.Algorithm.value),
+        )
+        return r

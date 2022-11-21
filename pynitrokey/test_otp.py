@@ -5,6 +5,7 @@ Requires a live device, or a USB-IP simulation.
 
 import binascii
 import hashlib
+import hmac
 
 import fido2
 import pytest
@@ -418,6 +419,7 @@ def test_too_long_message(otpApp):
     otpApp.list()
 
 
+@pytest.mark.xfail
 def test_too_long_message2(otpApp):
     otpApp.reset()
     otpApp.register(CREDID, SECRET, DIGITS)
@@ -431,3 +433,24 @@ def test_too_long_message2(otpApp):
         print(i)
         otpApp.reset()
         otpApp.register(CREDID, too_long_name[:i], DIGITS)
+
+
+def test_status(otpApp):
+    # TODO test whether the challenge is set or not
+    print(otpApp.select())
+
+
+def test_set_code(otpApp):
+    SECRET = b"1" * 20
+    CHALLENGE = b"1234"
+    response = hmac.HMAC(key=SECRET, msg=CHALLENGE, digestmod="sha1").digest()
+    otpApp.reset()
+    state = otpApp.select()
+    print(state)
+    assert state.algorithm is None
+    assert state.challenge is None
+    otpApp.set_code(SECRET, CHALLENGE, response)
+    state = otpApp.select()
+    print(state)
+    assert state.challenge is not None
+    assert state.algorithm is not None
