@@ -10,10 +10,16 @@ from enum import Enum
 from struct import pack
 from typing import List, Optional
 
+import dataclasses
 import tlv8
 
 from pynitrokey.nk3 import Nitrokey3Device
 from pynitrokey.start.gnuk_token import iso7816_compose
+
+
+@dataclasses.dataclass
+class RawBytes:
+    data: List
 
 
 class Instruction(Enum):
@@ -25,6 +31,7 @@ class Instruction(Enum):
     Validate = 0xA3
     CalculateAll = 0xA4
     SendRemaining = 0xA5
+    VerifyCode = 0xB1
 
 
 class Tag(Enum):
@@ -32,12 +39,22 @@ class Tag(Enum):
     NameList = 0x72
     Key = 0x73
     Challenge = 0x74
+    Response = 0x75
+    Properties = 0x78
     InitialCounter = 0x7A
 
 
 class Kind(Enum):
     Hotp = 0x10
     Totp = 0x20
+    HotpReverse = 0x30
+
+
+STRING_TO_KIND = {
+    "HOTP": Kind.Hotp,
+    "TOTP": Kind.Totp,
+    "HOTP_REVERSE": Kind.HotpReverse,
+}
 
 
 class Algorithm(Enum):
@@ -63,17 +80,40 @@ class OTPApp:
             self.logfn = self.log.info  # type: ignore [assignment]
         self.dev = dev
 
+    def _custom_encode(self, structure: Optional[List] = None) -> bytes:
+        if not structure:
+            return b""
+
+        def transform(d: typing.Union[tlv8.Entry, RawBytes, None]) -> bytes:
+            if not d:
+                return b""
+            if isinstance(d, RawBytes):
+                # return b"".join(d.data)
+                return bytes(d.data)
+            if isinstance(d, tlv8.Entry):
+                return tlv8.encode([d])
+            return b""
+
+        encoded_structure = b"".join(map(transform, structure))
+        return encoded_structure
+
     def _send_receive(
         self, ins: Instruction, structure: Optional[List] = None
     ) -> bytes:
-        encoded_structure = tlv8.encode(structure) if structure else b""
+        encoded_structure = self._custom_encode(structure)
         ins_b, p1, p2 = self._encode_command(ins)
         bytes_data = iso7816_compose(ins_b, p1, p2, data=encoded_structure)
         return self._send_receive_inner(bytes_data)
 
     def _send_receive_inner(self, data: bytes) -> bytes:
         self.logfn(f"Sending {data.hex() if data else data!r}")
-        result = self.dev.otp(data=data)
+
+        try:
+            result = self.dev.otp(data=data)
+        except Exception as e:
+            self.logfn(f"Got exception: {e}")
+            raise
+
         self.logfn(f"Received {result.hex() if data else data!r}")
         return result
 
@@ -127,6 +167,7 @@ class OTPApp:
         kind: Kind = Kind.Hotp,
         algo: Algorithm = Algorithm.Sha1,
         initial_counter_value: int = 0,
+        touch_button_required: bool = False,
     ) -> None:
         """
         Register new OTP credential
@@ -136,6 +177,7 @@ class OTPApp:
         :param kind: OTP variant - HOTP or TOTP
         :param algo: The hash algorithm to use - SHA1, SHA256 or SHA512
         :param initial_counter_value: The counter's initial value for the HOTP credential (HOTP only)
+        :param touch_button_required: User Presence confirmation is required to use this Credential
         :return: None
         """
         if initial_counter_value > 0xFFFFFFFF:
@@ -146,7 +188,7 @@ class OTPApp:
             )
 
         self.logfn(
-            f"Setting new credential: {credid!r}, {secret.hex()}, {kind}, {algo}, {initial_counter_value}"
+            f"Setting new credential: {credid!r}, {secret.hex()}, {kind}, {algo}, counter: {initial_counter_value}"
         )
 
         structure = [
@@ -155,6 +197,7 @@ class OTPApp:
             tlv8.Entry(
                 Tag.Key.value, bytes([kind.value | algo.value, digits]) + secret
             ),
+            RawBytes([Tag.Properties.value, 0x02 if touch_button_required else 0x00]),
             tlv8.Entry(
                 Tag.InitialCounter.value, initial_counter_value.to_bytes(4, "big")
             ),
@@ -186,3 +229,17 @@ class OTPApp:
             f" final code: {codes!r}"
         )
         return codes
+
+    def verify_code(self, cred_id: bytes, code: int) -> bool:
+        """
+        Proceed with the incoming OTP code verification (aka reverse HOTP).
+        :param cred_id: The name of the credential
+        :param code: The HOTP code to verify. u32 representation.
+        :return: fails with CTAP1 error; returns True if code matches the value calculated internally.
+        """
+        structure = [
+            tlv8.Entry(Tag.CredentialId.value, cred_id),
+            tlv8.Entry(Tag.Response.value, pack(">L", code)),
+        ]
+        res = self._send_receive(Instruction.VerifyCode, structure=structure)
+        return res.hex() == "7700"

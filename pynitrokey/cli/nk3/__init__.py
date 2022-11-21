@@ -33,7 +33,7 @@ from pynitrokey.nk3.bootloader import (
 )
 from pynitrokey.nk3.device import BootMode, Nitrokey3Device
 from pynitrokey.nk3.exceptions import TimeoutException
-from pynitrokey.nk3.otp_app import Algorithm, Kind, OTPApp
+from pynitrokey.nk3.otp_app import STRING_TO_KIND, Algorithm, OTPApp
 from pynitrokey.nk3.updates import REPOSITORY, get_firmware_update
 from pynitrokey.updates import OverwriteError
 
@@ -498,8 +498,8 @@ def otp(ctx: click.Context) -> None:
 @click.option(
     "--kind",
     "kind",
-    type=click.Choice(["TOTP", "HOTP"]),
-    help="OTP mechanism to use",
+    type=click.Choice(choices=STRING_TO_KIND.keys(), case_sensitive=False),  # type: ignore[arg-type]
+    help="OTP mechanism to use. Case insensitive.",
     default="TOTP",
 )
 @click.option(
@@ -516,6 +516,19 @@ def otp(ctx: click.Context) -> None:
     help="Starting value for the counter (HOTP only)",
     default=0,
 )
+@click.option(
+    "--touch_button",
+    "touch_button",
+    type=click.BOOL,
+    help="This credential requires button press before use",
+    is_flag=True,
+)
+@click.option(
+    "--experimental",
+    default=False,
+    is_flag=True,
+    help="Allow to execute experimental features",
+)
 def register(
     ctx: Context,
     name: str,
@@ -524,15 +537,20 @@ def register(
     kind: str,
     hash: str,
     counter_start: int,
+    touch_button: bool,
+    experimental: bool,
 ) -> None:
     """Register OTP credential.
 
     Write SECRET under the NAME.
     SECRET should be encoded in base32 format.
+    Experimental.
     """
+    check_experimental_flag(experimental)
+
     digits = int(digits_str)
     secret_bytes = b32decode(secret)
-    otp_kind = Kind.Totp if kind == "TOTP" else Kind.Hotp
+    otp_kind = STRING_TO_KIND[kind.upper()]
     hash_algorithm = Algorithm.Sha1 if hash == "SHA1" else Algorithm.Sha256
     with ctx.connect_device() as device:
         app = OTPApp(device)
@@ -543,7 +561,21 @@ def register(
             kind=otp_kind,
             algo=hash_algorithm,
             initial_counter_value=counter_start,
+            touch_button_required=touch_button,
         )
+
+
+def check_experimental_flag(experimental: bool) -> None:
+    """Helper function to show common warning for the experimental features"""
+    if not experimental:
+        local_print(" ")
+        local_print(
+            "This feature is experimental, which means it was not tested thoroughly.\n"
+            "Note: data stored with it can be lost in the next firmware update.\n"
+            "Please pass --experimental switch to force running it anyway."
+        )
+        local_print(" ")
+        raise click.Abort()
 
 
 @otp.command()
@@ -616,9 +648,20 @@ def reset(ctx: Context, force: bool) -> None:
     help="The period to use in seconds (TOTP only)",
     default=30,
 )
-def get(ctx: Context, name: str, timestamp: int, period: int) -> None:
-    """Generate OTP code from registered credential."""
+@click.option(
+    "--experimental",
+    default=False,
+    is_flag=True,
+    help="Allow to execute experimental features",
+)
+def get(
+    ctx: Context, name: str, timestamp: int, period: int, experimental: bool
+) -> None:
+    """Generate OTP code from registered credential.
+    Experimental."""
     # TODO: for TOTP get the time from a timeserver via NTP, instead of the local clock
+    check_experimental_flag(experimental)
+
     from datetime import datetime
 
     now = datetime.now()
@@ -634,4 +677,38 @@ def get(ctx: Context, name: str, timestamp: int, period: int) -> None:
         except fido2.ctap.CtapError as e:
             local_print(
                 f"Device returns error: {e}. This credential id might not be registered."
+            )
+
+
+@otp.command()
+@click.pass_obj
+@click.argument(
+    "name",
+    type=click.STRING,
+)
+@click.option(
+    "--code",
+    "code",
+    type=click.INT,
+    help="The code to verify",
+    default=0,
+)
+@click.option(
+    "--experimental",
+    default=False,
+    is_flag=True,
+    help="Allow to execute experimental features",
+)
+def verify(ctx: Context, name: str, code: int, experimental: bool) -> None:
+    """Proceed with the incoming OTP code verification (aka reverse HOTP).
+    Experimental."""
+    check_experimental_flag(experimental)
+
+    with ctx.connect_device() as device:
+        app = OTPApp(device)
+        try:
+            app.verify_code(name.encode(), code)
+        except fido2.ctap.CtapError as e:
+            local_print(
+                f"Device returns error: {e}. This credential id might not be registered, or the provided HOTP code has not passed verification."
             )
