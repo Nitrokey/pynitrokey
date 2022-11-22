@@ -436,7 +436,6 @@ def test_too_long_message2(otpApp):
 
 
 def test_status(otpApp):
-    # TODO test whether the challenge is set or not
     print(otpApp.select())
 
 
@@ -454,3 +453,73 @@ def test_set_code(otpApp):
     print(state)
     assert state.challenge is not None
     assert state.algorithm is not None
+
+
+def test_set_code_and_validate(otpApp):
+    """
+    Test device's behavior when the validation code is set.
+    Non-authorized calls should be rejected, except for the selected.
+    Authorization should be valid only until the next call.
+
+    Authorization is needed for all the listed commands except for RESET and VALIDATE:
+         Required               Not required
+         PUT 0x01               RESET 0x04 N
+         DELETE 0x02            VALIDATE 0xa3 N
+         SET CODE 0x03
+         LIST 0xa1
+         CALCULATE 0xa2
+         CALCULATE ALL 0xa4
+         SEND REMAINING 0xa5
+    Details:
+    - https://developers.yubico.com/OATH/YKOATH_Protocol.html
+    """
+
+    # The secret in production should be:
+    #   SECRET = PBKDF2(USER_PASSPHRASE || DEVICEID, 1000)[:16]
+    SECRET = b"1" * 20
+    CHALLENGE = b"12345678"  # in production should be random 8 bytes
+
+    # Device should be in the non-protected mode, and list command is allowed
+    otpApp.reset()
+    otpApp.list()
+
+    # Set the code, and require validation before regular calls from now on
+    response = hmac.HMAC(key=SECRET, msg=CHALLENGE, digestmod="sha1").digest()
+    otpApp.set_code(SECRET, CHALLENGE, response)
+
+    # Make sure all the expected commands are failing, as in specification
+    with pytest.raises(fido2.ctap.CtapError):
+        # TODO check for the exact error code
+        otpApp.list()
+
+    for ins in set(Instruction) - {Instruction.Reset, Instruction.Validate}:
+        # TODO check for the exact error code
+        with pytest.raises(fido2.ctap.CtapError):
+            structure = [RawBytes([0x02] * 10)]
+            otpApp._send_receive(ins, structure)
+
+    # Each guarded command has to prepended by the validation call
+    # Run "list" command, with validation first
+    state = otpApp.select()
+    response_validate = hmac.HMAC(
+        key=SECRET, msg=state.challenge, digestmod="sha1"
+    ).digest()
+    otpApp.validate(challenge=state.challenge, response=response_validate)
+    otpApp.list()
+
+    # Make sure another command call is not allowed
+    with pytest.raises(fido2.ctap.CtapError):
+        otpApp.list()
+
+    # Test running "list" command again
+    state = otpApp.select()
+    response_validate = hmac.HMAC(
+        key=SECRET, msg=state.challenge, digestmod="sha1"
+    ).digest()
+    otpApp.validate(challenge=state.challenge, response=response_validate)
+    otpApp.list()
+
+    # Reset should be allowed
+    otpApp.reset()
+    state = otpApp.select()
+    assert state.challenge is None
