@@ -406,6 +406,9 @@ def test_send_rubbish(otpApp):
 
 
 def test_too_long_message(otpApp):
+    """
+    Check device's response for the too long message
+    """
     otpApp.reset()
     otpApp.register(CREDID, SECRET, DIGITS)
     otpApp.list()
@@ -421,6 +424,9 @@ def test_too_long_message(otpApp):
 
 @pytest.mark.xfail
 def test_too_long_message2(otpApp):
+    """
+    Test how long the secret could be (WIP)
+    """
     otpApp.reset()
     otpApp.register(CREDID, SECRET, DIGITS)
     otpApp.list()
@@ -436,19 +442,28 @@ def test_too_long_message2(otpApp):
 
 
 def test_status(otpApp):
+    """
+    Simple test for getting device's status
+    """
     print(otpApp.select())
 
 
 def test_set_code(otpApp):
+    """
+    Simple test for setting the proper code on the device.
+    """
     SECRET = b"1" * 20
     CHALLENGE = b"1234"
-    response = hmac.HMAC(key=SECRET, msg=CHALLENGE, digestmod="sha1").digest()
+
     otpApp.reset()
     state = otpApp.select()
     print(state)
     assert state.algorithm is None
     assert state.challenge is None
+
+    response = hmac.HMAC(key=SECRET, msg=CHALLENGE, digestmod="sha1").digest()
     otpApp.set_code(SECRET, CHALLENGE, response)
+
     state = otpApp.select()
     print(state)
     assert state.challenge is not None
