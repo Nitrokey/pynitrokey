@@ -4,8 +4,12 @@ Requires a live device, or a USB-IP simulation.
 """
 
 import binascii
+import datetime
 import hashlib
 import hmac
+import time
+from datetime import timedelta
+from sys import stderr
 
 import fido2
 import pytest
@@ -538,3 +542,56 @@ def test_set_code_and_validate(otpApp):
     otpApp.reset()
     state = otpApp.select()
     assert state.challenge is None
+
+
+@pytest.mark.skip(reason="This test takes long time")
+def test_revhotp_bruteforce(otpAppNoLog):
+    """
+    This test implements practical brute-forcing of the codes values.
+    In case multiple devices use the same secret, stealing and brute-forcing answers on one
+    could help with the other.
+    """
+    otpApp = otpAppNoLog
+    otpApp.reset()
+    otpApp.register(
+        CREDID, SECRET, digits=6, kind=Kind.HotpReverse, algo=Algorithm.Sha1
+    )
+    start_time = time.time()
+    code_start = 1_000_000
+
+    from tqdm import trange, tqdm
+
+    for current_code in trange(code_start, 0, -1):
+        tqdm.write(f"Trying code {current_code}")
+        try:
+            otpApp.verify_code(CREDID, current_code)
+            stop_time = time.time()
+            tqdm.write(
+                f"Found code {current_code} after {stop_time-start_time} seconds"
+            )
+            break
+        except KeyboardInterrupt:
+            break
+        except fido2.ctap.CtapError:
+            pass
+        except Exception:
+            break
+
+
+def test_revhotp_delay_on_failure(otpApp):
+    """
+    Check if the right delay is set, when the invalid code is given for the reverse HOTP operation.
+    On failure the response time should take at least 1 second to prevent easy brute force.
+    """
+    start_time = time.time()
+    otpApp.reset()
+    otpApp.register(
+        CREDID, SECRET, digits=6, kind=Kind.HotpReverse, algo=Algorithm.Sha1
+    )
+    current_code = 123123
+    otpApp.verify_code(CREDID, current_code)
+    stop_time = time.time()
+
+    assert (
+        stop_time - start_time
+    ) > 1, "Replies' delay after the failed execution takes less than 1 second"

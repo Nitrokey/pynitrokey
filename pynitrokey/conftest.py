@@ -21,6 +21,13 @@ def otpApp():
     return app
 
 
+@pytest.fixture(scope="session")
+def otpAppNoLog():
+    ctx = Context(None)
+    app = OTPApp(ctx.connect_device())
+    return app
+
+
 CREDID = "CRED ID"
 SECRET = b"00" * 20
 DIGITS = 6
