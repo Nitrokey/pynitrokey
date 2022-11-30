@@ -5,11 +5,14 @@ Used through CTAPHID transport, via the custom vendor command.
 Can be used directly over CCID as well.
 """
 import hashlib
+import hmac
 import logging
 import typing
 from enum import Enum
 from struct import pack
 from typing import List, Optional
+from hashlib import pbkdf2_hmac
+from secrets import token_bytes
 
 import dataclasses
 import tlv8
@@ -271,13 +274,35 @@ class OTPApp:
         res = self._send_receive(Instruction.VerifyCode, structure=structure)
         return res.hex() == "7700"
 
+    def set_code_cli(self, passphrase: str) -> None:
+        """
+        Set the code with the defaults as suggested in the protocol specification:
+        - https://developers.yubico.com/OATH/YKOATH_Protocol.html
+        """
+        secret = self.get_secret_for_passphrase(passphrase)
+        challenge = token_bytes(8)
+        response = self.get_response_for_secret(challenge, secret)
+        self.set_code(secret, challenge, response)
+
+    def get_secret_for_passphrase(self, passphrase):
+        #   secret = PBKDF2(USER_PASSPHRASE, DEVICEID, 1000)[:16]
+        # salt = self.select().name
+        # FIXME use the proper SALT
+        # FIXME USB/IP Sim changes its ID after each reset and after setting the code (??)
+        salt = b"a" * 8
+        secret = pbkdf2_hmac("sha256", passphrase.encode(), salt, 1000)
+        return secret[:16]
+
+    def get_response_for_secret(self, challenge, secret):
+        response = hmac.HMAC(key=secret, msg=challenge, digestmod="sha1").digest()
+        return response
+
     def set_code(self, key: bytes, challenge: bytes, response: bytes) -> None:
         """
-        Set code
-        :param key:
-        :param challenge:
-        :param response:
-        :return:
+        Set or clear the passphrase used to authenticate to other commands. Raw interface.
+        :param key: User passphrase processed through PBKDF2(ID,1000), and limited to the first 16 bytes.
+        :param challenge: The current challenge taken from the SELECT command.
+        :param response: The data calculated on the client, as a proof of a correct setup.
         """
         algo = Algorithm.Sha1.value
         kind = Kind.Totp.value
@@ -288,12 +313,31 @@ class OTPApp:
         ]
         self._send_receive(Instruction.SetCode, structure=structure)
 
+    def clear_code(self) -> None:
+        """
+        Clear the passphrase used to authenticate to other commands.
+        """
+        structure = [
+            tlv8.Entry(Tag.Key.value, bytes()),
+        ]
+        self._send_receive(Instruction.SetCode, structure=structure)
+
+    def validate_cli(self, passphrase):
+        """
+        Authenticate using a passphrase
+        """
+        stat = self.select()
+        assert stat.algorithm == bytes([Algorithm.Sha1.value])
+        challenge = stat.challenge
+        secret = self.get_secret_for_passphrase(passphrase)
+        response = self.get_response_for_secret(challenge, secret)
+        self.validate(challenge, response)
+
     def validate(self, challenge: bytes, response: bytes) -> bytes:
         """
-        Validate
-        :param challenge:
-        :param response:
-        :return:
+        Authenticate using a passphrase. Raw interface.
+        :param challenge: The current challenge taken from the SELECT command.
+        :param response: The response calculated against the challenge and the secret
         """
         structure = [
             tlv8.Entry(Tag.Response.value, response),
@@ -304,6 +348,11 @@ class OTPApp:
         return resd.data
 
     def select(self) -> SelectResponse:
+        """
+        Execute SELECT command, which returns details about the device,
+        including the challenge needed for the authentication.
+        :return SelectResponse Status structure. Challenge and Algorithm fields are None, if the passphrase is not set.
+        """
         AID = [0xA0, 0x00, 0x00, 0x05, 0x27, 0x21, 0x01]
         structure = [RawBytes(AID)]
         raw_res = self._send_receive(Instruction.Select, structure=structure)

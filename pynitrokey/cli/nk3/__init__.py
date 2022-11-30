@@ -554,6 +554,7 @@ def register(
     hash_algorithm = Algorithm.Sha1 if hash == "SHA1" else Algorithm.Sha256
     with ctx.connect_device() as device:
         app = OTPApp(device)
+        authenticate_if_needed(app)
         app.register(
             name.encode(),
             secret_bytes,
@@ -592,6 +593,7 @@ def show(ctx: Context, hex: bool) -> None:
     """List registered OTP credentials."""
     with ctx.connect_device() as device:
         app = OTPApp(device)
+        authenticate_if_needed(app)
         for e in app.list():
             local_print(e.hex() if hex else e)
 
@@ -606,6 +608,7 @@ def remove(ctx: Context, name: str) -> None:
     """Remove OTP credential."""
     with ctx.connect_device() as device:
         app = OTPApp(device)
+        authenticate_if_needed(app)
         app.delete(name.encode())
 
 
@@ -667,8 +670,9 @@ def get(
     now = datetime.now()
     timestamp = timestamp if timestamp else int(datetime.timestamp(now))
     with ctx.connect_device() as device:
-        app = OTPApp(device)
         try:
+            app = OTPApp(device)
+            authenticate_if_needed(app)
             code = app.calculate(name.encode(), timestamp // period)
             local_print(
                 f"Timestamp: {datetime.isoformat(now, timespec='seconds')} ({timestamp}), period: {period}"
@@ -701,6 +705,7 @@ def get(
 )
 def verify(ctx: Context, name: str, code: int, experimental: bool) -> None:
     """Proceed with the incoming OTP code verification (aka reverse HOTP).
+    Does not need authentication by design.
     Experimental."""
     check_experimental_flag(experimental)
 
@@ -711,4 +716,73 @@ def verify(ctx: Context, name: str, code: int, experimental: bool) -> None:
         except fido2.ctap.CtapError as e:
             local_print(
                 f"Device returns error: {e}. This credential id might not be registered, or the provided HOTP code has not passed verification."
+            )
+
+
+def ask_for_passphrase_if_needed(app: OTPApp) -> Optional[str]:
+    passphrase = None
+    is_passphrase_set = app.select().challenge is not None
+    if is_passphrase_set:
+        passphrase = prompt("Current Password", hide_input=True)
+    return passphrase
+
+
+def authenticate_if_needed(app: OTPApp):
+    try:
+        passphrase = ask_for_passphrase_if_needed(app)
+        if passphrase is not None:
+            app.validate_cli(passphrase)
+    except Exception as e:
+        local_print(f"Authentication failed with error {e}")
+        raise click.Abort()
+
+
+@otp.command()
+@click.pass_obj
+@click.option(
+    "--experimental",
+    default=False,
+    is_flag=True,
+    help="Allow to execute experimental features",
+)
+@click.password_option()
+def set_password(ctx: Context, password, experimental: bool) -> None:
+    """Set the passphrase used to authenticate to other commands.
+    Experimental."""
+    check_experimental_flag(experimental)
+
+    with ctx.connect_device() as device:
+        try:
+            app = OTPApp(device)
+            authenticate_if_needed(app)
+            app.set_code_cli(password)
+            local_print("Password set")
+        except fido2.ctap.CtapError as e:
+            local_print(
+                f"Device returns error: {e}. This passphrase might be invalid or is set already."
+            )
+
+
+@otp.command()
+@click.pass_obj
+@click.option(
+    "--experimental",
+    default=False,
+    is_flag=True,
+    help="Allow to execute experimental features",
+)
+def clear_password(ctx: Context, experimental: bool) -> None:
+    """Clear the passphrase used to authenticate to other commands.
+    Experimental."""
+    check_experimental_flag(experimental)
+
+    with ctx.connect_device() as device:
+        try:
+            app = OTPApp(device)
+            authenticate_if_needed(app)
+            app.clear_code()
+            local_print("Password cleared")
+        except fido2.ctap.CtapError as e:
+            local_print(
+                f"Device returns error: {e}. This passphrase might be invalid or is set already."
             )
