@@ -4,14 +4,17 @@ Oath Authenticator client
 Used through CTAPHID transport, via the custom vendor command.
 Can be used directly over CCID as well.
 """
+import hmac
 import logging
 import typing
 from enum import Enum
+from hashlib import pbkdf2_hmac
 from struct import pack
 from typing import List, Optional
 
 import dataclasses
 import tlv8
+from secrets import token_bytes
 
 from pynitrokey.nk3 import Nitrokey3Device
 from pynitrokey.start.gnuk_token import iso7816_compose
@@ -22,9 +25,18 @@ class RawBytes:
     data: List
 
 
+@dataclasses.dataclass
+class SelectResponse:
+    version: bytes
+    name: bytes
+    challenge: Optional[bytes]
+    algorithm: Optional[bytes]
+
+
 class Instruction(Enum):
     Put = 0x1
     Delete = 0x2
+    SetCode = 0x3
     Reset = 0x4
     List = 0xA1
     Calculate = 0xA2
@@ -32,6 +44,7 @@ class Instruction(Enum):
     CalculateAll = 0xA4
     SendRemaining = 0xA5
     VerifyCode = 0xB1
+    Select = 0xA4
 
 
 class Tag(Enum):
@@ -42,6 +55,8 @@ class Tag(Enum):
     Response = 0x75
     Properties = 0x78
     InitialCounter = 0x7A
+    Version = 0x79
+    Algorithm = 0x7B
 
 
 class Kind(Enum):
@@ -71,8 +86,10 @@ class OTPApp:
     log: logging.Logger
     logfn: typing.Callable
     dev: Nitrokey3Device
+    write_corpus_fn: Optional[typing.Callable]
 
     def __init__(self, dev: Nitrokey3Device, logfn: Optional[typing.Callable] = None):
+        self.write_corpus_fn = None
         self.log = logging.getLogger("otpapp")
         if logfn is not None:
             self.logfn = logfn  # type: ignore [assignment]
@@ -103,6 +120,8 @@ class OTPApp:
         encoded_structure = self._custom_encode(structure)
         ins_b, p1, p2 = self._encode_command(ins)
         bytes_data = iso7816_compose(ins_b, p1, p2, data=encoded_structure)
+        if self.write_corpus_fn:
+            self.write_corpus_fn(ins, bytes_data)
         return self._send_receive_inner(bytes_data)
 
     def _send_receive_inner(self, data: bytes) -> bytes:
@@ -124,6 +143,9 @@ class OTPApp:
         if command == Instruction.Reset:
             p1 = 0xDE
             p2 = 0xAD
+        elif command == Instruction.Select:
+            p1 = 0x04
+            p2 = 0x00
         elif command == Instruction.Calculate or command == Instruction.CalculateAll:
             p1 = 0x00
             p2 = 0x01
@@ -243,3 +265,115 @@ class OTPApp:
         ]
         res = self._send_receive(Instruction.VerifyCode, structure=structure)
         return res.hex() == "7700"
+
+    def set_code(self, passphrase: str) -> None:
+        """
+        Set the code with the defaults as suggested in the protocol specification:
+        - https://developers.yubico.com/OATH/YKOATH_Protocol.html
+        """
+        secret = self.get_secret_for_passphrase(passphrase)
+        challenge = token_bytes(8)
+        response = self.get_response_for_secret(challenge, secret)
+        self.set_code_raw(secret, challenge, response)
+
+    def get_secret_for_passphrase(self, passphrase: str) -> bytes:
+        #   secret = PBKDF2(USER_PASSPHRASE, DEVICEID, 1000)[:16]
+        # salt = self.select().name
+        # FIXME use the proper SALT
+        # FIXME USB/IP Sim changes its ID after each reset and after setting the code (??)
+        salt = b"a" * 8
+        secret = pbkdf2_hmac("sha256", passphrase.encode(), salt, 1000)
+        return secret[:16]
+
+    def get_response_for_secret(self, challenge: bytes, secret: bytes) -> bytes:
+        response = hmac.HMAC(key=secret, msg=challenge, digestmod="sha1").digest()
+        return response
+
+    def set_code_raw(self, key: bytes, challenge: bytes, response: bytes) -> None:
+        """
+        Set or clear the passphrase used to authenticate to other commands. Raw interface.
+        :param key: User passphrase processed through PBKDF2(ID,1000), and limited to the first 16 bytes.
+        :param challenge: The current challenge taken from the SELECT command.
+        :param response: The data calculated on the client, as a proof of a correct setup.
+        """
+        algo = Algorithm.Sha1.value
+        kind = Kind.Totp.value
+        structure = [
+            tlv8.Entry(Tag.Key.value, bytes([kind | algo]) + key),
+            tlv8.Entry(Tag.Challenge.value, challenge),
+            tlv8.Entry(Tag.Response.value, response),
+        ]
+        self._send_receive(Instruction.SetCode, structure=structure)
+
+    def clear_code(self) -> None:
+        """
+        Clear the passphrase used to authenticate to other commands.
+        """
+        structure = [
+            tlv8.Entry(Tag.Key.value, bytes()),
+        ]
+        self._send_receive(Instruction.SetCode, structure=structure)
+
+    def authentication_required(self, stat: Optional[SelectResponse] = None) -> bool:
+        if stat is None:
+            stat = self.select()
+        return stat.algorithm is not None and stat.challenge is not None
+
+    def validate(self, passphrase: str) -> None:
+        """
+        Authenticate using a passphrase
+        """
+        stat = self.select()
+        if not self.authentication_required(stat):
+            # Assuming this should have been checked before calling validate()
+            raise RuntimeWarning(
+                "No passphrase is set. Authentication is not required."
+            )
+        if stat.algorithm != bytes([Algorithm.Sha1.value]):
+            raise RuntimeError("For the authentication only SHA1 is supported")
+        challenge = stat.challenge
+        if challenge is None:
+            # This should never happen
+            raise RuntimeError(
+                "There is some problem with the device's state. Challenge is not available."
+            )
+        secret = self.get_secret_for_passphrase(passphrase)
+        response = self.get_response_for_secret(challenge, secret)
+        self.validate_raw(challenge, response)
+
+    def validate_raw(self, challenge: bytes, response: bytes) -> bytes:
+        """
+        Authenticate using a passphrase. Raw interface.
+        :param challenge: The current challenge taken from the SELECT command.
+        :param response: The response calculated against the challenge and the secret
+        """
+        structure = [
+            tlv8.Entry(Tag.Response.value, response),
+            tlv8.Entry(Tag.Challenge.value, challenge),
+        ]
+        raw_res = self._send_receive(Instruction.Validate, structure=structure)
+        resd: tlv8.EntryList = tlv8.decode(raw_res)
+        return resd.data
+
+    def select(self) -> SelectResponse:
+        """
+        Execute SELECT command, which returns details about the device,
+        including the challenge needed for the authentication.
+        :return SelectResponse Status structure. Challenge and Algorithm fields are None, if the passphrase is not set.
+        """
+        AID = [0xA0, 0x00, 0x00, 0x05, 0x27, 0x21, 0x01]
+        structure = [RawBytes(AID)]
+        raw_res = self._send_receive(Instruction.Select, structure=structure)
+        resd: tlv8.EntryList = tlv8.decode(raw_res)
+        rd = {}
+        for e in resd:
+            # e: tlv8.Entry
+            rd[e.type_id] = e.data
+
+        r = SelectResponse(
+            version=rd[Tag.Version.value],
+            name=rd[Tag.CredentialId.value],
+            challenge=rd.get(Tag.Challenge.value),
+            algorithm=rd.get(Tag.Algorithm.value),
+        )
+        return r

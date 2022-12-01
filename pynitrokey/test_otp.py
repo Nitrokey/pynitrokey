@@ -4,13 +4,26 @@ Requires a live device, or a USB-IP simulation.
 """
 
 import binascii
+import datetime
 import hashlib
+import hmac
+import time
+from datetime import timedelta
+from sys import stderr
 
 import fido2
 import pytest
+import tlv8
 
 from pynitrokey.conftest import CHALLENGE, CREDID, DIGITS, HOTP_WINDOW_SIZE, SECRET
-from pynitrokey.nk3.otp_app import Algorithm, Kind
+from pynitrokey.nk3.otp_app import Algorithm, Instruction, Kind, RawBytes, Tag
+
+
+def test_reset(otpApp):
+    """
+    Clear credentials' storage. Simple test.
+    """
+    otpApp.reset()
 
 
 def test_list(otpApp):
@@ -47,13 +60,6 @@ def test_delete_nonexisting(otpApp):
     Should not fail when trying to remove non-existing credential id.
     """
     otpApp.delete(CREDID)
-
-
-def test_reset(otpApp):
-    """
-    Clear credentials storage. Simple test.
-    """
-    otpApp.reset()
 
 
 def test_list_changes(otpApp):
@@ -332,3 +338,262 @@ def test_calculated_codes_totp_hash_digits(otpApp, secret, algorithm, digits):
     ).encode()
     for i in range(10):
         assert otpApp.calculate(CREDID, i) == lib_at(i)
+
+
+@pytest.mark.parametrize(
+    "kind",
+    [Kind.Totp, Kind.Hotp],
+)
+def test_load(otpApp, kind: Kind):
+    """
+    Load tests to see how much OTP credentials we can store,
+    and if using of them is not broken with the full FS.
+    """
+    secret = "3132333435363738393031323334353637383930"
+    oath = pytest.importorskip("oath")
+    secretb = binascii.a2b_hex(secret)
+    otpApp.reset()
+
+    credentials_registered = 0
+
+    for i in range(100000):
+        name = f"LOAD{i}"
+        try:
+            otpApp.register(name, secretb, digits=6, kind=kind, initial_counter_value=i)
+        except Exception as e:
+            print(f"{e}")
+            print(f"Registered {i} credentials")
+            size = len(secret) + len(name)
+            print(f"Single Credential size: {size} B")
+            print(f"Total size: {size*i} B")
+            credentials_registered = i
+            break
+
+    assert (
+        credentials_registered > 100
+    ), "Expecting being able to register at least 100 OTP credentials"
+
+    lib_at = lambda t: oath.totp(secret, format="dec6", period=30, t=t * 30).encode()
+    if kind == Kind.Hotp:
+        lib_at = lambda t: oath.hotp(secret, format="dec6", counter=t).encode()
+
+    for i in range(credentials_registered):
+        # At this point device should respond to our calls, despite being full, fail otherwise
+        # Iterate over credentials and check code at given challenge
+        name = f"LOAD{i}"
+        assert otpApp.calculate(name, i) == lib_at(i)
+
+    l = otpApp.list()
+    assert len(l) == credentials_registered
+
+
+@pytest.mark.xfail
+def test_send_rubbish(otpApp):
+    """Check if the application crashes, when sending unexpected data for the given command"""
+    otpApp.reset()
+    otpApp.register(CREDID, SECRET, DIGITS)
+
+    # Just randomly selected 20 bytes of non-TLV data
+    invalid_data = bytes([0x11] * 20)
+    for _ in range(3):
+        with pytest.raises(fido2.ctap.CtapError):
+            otpApp._send_receive_inner(invalid_data)
+    otpApp.list()
+
+    # Reset and List commands do not parse
+    for ins in set(Instruction).difference({Instruction.Reset, Instruction.List}):
+        with pytest.raises(fido2.ctap.CtapError):
+            structure = [
+                RawBytes([0x02, 0x02]),
+            ]
+            otpApp._send_receive(ins, structure)
+    otpApp.list()
+
+
+def test_too_long_message(otpApp):
+    """
+    Check device's response for the too long message
+    """
+    otpApp.reset()
+    otpApp.register(CREDID, SECRET, DIGITS)
+    otpApp.list()
+
+    too_long_name = b"a" * 253
+    with pytest.raises(fido2.ctap.CtapError):
+        structure = [
+            tlv8.Entry(Tag.CredentialId.value, too_long_name),
+        ]
+        otpApp._send_receive(Instruction.Put, structure)
+    otpApp.list()
+
+
+@pytest.mark.xfail
+def test_too_long_message2(otpApp):
+    """
+    Test how long the secret could be (WIP)
+    """
+    otpApp.reset()
+    otpApp.register(CREDID, SECRET, DIGITS)
+    otpApp.list()
+
+    too_long_name = b"a" * 256
+    additional_space = 100
+    otpApp.register(too_long_name[: -len(SECRET) - additional_space], SECRET, DIGITS)
+    # find out the maximum secret length - 126 bytes?
+    for i in range(255):
+        print(i)
+        otpApp.reset()
+        otpApp.register(CREDID, too_long_name[:i], DIGITS)
+
+
+def test_status(otpApp):
+    """
+    Simple test for getting device's status
+    """
+    print(otpApp.select())
+
+
+def test_set_code(otpApp):
+    """
+    Simple test for setting the proper code on the device.
+    """
+    SECRET = b"1" * 20
+    CHALLENGE = b"1234"
+
+    otpApp.reset()
+    state = otpApp.select()
+    print(state)
+    assert state.algorithm is None
+    assert state.challenge is None
+
+    response = hmac.HMAC(key=SECRET, msg=CHALLENGE, digestmod="sha1").digest()
+    otpApp.set_code_raw(SECRET, CHALLENGE, response)
+
+    state = otpApp.select()
+    print(state)
+    assert state.challenge is not None
+    assert state.algorithm is not None
+
+
+def test_set_code_and_validate(otpApp):
+    """
+    Test device's behavior when the validation code is set.
+    Non-authorized calls should be rejected, except for the selected.
+    Authorization should be valid only until the next call.
+
+    Authorization is needed for all the listed commands except for RESET and VALIDATE:
+         Required               Not required
+         PUT 0x01               RESET 0x04 N
+         DELETE 0x02            VALIDATE 0xa3 N
+         SET CODE 0x03
+         LIST 0xa1
+         CALCULATE 0xa2
+         CALCULATE ALL 0xa4
+         SEND REMAINING 0xa5
+    Details:
+    - https://developers.yubico.com/OATH/YKOATH_Protocol.html
+    """
+
+    # The secret in production should be:
+    #   SECRET = PBKDF2(USER_PASSPHRASE || DEVICEID, 1000)[:16]
+    SECRET = b"1" * 20
+    CHALLENGE = b"12345678"  # in production should be random 8 bytes
+
+    # Device should be in the non-protected mode, and list command is allowed
+    otpApp.reset()
+    otpApp.list()
+
+    # Set the code, and require validation before regular calls from now on
+    response = hmac.HMAC(key=SECRET, msg=CHALLENGE, digestmod="sha1").digest()
+    otpApp.set_code_raw(SECRET, CHALLENGE, response)
+
+    # Make sure all the expected commands are failing, as in specification
+    with pytest.raises(fido2.ctap.CtapError):
+        # TODO check for the exact error code
+        otpApp.list()
+
+    for ins in set(Instruction) - {Instruction.Reset, Instruction.Validate}:
+        # TODO check for the exact error code
+        with pytest.raises(fido2.ctap.CtapError):
+            structure = [RawBytes([0x02] * 10)]
+            otpApp._send_receive(ins, structure)
+
+    # Each guarded command has to prepended by the validation call
+    # Run "list" command, with validation first
+    state = otpApp.select()
+    response_validate = hmac.HMAC(
+        key=SECRET, msg=state.challenge, digestmod="sha1"
+    ).digest()
+    otpApp.validate_raw(challenge=state.challenge, response=response_validate)
+    otpApp.list()
+
+    # Make sure another command call is not allowed
+    with pytest.raises(fido2.ctap.CtapError):
+        otpApp.list()
+
+    # Test running "list" command again
+    state = otpApp.select()
+    response_validate = hmac.HMAC(
+        key=SECRET, msg=state.challenge, digestmod="sha1"
+    ).digest()
+    otpApp.validate_raw(challenge=state.challenge, response=response_validate)
+    otpApp.list()
+
+    # Reset should be allowed
+    otpApp.reset()
+    state = otpApp.select()
+    assert state.challenge is None
+
+
+@pytest.mark.skip(reason="This test takes long time")
+def test_revhotp_bruteforce(otpAppNoLog):
+    """
+    This test implements practical brute-forcing of the codes values.
+    In case multiple devices use the same secret, stealing and brute-forcing answers on one
+    could help with the other.
+    """
+    otpApp = otpAppNoLog
+    otpApp.reset()
+    otpApp.register(
+        CREDID, SECRET, digits=6, kind=Kind.HotpReverse, algo=Algorithm.Sha1
+    )
+    start_time = time.time()
+    code_start = 1_000_000
+
+    from tqdm import tqdm, trange
+
+    for current_code in trange(code_start, 0, -1):
+        tqdm.write(f"Trying code {current_code}")
+        try:
+            otpApp.verify_code(CREDID, current_code)
+            stop_time = time.time()
+            tqdm.write(
+                f"Found code {current_code} after {stop_time-start_time} seconds"
+            )
+            break
+        except KeyboardInterrupt:
+            break
+        except fido2.ctap.CtapError:
+            pass
+        except Exception:
+            break
+
+
+@pytest.mark.xfail(reason="Not implemented in the firmware. Expected to fail.")
+def test_revhotp_delay_on_failure(otpApp):
+    """
+    Check if the right delay is set, when the invalid code is given for the reverse HOTP operation.
+    On failure the response time should take at least 1 second to prevent easy brute force.
+    """
+    start_time = time.time()
+    otpApp.reset()
+    otpApp.register(
+        CREDID, SECRET, digits=6, kind=Kind.HotpReverse, algo=Algorithm.Sha1
+    )
+    current_code = 123123
+    otpApp.verify_code(CREDID, current_code)
+    stop_time = time.time()
+
+    assert (
+        stop_time - start_time
+    ) > 1, "Replies' delay after the failed execution takes less than 1 second"
