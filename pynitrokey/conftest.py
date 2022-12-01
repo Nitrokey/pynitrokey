@@ -6,7 +6,7 @@ import pathlib
 import pytest
 
 from pynitrokey.cli.nk3 import Context
-from pynitrokey.nk3.otp_app import OTPApp, Instruction
+from pynitrokey.nk3.otp_app import Instruction, OTPApp
 
 logging.basicConfig(
     encoding="utf-8", level=logging.DEBUG, handlers=[logging.StreamHandler()]

@@ -727,7 +727,7 @@ def ask_for_passphrase_if_needed(app: OTPApp) -> Optional[str]:
     return passphrase
 
 
-def authenticate_if_needed(app: OTPApp):
+def authenticate_if_needed(app: OTPApp) -> None:
     try:
         passphrase = ask_for_passphrase_if_needed(app)
         if passphrase is not None:
@@ -746,7 +746,7 @@ def authenticate_if_needed(app: OTPApp):
     help="Allow to execute experimental features",
 )
 @click.password_option()
-def set_password(ctx: Context, password, experimental: bool) -> None:
+def set_password(ctx: Context, password: str, experimental: bool) -> None:
     """Set the passphrase used to authenticate to other commands.
     Experimental."""
     check_experimental_flag(experimental)

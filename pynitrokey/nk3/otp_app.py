@@ -4,18 +4,17 @@ Oath Authenticator client
 Used through CTAPHID transport, via the custom vendor command.
 Can be used directly over CCID as well.
 """
-import hashlib
 import hmac
 import logging
 import typing
 from enum import Enum
+from hashlib import pbkdf2_hmac
 from struct import pack
 from typing import List, Optional
-from hashlib import pbkdf2_hmac
-from secrets import token_bytes
 
 import dataclasses
 import tlv8
+from secrets import token_bytes
 
 from pynitrokey.nk3 import Nitrokey3Device
 from pynitrokey.start.gnuk_token import iso7816_compose
@@ -277,7 +276,7 @@ class OTPApp:
         response = self.get_response_for_secret(challenge, secret)
         self.set_code(secret, challenge, response)
 
-    def get_secret_for_passphrase(self, passphrase):
+    def get_secret_for_passphrase(self, passphrase: str) -> bytes:
         #   secret = PBKDF2(USER_PASSPHRASE, DEVICEID, 1000)[:16]
         # salt = self.select().name
         # FIXME use the proper SALT
@@ -286,7 +285,7 @@ class OTPApp:
         secret = pbkdf2_hmac("sha256", passphrase.encode(), salt, 1000)
         return secret[:16]
 
-    def get_response_for_secret(self, challenge, secret):
+    def get_response_for_secret(self, challenge: bytes, secret: bytes) -> bytes:
         response = hmac.HMAC(key=secret, msg=challenge, digestmod="sha1").digest()
         return response
 
@@ -315,13 +314,15 @@ class OTPApp:
         ]
         self._send_receive(Instruction.SetCode, structure=structure)
 
-    def validate_cli(self, passphrase):
+    def validate_cli(self, passphrase: str) -> None:
         """
         Authenticate using a passphrase
         """
         stat = self.select()
         assert stat.algorithm == bytes([Algorithm.Sha1.value])
         challenge = stat.challenge
+        if challenge is None:
+            raise RuntimeWarning("Challenge is not available")
         secret = self.get_secret_for_passphrase(passphrase)
         response = self.get_response_for_secret(challenge, secret)
         self.validate(challenge, response)
@@ -352,7 +353,7 @@ class OTPApp:
         resd: tlv8.EntryList = tlv8.decode(raw_res)
         rd = {}
         for e in resd:
-            e: tlv8.Entry
+            # e: tlv8.Entry
             rd[e.type_id] = e.data
 
         r = SelectResponse(

@@ -560,7 +560,7 @@ def test_revhotp_bruteforce(otpAppNoLog):
     start_time = time.time()
     code_start = 1_000_000
 
-    from tqdm import trange, tqdm
+    from tqdm import tqdm, trange
 
     for current_code in trange(code_start, 0, -1):
         tqdm.write(f"Trying code {current_code}")
