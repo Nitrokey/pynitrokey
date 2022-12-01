@@ -314,15 +314,29 @@ class OTPApp:
         ]
         self._send_receive(Instruction.SetCode, structure=structure)
 
+    def authentication_required(self, stat: Optional[SelectResponse] = None) -> bool:
+        if stat is None:
+            stat = self.select()
+        return stat.algorithm is not None and stat.challenge is not None
+
     def validate_cli(self, passphrase: str) -> None:
         """
         Authenticate using a passphrase
         """
         stat = self.select()
-        assert stat.algorithm == bytes([Algorithm.Sha1.value])
+        if not self.authentication_required(stat):
+            # Assuming this should have been checked before calling validate_cli
+            raise RuntimeWarning(
+                "No passphrase is set. Authentication is not required."
+            )
+        if stat.algorithm != bytes([Algorithm.Sha1.value]):
+            raise RuntimeError("For the authentication only SHA1 is supported")
         challenge = stat.challenge
         if challenge is None:
-            raise RuntimeWarning("Challenge is not available")
+            # This should never happen
+            raise RuntimeError(
+                "There is some problem with the device's state. Challenge is not available."
+            )
         secret = self.get_secret_for_passphrase(passphrase)
         response = self.get_response_for_secret(challenge, secret)
         self.validate(challenge, response)

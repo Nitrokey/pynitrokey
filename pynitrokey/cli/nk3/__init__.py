@@ -16,6 +16,7 @@ import fido2
 
 from pynitrokey.cli.exceptions import CliException
 from pynitrokey.helpers import (
+    AskUser,
     DownloadProgressBar,
     Retries,
     local_print,
@@ -473,7 +474,8 @@ def wink(ctx: Context) -> None:
 @nk3.group()
 @click.pass_context
 def otp(ctx: click.Context) -> None:
-    """Manage OTP secrets on the device."""
+    """Manage OTP secrets on the device.
+    Use NITROPY_OTP_PASSWORD to pass password for the scripted execution."""
     pass
 
 
@@ -721,9 +723,10 @@ def verify(ctx: Context, name: str, code: int, experimental: bool) -> None:
 
 def ask_for_passphrase_if_needed(app: OTPApp) -> Optional[str]:
     passphrase = None
-    is_passphrase_set = app.select().challenge is not None
-    if is_passphrase_set:
-        passphrase = prompt("Current Password", hide_input=True)
+    if app.authentication_required():
+        passphrase = AskUser(
+            "Current Password", envvar="NITROPY_OTP_PASSWORD", hide_input=True
+        ).ask()
     return passphrase
 
 
@@ -733,7 +736,7 @@ def authenticate_if_needed(app: OTPApp) -> None:
         if passphrase is not None:
             app.validate_cli(passphrase)
     except Exception as e:
-        local_print(f"Authentication failed with error {e}")
+        local_print(f'Authentication failed with error: "{e}"')
         raise click.Abort()
 
 
