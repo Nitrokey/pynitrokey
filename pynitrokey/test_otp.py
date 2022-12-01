@@ -467,7 +467,7 @@ def test_set_code(otpApp):
     assert state.challenge is None
 
     response = hmac.HMAC(key=SECRET, msg=CHALLENGE, digestmod="sha1").digest()
-    otpApp.set_code(SECRET, CHALLENGE, response)
+    otpApp.set_code_raw(SECRET, CHALLENGE, response)
 
     state = otpApp.select()
     print(state)
@@ -505,7 +505,7 @@ def test_set_code_and_validate(otpApp):
 
     # Set the code, and require validation before regular calls from now on
     response = hmac.HMAC(key=SECRET, msg=CHALLENGE, digestmod="sha1").digest()
-    otpApp.set_code(SECRET, CHALLENGE, response)
+    otpApp.set_code_raw(SECRET, CHALLENGE, response)
 
     # Make sure all the expected commands are failing, as in specification
     with pytest.raises(fido2.ctap.CtapError):
@@ -524,7 +524,7 @@ def test_set_code_and_validate(otpApp):
     response_validate = hmac.HMAC(
         key=SECRET, msg=state.challenge, digestmod="sha1"
     ).digest()
-    otpApp.validate(challenge=state.challenge, response=response_validate)
+    otpApp.validate_raw(challenge=state.challenge, response=response_validate)
     otpApp.list()
 
     # Make sure another command call is not allowed
@@ -536,7 +536,7 @@ def test_set_code_and_validate(otpApp):
     response_validate = hmac.HMAC(
         key=SECRET, msg=state.challenge, digestmod="sha1"
     ).digest()
-    otpApp.validate(challenge=state.challenge, response=response_validate)
+    otpApp.validate_raw(challenge=state.challenge, response=response_validate)
     otpApp.list()
 
     # Reset should be allowed

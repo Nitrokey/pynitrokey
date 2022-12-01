@@ -266,7 +266,7 @@ class OTPApp:
         res = self._send_receive(Instruction.VerifyCode, structure=structure)
         return res.hex() == "7700"
 
-    def set_code_cli(self, passphrase: str) -> None:
+    def set_code(self, passphrase: str) -> None:
         """
         Set the code with the defaults as suggested in the protocol specification:
         - https://developers.yubico.com/OATH/YKOATH_Protocol.html
@@ -274,7 +274,7 @@ class OTPApp:
         secret = self.get_secret_for_passphrase(passphrase)
         challenge = token_bytes(8)
         response = self.get_response_for_secret(challenge, secret)
-        self.set_code(secret, challenge, response)
+        self.set_code_raw(secret, challenge, response)
 
     def get_secret_for_passphrase(self, passphrase: str) -> bytes:
         #   secret = PBKDF2(USER_PASSPHRASE, DEVICEID, 1000)[:16]
@@ -289,7 +289,7 @@ class OTPApp:
         response = hmac.HMAC(key=secret, msg=challenge, digestmod="sha1").digest()
         return response
 
-    def set_code(self, key: bytes, challenge: bytes, response: bytes) -> None:
+    def set_code_raw(self, key: bytes, challenge: bytes, response: bytes) -> None:
         """
         Set or clear the passphrase used to authenticate to other commands. Raw interface.
         :param key: User passphrase processed through PBKDF2(ID,1000), and limited to the first 16 bytes.
@@ -319,13 +319,13 @@ class OTPApp:
             stat = self.select()
         return stat.algorithm is not None and stat.challenge is not None
 
-    def validate_cli(self, passphrase: str) -> None:
+    def validate(self, passphrase: str) -> None:
         """
         Authenticate using a passphrase
         """
         stat = self.select()
         if not self.authentication_required(stat):
-            # Assuming this should have been checked before calling validate_cli
+            # Assuming this should have been checked before calling validate()
             raise RuntimeWarning(
                 "No passphrase is set. Authentication is not required."
             )
@@ -339,9 +339,9 @@ class OTPApp:
             )
         secret = self.get_secret_for_passphrase(passphrase)
         response = self.get_response_for_secret(challenge, secret)
-        self.validate(challenge, response)
+        self.validate_raw(challenge, response)
 
-    def validate(self, challenge: bytes, response: bytes) -> bytes:
+    def validate_raw(self, challenge: bytes, response: bytes) -> bytes:
         """
         Authenticate using a passphrase. Raw interface.
         :param challenge: The current challenge taken from the SELECT command.

@@ -734,7 +734,7 @@ def authenticate_if_needed(app: OTPApp) -> None:
     try:
         passphrase = ask_for_passphrase_if_needed(app)
         if passphrase is not None:
-            app.validate_cli(passphrase)
+            app.validate(passphrase)
     except Exception as e:
         local_print(f'Authentication failed with error: "{e}"')
         raise click.Abort()
@@ -758,7 +758,7 @@ def set_password(ctx: Context, password: str, experimental: bool) -> None:
         try:
             app = OTPApp(device)
             authenticate_if_needed(app)
-            app.set_code_cli(password)
+            app.set_code(password)
             local_print("Password set")
         except fido2.ctap.CtapError as e:
             local_print(
