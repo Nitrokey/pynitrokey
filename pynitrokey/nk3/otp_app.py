@@ -87,10 +87,10 @@ class OTPApp:
     log: logging.Logger
     logfn: typing.Callable
     dev: Nitrokey3Device
-    write_corpus: bool
+    write_corpus_fn: Optional[typing.Callable]
 
     def __init__(self, dev: Nitrokey3Device, logfn: Optional[typing.Callable] = None):
-        self.write_corpus = False
+        self.write_corpus_fn = None
         self.log = logging.getLogger("otpapp")
         if logfn is not None:
             self.logfn = logfn  # type: ignore [assignment]
@@ -121,16 +121,9 @@ class OTPApp:
         encoded_structure = self._custom_encode(structure)
         ins_b, p1, p2 = self._encode_command(ins)
         bytes_data = iso7816_compose(ins_b, p1, p2, data=encoded_structure)
-        if self.write_corpus:
-            self._write_corpus(ins, bytes_data)
+        if self.write_corpus_fn:
+            self.write_corpus_fn(ins, bytes_data)
         return self._send_receive_inner(bytes_data)
-
-    def _write_corpus(self, ins: Instruction, data: bytes):
-        corpus_name = f"{ins}-{hashlib.sha1(data).digest().hex()}"
-        corpus_path = f"/tmp/corpus/{corpus_name}"
-        self.logfn(f"Writing corpus file: {corpus_path}")
-        with open(corpus_path, "bw") as f:
-            f.write(data)
 
     def _send_receive_inner(self, data: bytes) -> bytes:
         self.logfn(f"Sending {data.hex() if data else data!r}")
