@@ -19,6 +19,13 @@ from pynitrokey.conftest import CHALLENGE, CREDID, DIGITS, HOTP_WINDOW_SIZE, SEC
 from pynitrokey.nk3.otp_app import Algorithm, Instruction, Kind, RawBytes, Tag
 
 
+def test_reset(otpApp):
+    """
+    Clear credentials' storage. Simple test.
+    """
+    otpApp.reset()
+
+
 def test_list(otpApp):
     """
     List saved credentials. Simple test.
@@ -53,13 +60,6 @@ def test_delete_nonexisting(otpApp):
     Should not fail when trying to remove non-existing credential id.
     """
     otpApp.delete(CREDID)
-
-
-def test_reset(otpApp):
-    """
-    Clear credentials storage. Simple test.
-    """
-    otpApp.reset()
 
 
 def test_list_changes(otpApp):
@@ -387,6 +387,7 @@ def test_load(otpApp, kind: Kind):
     assert len(l) == credentials_registered
 
 
+@pytest.mark.xfail
 def test_send_rubbish(otpApp):
     """Check if the application crashes, when sending unexpected data for the given command"""
     otpApp.reset()
@@ -578,6 +579,7 @@ def test_revhotp_bruteforce(otpAppNoLog):
             break
 
 
+@pytest.mark.xfail(reason="Not implemented in the firmware. Expected to fail.")
 def test_revhotp_delay_on_failure(otpApp):
     """
     Check if the right delay is set, when the invalid code is given for the reverse HOTP operation.
