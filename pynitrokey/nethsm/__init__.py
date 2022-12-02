@@ -243,7 +243,7 @@ class NetHSM:
         return response
 
     def get_api(self):
-        from .client.api.default_api import DefaultApi
+        from .client.apis.tags.default_api import DefaultApi
 
         return DefaultApi(self.client)
 
