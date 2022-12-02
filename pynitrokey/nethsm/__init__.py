@@ -267,9 +267,11 @@ class NetHSM:
     def unlock(self, passphrase):
         from .client.model.unlock_request_data import UnlockRequestData
 
-        body = UnlockRequestData(Passphrase(passphrase))
+        request_body = UnlockRequestData(
+            passphrase=Passphrase(passphrase),
+        )
         try:
-            self.get_api().unlock_post(body=body)
+            self.get_api().unlock_post(request_body)
         except ApiException as e:
             _handle_api_exception(
                 e,
@@ -292,13 +294,13 @@ class NetHSM:
     def provision(self, unlock_passphrase, admin_passphrase, system_time):
         from .client.model.provision_request_data import ProvisionRequestData
 
-        body = ProvisionRequestData(
-            unlock_passphrase=Passphrase(unlock_passphrase),
-            admin_passphrase=Passphrase(admin_passphrase),
-            system_time=system_time,
+        request_body = ProvisionRequestData(
+            unlockPassphrase=Passphrase(unlock_passphrase),
+            adminPassphrase=Passphrase(admin_passphrase),
+            systemTime=system_time,
         )
         try:
-            self.get_api().provision_post(body=body)
+            self.get_api().provision_post(request_body)
         except ApiException as e:
             _handle_api_exception(
                 e,
