@@ -470,15 +470,15 @@ class NetHSM:
 
     def get_info(self):
         try:
-            data = self.get_api().info_get()
-            return (data.vendor, data.product)
+            response = self.get_api().info_get()
+            return (response.body["vendor"], response.body["product"])
         except ApiException as e:
             _handle_api_exception(e)
 
     def get_state(self):
         try:
-            data = self.get_api().health_state_get()
-            return State.from_model(data.state)
+            response = self.get_api().health_state_get()
+            return State.from_string(response.body["state"])
         except ApiException as e:
             _handle_api_exception(e)
 
@@ -494,7 +494,8 @@ class NetHSM:
 
     def get_metrics(self):
         try:
-            return self.get_api().metrics_get()
+            response = self.get_api().metrics_get()
+            return response.body
         except ApiException as e:
             _handle_api_exception(e, state=State.OPERATIONAL, roles=[Role.METRICS])
 
