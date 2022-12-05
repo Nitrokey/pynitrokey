@@ -20,9 +20,9 @@ from pynitrokey.nk3.otp_app import (
     Algorithm,
     Instruction,
     Kind,
+    OTPAppException,
     RawBytes,
     Tag,
-    OTPAppException,
 )
 
 

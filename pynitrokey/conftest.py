@@ -2,11 +2,11 @@ import hashlib
 import logging
 import os
 import pathlib
-import secrets
 import uuid
 from functools import partial
 
 import pytest
+import secrets
 from _pytest.fixtures import FixtureRequest
 
 from pynitrokey.cli.nk3 import Context

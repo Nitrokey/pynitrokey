@@ -63,10 +63,10 @@ class OTPAppException(Exception):
         }
         return d.get(self.code, "Unknown SW code")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"OTPAppException(code={self.code}/{self.to_string()})"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.__repr__()
 
 
@@ -176,7 +176,7 @@ class OTPApp:
         )
 
         if status_bytes != b"\x90\00":
-            raise OTPAppException(status_bytes.hex(), f"Received error")
+            raise OTPAppException(status_bytes.hex(), "Received error")
 
         return result
 
