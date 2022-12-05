@@ -24,8 +24,8 @@ from fido2.cbor import dump_dict
 from fido2.client import ClientError as Fido2ClientError
 from fido2.ctap import CtapError
 from fido2.ctap1 import ApduError
-from fido2.ctap2 import Ctap2
-from fido2.ctap2.pin import ClientPin
+from fido2.ctap2 import CredentialManagement, Ctap2
+from fido2.ctap2.pin import ClientPin, PinProtocol
 
 import pynitrokey
 import pynitrokey.fido2 as nkfido2
@@ -33,6 +33,8 @@ import pynitrokey.fido2.operations
 from pynitrokey.cli.monitor import monitor
 from pynitrokey.cli.program import program
 from pynitrokey.cli.update import update
+from pynitrokey.fido2 import client
+from pynitrokey.fido2.client import NKFido2Client
 from pynitrokey.fido2.commands import SoloBootloader
 from pynitrokey.helpers import (
     AskUser,
@@ -189,6 +191,98 @@ def list():
             id_ = descr.path
 
         local_print(f"{id_}: {name}")
+
+
+@click.command()
+@click.option(
+    "-s",
+    "--serial",
+    help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
+)
+@click.option("--pin", help="provide PIN instead of asking the user", default=None)
+def list_credentials(serial, pin):
+    """List all credentials saved on the key as well as the amount of remaining slots."""
+
+    # Makes sure pin exists
+    if not pin:
+        pin = AskUser.hidden("Please provide pin: ")
+
+    nk_client = NKFido2Client()
+    cred_manager = nk_client.cred_mgmt(serial, pin)
+
+    # Returns Sequence[Mapping[int, Any]]
+    # Use this to get all existing creds
+    cred_metadata = cred_manager.get_metadata()
+    cred_count = cred_metadata.get(CredentialManagement.RESULT.EXISTING_CRED_COUNT)
+    remaining_cred_space = cred_metadata.get(
+        CredentialManagement.RESULT.MAX_REMAINING_COUNT
+    )
+
+    reliable_party_list = cred_manager.enumerate_rps()
+
+    if cred_count == 0:
+        local_print("There are no registered credentials")
+        local_print(
+            f"There is an estimated amount of {remaining_cred_space} credential slots left"
+        )
+        return
+
+    # Get amount of registered creds from first key in list (Same trick is used in the CredentialManager)
+    local_print(f"There are {cred_count} registered credentials")
+
+    for reliable_party_result in reliable_party_list:
+        reliable_party = reliable_party_result.get(CredentialManagement.RESULT.RP)
+        reliable_party_hash = reliable_party_result.get(
+            CredentialManagement.RESULT.RP_ID_HASH
+        )
+        local_print("-----------------------------------")
+        local_print(f"{reliable_party['name']}: ")
+        for cred in cred_manager.enumerate_creds(reliable_party_hash):
+            cred_id = cred.get(CredentialManagement.RESULT.CREDENTIAL_ID)["id"]
+            cred_user = cred.get(CredentialManagement.RESULT.USER)
+            if cred_user["name"] == cred_user["displayName"]:
+                local_print(f"- id: {cred_id.hex()}")
+                local_print(f"user: {cred_user['name']}\n")
+            else:
+                local_print(f"- id: {cred_id.hex()}")
+                local_print(f"user: {cred_user['displayName']} ({cred_user['name']})\n")
+
+        local_print("-----------------------------------")
+    local_print(
+        f"There is an estimated amount of {remaining_cred_space} credential slots left"
+    )
+
+
+@click.command()
+@click.option(
+    "-s",
+    "--serial",
+    help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
+)
+@click.option("--pin", help="provide PIN instead of asking the user", default=None)
+@click.option(
+    "-cid", "--cred-id", help="Credential id of there Credential to be deleted"
+)
+def delete_credential(serial, pin, cred_id):
+    """Delete a specific credential from the key"""
+
+    if not cred_id:
+        cred_id = AskUser.hidden("Please provide credential-id")
+
+    if not pin:
+        pin = AskUser.hidden("Please provide pin: ")
+
+    nk_client = NKFido2Client()
+    cred_manager = nk_client.cred_mgmt(serial, pin)
+
+    tmp_cred_id = {"id": bytes.fromhex(cred_id), "type": "public-key"}
+
+    try:
+        cred_manager.delete_cred(tmp_cred_id)
+    except Exception as e:
+        local_critical("Failed to delete credential, was the right cred_id given?")
+        return
+    local_print("Credential was successfully deleted")
 
 
 @click.command()
@@ -724,6 +818,9 @@ fido2.add_command(rng)
 fido2.add_command(reboot)
 fido2.add_command(list)
 
+fido2.add_command(list_credentials)
+fido2.add_command(delete_credential)
+
 rng.add_command(hexbytes)
 rng.add_command(raw)
 rng.add_command(feedkernel)
@@ -750,7 +847,6 @@ util.add_command(sign)
 util.add_command(genkey)
 util.add_command(mergehex)
 util.add_command(monitor)
-
 
 # see above -> @fixme: likely to be removed?!
 # fido2.add_command(probe)
