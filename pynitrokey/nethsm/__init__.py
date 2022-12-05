@@ -936,12 +936,12 @@ class NetHSM:
 
     def get_system_info(self):
         try:
-            data = self.get_api().system_info_get()
+            response = self.get_api().system_info_get()
             return SystemInfo(
-                firmware_version=data.firmware_version,
-                software_version=data.software_version,
-                hardware_version=data.hardware_version,
-                build_tag=data.build_tag,
+                firmware_version=response.body["firmwareVersion"],
+                software_version=response.body["softwareVersion"],
+                hardware_version=response.body["hardwareVersion"],
+                build_tag=response.body["buildTag"],
             )
         except ApiException as e:
             _handle_api_exception(
