@@ -310,9 +310,11 @@ def test_reverse_hotp_window(otpApp, offset, start_value):
             assert otpApp.verify_code(CREDID, code_to_send)
         else:
             # counter got saturated, error code will be returned
-            assert otpApp.verify_code(CREDID, code_to_send)
-            assert otpApp.verify_code(CREDID, code_to_send)
-            assert otpApp.verify_code(CREDID, code_to_send)
+            for _ in range(3):
+                with pytest.raises(
+                    OTPAppException, match="UnspecifiedPersistentExecutionError"
+                ):
+                    otpApp.verify_code(CREDID, code_to_send)
 
 
 @pytest.mark.parametrize(
