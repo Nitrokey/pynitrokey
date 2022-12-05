@@ -488,7 +488,14 @@ def test_set_code(otpApp):
     assert state.algorithm is not None
 
 
-def test_set_code_and_validate(otpApp):
+@pytest.mark.parametrize(
+    "remove_password_with",
+    [
+        Instruction.Reset,
+        Instruction.SetCode,
+    ],
+)
+def test_set_code_and_validate(otpApp, remove_password_with: Instruction):
     """
     Test device's behavior when the validation code is set.
     Non-authorized calls should be rejected, except for the selected.
@@ -525,7 +532,6 @@ def test_set_code_and_validate(otpApp):
         otpApp.list()
 
     for ins in set(Instruction) - {Instruction.Reset, Instruction.Validate}:
-        # TODO check for the exact error code
         with pytest.raises(
             OTPAppException,
             match="IncorrectDataParameter|InstructionNotSupportedOrInvalid|NotFound|ConditionsOfUseNotSatisfied",
@@ -554,8 +560,23 @@ def test_set_code_and_validate(otpApp):
     otpApp.validate_raw(challenge=state.challenge, response=response_validate)
     otpApp.list()
 
-    # Reset should be allowed
-    otpApp.reset()
+    if remove_password_with == Instruction.Reset:
+        # Reset should be allowed
+        otpApp.reset()
+    elif remove_password_with == Instruction.SetCode:
+        # Clearing passphrase should be allowed after authentication
+        with pytest.raises(OTPAppException, match="ConditionsOfUseNotSatisfied"):
+            otpApp.clear_code()
+
+        state = otpApp.select()
+        response_validate = hmac.HMAC(
+            key=SECRET, msg=state.challenge, digestmod="sha1"
+        ).digest()
+        otpApp.validate_raw(challenge=state.challenge, response=response_validate)
+        otpApp.clear_code()
+    else:
+        raise ValueError()
+
     state = otpApp.select()
     assert state.challenge is None
 
