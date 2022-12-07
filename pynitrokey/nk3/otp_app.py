@@ -33,6 +33,43 @@ class SelectResponse:
     algorithm: Optional[bytes]
 
 
+@dataclasses.dataclass
+class OTPAppException(Exception):
+    code: str
+    context: str
+
+    def to_string(self) -> str:
+        d = {
+            "6300": "VerificationFailed",
+            "6400": "UnspecifiedNonpersistentExecutionError",
+            "6500": "UnspecifiedPersistentExecutionError",
+            "6700": "WrongLength",
+            "6881": "LogicalChannelNotSupported",
+            "6882": "SecureMessagingNotSupported",
+            "6884": "CommandChainingNotSupported",
+            "6982": "SecurityStatusNotSatisfied",
+            "6985": "ConditionsOfUseNotSatisfied",
+            "6983": "OperationBlocked",
+            "6a80": "IncorrectDataParameter",
+            "6a81": "FunctionNotSupported",
+            "6a82": "NotFound",
+            "6a84": "NotEnoughMemory",
+            "6a86": "IncorrectP1OrP2Parameter",
+            "6a88": "KeyReferenceNotFound",
+            "6d00": "InstructionNotSupportedOrInvalid",
+            "6e00": "ClassNotSupported",
+            "6f00": "UnspecifiedCheckingError",
+            "9000": "Success",
+        }
+        return d.get(self.code, "Unknown SW code")
+
+    def __repr__(self) -> str:
+        return f"OTPAppException(code={self.code}/{self.to_string()})"
+
+    def __str__(self) -> str:
+        return self.__repr__()
+
+
 class Instruction(Enum):
     Put = 0x1
     Delete = 0x2
@@ -133,7 +170,14 @@ class OTPApp:
             self.logfn(f"Got exception: {e}")
             raise
 
-        self.logfn(f"Received {result.hex() if data else data!r}")
+        status_bytes, result = result[:2], result[2:]
+        self.logfn(
+            f"Received [{status_bytes.hex()}] {result.hex() if result else result!r}"
+        )
+
+        if status_bytes != b"\x90\00":
+            raise OTPAppException(status_bytes.hex(), "Received error")
+
         return result
 
     @classmethod
@@ -257,14 +301,14 @@ class OTPApp:
         Proceed with the incoming OTP code verification (aka reverse HOTP).
         :param cred_id: The name of the credential
         :param code: The HOTP code to verify. u32 representation.
-        :return: fails with CTAP1 error; returns True if code matches the value calculated internally.
+        :return: fails with OTPAppException error; returns True if code matches the value calculated internally.
         """
         structure = [
             tlv8.Entry(Tag.CredentialId.value, cred_id),
             tlv8.Entry(Tag.Response.value, pack(">L", code)),
         ]
-        res = self._send_receive(Instruction.VerifyCode, structure=structure)
-        return res.hex() == "7700"
+        self._send_receive(Instruction.VerifyCode, structure=structure)
+        return True
 
     def set_code(self, passphrase: str) -> None:
         """

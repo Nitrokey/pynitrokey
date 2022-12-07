@@ -1,44 +1,65 @@
-import hashlib
 import logging
 import os
 import pathlib
+from functools import partial
 
 import pytest
+import secrets
+from _pytest.fixtures import FixtureRequest
 
 from pynitrokey.cli.nk3 import Context
 from pynitrokey.nk3.otp_app import Instruction, OTPApp
+
+CORPUS_PATH = "/tmp/corpus"
 
 logging.basicConfig(
     encoding="utf-8", level=logging.DEBUG, handlers=[logging.StreamHandler()]
 )
 
 
-def _write_corpus(ins: Instruction, data: bytes):
-    corpus_name = f"{ins}-{hashlib.sha1(data).digest().hex()}"
-    corpus_path = f"/tmp/corpus/{corpus_name}"
-    with open(corpus_path, "bw") as f:
+def _write_corpus(
+    ins: Instruction, data: bytes, prefix: str = "", path: str = CORPUS_PATH
+):
+    corpus_name = f"{prefix}"
+    corpus_path = f"{path}/{corpus_name}"
+    if len(data) > 255:
+        # Do not write records longer than 255 bytes
+        return
+    data = bytes([len(data)]) + data
+    with open(corpus_path, "ba") as f:
+        print(f"Writing corpus data to the path {corpus_path}")
         f.write(data)
 
 
-def setup_for_making_corpus(app):
-    pathlib.Path("/tmp/corpus").mkdir(exist_ok=True)
+@pytest.fixture(scope="function")
+def corpus_func(request: FixtureRequest):
     if os.environ.get("NK_FUZZ") is not None:
-        app.write_corpus_fn = _write_corpus
+        path = os.environ.get("NK_FUZZ_PATH", CORPUS_PATH)
+        pathlib.Path(path).mkdir(exist_ok=True)
+        # Add some random suffix to have separate outputs for parametrized test cases
+        pre = secrets.token_bytes(4).hex()
+        pre = f"{request.function.__name__}-{pre}"
+        return partial(_write_corpus, prefix=pre, path=path)
+    return None
 
 
 @pytest.fixture(scope="session")
-def otpApp():
+def dev():
     ctx = Context(None)
-    app = OTPApp(ctx.connect_device(), logfn=print)
-    setup_for_making_corpus(app)
+    return ctx.connect_device()
+
+
+@pytest.fixture(scope="function")
+def otpApp(corpus_func, dev):
+    app = OTPApp(dev, logfn=print)
+    app.write_corpus_fn = corpus_func
     return app
 
 
-@pytest.fixture(scope="session")
-def otpAppNoLog():
-    ctx = Context(None)
-    app = OTPApp(ctx.connect_device())
-    setup_for_making_corpus(app)
+@pytest.fixture(scope="function")
+def otpAppNoLog(corpus_func, dev):
+    app = OTPApp(dev)
+    app.write_corpus_fn = corpus_func
     return app
 
 

@@ -16,7 +16,14 @@ import pytest
 import tlv8
 
 from pynitrokey.conftest import CHALLENGE, CREDID, DIGITS, HOTP_WINDOW_SIZE, SECRET
-from pynitrokey.nk3.otp_app import Algorithm, Instruction, Kind, RawBytes, Tag
+from pynitrokey.nk3.otp_app import (
+    Algorithm,
+    Instruction,
+    Kind,
+    OTPAppException,
+    RawBytes,
+    Tag,
+)
 
 
 def test_reset(otpApp):
@@ -224,19 +231,19 @@ def test_reverse_hotp_failure(otpApp):
     )
     for i in range(3):
         c = codes[i]
-        with pytest.raises(fido2.ctap.CtapError):
+        with pytest.raises(OTPAppException, match="VerificationFailed"):
             assert not otpApp.verify_code(CREDID, c)
 
     # Test parsing too long code
-    with pytest.raises(fido2.ctap.CtapError):
+    with pytest.raises(OTPAppException, match="VerificationFailed"):
         assert not otpApp.verify_code(CREDID, 10**5)
 
     otpApp.register(CREDID, secretb, digits=7, kind=Kind.Hotp, algo=Algorithm.Sha1)
-    with pytest.raises(fido2.ctap.CtapError):
+    with pytest.raises(OTPAppException, match="ConditionsOfUseNotSatisfied"):
         assert not otpApp.verify_code(CREDID, 10**6)
 
     otpApp.register(CREDID, secretb, digits=8, kind=Kind.Hotp, algo=Algorithm.Sha1)
-    with pytest.raises(fido2.ctap.CtapError):
+    with pytest.raises(OTPAppException, match="ConditionsOfUseNotSatisfied"):
         assert not otpApp.verify_code(CREDID, 10**7)
 
 
@@ -280,7 +287,7 @@ def test_reverse_hotp_window(otpApp, offset, start_value):
     code_to_send = int(code_to_send)
     if offset > HOTP_WINDOW_SIZE:
         # calls with offset bigger than HOTP_WINDOW_SIZE should fail
-        with pytest.raises(fido2.ctap.CtapError):
+        with pytest.raises(OTPAppException, match="VerificationFailed"):
             otpApp.verify_code(CREDID, code_to_send)
     else:
         # check if this code will be accepted on the given offset
@@ -291,7 +298,11 @@ def test_reverse_hotp_window(otpApp, offset, start_value):
             and offset == HOTP_WINDOW_SIZE
         )
         if not is_counter_saturated:
-            with pytest.raises(fido2.ctap.CtapError):
+            with pytest.raises(
+                OTPAppException,
+                match="UnspecifiedPersistentExecutionError|VerificationFailed",
+            ):
+                # send the same code once again
                 otpApp.verify_code(CREDID, code_to_send)
             # test the very next value - should be accepted
             code_to_send = lib_at(start_value + offset + 1)
@@ -299,9 +310,11 @@ def test_reverse_hotp_window(otpApp, offset, start_value):
             assert otpApp.verify_code(CREDID, code_to_send)
         else:
             # counter got saturated, error code will be returned
-            assert otpApp.verify_code(CREDID, code_to_send)
-            assert otpApp.verify_code(CREDID, code_to_send)
-            assert otpApp.verify_code(CREDID, code_to_send)
+            for _ in range(3):
+                with pytest.raises(
+                    OTPAppException, match="UnspecifiedPersistentExecutionError"
+                ):
+                    otpApp.verify_code(CREDID, code_to_send)
 
 
 @pytest.mark.parametrize(
@@ -419,7 +432,7 @@ def test_too_long_message(otpApp):
     otpApp.list()
 
     too_long_name = b"a" * 253
-    with pytest.raises(fido2.ctap.CtapError):
+    with pytest.raises(OTPAppException, match="IncorrectDataParameter"):
         structure = [
             tlv8.Entry(Tag.CredentialId.value, too_long_name),
         ]
@@ -475,7 +488,14 @@ def test_set_code(otpApp):
     assert state.algorithm is not None
 
 
-def test_set_code_and_validate(otpApp):
+@pytest.mark.parametrize(
+    "remove_password_with",
+    [
+        Instruction.Reset,
+        Instruction.SetCode,
+    ],
+)
+def test_set_code_and_validate(otpApp, remove_password_with: Instruction):
     """
     Test device's behavior when the validation code is set.
     Non-authorized calls should be rejected, except for the selected.
@@ -508,13 +528,14 @@ def test_set_code_and_validate(otpApp):
     otpApp.set_code_raw(SECRET, CHALLENGE, response)
 
     # Make sure all the expected commands are failing, as in specification
-    with pytest.raises(fido2.ctap.CtapError):
-        # TODO check for the exact error code
+    with pytest.raises(OTPAppException, match="ConditionsOfUseNotSatisfied"):
         otpApp.list()
 
     for ins in set(Instruction) - {Instruction.Reset, Instruction.Validate}:
-        # TODO check for the exact error code
-        with pytest.raises(fido2.ctap.CtapError):
+        with pytest.raises(
+            OTPAppException,
+            match="IncorrectDataParameter|InstructionNotSupportedOrInvalid|NotFound|ConditionsOfUseNotSatisfied",
+        ):
             structure = [RawBytes([0x02] * 10)]
             otpApp._send_receive(ins, structure)
 
@@ -528,7 +549,7 @@ def test_set_code_and_validate(otpApp):
     otpApp.list()
 
     # Make sure another command call is not allowed
-    with pytest.raises(fido2.ctap.CtapError):
+    with pytest.raises(OTPAppException, match="ConditionsOfUseNotSatisfied"):
         otpApp.list()
 
     # Test running "list" command again
@@ -539,8 +560,23 @@ def test_set_code_and_validate(otpApp):
     otpApp.validate_raw(challenge=state.challenge, response=response_validate)
     otpApp.list()
 
-    # Reset should be allowed
-    otpApp.reset()
+    if remove_password_with == Instruction.Reset:
+        # Reset should be allowed
+        otpApp.reset()
+    elif remove_password_with == Instruction.SetCode:
+        # Clearing passphrase should be allowed after authentication
+        with pytest.raises(OTPAppException, match="ConditionsOfUseNotSatisfied"):
+            otpApp.clear_code()
+
+        state = otpApp.select()
+        response_validate = hmac.HMAC(
+            key=SECRET, msg=state.challenge, digestmod="sha1"
+        ).digest()
+        otpApp.validate_raw(challenge=state.challenge, response=response_validate)
+        otpApp.clear_code()
+    else:
+        raise ValueError()
+
     state = otpApp.select()
     assert state.challenge is None
 

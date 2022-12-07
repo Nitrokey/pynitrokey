@@ -11,8 +11,25 @@ ISORT_FLAGS=--py 35 --extend-skip pynitrokey/nethsm/client
 # whitelist of directories for flake8
 FLAKE8_DIRS=pynitrokey/nethsm pynitrokey/cli/nk3 pynitrokey/nk3
 
+.PHONY: init-fedora37
+init-fedora37:
+	sudo dnf install -y swig pcsc-lite-devel
+	$(MAKE) init
+
 # setup development environment
 init: update-venv
+
+ARGS=
+.PHONY: run rune builde
+run:
+	./venv/bin/nitropy $(ARGS)
+
+DOCKER=docker
+rune:
+	$(DOCKER) run --privileged --rm -it --entrypoint /bin/bash pynitrokey
+
+builde:
+	earthly +build
 
 # ensure this passes before commiting
 check: lint
@@ -130,4 +147,3 @@ wine-build/pynitrokey-$(VERSION).msi wine-build/nitropy-$(VERSION).exe:
 	bash build-wine.sh
 	#cp wine-build/out/pynitrokey-$(VERSION)-win32.msi wine-build
 	cp wine-build/out/nitropy-$(VERSION).exe wine-build
-

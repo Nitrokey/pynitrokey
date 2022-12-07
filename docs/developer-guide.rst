@@ -6,6 +6,25 @@ Setting Up The Environment
 
 Use ``make init`` to install ``pynitrokey``, its dependencies and the development tools inside a virtual environment in the ``venv`` folder.  This virtual environment is also used by other targets in the Makefile like ``make check``.  ``pynitrokey`` is installed in editable mode so that all changes to the source code also apply to the ``nitropy`` executable in the virtual environment.  If dependencies are changed, run ``make update-venv`` to update the virtual environment.
 
+
+By default the development environment is isolated using venv, when set up using ``make init``. To run the ``nitropy`` from there call ``./venv/bin/nitropy``. This can be used as a shortcut ``make run ARGS="nk3 list"``, where ``ARGS`` is an optional argument to pass to ``nitropy``.
+
+
+Containerized Environment
+--------------------
+
+Setting up a proper environment, matching the exact Python version, or having a newer one than it is supported, might be problematic for the development.
+For such cases it is handy to have development/test environment containerized, so it does not affect nor need changes in the host OS internals.
+For that Earthly tool is used, but any Docker-like tool will work.
+
+The common targets are listed in the main Makefile with the ``e`` suffix:
+
+- ``make builde`` - executes Earthly build process for the pynitrokey container image;
+- ``make rune`` - runs Docker container based on the pynitrokey image for a quick tests. Use ``DOCKER=podman`` to call ``podman`` binary instead of the default Docker.
+
+See https://earthly.dev/ for the Earthly setup instructions. Mind, that their binaries currently are not signed and cannot be verified, thus installation to the root directory of the host OS is not advised (on contrary to the claims on their main page). Use Dockerfile directly instead if in doubt.
+
+
 Linters
 -------
 
