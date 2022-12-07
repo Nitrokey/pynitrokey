@@ -354,8 +354,10 @@ class NKFido2Client:
                     "Pin authentication has been blocked, try reinserting the key or setting a pin if none is set"
                 )
             if error.code == CtapError.ERR.PIN_BLOCKED:
-                local_critical("Your device has been blocked after too many failed unlock attempts, to fix this it "
-                               "will have to be reset. (If no pin is set, plugging it in again might fix this warning)")
+                local_critical(
+                    "Your device has been blocked after too many failed unlock attempts, to fix this it "
+                    "will have to be reset. (If no pin is set, plugging it in again might fix this warning)"
+                )
 
         return CredentialManagement(device.ctap2, client_pin.protocol, client_token)
 
