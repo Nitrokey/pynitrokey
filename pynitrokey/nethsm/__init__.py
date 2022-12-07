@@ -247,8 +247,8 @@ class NetHSM:
 
         return DefaultApi(self.client)
 
-    def get_location(self):
-        return self.client.last_response.getheaders().get("location", "")
+    def get_location(self, headers):
+        return headers.get("location")
 
     def get_key_id_from_location(self):
         location = self.get_location()
@@ -257,8 +257,8 @@ class NetHSM:
             raise click.ClickException("Could not determine the ID of the new key")
         return key_id_match[1]
 
-    def get_user_id_from_location(self):
-        location = self.get_location()
+    def get_user_id_from_location(self, headers):
+        location = self.get_location(headers)
         user_id_match = re.fullmatch(f"/api/{self.version}/users/(.*)", location)
         if not user_id_match:
             raise click.ClickException("Could not determine the ID of the new user")
@@ -312,8 +312,8 @@ class NetHSM:
 
     def list_users(self):
         try:
-            data = self.get_api().users_get()
-            return [item["user"] for item in data.value]
+            response = self.get_api().users_get()
+            return [item["user"] for item in response.body]
         except ApiException as e:
             _handle_api_exception(
                 e,
@@ -322,12 +322,15 @@ class NetHSM:
             )
 
     def get_user(self, user_id):
+        from .client.paths.users_user_id.get import RequestPathParams
+
+        path_params = RequestPathParams({"UserID": user_id})
         try:
-            user = self.get_api().users_user_id_get(user_id=user_id)
+            response = self.get_api().users_user_id_get(path_params=path_params)
             return User(
                 user_id=user_id,
-                real_name=user.real_name,
-                role=Role.from_model(user.role),
+                real_name=response.body.realName,
+                role=Role.from_string(response.body.role),
             )
         except ApiException as e:
             _handle_api_exception(
@@ -342,19 +345,21 @@ class NetHSM:
     def add_user(self, real_name, role, passphrase, user_id=None):
         from .client.model.user_post_data import UserPostData
         from .client.model.user_role import UserRole
+        from .client.paths.users_user_id.put import RequestPathParams
 
         body = UserPostData(
-            real_name=real_name,
+            realName=real_name,
             role=UserRole(role),
             passphrase=Passphrase(passphrase),
         )
         try:
             if user_id:
-                self.get_api().users_user_id_put(user_id=user_id, body=body)
+                path_params = RequestPathParams({"UserID": user_id})
+                self.get_api().users_user_id_put(path_params=path_params, body=body)
                 return user_id
             else:
-                self.get_api().users_post(body=body)
-                return self.get_user_id_from_location()
+                response = self.get_api().users_post(body=body)
+                return self.get_user_id_from_location(response.response.getheaders())
         except ApiException as e:
             _handle_api_exception(
                 e,
@@ -367,8 +372,11 @@ class NetHSM:
             )
 
     def delete_user(self, user_id):
+        from .client.paths.users_user_id.delete import RequestPathParams
+
         try:
-            self.get_api().users_user_id_delete(user_id=user_id)
+            path_params = RequestPathParams({"UserID": user_id})
+            self.get_api().users_user_id_delete(path_params=path_params)
         except ApiException as e:
             _handle_api_exception(
                 e,
@@ -381,10 +389,14 @@ class NetHSM:
 
     def set_passphrase(self, user_id, passphrase):
         from .client.model.user_passphrase_post_data import UserPassphrasePostData
+        from .client.paths.users_user_id_passphrase.post import RequestPathParams
 
+        path_params = RequestPathParams({"UserID": user_id})
         body = UserPassphrasePostData(passphrase=Passphrase(passphrase))
         try:
-            self.get_api().users_user_id_passphrase_post(user_id=user_id, body=body)
+            self.get_api().users_user_id_passphrase_post(
+                path_params=path_params, body=body
+            )
         except ApiException as e:
             _handle_api_exception(
                 e,
@@ -397,8 +409,12 @@ class NetHSM:
             )
 
     def list_operator_tags(self, user_id):
+        from .client.paths.users_user_id_tags.get import RequestPathParams
+
+        path_params = RequestPathParams({"UserID": user_id})
         try:
-            return self.get_api().users_user_id_tags_get(user_id=user_id)
+            response = self.get_api().users_user_id_tags_get(path_params=path_params)
+            return response.body
         except ApiException as e:
             _handle_api_exception(
                 e,
@@ -410,8 +426,11 @@ class NetHSM:
             )
 
     def add_operator_tag(self, user_id, tag):
+        from .client.paths.users_user_id_tags_tag.put import RequestPathParams
+
+        path_params = RequestPathParams({"UserID": user_id, "Tag": tag})
         try:
-            return self.get_api().users_user_id_tags_tag_put(user_id=user_id, tag=tag)
+            return self.get_api().users_user_id_tags_tag_put(path_params=path_params)
         except ApiException as e:
             _handle_api_exception(
                 e,
@@ -424,10 +443,11 @@ class NetHSM:
             )
 
     def delete_operator_tag(self, user_id, tag):
+        from .client.paths.users_user_id_tags_tag.delete import RequestPathParams
+
+        path_params = RequestPathParams({"UserID": user_id, "Tag": tag})
         try:
-            return self.get_api().users_user_id_tags_tag_delete(
-                user_id=user_id, tag=tag
-            )
+            return self.get_api().users_user_id_tags_tag_delete(path_params=path_params)
         except ApiException as e:
             _handle_api_exception(
                 e,

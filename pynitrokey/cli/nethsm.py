@@ -220,7 +220,7 @@ def list_users(ctx, details):
             headers += ["Real name", "Role"]
             data = []
             for user_id in user_ids:
-                user = nethsm.get_user(user_id=user_id.value)
+                user = nethsm.get_user(user_id=user_id)
                 data.append([user_id, user.real_name, user.role.value])
         else:
             data = [[user_id] for user_id in user_ids]
@@ -318,9 +318,9 @@ def list_operator_tags(ctx, user_id):
     This command requires authentication as a user with the Administrator role."""
     with connect(ctx) as nethsm:
         tags = nethsm.list_operator_tags(user_id=user_id)
-        if tags.value:
+        if tags:
             print(f"Tags for user {user_id}:")
-            for tag in tags.value:
+            for tag in tags:
                 print(f"- {tag}")
         else:
             print(f"No tags set for user {user_id}.")
