@@ -1,40 +1,45 @@
-import hashlib
 import logging
 import os
 import pathlib
-import uuid
+import secrets
 from functools import partial
 
 import pytest
-import secrets
 from _pytest.fixtures import FixtureRequest
 
 from pynitrokey.cli.nk3 import Context
 from pynitrokey.nk3.otp_app import Instruction, OTPApp
+
+CORPUS_PATH = "/tmp/corpus"
 
 logging.basicConfig(
     encoding="utf-8", level=logging.DEBUG, handlers=[logging.StreamHandler()]
 )
 
 
-def _write_corpus(ins: Instruction, data: bytes, prefix: str = ""):
-    # corpus_name = f"{prefix}{ins}-{hashlib.sha1(data).digest().hex()}"
+def _write_corpus(
+    ins: Instruction, data: bytes, prefix: str = "", path: str = CORPUS_PATH
+):
     corpus_name = f"{prefix}"
-    corpus_path = f"/tmp/corpus/{corpus_name}"
+    corpus_path = f"{path}/{corpus_name}"
     if len(data) > 255:
+        # Do not write records longer than 255 bytes
         return
     data = bytes([len(data)]) + data
     with open(corpus_path, "ba") as f:
+        print(f"Writing corpus data to the path {corpus_path}")
         f.write(data)
 
 
 @pytest.fixture(scope="function")
 def corpus_func(request: FixtureRequest):
-    pathlib.Path("/tmp/corpus").mkdir(exist_ok=True)
     if os.environ.get("NK_FUZZ") is not None:
+        path = os.environ.get("NK_FUZZ_PATH", CORPUS_PATH)
+        pathlib.Path(path).mkdir(exist_ok=True)
+        # Add some random suffix to have separate outputs for parametrized test cases
         pre = secrets.token_bytes(4).hex()
         pre = f"{request.function.__name__}-{pre}"
-        return partial(_write_corpus, prefix=pre)
+        return partial(_write_corpus, prefix=pre, path=path)
     return None
 
 
