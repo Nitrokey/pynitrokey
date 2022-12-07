@@ -20,12 +20,13 @@ init-fedora37:
 init: update-venv
 
 ARGS=
-.PHONY: run rune
+.PHONY: run rune builde
 run:
 	./venv/bin/nitropy $(ARGS)
 
+DOCKER=docker
 rune:
-	podman run --privileged --rm -it --entrypoint /bin/bash pynitrokey
+	$(DOCKER) run --privileged --rm -it --entrypoint /bin/bash pynitrokey
 
 builde:
 	earthly +build
@@ -146,4 +147,3 @@ wine-build/pynitrokey-$(VERSION).msi wine-build/nitropy-$(VERSION).exe:
 	bash build-wine.sh
 	#cp wine-build/out/pynitrokey-$(VERSION)-win32.msi wine-build
 	cp wine-build/out/nitropy-$(VERSION).exe wine-build
-
