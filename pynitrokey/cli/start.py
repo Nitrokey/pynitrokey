@@ -25,6 +25,7 @@ from pynitrokey.start.upgrade_by_passwd import (
     IS_LINUX,
     kill_smartcard_services,
     logger,
+    restart_smartcard_services,
     show_kdf_details,
     start_update,
     validate_gnuk,
@@ -94,8 +95,21 @@ def rng(count, raw, quiet):
 
 @click.command()
 @click.argument("identity")
-def set_identity(identity):
-    """set given identity (one of: 0, 1, 2)"""
+@click.option(
+    "--force-restart",
+    is_flag=True,
+    help="Force pcscd and GnuPG services restart once finished",
+)
+def set_identity(identity, force_restart):
+    """Set given identity (one of: 0, 1, 2)
+
+    Might require stopping other smart card services to connect directly to the device over CCID interface.
+    These will be restarted after operation, if it is required.
+
+    This could be replaced with:
+
+    gpg-connect-agent "SCD APDU 00 85 00 0<IDENTITY>
+    """
     if not identity.isdigit():
         local_critical("identity number must be a digit")
 
@@ -103,18 +117,26 @@ def set_identity(identity):
     if identity < 0 or identity > 2:
         local_critical("identity must be 0, 1 or 2")
 
+    kill_done = False
     local_print(f"Setting identity to {identity}")
     for x in range(3):
         try:
             gnuk = get_gnuk_device()
-            gnuk.cmd_select_openpgp()
-            try:
-                gnuk.cmd_set_identity(identity)
-            except USBError:
-                local_print(f"reset done - now active identity: {identity}")
-                break
+            with gnuk.release_on_exit() as gnuk:
+                gnuk.cmd_select_openpgp()
+                try:
+                    gnuk.cmd_set_identity(identity)
+                except USBError:
+                    local_print(f"Reset done - now active identity: {identity}")
+                    break
 
         except OnlyBusyICCError:
+            # Handle is occupied. Try to close pcscd and try again.
+            if not kill_done:
+                kill_smartcard_services("pcscd")
+                kill_done = True
+                continue
+
             local_print(
                 "Identity not changed - device is busy or the selected identity is already active"
             )
@@ -129,6 +151,9 @@ def set_identity(identity):
                 local_critical(e)
         except Exception as e:
             local_critical(e)
+    if kill_done or force_restart:
+        sleep(1)
+        restart_smartcard_services("pcscd")
 
 
 @click.command()

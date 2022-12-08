@@ -340,23 +340,34 @@ def validate_regnual(ctx, param, path: str):
     return path
 
 
-def kill_smartcard_services():
-    local_print("Could not connect to the device. Attempting to close scdaemon.")
+def kill_smartcard_services(filter_word=None):
+    local_print(
+        "Could not connect to the device. Attempting to close other smart card services."
+    )
 
     commands = [
         ("gpgconf --kill all".split(), True),
         ("sudo systemctl stop pcscd pcscd.socket".split(), IS_LINUX),
     ]
+    if filter_word:
+        commands = filter_commands(commands, filter_word)
 
     try_to_run_commands(commands)
 
 
-def restart_smartcard_services():
-    local_print("*** Restarting smartcard services")
+def filter_commands(commands, filter_word):
+    commands = list(filter(lambda x: filter_word in x[0], commands))
+    return commands
+
+
+def restart_smartcard_services(filter_word=None):
+    local_print("Restarting smartcard services")
     commands = [
-        ("gpgconf --reload all".split(), True),
         ("sudo systemctl restart pcscd pcscd.socket".split(), IS_LINUX),
+        ("gpgconf --reload all".split(), True),
     ]
+    if filter_word:
+        commands = filter_commands(commands, filter_word)
     try_to_run_commands(commands)
 
 
@@ -364,12 +375,12 @@ def try_to_run_commands(commands):
     for command, flag in commands:
         if not flag:
             continue
-        local_print(f"Running: {' '.join(command)}")
+        local_print(f"*** Running: {' '.join(command)}")
         try:
             check_output(command)
         except Exception as e:
-            local_print("Error while running command", e)
-    time.sleep(3)
+            local_print("*** Error while running command", e)
+        time.sleep(1)
 
 
 # @fixme: maybe also move to confconsts.py?

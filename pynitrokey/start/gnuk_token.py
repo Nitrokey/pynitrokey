@@ -24,6 +24,7 @@ import binascii
 import logging
 import time
 from array import array
+from contextlib import contextmanager
 from struct import *
 
 import usb
@@ -132,6 +133,17 @@ class gnuk_token(object):
 
     def release_gnuk(self):
         self.__devhandle.releaseInterface()
+
+    @contextmanager
+    def release_on_exit(self, *args, **kwds):
+        """
+        Release GNUK device once finished, to not block other smart card services
+        trying to claim it
+        """
+        try:
+            yield self
+        finally:
+            self.release_gnuk()
 
     def stop_gnuk(self):
         self.__devhandle.releaseInterface()
@@ -734,7 +746,7 @@ def get_gnuk_device(verbose=True, logger: logging.Logger = None):
         except Exception:
             pass
     if not icc and candidates:
-        raise OnlyBusyICCError("Found only busy ICC")
+        raise OnlyBusyICCError(f"Found only busy ICC: {candidates}")
     if not icc:
         raise ValueError("No ICC present")
     status = icc.icc_get_status()
