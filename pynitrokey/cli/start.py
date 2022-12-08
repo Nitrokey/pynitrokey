@@ -117,7 +117,6 @@ def set_identity(identity, force_restart):
     if identity < 0 or identity > 2:
         local_critical("identity must be 0, 1 or 2")
 
-    kill_done = False
     local_print(f"Setting identity to {identity}")
     for x in range(3):
         try:
@@ -126,34 +125,25 @@ def set_identity(identity, force_restart):
                 gnuk.cmd_select_openpgp()
                 try:
                     gnuk.cmd_set_identity(identity)
+                    break
                 except USBError:
                     local_print(f"Reset done - now active identity: {identity}")
                     break
 
         except OnlyBusyICCError:
-            # Handle is occupied. Try to close pcscd and try again.
-            if not kill_done:
-                kill_smartcard_services("pcscd")
-                kill_done = True
-                continue
-
             local_print(
-                "Identity not changed - device is busy or the selected identity is already active"
+                "Device is occupied by some other service and cannot be connected to. Identity not changed."
             )
             break
         except ValueError as e:
             if "No ICC present" in str(e):
                 local_print(
-                    "Could not connect to device, trying to close other smart card services"
+                    "Device is occupied by some other service and cannot be connected to. Identity not changed."
                 )
-                kill_smartcard_services()
             else:
                 local_critical(e)
         except Exception as e:
             local_critical(e)
-    if kill_done or force_restart:
-        sleep(1)
-        restart_smartcard_services("pcscd")
 
 
 @click.command()
