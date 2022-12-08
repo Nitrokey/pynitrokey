@@ -7,6 +7,7 @@ import pytest
 import secrets
 from _pytest.fixtures import FixtureRequest
 
+from pynitrokey.cli import CliException
 from pynitrokey.cli.nk3 import Context
 from pynitrokey.nk3.otp_app import Instruction, OTPApp
 
@@ -46,7 +47,11 @@ def corpus_func(request: FixtureRequest):
 @pytest.fixture(scope="session")
 def dev():
     ctx = Context(None)
-    return ctx.connect_device()
+    try:
+        return ctx.connect_device()
+    except CliException as e:
+        if "No Nitrokey 3 device found" in str(e):
+            pytest.skip(f"Cannot connect to the Nitrokey 3 device. Error: {e}")
 
 
 @pytest.fixture(scope="function")
