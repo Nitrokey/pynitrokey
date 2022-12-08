@@ -108,7 +108,7 @@ def set_identity(identity, force_restart):
 
     This could be replaced with:
 
-    gpg-connect-agent "SCD APDU 00 85 00 0<IDENTITY>
+    gpg-connect-agent "SCD APDU 00 85 00 0<IDENTITY>"
     """
     if not identity.isdigit():
         local_critical("identity number must be a digit")
