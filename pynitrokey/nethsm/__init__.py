@@ -509,8 +509,8 @@ class NetHSM:
 
         body = RandomRequestData(length=n)
         try:
-            data = self.get_api().random_post(body=body)
-            return data.random
+            response = self.get_api().random_post(body=body)
+            return response.body["random"]
         except ApiException as e:
             _handle_api_exception(e, state=State.OPERATIONAL, roles=[Role.OPERATOR])
 
