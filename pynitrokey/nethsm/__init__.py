@@ -655,7 +655,8 @@ class NetHSM:
 
     def get_config_logging(self):
         try:
-            return self.get_api().config_logging_get()
+            response = self.get_api().config_logging_get()
+            return response.body
         except ApiException as e:
             _handle_api_exception(
                 e, state=State.OPERATIONAL, roles=[Role.ADMINISTRATOR]
@@ -663,7 +664,8 @@ class NetHSM:
 
     def get_config_network(self):
         try:
-            return self.get_api().config_network_get()
+            response = self.get_api().config_network_get()
+            return response.body
         except ApiException as e:
             _handle_api_exception(
                 e, state=State.OPERATIONAL, roles=[Role.ADMINISTRATOR]
@@ -671,7 +673,8 @@ class NetHSM:
 
     def get_config_time(self):
         try:
-            return self.get_api().config_time_get().time
+            response = self.get_api().config_time_get()
+            return response.body.time
         except ApiException as e:
             _handle_api_exception(
                 e, state=State.OPERATIONAL, roles=[Role.ADMINISTRATOR]
@@ -679,7 +682,7 @@ class NetHSM:
 
     def get_config_unattended_boot(self):
         try:
-            return self.get_api().config_unattended_boot_get().status
+            return self.get_api().config_unattended_boot_get().body.status
         except ApiException as e:
             _handle_api_exception(
                 e, state=State.OPERATIONAL, roles=[Role.ADMINISTRATOR]
@@ -687,7 +690,10 @@ class NetHSM:
 
     def get_public_key(self):
         try:
-            return self.get_api().config_tls_public_pem_get()
+            response = self.get_api().config_tls_public_pem_get(
+                skip_deserialization=True
+            )
+            return response.response.data.decode("utf-8")
         except ApiException as e:
             _handle_api_exception(
                 e, state=State.OPERATIONAL, roles=[Role.ADMINISTRATOR]
@@ -695,7 +701,8 @@ class NetHSM:
 
     def get_certificate(self):
         try:
-            return self.get_api().config_tls_cert_pem_get()
+            response = self.get_api().config_tls_cert_pem_get(skip_deserialization=True)
+            return response.response.data.decode("utf-8")
         except ApiException as e:
             _handle_api_exception(
                 e, state=State.OPERATIONAL, roles=[Role.ADMINISTRATOR]
@@ -772,7 +779,7 @@ class NetHSM:
         common_name,
         email_address,
     ):
-        data = {
+        body = {
             "countryName": country,
             "stateOrProvinceName": state_or_province,
             "localityName": locality,
@@ -782,13 +789,10 @@ class NetHSM:
             "emailAddress": email_address,
         }
         try:
-            response = self.request(
-                "POST",
-                "config/tls/csr.pem",
-                json=data,
-                mime_type="application/json",
+            response = self.get_api().config_tls_csr_pem_post(
+                body=body, skip_deserialization=True
             )
-            return response.content.decode("utf-8")
+            return response.response.data.decode("utf-8")
         except ApiException as e:
             _handle_api_exception(
                 e, state=State.OPERATIONAL, roles=[Role.ADMINISTRATOR]
@@ -891,7 +895,7 @@ class NetHSM:
         from .client.model.logging_config import LoggingConfig
 
         body = LoggingConfig(
-            ip_address=ip_address, port=port, log_level=LogLevel(log_level)
+            ipAddress=ip_address, port=port, logLevel=LogLevel(log_level)
         )
         try:
             self.get_api().config_logging_put(body=body)
@@ -908,7 +912,7 @@ class NetHSM:
     def set_network_config(self, ip_address, netmask, gateway):
         from .client.model.network_config import NetworkConfig
 
-        body = NetworkConfig(ip_address=ip_address, netmask=netmask, gateway=gateway)
+        body = NetworkConfig(ipAddress=ip_address, netmask=netmask, gateway=gateway)
         try:
             self.get_api().config_network_put(body=body)
         except ApiException as e:

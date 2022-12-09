@@ -711,14 +711,14 @@ def get_config(ctx, **kwargs):
         if show_all or kwargs["logging"]:
             data = nethsm.get_config_logging()
             print("  Logging:")
-            print("    IP address:   ", data.ip_address)
+            print("    IP address:   ", data.ipAddress)
             print("    Port:         ", data.port)
-            print("    Log level:    ", data.log_level)
+            print("    Log level:    ", data.logLevel)
 
         if show_all or kwargs["network"]:
             data = nethsm.get_config_network()
             print("  Network:")
-            print("    IP address:   ", data.ip_address)
+            print("    IP address:   ", data.ipAddress)
             print("    Netmask:      ", data.netmask)
             print("    Gateway:      ", data.gateway)
 
