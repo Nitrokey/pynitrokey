@@ -9,6 +9,7 @@
 
 import enum
 import logging
+import platform
 import sys
 from enum import Enum
 from typing import List, Optional
@@ -136,7 +137,10 @@ class Nitrokey3Device(Nitrokey3Base):
     @staticmethod
     def open(path: str) -> Optional["Nitrokey3Device"]:
         try:
-            device = open_device(path)
+            if platform.system() == "Windows":
+                device = open_device(bytes(path, "utf-8"))
+            else:
+                device = open_device(path)
         except Exception:
             logger.warn(f"No CTAPHID device at path {path}", exc_info=sys.exc_info())
             return None
