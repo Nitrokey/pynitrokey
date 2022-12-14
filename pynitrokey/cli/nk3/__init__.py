@@ -9,10 +9,15 @@
 import logging
 import os.path
 from base64 import b32decode
-from typing import List, Optional, Type, TypeVar
+from hashlib import sha256
+from typing import BinaryIO, List, Optional, Type, TypeVar
 
 import click
 import fido2
+from cryptography import x509
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey
+from ecdsa import NIST256p, SigningKey
 
 from pynitrokey.cli.exceptions import CliException
 from pynitrokey.helpers import (
@@ -35,6 +40,7 @@ from pynitrokey.nk3.bootloader import (
 from pynitrokey.nk3.device import BootMode, Nitrokey3Device
 from pynitrokey.nk3.exceptions import TimeoutException
 from pynitrokey.nk3.otp_app import STRING_TO_KIND, Algorithm, OTPApp
+from pynitrokey.nk3.provisioner_app import ProvisionerApp
 from pynitrokey.nk3.updates import REPOSITORY, get_firmware_update
 from pynitrokey.updates import OverwriteError
 
@@ -789,3 +795,94 @@ def clear_password(ctx: Context, experimental: bool) -> None:
             local_print(
                 f"Device returns error: {e}. This passphrase might be invalid or is set already."
             )
+
+
+@nk3.group(hidden=True)
+def provision() -> None:
+    """
+    Provision the device.  This command is only used during the production
+    process and not available for regular devices.
+    """
+    pass
+
+
+@provision.command("fido2")
+@click.pass_obj
+@click.option(
+    "--key",
+    "key_file",
+    required=True,
+    type=click.File("rb"),
+    help="The path of the FIDO2 attestation key",
+)
+@click.option(
+    "--cert",
+    "cert_file",
+    required=True,
+    type=click.File("rb"),
+    help="The path of the FIDO2 attestation certificate",
+)
+def provision_fido2(ctx: Context, key_file: BinaryIO, cert_file: BinaryIO) -> None:
+    """Provision the FIDO2 attestation key and certificate."""
+    key = key_file.read()
+    cert = cert_file.read()
+
+    if len(key) != 36:
+        raise CliException(f"Invalid key length {len(key)} (expected 36)")
+    ecdsa_key = SigningKey.from_string(key[4:], curve=NIST256p)
+    pem_pubkey = serialization.load_pem_public_key(
+        ecdsa_key.get_verifying_key().to_pem()
+    )
+
+    x509_cert = x509.load_der_x509_certificate(cert)
+    cert_pubkey = x509_cert.public_key()
+
+    if not isinstance(pem_pubkey, EllipticCurvePublicKey):
+        raise CliException("The FIDO2 attestation key is not an EC key")
+    if not isinstance(cert_pubkey, EllipticCurvePublicKey):
+        raise CliException(
+            "The FIDO2 attestation certificate does not contain an EC key"
+        )
+    if pem_pubkey.public_numbers() != cert_pubkey.public_numbers():
+        raise CliException(
+            "The FIDO2 attestation certificate does not match the public key"
+        )
+
+    # See https://www.w3.org/TR/webauthn-2/#sctn-packed-attestation-cert-requirements
+    if x509_cert.version != x509.Version.v3:
+        raise CliException(
+            f"Unexpected certificate version {x509_cert.version} (expected v3)"
+        )
+
+    subject_attrs = {
+        attr.rfc4514_attribute_name: attr.value for attr in x509_cert.subject
+    }
+    for name in ["C", "CN", "O", "OU"]:
+        if name not in subject_attrs:
+            raise CliException(f"Missing subject {name} in certificate")
+    if subject_attrs["OU"] != "Authenticator Attestation":
+        raise CliException(
+            f"Unexpected certificate subject OU {subject_attrs['OU']} (expected "
+            "Authenticator Attestation)"
+        )
+
+    found_aaguid = False
+    for extension in x509_cert.extensions:
+        if extension.oid.dotted_string == "1.3.6.1.4.1.45724.1.1.4":
+            found_aaguid = True
+    if not found_aaguid:
+        raise CliException("Missing AAGUID extension in certificate")
+
+    basic_constraints = x509_cert.extensions.get_extension_for_class(
+        x509.BasicConstraints
+    )
+    if basic_constraints.value.ca:
+        raise CliException("CA must be set to false in the basic constraints")
+
+    cert_hash = sha256(cert).digest().hex()
+    print(f"FIDO2 certificate hash: {cert_hash}")
+
+    with ctx.connect_device() as device:
+        provisioner = ProvisionerApp(device)
+        provisioner.write_file(b"fido/x5c/00", cert)
+        provisioner.write_file(b"fido/sec/00", key)
