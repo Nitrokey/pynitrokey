@@ -19,7 +19,7 @@ from spsdk.mboot.properties import PropertyTag
 from spsdk.sbfile.sb2.images import BootImageV21
 from spsdk.utils.usbfilter import USBDeviceFilter
 
-from ..utils import Version
+from ..utils import Uuid, Version
 from . import FirmwareMetadata, Nitrokey3Bootloader, ProgressCallback, Variant
 
 RKHT = bytes.fromhex("050aad3e77791a81e59c5b2ba5a158937e9460ee325d8ccba09734b8fdebb171")
@@ -81,7 +81,7 @@ class Nitrokey3BootloaderLpc55(Nitrokey3Bootloader):
                 raise Exception("Failed to reboot Nitrokey 3 bootloader")
         return True
 
-    def uuid(self) -> Optional[int]:
+    def uuid(self) -> Optional[Uuid]:
         uuid = self.device.get_property(PropertyTag.UNIQUE_DEVICE_IDENT)  # type: ignore[arg-type]
         if not uuid:
             raise ValueError("Missing response for UUID property query")
@@ -92,7 +92,7 @@ class Nitrokey3BootloaderLpc55(Nitrokey3Bootloader):
         # https://github.com/lpc55/lpc55-host/blob/main/src/bootloader/property.rs#L222
         wrong_endian = (uuid[3] << 96) + (uuid[2] << 64) + (uuid[1] << 32) + uuid[0]
         right_endian = wrong_endian.to_bytes(16, byteorder="little")
-        return int.from_bytes(right_endian, byteorder="big")
+        return Uuid(int.from_bytes(right_endian, byteorder="big"))
 
     def update(
         self,

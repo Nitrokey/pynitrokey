@@ -10,6 +10,8 @@
 from abc import ABC, abstractmethod
 from typing import Optional, TypeVar
 
+from .utils import Uuid
+
 T = TypeVar("T", bound="Nitrokey3Base")
 
 
@@ -41,5 +43,5 @@ class Nitrokey3Base(ABC):
         ...
 
     @abstractmethod
-    def uuid(self) -> Optional[int]:
+    def uuid(self) -> Optional[Uuid]:
         ...

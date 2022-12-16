@@ -23,7 +23,7 @@ from pynitrokey.fido2 import device_path_to_str
 from pynitrokey.helpers import local_print
 from pynitrokey.nk3.base import Nitrokey3Base
 from pynitrokey.nk3.device import Nitrokey3Device
-from pynitrokey.nk3.utils import Version
+from pynitrokey.nk3.utils import Uuid, Version
 
 logger = logging.getLogger(__name__)
 
@@ -149,7 +149,7 @@ def log_system() -> None:
 @test_case("uuid", "UUID query")
 def test_uuid_query(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
     uuid = device.uuid()
-    uuid_str = f"{uuid:032X}" if uuid else "[not supported]"
+    uuid_str = str(uuid) if uuid else "[not supported]"
     return TestResult(TestStatus.SUCCESS, uuid_str)
 
 
@@ -179,7 +179,7 @@ try:
     from smartcard.CardConnection import CardConnection
     from smartcard.Exceptions import NoCardException
 
-    def find_smartcard(uuid: int) -> CardConnection:
+    def find_smartcard(uuid: Uuid) -> CardConnection:
         for reader in System.readers():
             conn = reader.createConnection()
             try:
@@ -193,10 +193,10 @@ try:
                 continue
             if len(data) != 16:
                 continue
-            if uuid != int.from_bytes(data, "big"):
+            if uuid != Uuid(int.from_bytes(data, byteorder="big")):
                 continue
             return conn
-        raise Exception(f"No smartcard with UUID {uuid:032X} found")
+        raise Exception(f"No smartcard with UUID {uuid} found")
 
     def select(conn: CardConnection, aid: list[int]) -> bool:
         apdu = [0x00, 0xA4, 0x04, 0x00]

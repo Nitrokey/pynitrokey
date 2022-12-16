@@ -10,7 +10,18 @@
 from functools import total_ordering
 from typing import Tuple
 
+from dataclasses import dataclass
 from spsdk.sbfile.misc import BcdVersion3
+
+
+@dataclass(order=True, frozen=True)
+class Uuid:
+    """UUID of a Nitrokey 3 device."""
+
+    value: int
+
+    def __str__(self) -> str:
+        return f"{self.value:032X}"
 
 
 @total_ordering
