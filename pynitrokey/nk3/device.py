@@ -40,6 +40,7 @@ class Command(Enum):
     UUID = 0x62
     LOCKED = 0x63
     OTP = 0x70
+    PROVISIONER = 0x71
 
 
 @enum.unique
