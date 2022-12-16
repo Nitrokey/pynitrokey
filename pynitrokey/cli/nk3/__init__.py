@@ -135,7 +135,7 @@ def list() -> None:
         with device as device:
             uuid = device.uuid()
             if uuid:
-                local_print(f"{device.path}: {device.name} {device.uuid():032X}")
+                local_print(f"{device.path}: {device.name} {uuid}")
             else:
                 local_print(f"{device.path}: {device.name}")
 

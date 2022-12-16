@@ -20,7 +20,7 @@ from pynitrokey.fido2 import device_path_to_str
 
 from .base import Nitrokey3Base
 from .exceptions import TimeoutException
-from .utils import Version
+from .utils import Uuid, Version
 
 RNG_LEN = 57
 UUID_LEN = 16
@@ -96,14 +96,14 @@ class Nitrokey3Device(Nitrokey3Base):
             self.logger.debug("ignoring OSError after reboot", exc_info=e)
         return True
 
-    def uuid(self) -> Optional[int]:
+    def uuid(self) -> Optional[Uuid]:
         uuid = self._call(Command.UUID)
         if len(uuid) == 0:
             # Firmware version 1.0.0 does not support querying the UUID
             return None
         if len(uuid) != UUID_LEN:
             raise ValueError(f"UUID response has invalid length {len(uuid)}")
-        return int.from_bytes(uuid, "big")
+        return Uuid(int.from_bytes(uuid, byteorder="big"))
 
     def version(self) -> Version:
         version_bytes = self._call(Command.VERSION, response_len=VERSION_LEN)

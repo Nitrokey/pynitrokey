@@ -26,7 +26,7 @@ from nordicsemi.dfu.manifest import Manifest
 from nordicsemi.dfu.package import Package
 from nordicsemi.lister.device_lister import DeviceLister
 
-from ..utils import Version
+from ..utils import Uuid, Version
 from . import FirmwareMetadata, Nitrokey3Bootloader, ProgressCallback, Variant
 
 logger = logging.getLogger(__name__)
@@ -153,8 +153,8 @@ class Nitrokey3BootloaderNrf52(Nitrokey3Bootloader):
     def reboot(self) -> bool:
         return False
 
-    def uuid(self) -> Optional[int]:
-        return self._uuid
+    def uuid(self) -> Optional[Uuid]:
+        return Uuid(self._uuid)
 
     def update(self, data: bytes, callback: Optional[ProgressCallback] = None) -> None:
         # based on https://github.com/NordicSemiconductor/pc-nrfutil/blob/1caa347b1cca3896f4695823f48abba15fbef76b/nordicsemi/dfu/dfu.py
