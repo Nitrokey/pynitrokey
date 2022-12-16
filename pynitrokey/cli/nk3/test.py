@@ -149,7 +149,7 @@ def log_system() -> None:
 @test_case("uuid", "UUID query")
 def test_uuid_query(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
     uuid = device.uuid()
-    uuid_str = f"{uuid:X}" if uuid else "[not supported]"
+    uuid_str = f"{uuid:032X}" if uuid else "[not supported]"
     return TestResult(TestStatus.SUCCESS, uuid_str)
 
 
@@ -196,7 +196,7 @@ try:
             if uuid != int.from_bytes(data, "big"):
                 continue
             return conn
-        raise Exception(f"No smartcard with UUID {uuid:X} found")
+        raise Exception(f"No smartcard with UUID {uuid:032X} found")
 
     def select(conn: CardConnection, aid: list[int]) -> bool:
         apdu = [0x00, 0xA4, 0x04, 0x00]
