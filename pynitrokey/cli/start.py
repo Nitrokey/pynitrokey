@@ -198,7 +198,7 @@ def set_identity(identity):
             pass
 
         try:
-            from smartcard.Exceptions import CardConnectionException
+            from smartcard.Exceptions import CardConnectionException  # type: ignore
             from smartcard.pcsc.PCSCExceptions import EstablishContextException
 
             # this works when gpg has no connection, but pcsc server is working
