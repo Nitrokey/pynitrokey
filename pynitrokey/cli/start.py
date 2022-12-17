@@ -7,6 +7,7 @@
 # http://opensource.org/licenses/MIT>, at your option. This file may not be
 # copied, modified, or distributed except according to those terms.
 import binascii
+import logging
 import typing
 from sys import stderr, stdout
 
@@ -16,7 +17,7 @@ from usb.core import USBError
 
 from pynitrokey.confconsts import logger
 from pynitrokey.helpers import local_critical, local_print
-from pynitrokey.start.gnuk_token import OnlyBusyICCError, get_gnuk_device
+from pynitrokey.start.gnuk_token import OnlyBusyICCError, get_gnuk_device, gnuk_token
 from pynitrokey.start.threaded_log import ThreadLog
 from pynitrokey.start.upgrade_by_passwd import (
     DEFAULT_PW3,
@@ -93,6 +94,10 @@ class CardRemovedGPGAgentException(RuntimeWarning):
     pass
 
 
+class ServiceNotRunningGPGAgentException(RuntimeWarning):
+    pass
+
+
 class NoCardPCSCException(RuntimeWarning):
     pass
 
@@ -106,6 +111,8 @@ def gpg_agent_set_identity(identity: int):
     logger.debug(app_out)
     if b"ERR 100663406 Card removed" in app_out:
         raise CardRemovedGPGAgentException("Card removed")
+    if b"ERR 100663614 Service is not running" in app_out:
+        raise ServiceNotRunningGPGAgentException()
 
 
 def pcsc_set_identity(identity):
@@ -193,7 +200,7 @@ def set_identity(identity):
             logger.info("Trying changing identity through gpg-agent")
             gpg_agent_set_identity(identity)
             return
-        except CardRemovedGPGAgentException:
+        except (CardRemovedGPGAgentException, ServiceNotRunningGPGAgentException):
             # this error shows up when the identity was just changed with gpg, and the new state was not reloaded
             pass
 
