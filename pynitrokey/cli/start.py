@@ -6,13 +6,15 @@
 # http://apache.org/licenses/LICENSE-2.0> or the MIT license <LICENSE-MIT or
 # http://opensource.org/licenses/MIT>, at your option. This file may not be
 # copied, modified, or distributed except according to those terms.
-
-
+import binascii
+import typing
 from subprocess import check_output
 from sys import stderr, stdout
 from time import sleep
 
 import click
+from smartcard.Exceptions import CardConnectionException
+from smartcard.pcsc.PCSCExceptions import EstablishContextException
 from tqdm import tqdm
 from usb.core import USBError
 
@@ -93,14 +95,81 @@ def rng(count, raw, quiet):
                 print(challenge.hex())
 
 
+class CardRemovedGPGAgentException(RuntimeWarning):
+    pass
+
+
+def gpg_agent_set_identity(identity: int):
+    from pexpect import run
+
+    cmd = f"gpg-connect-agent 'SCD APDU 00 85 00 0{identity}' /bye"
+    app = run(cmd)
+    print(cmd)
+    print(app)
+    if b"ERR 100663406 Card removed" in app:
+        raise CardRemovedGPGAgentException("Card removed")
+
+
+def pcsc_set_identity(identity):
+    try:
+        from smartcard import System
+        from smartcard.CardConnection import CardConnection
+        from smartcard.Exceptions import NoCardException
+
+        def find_smartcard(uuid: typing.Optional[int] = None) -> CardConnection:
+            for reader in System.readers():
+                if "Nitrokey Start" not in str(reader):
+                    continue
+                conn = reader.createConnection()
+                try:
+                    conn.connect()
+                except NoCardException:
+                    continue
+                #     use this for debug
+                # sudo pcscd -f -a
+
+                # if not select(conn, AID_ADMIN):
+                #     continue
+                # data, sw1, sw2 = conn.transmit([0x00, 0x62, 0x00, 0x00, 16])
+                print(reader)
+                print(conn)
+                return conn
+            # raise Exception(f"No smartcard with UUID {uuid:X} found")
+
+        def select(conn: CardConnection, aid: bytes) -> bool:
+            apdu = [0x00, 0xA4, 0x04, 0x00]
+            apdu.append(len(aid))
+            apdu.extend(aid)
+            _, sw1, sw2 = conn.transmit(apdu)
+            return (sw1, sw2) == (0x90, 0x00)
+
+        def send_id_change(conn: CardConnection, identity: int) -> None:
+            #  00 85 00 02
+            out = [0x00, 0x85, 0x00, identity]
+            for i in range(5):
+                data, sw1, sw2 = conn.transmit(out)
+                print((bytes(out).hex(), data, hex(sw1), hex(sw2)))
+                res = bytes([sw1, sw2]).hex()
+                if res == "9000":
+                    print("success")
+                    break
+                if res == "6a88":
+                    print(f"error: {res}")
+                    continue
+
+        conn = find_smartcard()
+        aid = binascii.a2b_hex("D276:0001:2401".replace(":", ""))
+        select(conn, aid)
+        send_id_change(conn, identity)
+
+    except ImportError:
+        logger.debug("pcsc feature is deactivated, skipping firmware mode test")
+        pass
+
+
 @click.command()
 @click.argument("identity")
-@click.option(
-    "--force-restart",
-    is_flag=True,
-    help="Force pcscd and GnuPG services restart once finished",
-)
-def set_identity(identity, force_restart):
+def set_identity(identity):
     """Set given identity (one of: 0, 1, 2)
 
     Might require stopping other smart card services to connect directly to the device over CCID interface.
@@ -118,6 +187,50 @@ def set_identity(identity, force_restart):
         local_critical("identity must be 0, 1 or 2")
 
     local_print(f"Setting identity to {identity}")
+
+    # Note: the error in communication coming after changing the identity is caused by the immediate restart of
+    # the device, without responding to the call. The idea was to avoid operating with a potentially inconsistent state in
+    # the memory.
+    def inner():
+        """
+        Call all the methods in the order of the success chance
+        """
+
+        # this works when gpg has opened connection, stops after changing identity with it
+        try:
+            gpg_agent_set_identity(identity)
+            return True
+        except CardRemovedGPGAgentException:
+            # this error shows up when the identity was just changed with gpg, and the new state was not reloaded
+            pass
+
+        # this works when gpg has no connection, but pcsc server is working
+        try:
+            pcsc_set_identity(identity)
+            print(f"PCSC change works")
+            return True
+        except CardConnectionException as e:
+            print(f"Expected error. PCSC reports {e}")
+            # this error is expected after sucessfully changing the identity
+            return True
+        except EstablishContextException:
+            # pcscd must not work, try another method
+            local_print("pcscd must not work, try another method")
+
+        # this works, when neither gnupg nor opensc is claiming the smart card interface
+        try:
+            set_identity_raw(identity)
+        except:
+            raise
+
+    inner()
+    # apparently calling it 2 times reloads the gnupg, and allows for immediate use of it after changing the identity
+    # otherwise its reload is needed with gpgconf --reload all
+    inner()
+    local_print(f"Reset done - now active identity: {identity}")
+
+
+def set_identity_raw(identity):
     for x in range(3):
         try:
             gnuk = get_gnuk_device()
@@ -127,7 +240,7 @@ def set_identity(identity, force_restart):
                     gnuk.cmd_set_identity(identity)
                     break
                 except USBError:
-                    local_print(f"Reset done - now active identity: {identity}")
+                    # local_print(f"Reset done - now active identity: {identity}")
                     break
 
         except OnlyBusyICCError:
