@@ -9,10 +9,10 @@
 
 import os.path
 import urllib.parse
+from dataclasses import dataclass
 from typing import BinaryIO, Callable, Dict, Generator, Optional, Pattern
 
 import requests
-from dataclasses import dataclass
 
 API_BASE_URL = "https://api.github.com"
 

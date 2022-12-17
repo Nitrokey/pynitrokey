@@ -11,6 +11,7 @@ import base64
 import binascii
 import hashlib
 import json
+import secrets
 import struct
 import sys
 import tempfile
@@ -18,7 +19,6 @@ import time
 from getpass import getpass
 from typing import Any, Optional
 
-import secrets
 from fido2.client import Fido2Client, UserInteraction
 from fido2.ctap import CtapError
 from fido2.ctap1 import Ctap1
