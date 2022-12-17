@@ -8,13 +8,9 @@
 # copied, modified, or distributed except according to those terms.
 import binascii
 import typing
-from subprocess import check_output
 from sys import stderr, stdout
-from time import sleep
 
 import click
-from smartcard.Exceptions import CardConnectionException
-from smartcard.pcsc.PCSCExceptions import EstablishContextException
 from tqdm import tqdm
 from usb.core import USBError
 
@@ -204,18 +200,24 @@ def set_identity(identity):
             # this error shows up when the identity was just changed with gpg, and the new state was not reloaded
             pass
 
-        # this works when gpg has no connection, but pcsc server is working
         try:
-            pcsc_set_identity(identity)
-            print(f"PCSC change works")
-            return True
-        except CardConnectionException as e:
-            print(f"Expected error. PCSC reports {e}")
-            # this error is expected after sucessfully changing the identity
-            return True
-        except EstablishContextException:
-            # pcscd must not work, try another method
-            local_print("pcscd must not work, try another method")
+            from smartcard.Exceptions import CardConnectionException
+            from smartcard.pcsc.PCSCExceptions import EstablishContextException
+
+            # this works when gpg has no connection, but pcsc server is working
+            try:
+                pcsc_set_identity(identity)
+                print(f"PCSC change works")
+                return True
+            except CardConnectionException as e:
+                print(f"Expected error. PCSC reports {e}")
+                # this error is expected after sucessfully changing the identity
+                return True
+            except EstablishContextException:
+                # pcscd must not work, try another method
+                local_print("pcscd must not work, try another method")
+        except ImportError:
+            local_print("pcsc feature is deactivated, skipping this switching method")
 
         # this works, when neither gnupg nor opensc is claiming the smart card interface
         try:
