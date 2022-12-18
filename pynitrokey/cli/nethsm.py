@@ -448,7 +448,7 @@ def list_keys(ctx, details):
             headers += ["Type", "Mechanisms", "Operations", "Tags"]
             data = []
             for key_id in key_ids:
-                key = nethsm.get_key(key_id=key_id.value)
+                key = nethsm.get_key(key_id=key_id)
                 data.append(
                     [
                         key_id,
