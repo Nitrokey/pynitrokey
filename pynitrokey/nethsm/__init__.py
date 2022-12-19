@@ -597,14 +597,16 @@ class NetHSM:
             )
 
     def add_key(
-        self, key_id, type, mechanisms, prime_p, prime_q, public_exponent, data
+        self, key_id, type, mechanisms, tags, prime_p, prime_q, public_exponent, data
     ):
-        from .client.paths.keys_key_id.put import RequestPathParams
         from .client.model.key_mechanism import KeyMechanism
         from .client.model.key_mechanisms import KeyMechanisms
         from .client.model.key_private_data import KeyPrivateData
+        from .client.model.key_restrictions import KeyRestrictions
         from .client.model.key_type import KeyType
         from .client.model.private_key import PrivateKey
+        from .client.model.tag_list import TagList
+        from .client.paths.keys_key_id.put import RequestPathParams
 
         path_params = RequestPathParams({"KeyID": key_id})
         if type == "RSA":
@@ -616,13 +618,24 @@ class NetHSM:
         else:
             key_data = KeyPrivateData(data=data)
 
-        body = PrivateKey(
-            type=KeyType(type),
-            mechanisms=KeyMechanisms(
-                [KeyMechanism(mechanism) for mechanism in mechanisms]
-            ),
-            key=key_data,
-        )
+        if tags:
+            body = PrivateKey(
+                type=KeyType(type),
+                mechanisms=KeyMechanisms(
+                    [KeyMechanism(mechanism) for mechanism in mechanisms]
+                ),
+                key=key_data,
+                restrictions=KeyRestrictions(tags=TagList([tag for tag in tags])),
+            )
+        else:
+            body = PrivateKey(
+                type=KeyType(type),
+                mechanisms=KeyMechanisms(
+                    [KeyMechanism(mechanism) for mechanism in mechanisms]
+                ),
+                key=key_data,
+            )
+
         try:
             if key_id:
                 self.get_api().keys_key_id_put(
