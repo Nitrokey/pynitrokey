@@ -531,9 +531,15 @@ class NetHSM:
         except ApiException as e:
             _handle_api_exception(e, state=State.OPERATIONAL, roles=[Role.METRICS])
 
-    def list_keys(self):
+    def list_keys(self, filter):
+        from .client.paths.keys.get import RequestQueryParams
+
         try:
-            response = self.get_api().keys_get()
+            if filter:
+                query_params = RequestQueryParams({"filter": filter})
+                response = self.get_api().keys_get(query_params=query_params)
+            else:
+                response = self.get_api().keys_get()
             return [item["key"] for item in response.body]
         except ApiException as e:
             _handle_api_exception(

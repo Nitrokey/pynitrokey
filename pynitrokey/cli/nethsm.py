@@ -431,14 +431,20 @@ def metrics(ctx):
     default=True,
     help="Also query the key data",
 )
+@click.option(
+    "-f",
+    "--filter",
+    type=str,
+    help="Filter keys by tags for respective user",
+)
 @click.pass_context
-def list_keys(ctx, details):
+def list_keys(ctx, details, filter):
     """List all keys on the NetHSM.
 
     This command requires authentication as a user with the Administrator or
     Operator role."""
     with connect(ctx) as nethsm:
-        key_ids = nethsm.list_keys()
+        key_ids = nethsm.list_keys(filter)
 
         print(f"Keys on NetHSM {nethsm.host}:")
         print()
