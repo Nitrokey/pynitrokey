@@ -110,6 +110,10 @@ class KeyMechanism(enum.Enum):
     AES_DECRYPTION_CBC = "AES_Decryption_CBC"
 
 
+class EncryptMode(enum.Enum):
+    AES_CBC = "AES_CBC"
+
+
 class DecryptMode(enum.Enum):
     RAW = "RAW"
     PKCS1 = "PKCS1"
@@ -1133,7 +1137,33 @@ class NetHSM:
                 roles=[Role.ADMINISTRATOR],
             )
 
-    def decrypt(self, key_id, data, mode):
+    def encrypt(self, key_id, data, mode, iv):
+        from .client.model.base64 import Base64
+        from .client.model.encrypt_mode import EncryptMode
+        from .client.model.encrypt_request_data import EncryptRequestData
+        from .client.paths.keys_key_id_encrypt.post import RequestPathParams
+
+        path_params = RequestPathParams({"KeyID": key_id})
+        body = EncryptRequestData(
+            message=Base64(data), mode=EncryptMode(mode), iv=Base64(iv)
+        )
+        try:
+            response = self.get_api().keys_key_id_encrypt_post(
+                path_params=path_params, body=body
+            )
+            return (response.body.encrypted, response.body.iv)
+        except ApiException as e:
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.OPERATOR],
+                messages={
+                    400: "Bad request -- e. g. invalid encryption mode, or wrong padding",
+                    404: f"Key {key_id} not found",
+                },
+            )
+
+    def decrypt(self, key_id, data, mode, iv):
         from .client.model.base64 import Base64
         from .client.model.decrypt_mode import DecryptMode
         from .client.model.decrypt_request_data import DecryptRequestData

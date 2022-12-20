@@ -39,6 +39,7 @@ UNATTENDED_BOOT_STATUS_TYPE = make_enum_type(pynitrokey.nethsm.UnattendedBootSta
 TYPE_TYPE = make_enum_type(pynitrokey.nethsm.KeyType)
 TYPE_TLS_KEY_TYPE = make_enum_type(pynitrokey.nethsm.TlsKeyType)
 MECHANISM_TYPE = make_enum_type(pynitrokey.nethsm.KeyMechanism)
+ENCRYPT_MODE_TYPE = make_enum_type(pynitrokey.nethsm.EncryptMode)
 DECRYPT_MODE_TYPE = make_enum_type(pynitrokey.nethsm.DecryptMode)
 SIGN_MODE_TYPE = make_enum_type(pynitrokey.nethsm.SignMode)
 
@@ -1279,6 +1280,45 @@ def factory_reset(ctx, force):
             print(f"NetHSM {nethsm.host} is about to perform a factory reset")
         else:
             print(f"Factory reset on NetHSM {nethsm.host} cancelled")
+
+
+@nethsm.command()
+@click.option(
+    "-k",
+    "--key-id",
+    prompt=True,
+    help="The ID of the key to encrypt the data with",
+)
+@click.option(
+    "-d",
+    "--data",
+    prompt=True,
+    help="The data in Base64 encoding",
+)
+@click.option(
+    "-m",
+    "--mode",
+    type=ENCRYPT_MODE_TYPE,
+    prompt=True,
+    help="The encrypt mode",
+)
+@click.option(
+    "-iv",
+    "--initialization-vector",
+    "iv",
+    type=str,
+    prompt=True,
+    help="The initialization vector",
+)
+@click.pass_context
+def encrypt(ctx, key_id, data, mode, iv):
+    """Encrypt data with an asymmetric secret key on the NetHSM and print the encrypted message.
+
+    This command requires authentication as a user with the Operator role."""
+    with connect(ctx) as nethsm:
+        encrypted = nethsm.encrypt(key_id, data, mode, iv)
+        print(f"Encrypted: {encrypted[0]}")
+        print(f"Initialization vector: {encrypted[1]}")
 
 
 @nethsm.command()
