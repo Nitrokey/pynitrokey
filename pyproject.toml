@@ -20,21 +20,24 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
 ]
 dependencies = [
+  "certifi >= 14.5.14",
   "cffi",
   "click >=8.0.0,<9",
   "cryptography >=3.4.4,<37",
   "ecdsa",
+  "frozendict ~= 2.3.4",
   "fido2 >=1.1.0,<2",
   "intelhex",
   "nkdfu",
   "nrfutil >=6.1.4,<7",
-  "python-dateutil",
+  "python-dateutil ~= 2.7.0",
   "pyusb",
   "requests",
   "spsdk >=1.7.0,<1.8.0",
   "tqdm",
-  "urllib3",
-  "tlv8"
+  "urllib3 ~= 1.26.7",
+  "tlv8",
+  "typing_extensions ~= 4.3.0"
 ]
 dynamic = ["version", "description"]
 

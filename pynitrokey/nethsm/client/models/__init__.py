@@ -1,3 +1,5 @@
+# coding: utf-8
+
 # flake8: noqa
 
 # import all models into this package
@@ -33,7 +35,12 @@ from pynitrokey.nethsm.client.model.key_type import KeyType
 from pynitrokey.nethsm.client.model.log_level import LogLevel
 from pynitrokey.nethsm.client.model.logging_config import LoggingConfig
 from pynitrokey.nethsm.client.model.network_config import NetworkConfig
+from pynitrokey.nethsm.client.model.pgp_private_key import PGPPrivateKey
 from pynitrokey.nethsm.client.model.passphrase import Passphrase
+from pynitrokey.nethsm.client.model.pem_csr import PemCSR
+from pynitrokey.nethsm.client.model.pem_cert import PemCert
+from pynitrokey.nethsm.client.model.pem_private_key import PemPrivateKey
+from pynitrokey.nethsm.client.model.pem_public_key import PemPublicKey
 from pynitrokey.nethsm.client.model.private_key import PrivateKey
 from pynitrokey.nethsm.client.model.provision_request_data import ProvisionRequestData
 from pynitrokey.nethsm.client.model.public_key import PublicKey
