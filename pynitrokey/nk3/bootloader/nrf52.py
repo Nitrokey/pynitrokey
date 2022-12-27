@@ -11,13 +11,13 @@ import hashlib
 import logging
 import re
 import time
+from dataclasses import dataclass
 from io import BytesIO
 from typing import Optional
 from zipfile import ZipFile
 
 import ecdsa
 import ecdsa.curves
-from dataclasses import dataclass
 from ecdsa.keys import BadSignatureError
 from nordicsemi.dfu.dfu_transport import DfuEvent
 from nordicsemi.dfu.dfu_transport_serial import DfuTransportSerial

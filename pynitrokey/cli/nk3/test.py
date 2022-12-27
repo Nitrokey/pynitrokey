@@ -11,12 +11,11 @@
 import logging
 import platform
 import sys
+from dataclasses import dataclass
 from enum import Enum, auto, unique
 from hashlib import sha256
 from types import TracebackType
 from typing import Any, Callable, Iterable, List, Optional, Tuple, Type, Union
-
-from dataclasses import dataclass
 
 from pynitrokey.cli.exceptions import CliException
 from pynitrokey.fido2 import device_path_to_str

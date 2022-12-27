@@ -6,7 +6,7 @@ PYTHON3=python3
 
 BLACK_FLAGS=-t py35 --extend-exclude pynitrokey/nethsm/client
 FLAKE8_FLAGS=--extend-exclude pynitrokey/nethsm/client
-ISORT_FLAGS=--py 35 --extend-skip pynitrokey/nethsm/client
+ISORT_FLAGS=--py 39 --extend-skip pynitrokey/nethsm/client
 
 # whitelist of directories for flake8
 FLAKE8_DIRS=pynitrokey/nethsm pynitrokey/cli/nk3 pynitrokey/nk3
