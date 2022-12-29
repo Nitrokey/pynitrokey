@@ -4,7 +4,7 @@ PACKAGE_NAME=pynitrokey
 VENV=venv
 PYTHON3=python3
 
-BLACK_FLAGS=-t py35 --extend-exclude pynitrokey/nethsm/client
+BLACK_FLAGS=-t py39 --extend-exclude pynitrokey/nethsm/client
 FLAKE8_FLAGS=--extend-exclude pynitrokey/nethsm/client
 ISORT_FLAGS=--py 39 --extend-skip pynitrokey/nethsm/client
 
