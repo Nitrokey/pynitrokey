@@ -243,10 +243,12 @@ def set_identity(identity):
 def set_identity_raw(identity):
     for x in range(1):
         try:
-            gnuk = get_gnuk_device()
+            gnuk: gnuk_token = get_gnuk_device()
             with gnuk.release_on_exit() as gnuk:
                 gnuk.cmd_select_openpgp()
                 try:
+                    aid = gnuk.cmd_read_binary(0x004F, pre=0)
+                    logging.debug(f"{aid=}")
                     gnuk.cmd_set_identity(identity)
                     break
                 except USBError:
