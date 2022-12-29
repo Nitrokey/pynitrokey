@@ -4,17 +4,17 @@ Oath Authenticator client
 Used through CTAPHID transport, via the custom vendor command.
 Can be used directly over CCID as well.
 """
+import dataclasses
 import hmac
 import logging
 import typing
 from enum import Enum
 from hashlib import pbkdf2_hmac
+from secrets import token_bytes
 from struct import pack
 from typing import List, Optional
 
-import dataclasses
 import tlv8
-from secrets import token_bytes
 
 from pynitrokey.nk3 import Nitrokey3Device
 from pynitrokey.start.gnuk_token import iso7816_compose

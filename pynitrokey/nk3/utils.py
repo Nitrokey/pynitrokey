@@ -7,10 +7,10 @@
 # http://opensource.org/licenses/MIT>, at your option. This file may not be
 # copied, modified, or distributed except according to those terms.
 
+from dataclasses import dataclass
 from functools import total_ordering
 from typing import Tuple
 
-from dataclasses import dataclass
 from spsdk.sbfile.misc import BcdVersion3
 
 

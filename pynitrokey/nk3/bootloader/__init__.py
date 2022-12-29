@@ -11,10 +11,9 @@ import enum
 import logging
 import sys
 from abc import abstractmethod
+from dataclasses import dataclass
 from re import Pattern
 from typing import Callable, List, Optional
-
-from dataclasses import dataclass
 
 from ..base import Nitrokey3Base
 from ..utils import Version
