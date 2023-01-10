@@ -25,8 +25,10 @@ run:
 	./venv/bin/nitropy $(ARGS)
 
 DOCKER=docker
+IMAGE=pynitrokey
+CMD=/bin/bash
 rune:
-	$(DOCKER) run --privileged --rm -it --entrypoint /bin/bash pynitrokey
+	$(DOCKER) run --privileged --rm -it -v $(PWD):/app --entrypoint= $(IMAGE) $(CMD)
 
 builde:
 	earthly +build
