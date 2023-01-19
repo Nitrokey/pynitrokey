@@ -68,6 +68,7 @@ profile = "black"
 [tool.mypy]
 mypy_path = "pynitrokey/stubs"
 show_error_codes = true
+python_version = "3.9"
 
 # enable strict checks for new code
 [[tool.mypy.overrides]]
