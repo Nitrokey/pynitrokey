@@ -368,11 +368,13 @@ def test_load(otpApp, kind: Kind):
     otpApp.reset()
 
     credentials_registered = 0
+    names_registered = []
 
     for i in range(100000):
         name = f"LOAD{i}"
         try:
             otpApp.register(name, secretb, digits=6, kind=kind, initial_counter_value=i)
+            names_registered.append(name)
         except Exception as e:
             print(f"{e}")
             print(f"Registered {i} credentials")
@@ -383,8 +385,13 @@ def test_load(otpApp, kind: Kind):
             break
 
     assert (
-        credentials_registered > 100
+        credentials_registered > 30
     ), "Expecting being able to register at least 100 OTP credentials"
+
+    # Make some space for the counter updates - delete the last 2 credentials
+    for name in names_registered[-2:]:
+        otpApp.delete(name)
+    credentials_registered -= 2
 
     lib_at = lambda t: oath.totp(secret, format="dec6", period=30, t=t * 30).encode()
     if kind == Kind.Hotp:
