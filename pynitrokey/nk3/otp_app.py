@@ -40,6 +40,7 @@ class OTPAppException(Exception):
 
     def to_string(self) -> str:
         d = {
+            "61FF": "MoreDataAvailable",
             "6300": "VerificationFailed",
             "6400": "UnspecifiedNonpersistentExecutionError",
             "6500": "UnspecifiedPersistentExecutionError",
@@ -175,10 +176,34 @@ class OTPApp:
             f"Received [{status_bytes.hex()}] {result.hex() if result else result!r}"
         )
 
-        if status_bytes != b"\x90\00":
+        data_final = result
+        MORE_DATA_STATUS_BYTE = 0x61
+        while status_bytes[0] == MORE_DATA_STATUS_BYTE:
+            self.logfn(
+                f"Got RemainingData status: [{status_bytes.hex()}] {result.hex() if result else result!r}"
+            )
+            ins_b, p1, p2 = self._encode_command(Instruction.SendRemaining)
+            bytes_data = iso7816_compose(ins_b, p1, p2, data=[])
+            try:
+                result = self.dev.otp(data=bytes_data)
+            except Exception as e:
+                self.logfn(f"Got exception: {e}")
+                raise
+            status_bytes, result = result[:2], result[2:]
+            self.logfn(
+                f"Received [{status_bytes.hex()}] {result.hex() if result else result!r}"
+            )
+            if status_bytes[0] in [0x90, MORE_DATA_STATUS_BYTE]:
+                data_final += result
+
+        if status_bytes != b"\x90\x00" and status_bytes[0] != MORE_DATA_STATUS_BYTE:
             raise OTPAppException(status_bytes.hex(), "Received error")
 
-        return result
+        self.logfn(
+            f"Received final data: [{status_bytes.hex()}] {data_final.hex() if data_final else data_final!r}"
+        )
+
+        return data_final
 
     @classmethod
     def _encode_command(cls, command: Instruction) -> bytes:
