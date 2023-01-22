@@ -23,6 +23,9 @@ class Uuid:
     def __str__(self) -> str:
         return f"{self.value:032X}"
 
+    def __int__(self) -> int:
+        return self.value
+
 
 @total_ordering
 class Version:
