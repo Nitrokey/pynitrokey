@@ -427,6 +427,19 @@ def test_load(otpApp, kind: Kind, long_labels: bool):
     assert len(l) == credentials_registered
 
 
+def test_remove_all_credentials_by_hand(otpApp):
+    """Remove all hold credentials by hand and test for being empty.
+    Can fail if the previous test was not registering any credentials.
+    TODO: make it not depending on the execution order
+    """
+    l = otpApp.list()
+    assert len(l) > 0, "Empty credentials list"
+    for n in l:
+        otpApp.delete(n)
+    l = otpApp.list()
+    assert len(l) == 0
+
+
 @pytest.mark.xfail
 def test_send_rubbish(otpApp):
     """Check if the application crashes, when sending unexpected data for the given command"""
