@@ -308,11 +308,13 @@ class Updater:
             )
 
         metadata = validate_firmware_image(variant, data)
+        release_version = Version.from_v_str(release.tag)
         if Version.from_v_str(release.tag) != metadata.version:
             raise self.ui.error(
                 f"The firmware image for the release {release} has the unexpected product "
                 f"version {metadata.version}."
             )
+        metadata.version = release_version
 
         return (metadata, data)
 
@@ -325,10 +327,14 @@ class Updater:
         logger.info(f"Updated firmware version: {new_version}")
 
         if current_version:
-            if current_version > new_version:
+            if current_version.core() > new_version.core():
                 raise self.ui.abort_downgrade(current_version, new_version)
             elif current_version == new_version:
-                self.ui.confirm_update_same_version(current_version)
+                if current_version.complete and new_version.complete:
+                    same_version = current_version
+                else:
+                    same_version = current_version.core()
+                self.ui.confirm_update_same_version(same_version)
 
     def _perform_update(self, device: Nitrokey3Bootloader, image: bytes) -> None:
         logger.debug("Starting firmware update")

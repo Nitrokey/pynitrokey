@@ -27,6 +27,7 @@ from pynitrokey.helpers import (
 )
 from pynitrokey.nk3 import list as list_nk3
 from pynitrokey.nk3 import open as open_nk3
+from pynitrokey.nk3.admin_app import AdminApp
 from pynitrokey.nk3.base import Nitrokey3Base
 from pynitrokey.nk3.bootloader import (
     Nitrokey3Bootloader,
@@ -463,6 +464,28 @@ def update(
     from .update import update as exec_update
 
     exec_update(ctx, image, variant)
+
+
+@nk3.command()
+@click.pass_obj
+def status(ctx: Context) -> None:
+    """Query the device status."""
+    with ctx.connect_device() as device:
+        uuid = device.uuid()
+        if uuid is not None:
+            local_print(f"UUID:               {uuid}")
+
+        admin = AdminApp(device)
+        version = admin.version()
+        local_print(f"Firmware version:   {version}")
+
+        status = admin.status()
+        if status.init_status is not None:
+            local_print(f"Init status:        {status.init_status}")
+        if status.ifs_blocks is not None:
+            local_print(f"Free blocks (int):  {status.ifs_blocks}")
+        if status.efs_blocks is not None:
+            local_print(f"Free blocks (ext):  {status.efs_blocks}")
 
 
 @nk3.command()
