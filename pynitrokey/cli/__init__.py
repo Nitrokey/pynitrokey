@@ -61,13 +61,9 @@ def nitropy():
     handler = logging.FileHandler(filename=LOG_FN, delay=True, encoding="utf-8")
     logging.basicConfig(format=LOG_FORMAT, level=logging.DEBUG, handlers=[handler])
 
-    # Timestamp for log
-    logger.info(f"Timestamp: {datetime.now()}\n")
-    # Info Os
-    logger.info(f"OS: {platform.uname()}\n")
-    # Info Python version
-    logger.info(f"Python version: {platform.python_version()}\n")
-    # Info all modules version
+    logger.info(f"Timestamp: {datetime.now()}")
+    logger.info(f"OS: {platform.uname()}")
+    logger.info(f"Python version: {platform.python_version()}")
     pymodules = [
         "pynitrokey",
         "cryptography",
