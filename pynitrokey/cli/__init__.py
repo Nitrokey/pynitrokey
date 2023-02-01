@@ -62,11 +62,11 @@ def nitropy():
     logging.basicConfig(format=LOG_FORMAT, level=logging.DEBUG, handlers=[handler])
 
     # Timestamp for log
-    logger.info(f"\nTimestamp: {datetime.now()}")
+    logger.info(f"Timestamp: {datetime.now()}\n")
     # Info Os
-    logger.info(f"\nOS: {platform.uname()}")
+    logger.info(f"OS: {platform.uname()}\n")
     # Info Python version
-    logger.info(f"Pythonversion: {sys.version}\n")
+    logger.info(f"Python version: {platform.python_version()}\n")
     # Info all modules version
     pymodules = [
         "pynitrokey",
