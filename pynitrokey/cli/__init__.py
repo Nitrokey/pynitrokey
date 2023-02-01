@@ -10,8 +10,11 @@
 
 import logging
 import os
+import platform
 import sys
 import warnings
+from datetime import datetime
+from importlib.metadata import version as package_version
 
 import click
 
@@ -58,10 +61,30 @@ def nitropy():
     handler = logging.FileHandler(filename=LOG_FN, delay=True, encoding="utf-8")
     logging.basicConfig(format=LOG_FORMAT, level=logging.DEBUG, handlers=[handler])
 
+    # Timestamp for log
+    logger.info(f"\nTimestamp: {datetime.now()}")
+    # Info Os
+    logger.info(f"\nOS: {platform.uname()}")
+    # Info Python version
+    logger.info(f"Pythonversion: {sys.version}\n")
+    # Info all modules version
+    pymodules = [
+        "pynitrokey",
+        "cryptography",
+        "ecdsa",
+        "fido2",
+        "nrfutil",
+        "pyusb",
+        "spsdk",
+    ]
+    for x in pymodules:
+        logger.info(f"{x} version: {package_version(x)}")
+
     print(
         f"Command line tool to interact with Nitrokey devices {pynitrokey.__version__}",
         file=sys.stderr,
     )
+
     check_root()
 
 
