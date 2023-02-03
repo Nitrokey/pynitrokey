@@ -57,6 +57,7 @@ semi-clean:
 clean: semi-clean
 	rm -rf $(VENV)
 	rm -rf dist
+	rm -rf ./.mypy_cache/
 
 
 # Package management

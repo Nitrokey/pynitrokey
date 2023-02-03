@@ -299,8 +299,8 @@ class gnuk_token(object):
             raise ValueError("%02x%02x" % (sw[0], sw[1]))
         return True
 
-    def cmd_read_binary(self, fileid):
-        cmd_data = iso7816_compose(0xB0, 0x80 + fileid, 0x00, b"")
+    def cmd_read_binary(self, fileid, pre=0x80):
+        cmd_data = iso7816_compose(0xB0, pre + fileid, 0x00, b"")
         sw = self.icc_send_cmd(cmd_data)
         if len(sw) != 2:
             raise ValueError(sw)

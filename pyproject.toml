@@ -101,5 +101,6 @@ module = [
     "usb1.*",
     "tlv8.*",
     "pytest.*",
+    "smartcard.pcsc.*",
 ]
 ignore_missing_imports = true
