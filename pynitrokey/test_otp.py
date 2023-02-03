@@ -25,6 +25,8 @@ from pynitrokey.nk3.otp_app import (
     Tag,
 )
 
+CREDENTIAL_LABEL_MAX_SIZE = 127
+
 
 def test_reset(otpApp):
     """
@@ -354,10 +356,14 @@ def test_calculated_codes_totp_hash_digits(otpApp, secret, algorithm, digits):
 
 
 @pytest.mark.parametrize(
+    "long_labels",
+    [False, True],
+)
+@pytest.mark.parametrize(
     "kind",
     [Kind.Totp, Kind.Hotp],
 )
-def test_load(otpApp, kind: Kind):
+def test_load(otpApp, kind: Kind, long_labels: bool):
     """
     Load tests to see how much OTP credentials we can store,
     and if using of them is not broken with the full FS.
@@ -368,11 +374,18 @@ def test_load(otpApp, kind: Kind):
     otpApp.reset()
 
     credentials_registered = 0
+    names_registered = []
 
-    for i in range(100000):
-        name = f"LOAD{i}"
+    name_gen = lambda x: f"LOAD{x:02}"
+    if long_labels:
+        name_gen = lambda x: (f"LOAD{x:02}" * 100)[:CREDENTIAL_LABEL_MAX_SIZE]
+
+    i = 0
+    while True:
+        name = name_gen(i)
         try:
             otpApp.register(name, secretb, digits=6, kind=kind, initial_counter_value=i)
+            names_registered.append(name.encode())
         except Exception as e:
             print(f"{e}")
             print(f"Registered {i} credentials")
@@ -381,10 +394,24 @@ def test_load(otpApp, kind: Kind):
             print(f"Total size: {size*i} B")
             credentials_registered = i
             break
+        i += 1
 
     assert (
-        credentials_registered > 100
-    ), "Expecting being able to register at least 100 OTP credentials"
+        credentials_registered > 30
+    ), "Expecting being able to register at least 30 OTP credentials"
+
+    l = otpApp.list()
+    assert sorted(l) == sorted(names_registered)
+    assert len(l) == credentials_registered
+
+    # Make some space for the counter updates - delete the last 3 credentials
+    CRED_TO_REMOVE = 3
+    for name in names_registered[-CRED_TO_REMOVE:]:
+        otpApp.delete(name)
+    credentials_registered -= CRED_TO_REMOVE
+
+    l = otpApp.list()
+    assert len(l) == credentials_registered
 
     lib_at = lambda t: oath.totp(secret, format="dec6", period=30, t=t * 30).encode()
     if kind == Kind.Hotp:
@@ -393,11 +420,24 @@ def test_load(otpApp, kind: Kind):
     for i in range(credentials_registered):
         # At this point device should respond to our calls, despite being full, fail otherwise
         # Iterate over credentials and check code at given challenge
-        name = f"LOAD{i}"
+        name = name_gen(i)
         assert otpApp.calculate(name, i) == lib_at(i)
 
     l = otpApp.list()
     assert len(l) == credentials_registered
+
+
+def test_remove_all_credentials_by_hand(otpApp):
+    """Remove all hold credentials by hand and test for being empty.
+    Can fail if the previous test was not registering any credentials.
+    TODO: make it not depending on the execution order
+    """
+    l = otpApp.list()
+    assert len(l) > 0, "Empty credentials list"
+    for n in l:
+        otpApp.delete(n)
+    l = otpApp.list()
+    assert len(l) == 0
 
 
 @pytest.mark.xfail
