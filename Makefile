@@ -52,11 +52,11 @@ lint:
 	$(VENV)/bin/python3 -m mypy $(PACKAGE_NAME)
 
 semi-clean:
-	rm -rf **/__pycache__
+	rm -rf ./**/__pycache__
 
 clean: semi-clean
-	rm -rf $(VENV)
-	rm -rf dist
+	rm -rf ./$(VENV)
+	rm -rf ./dist
 
 
 # Package management
