@@ -245,7 +245,7 @@ class OTPApp:
         Delete credential with the given id. Does not fail, if the given credential does not exist.
         :param credid: Credential ID
         """
-        self.logfn(f"Sending delete request for {cred_id}")
+        self.logfn(f"Sending delete request for {cred_id!r}")
         structure = [
             tlv8.Entry(Tag.CredentialId.value, cred_id),
         ]
@@ -304,7 +304,9 @@ class OTPApp:
             Should be equal to: timestamp/period. The commonly used period value is 30.
         :return: OTP code as a byte string
         """
-        self.logfn(f"Sending calculate request for {cred_id} and challenge {challenge}")
+        self.logfn(
+            f"Sending calculate request for {cred_id!r} and challenge {challenge!r}"
+        )
         structure = [
             tlv8.Entry(Tag.CredentialId.value, cred_id),
             tlv8.Entry(Tag.Challenge.value, pack(">Q", challenge)),

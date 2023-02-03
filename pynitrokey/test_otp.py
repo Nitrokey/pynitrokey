@@ -10,6 +10,7 @@ import hmac
 import time
 from datetime import timedelta
 from sys import stderr
+from typing import Any, Callable, List
 
 import fido2
 import pytest
@@ -373,10 +374,10 @@ def test_load(otpApp, kind: Kind, long_labels: bool):
     secretb = binascii.a2b_hex(secret)
     otpApp.reset()
 
-    credentials_registered = 0
-    names_registered = []
+    credentials_registered: int = 0
+    names_registered: List[bytes] = []
 
-    name_gen = lambda x: f"LOAD{x:02}"
+    name_gen: Callable[[int], str] = lambda x: f"LOAD{x:02}"
     if long_labels:
         name_gen = lambda x: (f"LOAD{x:02}" * 100)[:CREDENTIAL_LABEL_MAX_SIZE]
 
@@ -406,8 +407,8 @@ def test_load(otpApp, kind: Kind, long_labels: bool):
 
     # Make some space for the counter updates - delete the last 3 credentials
     CRED_TO_REMOVE = 3
-    for name in names_registered[-CRED_TO_REMOVE:]:
-        otpApp.delete(name)
+    for name_c in names_registered[-CRED_TO_REMOVE:]:
+        otpApp.delete(name_c)
     credentials_registered -= CRED_TO_REMOVE
 
     l = otpApp.list()
@@ -420,8 +421,8 @@ def test_load(otpApp, kind: Kind, long_labels: bool):
     for i in range(credentials_registered):
         # At this point device should respond to our calls, despite being full, fail otherwise
         # Iterate over credentials and check code at given challenge
-        name = name_gen(i)
-        assert otpApp.calculate(name, i) == lib_at(i)
+        nameb = name_gen(i).encode()
+        assert otpApp.calculate(nameb, i) == lib_at(i)
 
     l = otpApp.list()
     assert len(l) == credentials_registered
