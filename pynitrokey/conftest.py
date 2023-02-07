@@ -1,5 +1,4 @@
 import logging
-import os
 import pathlib
 import secrets
 from functools import partial
@@ -32,15 +31,40 @@ def _write_corpus(
         f.write(data)
 
 
+def pytest_addoption(parser):
+    parser.addoption(
+        "--generate-fuzzing-corpus",
+        action="store_true",
+        default=False,
+        help="Enable generation of fuzzing corpus for the oath-authenticator.",
+    )
+    parser.addoption(
+        "--fuzzing-corpus-path",
+        type=pathlib.Path,
+        default=CORPUS_PATH,
+        help=f"Path to store the generated fuzzing corpus. Default: {CORPUS_PATH}.",
+    )
+
+
+@pytest.fixture(scope="session")
+def generate_corpus_args(request: FixtureRequest):
+    return request.config.getoption(
+        "--generate-fuzzing-corpus"
+    ), request.config.getoption("--fuzzing-corpus-path")
+
+
 @pytest.fixture(scope="function")
-def corpus_func(request: FixtureRequest):
-    if os.environ.get("NK_FUZZ") is not None:
-        path = os.environ.get("NK_FUZZ_PATH", CORPUS_PATH)
-        pathlib.Path(path).mkdir(exist_ok=True)
+def corpus_func(request: FixtureRequest, generate_corpus_args):
+    generate_corpus, corpus_path = generate_corpus_args
+    if generate_corpus:
+        print(
+            f"\n*** Generating corpus for oath-authenticator fuzzing at {corpus_path}"
+        )
+        pathlib.Path(corpus_path).mkdir(exist_ok=True)
         # Add some random suffix to have separate outputs for parametrized test cases
         pre = secrets.token_bytes(4).hex()
         pre = f"{request.function.__name__}-{pre}"
-        return partial(_write_corpus, prefix=pre, path=path)
+        return partial(_write_corpus, prefix=pre, path=corpus_path)
     return None
 
 
