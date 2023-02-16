@@ -84,7 +84,7 @@ class NKFido2Client:
         except OSError:
             pass
 
-    def find_device(self, dev=None, solo_serial: str = None, pin=None):
+    def find_device(self, dev=None, solo_serial: Optional[str] = None, pin=None):
         devices = []
         if dev is None:
             if solo_serial is not None:
