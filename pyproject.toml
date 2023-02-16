@@ -66,7 +66,7 @@ nitropy = "pynitrokey.cli:main"
 profile = "black"
 
 [tool.mypy]
-mypy_path = "pynitrokey/stubs"
+mypy_path = "stubs"
 show_error_codes = true
 python_version = "3.9"
 
