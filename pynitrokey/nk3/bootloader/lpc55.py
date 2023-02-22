@@ -100,11 +100,16 @@ class Nitrokey3BootloaderLpc55(Nitrokey3Bootloader):
         callback: Optional[ProgressCallback] = None,
         check_errors: bool = False,
     ) -> None:
-        success = self.device.receive_sb_file(
-            image,
-            progress_callback=callback,
-            check_errors=check_errors,
-        )
+        # This is a workaround for a wrong type annotation for progress_callback (not Optional)
+        # in spsdk (fixed in 1.9.0).
+        if callback:
+            success = self.device.receive_sb_file(
+                image,
+                progress_callback=callback,
+                check_errors=check_errors,
+            )
+        else:
+            success = self.device.receive_sb_file(image, check_errors=check_errors)
         logger.debug(f"Firmware update finished with status {self.status}")
         if success:
             self.reboot()

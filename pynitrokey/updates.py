@@ -70,15 +70,15 @@ class Asset:
     def _get_chunks(
         self, chunk_size: int = 1024, callback: Optional[ProgressCallback] = None
     ) -> Generator[bytes, None, None]:
-        with self._get(stream=True) as response:
-            total = int(response.headers.get("content-length", 0))
-            if callback:
-                callback(0, total)
+        response = self._get(stream=True)
+        total = int(response.headers.get("content-length", 0))
+        if callback:
+            callback(0, total)
 
-            for chunk in response.iter_content(chunk_size=chunk_size):
-                if callback:
-                    callback(len(chunk), total)
-                yield chunk
+        for chunk in response.iter_content(chunk_size=chunk_size):
+            if callback:
+                callback(len(chunk), total)
+            yield chunk
 
     def _get(self, stream: bool = False) -> requests.Response:
         response = requests.get(self.url, stream=stream)

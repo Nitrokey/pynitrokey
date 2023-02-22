@@ -48,7 +48,7 @@ dev = [
   "flit >=3.2,<4",
   "ipython",
   "isort",
-  "mypy >= 0.900,<0.990",
+  "mypy >=1,<1.1",
   "types-requests",
   "types-tqdm",
   "pytest",
@@ -66,7 +66,7 @@ nitropy = "pynitrokey.cli:main"
 profile = "black"
 
 [tool.mypy]
-mypy_path = "pynitrokey/stubs"
+mypy_path = "stubs"
 show_error_codes = true
 python_version = "3.9"
 

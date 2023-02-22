@@ -236,8 +236,8 @@ class AskUser:
     """
     Asking user for input:
         `question`:       printed user question
-        `options`:        `None`        -> we want some data input
-                          `iter of str` -> only allow items inside iterable
+        `options`:        `[]`        -> we want some data input
+                          `List[str]` -> only allow items inside iterable
         `strict`:         if `options` are used, force full match
         `repeat`:         ask `question` up to `repeat` times, if `options` are provided
         `adapt_question`: adapt user-provided `question` (add options, whitespace...),
@@ -248,12 +248,12 @@ class AskUser:
     def __init__(
         self,
         question: str,
-        options: List[str] = None,
+        options: List[str] = [],
         strict: bool = False,
         repeat: int = 3,
         adapt_question=True,
         hide_input=False,
-        envvar: str = None,
+        envvar: Optional[str] = None,
     ):
 
         self.data = None

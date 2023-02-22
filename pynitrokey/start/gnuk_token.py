@@ -26,6 +26,7 @@ import time
 from array import array
 from contextlib import contextmanager
 from struct import *
+from typing import Optional
 
 import usb
 
@@ -717,7 +718,7 @@ def gnuk_devices_by_vidpid():
                 break
 
 
-def get_gnuk_device(verbose=True, logger: logging.Logger = None):
+def get_gnuk_device(verbose=True, logger: Optional[logging.Logger] = None):
     from usb import USBError
 
     candidates = []
