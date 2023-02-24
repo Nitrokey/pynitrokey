@@ -31,6 +31,7 @@ class SelectResponse:
     name: bytes
     challenge: Optional[bytes]
     algorithm: Optional[bytes]
+    pin_attempt_counter: Optional[int]
 
 
 @dataclasses.dataclass
@@ -452,11 +453,17 @@ class OTPApp:
             # e: tlv8.Entry
             rd[e.type_id] = e.data
 
+        counter = rd.get(Tag.PINCounter.value)
+        if counter is not None:
+            # counter is passed as 1B array - convert it to int
+            counter = int.from_bytes(counter, byteorder="big")
+
         r = SelectResponse(
             version=rd[Tag.Version.value],
             name=rd[Tag.CredentialId.value],
             challenge=rd.get(Tag.Challenge.value),
             algorithm=rd.get(Tag.Algorithm.value),
+            pin_attempt_counter=counter,
         )
         return r
 

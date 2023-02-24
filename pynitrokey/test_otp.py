@@ -16,7 +16,17 @@ import fido2
 import pytest
 import tlv8
 
-from pynitrokey.conftest import CHALLENGE, CREDID, DIGITS, HOTP_WINDOW_SIZE, SECRET
+from pynitrokey.conftest import (
+    CHALLENGE,
+    CREDID,
+    DIGITS,
+    HOTP_WINDOW_SIZE,
+    SECRET,
+    PIN,
+    PIN_ATTEMPT_COUNTER_DEFAULT,
+    FEATURE_CHALLENGE_RESPONSE_ENABLED,
+    PIN2,
+)
 from pynitrokey.nk3.otp_app import (
     Algorithm,
     Instruction,
@@ -507,6 +517,10 @@ def test_status(otpApp):
     print(otpApp.select())
 
 
+@pytest.mark.skipif(
+    not FEATURE_CHALLENGE_RESPONSE_ENABLED,
+    reason="Challenge-Response feature should be activated",
+)
 def test_set_code(otpApp):
     """
     Simple test for setting the proper code on the device.
@@ -536,13 +550,17 @@ def test_set_code(otpApp):
         Instruction.SetCode,
     ],
 )
+@pytest.mark.skipif(
+    not FEATURE_CHALLENGE_RESPONSE_ENABLED,
+    reason="Challenge-Response feature should be activated",
+)
 def test_set_code_and_validate(otpApp, remove_password_with: Instruction):
     """
     Test device's behavior when the validation code is set.
     Non-authorized calls should be rejected, except for the selected.
     Authorization should be valid only until the next call.
 
-    Authorization is needed for all the listed commands except for RESET and VALIDATE:
+    Authorization is needed for all the listed commands, except for RESET and VALIDATE:
          Required               Not required
          PUT 0x01               RESET 0x04 N
          DELETE 0x02            VALIDATE 0xa3 N
@@ -674,3 +692,70 @@ def test_revhotp_delay_on_failure(otpApp):
     assert (
         stop_time - start_time
     ) > 1, "Replies' delay after the failed execution takes less than 1 second"
+
+
+def test_set_pin(otpApp):
+    """
+    Simple test for setting the PIN on the device.
+    """
+    otpApp.reset()
+    state = otpApp.select()
+    print(state)
+    assert state.algorithm is None
+    assert state.challenge is None
+    assert state.pin_attempt_counter is None
+
+    otpApp.set_pin_raw(PIN)
+
+    state = otpApp.select()
+    print(state)
+    assert state.challenge is None
+    assert state.algorithm is None
+    assert state.pin_attempt_counter == PIN_ATTEMPT_COUNTER_DEFAULT
+
+    # Should fail when setting the second time
+    with pytest.raises(OTPAppException, match="ConditionsOfUseNotSatisfied"):
+        otpApp.set_pin_raw(PIN)
+
+
+def test_change_pin(otpApp):
+    """
+    Simple test for setting the proper code on the device.
+    """
+    otpApp.reset()
+
+    state = otpApp.select()
+    assert state.pin_attempt_counter is None
+
+    otpApp.set_pin_raw(PIN)
+    assert otpApp.select().pin_attempt_counter == PIN_ATTEMPT_COUNTER_DEFAULT
+
+    otpApp.change_pin_raw(PIN, PIN2)
+    assert otpApp.select().pin_attempt_counter == PIN_ATTEMPT_COUNTER_DEFAULT
+
+    otpApp.change_pin_raw(PIN2, PIN)
+    assert otpApp.select().pin_attempt_counter == PIN_ATTEMPT_COUNTER_DEFAULT
+
+    # Should fail when setting the second time with the PIN2
+    with pytest.raises(OTPAppException, match="VerificationFailed"):
+        otpApp.change_pin_raw(PIN2, PIN)
+    # TODO enable
+    # assert otpApp.select().pin_attempt_counter == PIN_ATTEMPT_COUNTER_DEFAULT - 1
+
+
+def test_verify_pin(otpApp):
+    """
+    Simple test for PIN verificaiton
+    """
+    otpApp.reset()
+    otpApp.list()
+    otpApp.set_pin_raw(PIN)
+    assert otpApp.select().pin_attempt_counter == PIN_ATTEMPT_COUNTER_DEFAULT
+
+    # Make sure all the expected commands are failing, as in specification
+    with pytest.raises(OTPAppException, match="ConditionsOfUseNotSatisfied"):
+        otpApp.list()
+
+    # With PIN verified this should work
+    otpApp.verify_pin_raw(PIN)
+    otpApp.list()
