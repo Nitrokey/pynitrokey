@@ -83,6 +83,10 @@ class Instruction(Enum):
     SendRemaining = 0xA5
     VerifyCode = 0xB1
     Select = 0xA4
+    # Place extending commands in 0xBx space
+    VerifyPIN = 0xB2
+    ChangePIN = 0xB3
+    SetPIN = 0xB4
 
 
 class Tag(Enum):
@@ -95,6 +99,11 @@ class Tag(Enum):
     InitialCounter = 0x7A
     Version = 0x79
     Algorithm = 0x7B
+    # Touch = 0x7c,
+    # Extension starting from 0x80
+    Password = 0x80
+    NewPassword = 0x81
+    PINCounter = 0x82
 
 
 class Kind(Enum):
@@ -450,3 +459,22 @@ class OTPApp:
             algorithm=rd.get(Tag.Algorithm.value),
         )
         return r
+
+    def set_pin_raw(self, password):
+        structure = [
+            tlv8.Entry(Tag.Password.value, password),
+        ]
+        self._send_receive(Instruction.SetPIN, structure=structure)
+
+    def change_pin_raw(self, password, new_password):
+        structure = [
+            tlv8.Entry(Tag.Password.value, password),
+            tlv8.Entry(Tag.NewPassword.value, new_password),
+        ]
+        self._send_receive(Instruction.ChangePIN, structure=structure)
+
+    def verify_pin_raw(self, password):
+        structure = [
+            tlv8.Entry(Tag.Password.value, password),
+        ]
+        self._send_receive(Instruction.VerifyPIN, structure=structure)
