@@ -461,8 +461,8 @@ class OTPApp:
             counter = int.from_bytes(counter, byteorder="big")
 
         r = SelectResponse(
-            version=rd[Tag.Version.value],
-            name=rd[Tag.CredentialId.value],
+            version=rd.get(Tag.Version.value),
+            name=rd.get(Tag.CredentialId.value),
             challenge=rd.get(Tag.Challenge.value),
             algorithm=rd.get(Tag.Algorithm.value),
             pin_attempt_counter=counter,
