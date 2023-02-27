@@ -531,12 +531,6 @@ def otp(ctx: click.Context) -> None:
     help="This credential requires button press before use",
     is_flag=True,
 )
-@click.option(
-    "--experimental",
-    default=False,
-    is_flag=True,
-    help="Allow to execute experimental features",
-)
 def register(
     ctx: Context,
     name: str,
@@ -546,16 +540,12 @@ def register(
     hash: str,
     counter_start: int,
     touch_button: bool,
-    experimental: bool,
 ) -> None:
     """Register OTP credential.
 
     Write SECRET under the NAME.
     SECRET should be encoded in base32 format.
-    Experimental.
     """
-    check_experimental_flag(experimental)
-
     digits = int(digits_str)
     secret_bytes = b32decode(secret)
     otp_kind = STRING_TO_KIND[kind.upper()]
@@ -668,19 +658,14 @@ def reset(ctx: Context, force: bool) -> None:
     help="The period to use in seconds (TOTP only)",
     default=30,
 )
-@click.option(
-    "--experimental",
-    default=False,
-    is_flag=True,
-    help="Allow to execute experimental features",
-)
 def get(
-    ctx: Context, name: str, timestamp: int, period: int, experimental: bool
+    ctx: Context,
+    name: str,
+    timestamp: int,
+    period: int,
 ) -> None:
-    """Generate OTP code from registered credential.
-    Experimental."""
+    """Generate OTP code from registered credential."""
     # TODO: for TOTP get the time from a timeserver via NTP, instead of the local clock
-    check_experimental_flag(experimental)
 
     from datetime import datetime
 
@@ -715,18 +700,10 @@ def get(
     help="The code to verify",
     default=0,
 )
-@click.option(
-    "--experimental",
-    default=False,
-    is_flag=True,
-    help="Allow to execute experimental features",
-)
-def verify(ctx: Context, name: str, code: int, experimental: bool) -> None:
+def verify(ctx: Context, name: str, code: int) -> None:
     """Proceed with the incoming OTP code verification (aka reverse HOTP).
     Does not need authentication by design.
-    Experimental."""
-    check_experimental_flag(experimental)
-
+    """
     with ctx.connect_device() as device:
         app = OTPApp(device)
         ask_to_touch_if_needed()
@@ -767,17 +744,9 @@ def authenticate_if_needed(app: OTPApp) -> None:
 
 @otp.command()
 @click.pass_obj
-@click.option(
-    "--experimental",
-    default=False,
-    is_flag=True,
-    help="Allow to execute experimental features",
-)
 @click.password_option()
-def set_password(ctx: Context, password: str, experimental: bool) -> None:
-    """Set the passphrase used to authenticate to other commands.
-    Experimental."""
-    check_experimental_flag(experimental)
+def set_password(ctx: Context, password: str) -> None:
+    """Set the passphrase used to authenticate to other commands."""
     new_password = password
 
     with ctx.connect_device() as device:
@@ -803,12 +772,7 @@ def set_password(ctx: Context, password: str, experimental: bool) -> None:
 
 @otp.command()
 @click.pass_obj
-@click.option(
-    "--force",
-    is_flag=True,
-    help="Do not ask for confirmation",
-)
-def status(ctx: Context, force: bool) -> None:
+def status(ctx: Context) -> None:
     """Show OTP status"""
     with ctx.connect_device() as device:
         app = OTPApp(device)
