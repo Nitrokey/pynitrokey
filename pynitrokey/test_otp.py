@@ -39,68 +39,83 @@ from pynitrokey.nk3.otp_app import (
 CREDENTIAL_LABEL_MAX_SIZE = 127
 
 
-def test_reset(otpApp):
+def test_reset(otpAppResetLogin):
     """
     Clear credentials' storage. Simple test.
     """
-    otpApp.reset()
+    otpAppResetLogin.reset()
 
 
-def test_list(otpApp):
+def test_list(otpAppResetLogin):
     """
     List saved credentials. Simple test.
     """
-    otpApp.list()
+    otpAppResetLogin.list()
 
 
-def test_register(otpApp):
+def test_register(otpAppResetLogin):
     """
     Register credential with the given id and properties. Simple test.
     """
-    otpApp.register(CREDID, SECRET, DIGITS)
+    otpAppResetLogin.register(CREDID, SECRET, DIGITS)
 
 
-def test_calculate(otpApp):
+def test_calculate(otpAppResetLogin):
     """
     Run calculation on the default credential id. Simple test.
     """
-    code = otpApp.calculate(CREDID, CHALLENGE)
+    otpAppResetLogin.register(CREDID, SECRET, DIGITS)
+    otpAppResetLogin.verify_pin_raw(PIN)
+    code = otpAppResetLogin.calculate(CREDID, CHALLENGE)
     print(code)
 
 
-def test_delete(otpApp):
+def test_delete(otpAppResetLogin):
     """
     Remove credential with the given id. Simple test.
     """
-    otpApp.delete(CREDID)
+    otpAppResetLogin.register(CREDID, SECRET, DIGITS)
+    otpAppResetLogin.verify_pin_raw(PIN)
+    otpAppResetLogin.delete(CREDID)
 
 
-def test_delete_nonexisting(otpApp):
+def test_delete_nonexisting(otpAppResetLogin):
     """
     Should not fail when trying to remove non-existing credential id.
     """
-    otpApp.delete(CREDID)
+    otpAppResetLogin.delete(CREDID)
 
 
-def test_list_changes(otpApp):
+def test_list_changes(otpAppResetLogin):
     """
     Test how the list of credential changes, when one is added or removed, and after a reset.
     """
     cred1 = b"TESTCRED"
     cred2 = b"ANOTHERCRED"
 
-    otpApp.reset()
+    otpApp = otpAppResetLogin
+
     assert not otpApp.list()
+
+    otpApp.verify_pin_raw(PIN)
     otpApp.register(cred1, SECRET, DIGITS)
+    otpApp.verify_pin_raw(PIN)
     assert cred1 in otpApp.list()
+    otpApp.verify_pin_raw(PIN)
     otpApp.register(cred2, SECRET, DIGITS)
+    otpApp.verify_pin_raw(PIN)
     assert cred2 in otpApp.list()
 
+    otpApp.verify_pin_raw(PIN)
     otpApp.delete(cred2)
+    otpApp.verify_pin_raw(PIN)
     assert cred2 not in otpApp.list()
+    otpApp.verify_pin_raw(PIN)
     assert cred1 in otpApp.list()
 
     otpApp.reset()
+    otpApp.set_pin_raw(PIN)
+    otpApp.verify_pin_raw(PIN)
     assert not otpApp.list()
 
 
@@ -123,14 +138,14 @@ def test_list_changes(otpApp):
         0xFFFFFFFF - 10,
     ],
 )
-def test_calculated_codes_hotp(otpApp, secret, start_counter):
+def test_calculated_codes_hotp(otpAppResetLogin, secret, start_counter):
     """
     Test HOTP codes against another OTP library.
     Use different secret and start counter values.
     """
     oath = pytest.importorskip("oath")
     secretb = binascii.a2b_hex(secret)
-    otpApp.reset()
+    otpApp = otpAppResetLogin
     otpApp.register(
         CREDID,
         secretb,
@@ -142,6 +157,7 @@ def test_calculated_codes_hotp(otpApp, secret, start_counter):
     lib_at = lambda t: oath.hotp(secret, counter=t, format="dec6").encode()
     for i in range(10):
         i = i + start_counter
+        otpApp.verify_pin_raw(PIN)
         assert otpApp.calculate(CREDID, i) == lib_at(i)
 
 
@@ -154,20 +170,21 @@ def test_calculated_codes_hotp(otpApp, secret, start_counter):
         "002EF43F51AFA97BA2B46418768123C9E1809A5B" * 2,
     ],
 )
-def test_calculated_codes_totp(otpApp, secret):
+def test_calculated_codes_totp(otpAppResetLogin, secret):
     """
     Test TOTP codes against another OTP library.
     """
     oath = pytest.importorskip("oath")
     secretb = binascii.a2b_hex(secret)
-    otpApp.reset()
+    otpApp = otpAppResetLogin
     otpApp.register(CREDID, secretb, digits=6, kind=Kind.Totp, algo=Algorithm.Sha1)
     lib_at = lambda t: oath.totp(secret, format="dec6", period=30, t=t * 30).encode()
     for i in range(10):
+        otpApp.verify_pin_raw(PIN)
         assert otpApp.calculate(CREDID, i) == lib_at(i)
 
 
-def test_calculated_codes_test_vector(otpApp):
+def test_calculated_codes_test_vector(otpAppResetLogin):
     """
     Check output against RFC4226 test vectors, as provided in
     https://www.rfc-editor.org/rfc/rfc4226#page-32
@@ -189,14 +206,15 @@ def test_calculated_codes_test_vector(otpApp):
        9        2679dc69        645520489     520489"""
     # select last column only, starting after the header line
     codes = [x.split()[-1].encode() for x in test_vectors.splitlines()[2:]]
+    otpApp = otpAppResetLogin
 
-    otpApp.reset()
     otpApp.register(CREDID, secretb, digits=6, kind=Kind.Hotp, algo=Algorithm.Sha1)
     for i in range(10):
+        otpApp.verify_pin_raw(PIN)
         assert otpApp.calculate(CREDID, i) == codes[i]
 
 
-def test_reverse_hotp(otpApp):
+def test_reverse_hotp(otpAppResetLogin):
     """
     Test passing conditions for the HOTP reverse check
     Check against RFC4226 test vectors, as provided in
@@ -220,16 +238,17 @@ def test_reverse_hotp(otpApp):
     # select last column only, starting after the header line
     codes = [x.split()[-1].encode() for x in test_vectors.splitlines()[2:]]
 
-    otpApp.reset()
+    otpApp = otpAppResetLogin
     otpApp.register(
         CREDID, secretb, digits=6, kind=Kind.HotpReverse, algo=Algorithm.Sha1
     )
     for i in range(10):
         c = int(codes[i])
+        otpApp.verify_pin_raw(PIN)
         assert otpApp.verify_code(CREDID, c)
 
 
-def test_reverse_hotp_failure(otpApp):
+def test_reverse_hotp_failure(otpAppResetLogin):
     """
     Test failing conditions for the HOTP reverse check
     """
@@ -238,7 +257,7 @@ def test_reverse_hotp_failure(otpApp):
 
     codes = [x for x in range(10)]
 
-    otpApp.reset()
+    otpApp = otpAppResetLogin
     otpApp.register(
         CREDID, secretb, digits=6, kind=Kind.HotpReverse, algo=Algorithm.Sha1
     )
@@ -268,10 +287,10 @@ def test_reverse_hotp_failure(otpApp):
     "offset",
     [0, 1, HOTP_WINDOW_SIZE - 1, HOTP_WINDOW_SIZE, HOTP_WINDOW_SIZE + 1],
 )
-def test_reverse_hotp_window(otpApp, offset, start_value):
+def test_reverse_hotp_window(otpAppResetLogin, offset, start_value):
     """
-    https://github.com/Nitrokey/nitrokey-hotp-verification#verifying-hotp-code
-    Solution contains a mean to avoid desynchronization between the host's and device's counters. Device calculates
+    Test reverse HOTP code calculation synchronization.
+    Solution contains a means to avoid desynchronization between the host's and device's counters. Device calculates
     up to 9 values ahead of its current counter to find the matching code (in total it calculates HOTP code for 10
     subsequent counter positions). In case:
 
@@ -282,11 +301,12 @@ def test_reverse_hotp_window(otpApp, offset, start_value):
 
     Device will stop verifying the HOTP codes in case, when the difference between the host and on-device counters
     will be greater or equal to 10.
+    See https://github.com/Nitrokey/nitrokey-hotp-verification#verifying-hotp-code for more information.
     """
     oath = pytest.importorskip("oath")
     secret = "3132333435363738393031323334353637383930"
     secretb = binascii.a2b_hex(secret)
-    otpApp.reset()
+    otpApp = otpAppResetLogin
     otpApp.register(
         CREDID,
         secretb,
@@ -349,7 +369,7 @@ def test_reverse_hotp_window(otpApp, offset, start_value):
         "002EF43F51AFA97BA2B46418768123C9E1809A5B" * 2,
     ],
 )
-def test_calculated_codes_totp_hash_digits(otpApp, secret, algorithm, digits):
+def test_calculated_codes_totp_hash_digits(otpAppResetLogin, secret, algorithm, digits):
     """
     Test TOTP codes against another OTP library, with different hash algorithms and digits count.
     Test vector secret, and a random 40 bytes value.
@@ -357,12 +377,13 @@ def test_calculated_codes_totp_hash_digits(otpApp, secret, algorithm, digits):
     algo_app, algo_oath = algorithm
     oath = pytest.importorskip("oath")
     secretb = binascii.a2b_hex(secret)
-    otpApp.reset()
+    otpApp = otpAppResetLogin
     otpApp.register(CREDID, secretb, digits=digits, kind=Kind.Totp, algo=algo_app)
     lib_at = lambda t: oath.totp(
         secret, format="dec" + str(digits), period=30, t=t * 30, hash=algo_oath
     ).encode()
     for i in range(10):
+        otpApp.verify_pin_raw(PIN)
         assert otpApp.calculate(CREDID, i) == lib_at(i)
 
 
@@ -374,7 +395,7 @@ def test_calculated_codes_totp_hash_digits(otpApp, secret, algorithm, digits):
     "kind",
     [Kind.Totp, Kind.Hotp],
 )
-def test_load(otpApp, kind: Kind, long_labels: bool):
+def test_load(otpAppResetLogin, kind: Kind, long_labels: bool):
     """
     Load tests to see how much OTP credentials we can store,
     and if using of them is not broken with the full FS.
@@ -382,8 +403,8 @@ def test_load(otpApp, kind: Kind, long_labels: bool):
     secret = "3132333435363738393031323334353637383930"
     oath = pytest.importorskip("oath")
     secretb = binascii.a2b_hex(secret)
-    otpApp.reset()
 
+    otpApp = otpAppResetLogin
     credentials_registered: int = 0
     names_registered: List[bytes] = []
 
@@ -395,6 +416,7 @@ def test_load(otpApp, kind: Kind, long_labels: bool):
     while True:
         name = name_gen(i)
         try:
+            otpApp.verify_pin_raw(PIN)
             otpApp.register(name, secretb, digits=6, kind=kind, initial_counter_value=i)
             names_registered.append(name.encode())
         except Exception as e:
@@ -411,6 +433,7 @@ def test_load(otpApp, kind: Kind, long_labels: bool):
         credentials_registered > 30
     ), "Expecting being able to register at least 30 OTP credentials"
 
+    otpApp.verify_pin_raw(PIN)
     l = otpApp.list()
     assert sorted(l) == sorted(names_registered)
     assert len(l) == credentials_registered
@@ -418,9 +441,11 @@ def test_load(otpApp, kind: Kind, long_labels: bool):
     # Make some space for the counter updates - delete the last 3 credentials
     CRED_TO_REMOVE = 3
     for name_c in names_registered[-CRED_TO_REMOVE:]:
+        otpApp.verify_pin_raw(PIN)
         otpApp.delete(name_c)
     credentials_registered -= CRED_TO_REMOVE
 
+    otpApp.verify_pin_raw(PIN)
     l = otpApp.list()
     assert len(l) == credentials_registered
 
@@ -432,8 +457,10 @@ def test_load(otpApp, kind: Kind, long_labels: bool):
         # At this point device should respond to our calls, despite being full, fail otherwise
         # Iterate over credentials and check code at given challenge
         nameb = name_gen(i).encode()
+        otpApp.verify_pin_raw(PIN)
         assert otpApp.calculate(nameb, i) == lib_at(i)
 
+    otpApp.verify_pin_raw(PIN)
     l = otpApp.list()
     assert len(l) == credentials_registered
 
@@ -443,10 +470,13 @@ def test_remove_all_credentials_by_hand(otpApp):
     Can fail if the previous test was not registering any credentials.
     TODO: make it not depending on the execution order
     """
+    otpApp.verify_pin_raw(PIN)
     l = otpApp.list()
     assert len(l) > 0, "Empty credentials list"
     for n in l:
+        otpApp.verify_pin_raw(PIN)
         otpApp.delete(n)
+    otpApp.verify_pin_raw(PIN)
     l = otpApp.list()
     assert len(l) == 0
 
@@ -474,12 +504,13 @@ def test_send_rubbish(otpApp):
     otpApp.list()
 
 
-def test_too_long_message(otpApp):
+def test_too_long_message(otpAppResetLogin):
     """
     Check device's response for the too long message
     """
-    otpApp.reset()
+    otpApp = otpAppResetLogin
     otpApp.register(CREDID, SECRET, DIGITS)
+    otpApp.verify_pin_raw(PIN)
     otpApp.list()
 
     too_long_name = b"a" * 253
@@ -488,6 +519,7 @@ def test_too_long_message(otpApp):
             tlv8.Entry(Tag.CredentialId.value, too_long_name),
         ]
         otpApp._send_receive(Instruction.Put, structure)
+    otpApp.verify_pin_raw(PIN)
     otpApp.list()
 
 
@@ -748,8 +780,9 @@ def test_verify_pin(otpApp):
     Simple test for PIN verificaiton
     """
     otpApp.reset()
-    otpApp.list()
     otpApp.set_pin_raw(PIN)
+    otpApp.verify_pin_raw(PIN)
+    otpApp.list()
     assert otpApp.select().pin_attempt_counter == PIN_ATTEMPT_COUNTER_DEFAULT
 
     # Make sure all the expected commands are failing, as in specification

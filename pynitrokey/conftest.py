@@ -86,6 +86,17 @@ def otpApp(corpus_func, dev):
 
 
 @pytest.fixture(scope="function")
+def otpAppResetLogin(corpus_func, dev):
+    app = OTPApp(dev, logfn=print)
+    app.write_corpus_fn = corpus_func
+
+    app.reset()
+    app.set_pin_raw(PIN)
+    app.verify_pin_raw(PIN)
+    return app
+
+
+@pytest.fixture(scope="function")
 def otpAppNoLog(corpus_func, dev):
     app = OTPApp(dev)
     app.write_corpus_fn = corpus_func
