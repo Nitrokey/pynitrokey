@@ -739,8 +739,8 @@ def test_change_pin(otpApp):
     # Should fail when setting the second time with the PIN2
     with pytest.raises(OTPAppException, match="VerificationFailed"):
         otpApp.change_pin_raw(PIN2, PIN)
-    # TODO enable
-    # assert otpApp.select().pin_attempt_counter == PIN_ATTEMPT_COUNTER_DEFAULT - 1
+    # after providing the wrong PIN, the attempt counter should decrement itself by 1
+    assert otpApp.select().pin_attempt_counter == PIN_ATTEMPT_COUNTER_DEFAULT - 1
 
 
 def test_verify_pin(otpApp):
