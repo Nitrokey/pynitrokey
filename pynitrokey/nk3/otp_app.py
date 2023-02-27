@@ -170,10 +170,12 @@ class OTPApp:
         bytes_data = iso7816_compose(ins_b, p1, p2, data=encoded_structure)
         if self.write_corpus_fn:
             self.write_corpus_fn(ins, bytes_data)
-        return self._send_receive_inner(bytes_data)
+        return self._send_receive_inner(bytes_data, log_info=f"{ins}")
 
-    def _send_receive_inner(self, data: bytes) -> bytes:
-        self.logfn(f"Sending {data.hex() if data else data!r}")
+    def _send_receive_inner(self, data: bytes, log_info=None) -> bytes:
+        self.logfn(
+            f"Sending {log_info if log_info else ''} {data.hex() if data else data!r}"
+        )
 
         try:
             result = self.dev.otp(data=data)
