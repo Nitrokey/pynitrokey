@@ -270,10 +270,12 @@ def test_reverse_hotp_failure(otpAppResetLogin):
     with pytest.raises(OTPAppException, match="VerificationFailed"):
         assert not otpApp.verify_code(CREDID, 10**5)
 
+    otpApp.verify_pin_raw(PIN)
     otpApp.register(CREDID, secretb, digits=7, kind=Kind.Hotp, algo=Algorithm.Sha1)
     with pytest.raises(OTPAppException, match="ConditionsOfUseNotSatisfied"):
         assert not otpApp.verify_code(CREDID, 10**6)
 
+    otpApp.verify_pin_raw(PIN)
     otpApp.register(CREDID, secretb, digits=8, kind=Kind.Hotp, algo=Algorithm.Sha1)
     with pytest.raises(OTPAppException, match="ConditionsOfUseNotSatisfied"):
         assert not otpApp.verify_code(CREDID, 10**7)
