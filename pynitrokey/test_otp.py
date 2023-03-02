@@ -777,6 +777,50 @@ def test_change_pin(otpApp):
     assert otpApp.select().pin_attempt_counter == PIN_ATTEMPT_COUNTER_DEFAULT - 1
 
 
+def test_change_pin_data_dont_change(otpAppResetLogin):
+    """
+    Test for changing the proper PIN on the device.
+    Check if data remain the same
+    """
+
+    def helper_test_calculated_codes_totp(otpApp, secret: str, PIN: str):
+        """Test TOTP codes against another OTP library."""
+        oath = pytest.importorskip("oath")
+        lib_at = lambda t: oath.totp(
+            secret, format="dec6", period=30, t=t * 30
+        ).encode()
+        for i in range(10):
+            otpApp.verify_pin_raw(PIN)
+            assert otpApp.calculate(CREDID, i) == lib_at(i)
+
+    # Initial setup for the TOTP slot and test
+    secret = "00" * 20
+    otpApp = otpAppResetLogin
+    secretb = binascii.a2b_hex(secret)
+    otpApp.register(CREDID, secretb, digits=6, kind=Kind.Totp, algo=Algorithm.Sha1)
+    helper_test_calculated_codes_totp(otpApp, secret, PIN)
+
+    # Change PIN and check whether the data remain the same
+    otpApp.change_pin_raw(PIN, PIN2)
+    assert otpApp.select().pin_attempt_counter == PIN_ATTEMPT_COUNTER_DEFAULT
+    helper_test_calculated_codes_totp(otpApp, secret, PIN2)
+
+    # And again
+    otpApp.change_pin_raw(PIN2, PIN)
+    assert otpApp.select().pin_attempt_counter == PIN_ATTEMPT_COUNTER_DEFAULT
+    helper_test_calculated_codes_totp(otpApp, secret, PIN)
+
+    # Should fail when setting the second time with the PIN2
+    with pytest.raises(OTPAppException, match="VerificationFailed"):
+        otpApp.change_pin_raw(PIN2, PIN)
+
+    # after providing the wrong PIN, the attempt counter should decrement itself by 1
+    assert otpApp.select().pin_attempt_counter == PIN_ATTEMPT_COUNTER_DEFAULT - 1
+
+    # After failed PIN change the data should remain the same
+    helper_test_calculated_codes_totp(otpApp, secret, PIN)
+
+
 def test_verify_pin(otpApp):
     """
     Simple test for PIN verificaiton
