@@ -20,12 +20,12 @@ from pynitrokey.conftest import (
     CHALLENGE,
     CREDID,
     DIGITS,
-    HOTP_WINDOW_SIZE,
-    SECRET,
-    PIN,
-    PIN_ATTEMPT_COUNTER_DEFAULT,
     FEATURE_CHALLENGE_RESPONSE_ENABLED,
+    HOTP_WINDOW_SIZE,
+    PIN,
     PIN2,
+    PIN_ATTEMPT_COUNTER_DEFAULT,
+    SECRET,
 )
 from pynitrokey.nk3.otp_app import (
     Algorithm,
