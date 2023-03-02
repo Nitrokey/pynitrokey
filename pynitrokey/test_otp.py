@@ -748,7 +748,7 @@ def test_set_pin(otpApp):
     assert state.pin_attempt_counter == PIN_ATTEMPT_COUNTER_DEFAULT
 
     # Should fail when setting the second time
-    with pytest.raises(OTPAppException, match="ConditionsOfUseNotSatisfied"):
+    with pytest.raises(OTPAppException, match="SecurityStatusNotSatisfied"):
         otpApp.set_pin_raw(PIN)
 
 
