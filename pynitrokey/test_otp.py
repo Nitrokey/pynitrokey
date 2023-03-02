@@ -391,13 +391,13 @@ def test_calculated_codes_totp_hash_digits(otpAppResetLogin, secret, algorithm, 
 
 @pytest.mark.parametrize(
     "long_labels",
-    [False, True],
+    ["short_labels", "long_labels"],
 )
 @pytest.mark.parametrize(
     "kind",
     [Kind.Totp, Kind.Hotp],
 )
-def test_load(otpAppResetLogin, kind: Kind, long_labels: bool):
+def test_load(otpAppResetLogin, kind: Kind, long_labels: str):
     """
     Load tests to see how much OTP credentials we can store,
     and if using of them is not broken with the full FS.
@@ -411,7 +411,7 @@ def test_load(otpAppResetLogin, kind: Kind, long_labels: bool):
     names_registered: List[bytes] = []
 
     name_gen: Callable[[int], str] = lambda x: f"LOAD{x:02}"
-    if long_labels:
+    if long_labels == "long_labels":
         name_gen = lambda x: (f"LOAD{x:02}" * 100)[:CREDENTIAL_LABEL_MAX_SIZE]
 
     i = 0
