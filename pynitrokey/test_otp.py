@@ -814,11 +814,14 @@ def test_change_pin_data_dont_change(otpAppResetLogin):
     with pytest.raises(OTPAppException, match="VerificationFailed"):
         otpApp.change_pin_raw(PIN2, PIN)
 
-    # after providing the wrong PIN, the attempt counter should decrement itself by 1
+    # After providing the wrong PIN, the attempt counter should decrement itself by 1
     assert otpApp.select().pin_attempt_counter == PIN_ATTEMPT_COUNTER_DEFAULT - 1
 
     # After failed PIN change the data should remain the same
     helper_test_calculated_codes_totp(otpApp, secret, PIN)
+
+    # After providing the correct PIN, the attempt counter should reset itself
+    assert otpApp.select().pin_attempt_counter == PIN_ATTEMPT_COUNTER_DEFAULT
 
 
 def test_verify_pin(otpApp):
@@ -838,3 +841,26 @@ def test_verify_pin(otpApp):
     # With PIN verified this should work
     otpApp.verify_pin_raw(PIN)
     otpApp.list()
+
+
+def test_use_up_pin_counter(otpApp):
+    otpApp.reset()
+    otpApp.set_pin_raw(PIN)
+    otpApp.verify_pin_raw(PIN)
+    otpApp.list()
+    assert otpApp.select().pin_attempt_counter == PIN_ATTEMPT_COUNTER_DEFAULT
+
+    # Use all PIN counter attempts
+    while otpApp.select().pin_attempt_counter > 0:
+        with pytest.raises(OTPAppException, match="VerificationFailed"):
+            otpApp.verify_pin_raw(PIN2)
+
+    # With the PIN attempt counter used up, verifying with the correct PIN should not recover the device
+    assert otpApp.select().pin_attempt_counter == 0
+    with pytest.raises(OTPAppException, match="VerificationFailed"):
+        otpApp.verify_pin_raw(PIN)
+    assert otpApp.select().pin_attempt_counter == 0
+
+    # As usual, standard commands should require authentication
+    with pytest.raises(OTPAppException, match="ConditionsOfUseNotSatisfied"):
+        otpApp.list()
