@@ -741,7 +741,12 @@ def verify(ctx: Context, name: str, code: int, experimental: bool) -> None:
 def ask_for_passphrase_if_needed(app: OTPApp) -> Optional[str]:
     passphrase = None
     if app.authentication_required():
+        health_check = helper_secrets_app_health_check(app)
+        if health_check:
+            local_print(*health_check)
         counter = app.select().pin_attempt_counter
+        if counter is None or counter == 0:
+            raise RuntimeError("PIN not available to use")
         passphrase = AskUser(
             f"Current Password ({counter} attempts left)",
             envvar="NITROPY_OTP_PASSWORD",
@@ -807,6 +812,21 @@ def status(ctx: Context, force: bool) -> None:
         app = OTPApp(device)
         r = app.select()
         local_print(f"{r}")
+        local_print(*helper_secrets_app_health_check(app))
+
+
+def helper_secrets_app_health_check(app: OTPApp) -> List[str]:
+    messages = []
+    r = app.select()
+    if r.pin_attempt_counter is None:
+        messages.append("- Device does not have a PIN. Set PIN before the first use.")
+    if r.pin_attempt_counter == 0:
+        messages.append(
+            "- All attempts on the PIN counter are used. Call factory reset to use the device again."
+        )
+    if messages:
+        messages.insert(0, "Health check notes:")
+    return messages
 
 
 @nk3.group(hidden=True)
