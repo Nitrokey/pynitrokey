@@ -562,6 +562,7 @@ def register(
     hash_algorithm = Algorithm.Sha1 if hash == "SHA1" else Algorithm.Sha256
     with ctx.connect_device() as device:
         app = OTPApp(device)
+        ask_to_touch_if_needed()
         authenticate_if_needed(app)
         app.register(
             name.encode(),
@@ -587,6 +588,11 @@ def check_experimental_flag(experimental: bool) -> None:
         raise click.Abort()
 
 
+def ask_to_touch_if_needed() -> None:
+    """Helper function to show common request for the touch if device signalizes it"""
+    local_print("Please touch the device if it blinks")
+
+
 @otp.command()
 @click.pass_obj
 @click.option(
@@ -601,6 +607,7 @@ def show(ctx: Context, hex: bool) -> None:
     """List registered OTP credentials."""
     with ctx.connect_device() as device:
         app = OTPApp(device)
+        ask_to_touch_if_needed()
         authenticate_if_needed(app)
         for e in app.list():
             local_print(e.hex() if hex else e)
@@ -616,6 +623,7 @@ def remove(ctx: Context, name: str) -> None:
     """Remove OTP credential."""
     with ctx.connect_device() as device:
         app = OTPApp(device)
+        ask_to_touch_if_needed()
         authenticate_if_needed(app)
         app.delete(name.encode())
 
@@ -635,6 +643,7 @@ def reset(ctx: Context, force: bool) -> None:
         click.Abort()
     with ctx.connect_device() as device:
         app = OTPApp(device)
+        ask_to_touch_if_needed()
         app.reset()
         local_print("Operation executed")
 
@@ -680,6 +689,7 @@ def get(
     with ctx.connect_device() as device:
         try:
             app = OTPApp(device)
+            ask_to_touch_if_needed()
             authenticate_if_needed(app)
             code = app.calculate(name.encode(), timestamp // period)
             local_print(
@@ -719,6 +729,7 @@ def verify(ctx: Context, name: str, code: int, experimental: bool) -> None:
 
     with ctx.connect_device() as device:
         app = OTPApp(device)
+        ask_to_touch_if_needed()
         try:
             app.verify_code(name.encode(), code)
         except fido2.ctap.CtapError as e:
@@ -763,6 +774,7 @@ def set_password(ctx: Context, password: str, experimental: bool) -> None:
     with ctx.connect_device() as device:
         try:
             app = OTPApp(device)
+            ask_to_touch_if_needed()
             authenticate_if_needed(app)
             app.set_code(password)
             local_print("Password set")
@@ -788,6 +800,7 @@ def clear_password(ctx: Context, experimental: bool) -> None:
     with ctx.connect_device() as device:
         try:
             app = OTPApp(device)
+            ask_to_touch_if_needed()
             authenticate_if_needed(app)
             app.clear_code()
             local_print("Password cleared")
