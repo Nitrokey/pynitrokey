@@ -741,8 +741,11 @@ def verify(ctx: Context, name: str, code: int, experimental: bool) -> None:
 def ask_for_passphrase_if_needed(app: OTPApp) -> Optional[str]:
     passphrase = None
     if app.authentication_required():
+        counter = app.select().pin_attempt_counter
         passphrase = AskUser(
-            "Current Password", envvar="NITROPY_OTP_PASSWORD", hide_input=True
+            f"Current Password ({counter} attempts left)",
+            envvar="NITROPY_OTP_PASSWORD",
+            hide_input=True,
         ).ask()
     return passphrase
 
@@ -777,12 +780,10 @@ def set_password(ctx: Context, password: str, experimental: bool) -> None:
             app = OTPApp(device)
             ask_to_touch_if_needed()
 
-            try:
+            if app.select().pin_attempt_counter is None:
                 app.set_pin_raw(new_password)
                 local_print("Password set")
                 return
-            except:
-                pass
 
             current_password = ask_for_passphrase_if_needed(app)
             app.change_pin_raw(current_password, new_password)
