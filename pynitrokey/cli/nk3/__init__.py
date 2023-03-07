@@ -751,7 +751,7 @@ def authenticate_if_needed(app: OTPApp) -> None:
     try:
         passphrase = ask_for_passphrase_if_needed(app)
         if passphrase is not None:
-            app.validate(passphrase)
+            app.verify_pin_raw(passphrase)
     except Exception as e:
         local_print(f'Authentication failed with error: "{e}"')
         raise click.Abort()
@@ -770,14 +770,23 @@ def set_password(ctx: Context, password: str, experimental: bool) -> None:
     """Set the passphrase used to authenticate to other commands.
     Experimental."""
     check_experimental_flag(experimental)
+    new_password = password
 
     with ctx.connect_device() as device:
         try:
             app = OTPApp(device)
             ask_to_touch_if_needed()
-            authenticate_if_needed(app)
-            app.set_code(password)
-            local_print("Password set")
+
+            try:
+                app.set_pin_raw(new_password)
+                local_print("Password set")
+                return
+            except:
+                pass
+
+            current_password = ask_for_passphrase_if_needed(app)
+            app.change_pin_raw(current_password, new_password)
+            local_print("Password changed")
         except fido2.ctap.CtapError as e:
             local_print(
                 f"Device returns error: {e}. This passphrase might be invalid or is set already."
@@ -787,27 +796,16 @@ def set_password(ctx: Context, password: str, experimental: bool) -> None:
 @otp.command()
 @click.pass_obj
 @click.option(
-    "--experimental",
-    default=False,
+    "--force",
     is_flag=True,
-    help="Allow to execute experimental features",
+    help="Do not ask for confirmation",
 )
-def clear_password(ctx: Context, experimental: bool) -> None:
-    """Clear the passphrase used to authenticate to other commands.
-    Experimental."""
-    check_experimental_flag(experimental)
-
+def status(ctx: Context, force: bool) -> None:
+    """Show OTP status"""
     with ctx.connect_device() as device:
-        try:
-            app = OTPApp(device)
-            ask_to_touch_if_needed()
-            authenticate_if_needed(app)
-            app.clear_code()
-            local_print("Password cleared")
-        except fido2.ctap.CtapError as e:
-            local_print(
-                f"Device returns error: {e}. This passphrase might be invalid or is set already."
-            )
+        app = OTPApp(device)
+        r = app.select()
+        local_print(f"{r}")
 
 
 @nk3.group(hidden=True)

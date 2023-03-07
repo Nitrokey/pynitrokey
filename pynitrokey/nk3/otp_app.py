@@ -28,10 +28,14 @@ class RawBytes:
 @dataclasses.dataclass
 class SelectResponse:
     version: bytes
-    name: bytes
-    challenge: Optional[bytes]
-    algorithm: Optional[bytes]
     pin_attempt_counter: Optional[int]
+
+    def __str__(self):
+        return (
+            "Nitrokey Secrets\n"
+            f"\tVersion: {self.version[0]}.{self.version[1]}.{self.version[2]}\n"
+            + f"\tPIN attempt counter: {self.pin_attempt_counter}"
+        )
 
 
 @dataclasses.dataclass
@@ -400,9 +404,7 @@ class OTPApp:
         self._send_receive(Instruction.SetCode, structure=structure)
 
     def authentication_required(self, stat: Optional[SelectResponse] = None) -> bool:
-        if stat is None:
-            stat = self.select()
-        return stat.algorithm is not None and stat.challenge is not None
+        return True
 
     def validate(self, passphrase: str) -> None:
         """
@@ -462,9 +464,6 @@ class OTPApp:
 
         r = SelectResponse(
             version=rd.get(Tag.Version.value),
-            name=rd.get(Tag.CredentialId.value),
-            challenge=rd.get(Tag.Challenge.value),
-            algorithm=rd.get(Tag.Algorithm.value),
             pin_attempt_counter=counter,
         )
         return r
@@ -487,3 +486,6 @@ class OTPApp:
             tlv8.Entry(Tag.Password.value, password),
         ]
         self._send_receive(Instruction.VerifyPIN, structure=structure)
+
+    def feature_active_PIN_authentication(self) -> bool:
+        return b"474" == self.select().version
