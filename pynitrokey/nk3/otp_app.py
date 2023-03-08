@@ -29,6 +29,9 @@ class RawBytes:
 class SelectResponse:
     version: bytes
     pin_attempt_counter: Optional[int]
+    name: bytes
+    challenge: Optional[bytes]
+    algorithm: Optional[bytes]
 
     def __str__(self):
         return (
@@ -141,6 +144,7 @@ class OTPApp:
     write_corpus_fn: Optional[typing.Callable]
 
     def __init__(self, dev: Nitrokey3Device, logfn: Optional[typing.Callable] = None):
+        self._cache_status = None
         self.write_corpus_fn = None
         self.log = logging.getLogger("otpapp")
         if logfn is not None:
@@ -465,6 +469,9 @@ class OTPApp:
         r = SelectResponse(
             version=rd.get(Tag.Version.value),
             pin_attempt_counter=counter,
+            name=rd.get(Tag.CredentialId.value),
+            challenge=rd.get(Tag.Challenge.value),
+            algorithm=rd.get(Tag.Algorithm.value),
         )
         return r
 
@@ -487,5 +494,19 @@ class OTPApp:
         ]
         self._send_receive(Instruction.VerifyPIN, structure=structure)
 
+    def get_feature_status_cached(self):
+        self._cache_status = (
+            self.select() if not self._cache_status else self._cache_status
+        )
+        return self._cache_status
+
     def feature_active_PIN_authentication(self) -> bool:
-        return b"474" == self.select().version
+        return self.get_feature_status_cached().challenge is None
+
+    def feature_old_application_version(self) -> bool:
+        v = self.get_feature_status_cached().version
+        return b"444" == v
+
+    def feature_challenge_response_support(self):
+        if self.get_feature_status_cached().challenge is not None:
+            return True

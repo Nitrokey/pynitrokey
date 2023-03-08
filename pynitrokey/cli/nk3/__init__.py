@@ -819,11 +819,19 @@ def helper_secrets_app_health_check(app: OTPApp) -> List[str]:
     messages = []
     r = app.select()
     if r.pin_attempt_counter is None:
-        messages.append("- Device does not have a PIN. Set PIN before the first use.")
+        messages.append(
+            "- Application does not have a PIN. Set PIN before the first use."
+        )
     if r.pin_attempt_counter == 0:
         messages.append(
             "- All attempts on the PIN counter are used. Call factory reset to use the device again."
         )
+    if (
+        app.feature_challenge_response_support()
+        or app.feature_old_application_version()
+    ):
+        messages.append("- This application version might be outdated.")
+
     if messages:
         messages.insert(0, "Health check notes:")
     return messages
