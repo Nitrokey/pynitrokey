@@ -20,6 +20,7 @@ from typing import Any, Callable, Iterable, List, Optional, Tuple, Type, Union
 from pynitrokey.cli.exceptions import CliException
 from pynitrokey.fido2 import device_path_to_str
 from pynitrokey.helpers import local_print
+from pynitrokey.nk3.admin_app import AdminApp
 from pynitrokey.nk3.base import Nitrokey3Base
 from pynitrokey.nk3.device import Nitrokey3Device
 from pynitrokey.nk3.utils import Uuid, Version
@@ -159,6 +160,38 @@ def test_firmware_version_query(ctx: TestContext, device: Nitrokey3Base) -> Test
     version = device.version()
     ctx.firmware_version = version
     return TestResult(TestStatus.SUCCESS, str(version))
+
+
+@test_case("status", "Device status")
+def test_device_status(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
+    if not isinstance(device, Nitrokey3Device):
+        return TestResult(TestStatus.SKIPPED)
+    firmware_version = ctx.firmware_version or device.version()
+    if firmware_version.core() < Version(1, 3, 0):
+        return TestResult(TestStatus.SKIPPED)
+
+    errors = []
+
+    status = AdminApp(device).status()
+    logger.info(f"Device status: {status}")
+
+    if status.init_status is None:
+        errors.append("missing init status")
+    elif status.init_status.is_error():
+        errors.append(f"init error: {status.init_status}")
+
+    if status.efs_blocks is None or status.ifs_blocks is None:
+        return TestResult(TestStatus.FAILURE, "missing filesystem status")
+    else:
+        if status.ifs_blocks < 5:
+            errors.append(f"IFS block count critical ({status.ifs_blocks})")
+        if status.efs_blocks < 10:
+            errors.append(f"EFS block count critical ({status.ifs_blocks})")
+
+    if errors:
+        return TestResult(TestStatus.FAILURE, ", ".join(errors))
+    else:
+        return TestResult(TestStatus.SUCCESS, str(status))
 
 
 @test_case("bootloader", "Bootloader configuration")
