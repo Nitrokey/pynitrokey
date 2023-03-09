@@ -26,7 +26,7 @@ def secrets(ctx: click.Context) -> None:
 @click.argument(
     "secret",
     type=click.STRING,
-    # help="The shared secret string (by default in base32)",
+    # help="The shared secret string (by default in base32)",  # Help can't be enabled on the positional argument
 )
 @click.option(
     "--digits_str",

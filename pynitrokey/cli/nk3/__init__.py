@@ -565,4 +565,5 @@ def provision_fido2(ctx: Context, key_file: BinaryIO, cert_file: BinaryIO) -> No
 
 
 # This import has to be added here to avoid circular dependency
+# Import "secrets" subcommand from the secrets module
 from . import secrets  # noqa: F401,E402
