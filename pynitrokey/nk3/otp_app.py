@@ -40,7 +40,7 @@ class SelectResponse:
 
     def version_str(self) -> str:
         if self.version:
-            return "{self.version[0]}.{self.version[1]}.{self.version[2]}"
+            return f"{self.version[0]}.{self.version[1]}.{self.version[2]}"
         else:
             return "unknown"
 
