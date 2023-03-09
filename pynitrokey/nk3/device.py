@@ -42,6 +42,7 @@ class Command(Enum):
     LOCKED = 0x63
     OTP = 0x70
     PROVISIONER = 0x71
+    DEBUG = 0x73
 
 
 @enum.unique

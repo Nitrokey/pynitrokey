@@ -23,6 +23,7 @@ from pynitrokey.cli.exceptions import CliException
 from pynitrokey.helpers import (
     AskUser,
     DownloadProgressBar,
+    ProgressBar,
     Retries,
     local_print,
     prompt,
@@ -37,6 +38,7 @@ from pynitrokey.nk3.bootloader import (
     detect_variant,
     parse_firmware_image,
 )
+from pynitrokey.nk3.debug_app import DebugApp
 from pynitrokey.nk3.device import BootMode, Nitrokey3Device
 from pynitrokey.nk3.exceptions import TimeoutException
 from pynitrokey.nk3.otp_app import STRING_TO_KIND, Algorithm, OTPApp
@@ -467,6 +469,23 @@ def version(ctx: Context) -> None:
     with ctx.connect_device() as device:
         version = device.version()
         local_print(version)
+
+
+@nk3.command()
+@click.argument("output")
+@click.pass_obj
+def debug(ctx: Context, output: str) -> None:
+    with ctx.connect_device() as device:
+        debug = DebugApp(device)
+        size = debug.size()
+        with open(output, "wb") as f:
+            with ProgressBar(unit="B", unit_scale=True) as bar:
+                n = 0
+                while n < size:
+                    data = debug.read(n)
+                    bar.update(len(data), size)
+                    n += len(data)
+                    f.write(data)
 
 
 @nk3.command()
