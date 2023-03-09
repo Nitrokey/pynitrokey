@@ -479,13 +479,13 @@ def wink(ctx: Context) -> None:
 
 @nk3.group()
 @click.pass_context
-def otp(ctx: click.Context) -> None:
-    """Manage OTP secrets on the device.
-    Use NITROPY_OTP_PASSWORD to pass password for the scripted execution."""
+def secrets(ctx: click.Context) -> None:
+    """Nitrokey Secrets App. Manage OTP secrets on the device.
+    Use NITROPY_SECRETS_PASSWORD to pass password for the scripted execution."""
     pass
 
 
-@otp.command()
+@secrets.command()
 @click.pass_obj
 @click.argument(
     "name",
@@ -583,7 +583,7 @@ def ask_to_touch_if_needed() -> None:
     local_print("Please touch the device if it blinks")
 
 
-@otp.command()
+@secrets.command()
 @click.pass_obj
 @click.option(
     "--hex",
@@ -593,7 +593,7 @@ def ask_to_touch_if_needed() -> None:
     default=False,
     is_flag=True,
 )
-def show(ctx: Context, hex: bool) -> None:
+def list_secrets(ctx: Context, hex: bool) -> None:
     """List registered OTP credentials."""
     with ctx.connect_device() as device:
         app = OTPApp(device)
@@ -603,7 +603,7 @@ def show(ctx: Context, hex: bool) -> None:
             local_print(e.hex() if hex else e)
 
 
-@otp.command()
+@secrets.command()
 @click.pass_obj
 @click.argument(
     "name",
@@ -618,7 +618,7 @@ def remove(ctx: Context, name: str) -> None:
         app.delete(name.encode())
 
 
-@otp.command()
+@secrets.command()
 @click.pass_obj
 @click.option(
     "--force",
@@ -638,7 +638,7 @@ def reset(ctx: Context, force: bool) -> None:
         local_print("Operation executed")
 
 
-@otp.command()
+@secrets.command()
 @click.pass_obj
 @click.argument(
     "name",
@@ -687,7 +687,7 @@ def get(
             )
 
 
-@otp.command()
+@secrets.command()
 @click.pass_obj
 @click.argument(
     "name",
@@ -702,7 +702,7 @@ def get(
 )
 def verify(ctx: Context, name: str, code: int) -> None:
     """Proceed with the incoming OTP code verification (aka reverse HOTP).
-    Does not need authentication by design.
+    Does not need authentication by design. Use the "register" command to create the credential for this action.
     """
     with ctx.connect_device() as device:
         app = OTPApp(device)
@@ -726,7 +726,7 @@ def ask_for_passphrase_if_needed(app: OTPApp) -> Optional[str]:
             raise RuntimeError("PIN not available to use")
         passphrase = AskUser(
             f"Current Password ({counter} attempts left)",
-            envvar="NITROPY_OTP_PASSWORD",
+            envvar="NITROPY_SECRETS_PASSWORD",
             hide_input=True,
         ).ask()
     return passphrase
@@ -742,11 +742,11 @@ def authenticate_if_needed(app: OTPApp) -> None:
         raise click.Abort()
 
 
-@otp.command()
+@secrets.command()
 @click.pass_obj
 @click.password_option()
-def set_password(ctx: Context, password: str) -> None:
-    """Set the passphrase used to authenticate to other commands."""
+def set_pin(ctx: Context, password: str) -> None:
+    """Set the PIN used to authenticate to other commands."""
     new_password = password
 
     with ctx.connect_device() as device:
@@ -770,10 +770,10 @@ def set_password(ctx: Context, password: str) -> None:
             )
 
 
-@otp.command()
+@secrets.command()
 @click.pass_obj
 def status(ctx: Context) -> None:
-    """Show OTP status"""
+    """Show application status"""
     with ctx.connect_device() as device:
         app = OTPApp(device)
         r = app.select()
