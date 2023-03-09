@@ -27,17 +27,28 @@ class RawBytes:
 
 @dataclasses.dataclass
 class SelectResponse:
-    version: bytes
+    # Application version
+    version: Optional[bytes]
+    # PIN attempt counter
     pin_attempt_counter: Optional[int]
-    name: bytes
+    # Salt, challenge-response auth only, tag Name
+    salt: Optional[bytes]
+    # Challenge field, challenge-response auth only
     challenge: Optional[bytes]
+    # Selected algorithm, challenge-response auth only
     algorithm: Optional[bytes]
 
-    def __str__(self):
+    def version_str(self) -> str:
+        if self.version:
+            return "{self.version[0]}.{self.version[1]}.{self.version[2]}"
+        else:
+            return "unknown"
+
+    def __str__(self) -> str:
         return (
             "Nitrokey Secrets\n"
-            f"\tVersion: {self.version[0]}.{self.version[1]}.{self.version[2]}\n"
-            + f"\tPIN attempt counter: {self.pin_attempt_counter}"
+            f"\tVersion: {self.version_str()}\n"
+            f"\tPIN attempt counter: {self.pin_attempt_counter}"
         )
 
 
@@ -98,7 +109,7 @@ class Instruction(Enum):
 
 
 class Tag(Enum):
-    CredentialId = 0x71
+    CredentialId = 0x71  # also known as Name
     NameList = 0x72
     Key = 0x73
     Challenge = 0x74
@@ -142,6 +153,7 @@ class OTPApp:
     logfn: typing.Callable
     dev: Nitrokey3Device
     write_corpus_fn: Optional[typing.Callable]
+    _cache_status: Optional[SelectResponse]
 
     def __init__(self, dev: Nitrokey3Device, logfn: Optional[typing.Callable] = None):
         self._cache_status = None
@@ -180,7 +192,7 @@ class OTPApp:
             self.write_corpus_fn(ins, bytes_data)
         return self._send_receive_inner(bytes_data, log_info=f"{ins}")
 
-    def _send_receive_inner(self, data: bytes, log_info=None) -> bytes:
+    def _send_receive_inner(self, data: bytes, log_info: str = "") -> bytes:
         self.logfn(
             f"Sending {log_info if log_info else ''} {data.hex() if data else data!r}"
         )
@@ -469,34 +481,34 @@ class OTPApp:
         r = SelectResponse(
             version=rd.get(Tag.Version.value),
             pin_attempt_counter=counter,
-            name=rd.get(Tag.CredentialId.value),
+            salt=rd.get(Tag.CredentialId.value),
             challenge=rd.get(Tag.Challenge.value),
             algorithm=rd.get(Tag.Algorithm.value),
         )
         return r
 
-    def set_pin_raw(self, password):
+    def set_pin_raw(self, password: str) -> None:
         structure = [
             tlv8.Entry(Tag.Password.value, password),
         ]
         self._send_receive(Instruction.SetPIN, structure=structure)
 
-    def change_pin_raw(self, password, new_password):
+    def change_pin_raw(self, password: str, new_password: str) -> None:
         structure = [
             tlv8.Entry(Tag.Password.value, password),
             tlv8.Entry(Tag.NewPassword.value, new_password),
         ]
         self._send_receive(Instruction.ChangePIN, structure=structure)
 
-    def verify_pin_raw(self, password):
+    def verify_pin_raw(self, password: str) -> None:
         structure = [
             tlv8.Entry(Tag.Password.value, password),
         ]
         self._send_receive(Instruction.VerifyPIN, structure=structure)
 
-    def get_feature_status_cached(self):
+    def get_feature_status_cached(self) -> SelectResponse:
         self._cache_status = (
-            self.select() if not self._cache_status else self._cache_status
+            self.select() if self._cache_status is None else self._cache_status
         )
         return self._cache_status
 
@@ -507,6 +519,7 @@ class OTPApp:
         v = self.get_feature_status_cached().version
         return b"444" == v
 
-    def feature_challenge_response_support(self):
+    def feature_challenge_response_support(self) -> bool:
         if self.get_feature_status_cached().challenge is not None:
             return True
+        return False
