@@ -640,7 +640,7 @@ def reset(ctx: Context, force: bool) -> None:
     confirmed = force or click.confirm("Do you want to continue?")
     if not confirmed:
         local_print("Operation cancelled")
-        click.Abort()
+        raise click.Abort()
     with ctx.connect_device() as device:
         app = OTPApp(device)
         ask_to_touch_if_needed()
@@ -741,8 +741,16 @@ def verify(ctx: Context, name: str, code: int, experimental: bool) -> None:
 def ask_for_passphrase_if_needed(app: OTPApp) -> Optional[str]:
     passphrase = None
     if app.authentication_required():
+        health_check = helper_secrets_app_health_check(app)
+        if health_check:
+            local_print(*health_check)
+        counter = app.select().pin_attempt_counter
+        if counter is None or counter == 0:
+            raise RuntimeError("PIN not available to use")
         passphrase = AskUser(
-            "Current Password", envvar="NITROPY_OTP_PASSWORD", hide_input=True
+            f"Current Password ({counter} attempts left)",
+            envvar="NITROPY_OTP_PASSWORD",
+            hide_input=True,
         ).ask()
     return passphrase
 
@@ -751,7 +759,7 @@ def authenticate_if_needed(app: OTPApp) -> None:
     try:
         passphrase = ask_for_passphrase_if_needed(app)
         if passphrase is not None:
-            app.validate(passphrase)
+            app.verify_pin_raw(passphrase)
     except Exception as e:
         local_print(f'Authentication failed with error: "{e}"')
         raise click.Abort()
@@ -770,14 +778,23 @@ def set_password(ctx: Context, password: str, experimental: bool) -> None:
     """Set the passphrase used to authenticate to other commands.
     Experimental."""
     check_experimental_flag(experimental)
+    new_password = password
 
     with ctx.connect_device() as device:
         try:
             app = OTPApp(device)
             ask_to_touch_if_needed()
-            authenticate_if_needed(app)
-            app.set_code(password)
-            local_print("Password set")
+
+            if app.select().pin_attempt_counter is None:
+                app.set_pin_raw(new_password)
+                local_print("Password set")
+                return
+
+            current_password = ask_for_passphrase_if_needed(app)
+            if current_password is None:
+                raise click.Abort()
+            app.change_pin_raw(current_password, new_password)
+            local_print("Password changed")
         except fido2.ctap.CtapError as e:
             local_print(
                 f"Device returns error: {e}. This passphrase might be invalid or is set already."
@@ -787,27 +804,39 @@ def set_password(ctx: Context, password: str, experimental: bool) -> None:
 @otp.command()
 @click.pass_obj
 @click.option(
-    "--experimental",
-    default=False,
+    "--force",
     is_flag=True,
-    help="Allow to execute experimental features",
+    help="Do not ask for confirmation",
 )
-def clear_password(ctx: Context, experimental: bool) -> None:
-    """Clear the passphrase used to authenticate to other commands.
-    Experimental."""
-    check_experimental_flag(experimental)
-
+def status(ctx: Context, force: bool) -> None:
+    """Show OTP status"""
     with ctx.connect_device() as device:
-        try:
-            app = OTPApp(device)
-            ask_to_touch_if_needed()
-            authenticate_if_needed(app)
-            app.clear_code()
-            local_print("Password cleared")
-        except fido2.ctap.CtapError as e:
-            local_print(
-                f"Device returns error: {e}. This passphrase might be invalid or is set already."
-            )
+        app = OTPApp(device)
+        r = app.select()
+        local_print(f"{r}")
+        local_print(*helper_secrets_app_health_check(app))
+
+
+def helper_secrets_app_health_check(app: OTPApp) -> List[str]:
+    messages = []
+    r = app.select()
+    if r.pin_attempt_counter is None:
+        messages.append(
+            "- Application does not have a PIN. Set PIN before the first use."
+        )
+    if r.pin_attempt_counter == 0:
+        messages.append(
+            "- All attempts on the PIN counter are used. Call factory reset to use the device again."
+        )
+    if (
+        app.feature_challenge_response_support()
+        or app.feature_old_application_version()
+    ):
+        messages.append("- This application version might be outdated.")
+
+    if messages:
+        messages.insert(0, "Health check notes:")
+    return messages
 
 
 @nk3.group(hidden=True)
