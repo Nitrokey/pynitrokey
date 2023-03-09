@@ -12,9 +12,9 @@ from pynitrokey.nk3.secrets_app import Instruction, SecretsApp
 
 CORPUS_PATH = "/tmp/corpus"
 
-logging.basicConfig(
-    encoding="utf-8", level=logging.DEBUG, handlers=[logging.StreamHandler()]
-)
+
+logger = logging.getLogger("main")
+log = logger.debug
 
 
 def _write_corpus(
@@ -80,14 +80,14 @@ def dev():
 
 @pytest.fixture(scope="function")
 def secretsApp(corpus_func, dev):
-    app = SecretsApp(dev, logfn=print)
+    app = SecretsApp(dev, logfn=log)
     app.write_corpus_fn = corpus_func
     return app
 
 
 @pytest.fixture(scope="function")
 def secretsAppResetLogin(corpus_func, dev):
-    app = SecretsApp(dev, logfn=print)
+    app = SecretsApp(dev, logfn=log)
     app.write_corpus_fn = corpus_func
 
     app.reset()
