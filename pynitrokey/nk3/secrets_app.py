@@ -40,7 +40,7 @@ class SelectResponse:
 
     def version_str(self) -> str:
         if self.version:
-            return "{self.version[0]}.{self.version[1]}.{self.version[2]}"
+            return f"{self.version[0]}.{self.version[1]}.{self.version[2]}"
         else:
             return "unknown"
 
@@ -53,7 +53,7 @@ class SelectResponse:
 
 
 @dataclasses.dataclass
-class OTPAppException(Exception):
+class SecretsAppException(Exception):
     code: str
     context: str
 
@@ -144,9 +144,10 @@ class Algorithm(Enum):
     Sha512 = 0x03
 
 
-class OTPApp:
+class SecretsApp:
     """
-    This is an Oath Authenticator client
+    This is a Secrets App client
+    https://github.com/Nitrokey/trussed-secrets-app
     """
 
     log: logging.Logger
@@ -229,7 +230,7 @@ class OTPApp:
                 data_final += result
 
         if status_bytes != b"\x90\x00" and status_bytes[0] != MORE_DATA_STATUS_BYTE:
-            raise OTPAppException(status_bytes.hex(), "Received error")
+            raise SecretsAppException(status_bytes.hex(), "Received error")
 
         self.logfn(
             f"Received final data: [{status_bytes.hex()}] {data_final.hex() if data_final else data_final!r}"

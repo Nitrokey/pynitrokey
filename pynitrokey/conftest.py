@@ -8,7 +8,7 @@ from _pytest.fixtures import FixtureRequest
 
 from pynitrokey.cli import CliException
 from pynitrokey.cli.nk3 import Context
-from pynitrokey.nk3.otp_app import Instruction, OTPApp
+from pynitrokey.nk3.secrets_app import Instruction, SecretsApp
 
 CORPUS_PATH = "/tmp/corpus"
 
@@ -79,15 +79,15 @@ def dev():
 
 
 @pytest.fixture(scope="function")
-def otpApp(corpus_func, dev):
-    app = OTPApp(dev, logfn=print)
+def secretsApp(corpus_func, dev):
+    app = SecretsApp(dev, logfn=print)
     app.write_corpus_fn = corpus_func
     return app
 
 
 @pytest.fixture(scope="function")
-def otpAppResetLogin(corpus_func, dev):
-    app = OTPApp(dev, logfn=print)
+def secretsAppResetLogin(corpus_func, dev):
+    app = SecretsApp(dev, logfn=print)
     app.write_corpus_fn = corpus_func
 
     app.reset()
@@ -97,8 +97,8 @@ def otpAppResetLogin(corpus_func, dev):
 
 
 @pytest.fixture(scope="function")
-def otpAppNoLog(corpus_func, dev):
-    app = OTPApp(dev)
+def secretsAppNoLog(corpus_func, dev):
+    app = SecretsApp(dev)
     app.write_corpus_fn = corpus_func
     return app
 
