@@ -6,7 +6,7 @@ import fido2
 
 from pynitrokey.cli.nk3 import Context, nk3
 from pynitrokey.helpers import AskUser, local_print
-from pynitrokey.nk3.otp_app import STRING_TO_KIND, Algorithm, OTPApp
+from pynitrokey.nk3.secrets_app import STRING_TO_KIND, Algorithm, SecretsApp
 
 
 @nk3.group()
@@ -83,7 +83,7 @@ def register(
     otp_kind = STRING_TO_KIND[kind.upper()]
     hash_algorithm = Algorithm.Sha1 if hash == "SHA1" else Algorithm.Sha256
     with ctx.connect_device() as device:
-        app = OTPApp(device)
+        app = SecretsApp(device)
         ask_to_touch_if_needed()
         authenticate_if_needed(app)
         app.register(
@@ -128,7 +128,7 @@ def ask_to_touch_if_needed() -> None:
 def list(ctx: Context, hex: bool) -> None:
     """List registered OTP credentials."""
     with ctx.connect_device() as device:
-        app = OTPApp(device)
+        app = SecretsApp(device)
         ask_to_touch_if_needed()
         authenticate_if_needed(app)
         for e in app.list():
@@ -144,7 +144,7 @@ def list(ctx: Context, hex: bool) -> None:
 def remove(ctx: Context, name: str) -> None:
     """Remove OTP credential."""
     with ctx.connect_device() as device:
-        app = OTPApp(device)
+        app = SecretsApp(device)
         ask_to_touch_if_needed()
         authenticate_if_needed(app)
         app.delete(name.encode())
@@ -164,7 +164,7 @@ def reset(ctx: Context, force: bool) -> None:
         local_print("Operation cancelled")
         raise click.Abort()
     with ctx.connect_device() as device:
-        app = OTPApp(device)
+        app = SecretsApp(device)
         ask_to_touch_if_needed()
         app.reset()
         local_print("Operation executed")
@@ -205,7 +205,7 @@ def get(
     timestamp = timestamp if timestamp else int(datetime.timestamp(now))
     with ctx.connect_device() as device:
         try:
-            app = OTPApp(device)
+            app = SecretsApp(device)
             ask_to_touch_if_needed()
             authenticate_if_needed(app)
             code = app.calculate(name.encode(), timestamp // period)
@@ -237,7 +237,7 @@ def verify(ctx: Context, name: str, code: int) -> None:
     Does not need authentication by design. Use the "register" command to create the credential for this action.
     """
     with ctx.connect_device() as device:
-        app = OTPApp(device)
+        app = SecretsApp(device)
         ask_to_touch_if_needed()
         try:
             app.verify_code(name.encode(), code)
@@ -247,7 +247,7 @@ def verify(ctx: Context, name: str, code: int) -> None:
             )
 
 
-def ask_for_passphrase_if_needed(app: OTPApp) -> Optional[str]:
+def ask_for_passphrase_if_needed(app: SecretsApp) -> Optional[str]:
     passphrase = None
     if app.authentication_required():
         health_check = helper_secrets_app_health_check(app)
@@ -264,7 +264,7 @@ def ask_for_passphrase_if_needed(app: OTPApp) -> Optional[str]:
     return passphrase
 
 
-def authenticate_if_needed(app: OTPApp) -> None:
+def authenticate_if_needed(app: SecretsApp) -> None:
     try:
         passphrase = ask_for_passphrase_if_needed(app)
         if passphrase is not None:
@@ -283,7 +283,7 @@ def set_pin(ctx: Context, password: str) -> None:
 
     with ctx.connect_device() as device:
         try:
-            app = OTPApp(device)
+            app = SecretsApp(device)
             ask_to_touch_if_needed()
 
             if app.select().pin_attempt_counter is None:
@@ -307,13 +307,13 @@ def set_pin(ctx: Context, password: str) -> None:
 def status(ctx: Context) -> None:
     """Show application status"""
     with ctx.connect_device() as device:
-        app = OTPApp(device)
+        app = SecretsApp(device)
         r = app.select()
         local_print(f"{r}")
         local_print(*helper_secrets_app_health_check(app))
 
 
-def helper_secrets_app_health_check(app: OTPApp) -> List[str]:
+def helper_secrets_app_health_check(app: SecretsApp) -> List[str]:
     messages = []
     r = app.select()
     if r.pin_attempt_counter is None:
