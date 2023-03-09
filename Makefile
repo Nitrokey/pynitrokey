@@ -33,10 +33,12 @@ rune:
 builde:
 	earthly +build
 
-# ensure this passes before commiting
+# ensure this passes before committing
 check: lint
+	@echo "Note: run semi-clean target in case this fails without any proper reason"
 	$(VENV)/bin/python3 -m black $(BLACK_FLAGS) --check $(PACKAGE_NAME)/
 	$(VENV)/bin/python3 -m isort $(ISORT_FLAGS) --check-only $(PACKAGE_NAME)/
+	@echo All good!
 
 # automatic code fixes
 fix: black isort
@@ -53,6 +55,7 @@ lint:
 
 semi-clean:
 	rm -rf ./**/__pycache__
+	rm -rf ./.mypy_cache
 
 clean: semi-clean
 	rm -rf ./$(VENV)
