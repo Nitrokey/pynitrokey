@@ -399,7 +399,14 @@ def test_calculated_codes_totp_hash_digits(
     "kind",
     [Kind.Totp, Kind.Hotp],
 )
-def test_load(secretsAppResetLogin, kind: Kind, long_labels: str):
+@pytest.mark.parametrize(
+    "count",
+    [
+        100,
+        pytest.param(1000, marks=pytest.mark.slow),
+    ],
+)
+def test_load(secretsAppResetLogin, kind: Kind, long_labels: str, count):
     """
     Load tests to see how much OTP credentials we can store,
     and if using of them is not broken with the full FS.
@@ -425,6 +432,9 @@ def test_load(secretsAppResetLogin, kind: Kind, long_labels: str):
                 name, secretb, digits=6, kind=kind, initial_counter_value=i
             )
             names_registered.append(name.encode())
+            if i > count:
+                i = i + 1
+                raise Exception("Reached expected credentials count, finishing early")
         except Exception as e:
             print(f"{e}")
             print(f"Registered {i} credentials")

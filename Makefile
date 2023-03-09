@@ -152,3 +152,13 @@ wine-build/pynitrokey-$(VERSION).msi wine-build/nitropy-$(VERSION).exe:
 	bash build-wine.sh
 	#cp wine-build/out/pynitrokey-$(VERSION)-win32.msi wine-build
 	cp wine-build/out/nitropy-$(VERSION).exe wine-build
+
+
+.PHONY: secrets-test-all secrets-test
+TESTPARAM=-x -s -o log_cli=true
+secrets-test-all: init
+	./venv/bin/pytest  -v pynitrokey/test_secrets_app.py --durations=0 $(TESTPARAM)
+
+secrets-test: init
+	@echo "Skipping slow tests. Run secrets-test-all target for all tests."
+	./venv/bin/pytest  -v pynitrokey/test_secrets_app.py --durations=0 -m "not slow" $(TESTPARAM)

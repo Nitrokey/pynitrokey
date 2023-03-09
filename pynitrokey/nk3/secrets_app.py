@@ -209,12 +209,15 @@ class SecretsApp:
             f"Received [{status_bytes.hex()}] {result.hex() if result else result!r}"
         )
 
+        log_multipacket = False
         data_final = result
         MORE_DATA_STATUS_BYTE = 0x61
         while status_bytes[0] == MORE_DATA_STATUS_BYTE:
-            self.logfn(
-                f"Got RemainingData status: [{status_bytes.hex()}] {result.hex() if result else result!r}"
-            )
+            if log_multipacket:
+                self.logfn(
+                    f"Got RemainingData status: [{status_bytes.hex()}] {result.hex() if result else result!r}"
+                )
+            log_multipacket = True
             ins_b, p1, p2 = self._encode_command(Instruction.SendRemaining)
             bytes_data = iso7816_compose(ins_b, p1, p2, data=[])
             try:
@@ -232,9 +235,10 @@ class SecretsApp:
         if status_bytes != b"\x90\x00" and status_bytes[0] != MORE_DATA_STATUS_BYTE:
             raise SecretsAppException(status_bytes.hex(), "Received error")
 
-        self.logfn(
-            f"Received final data: [{status_bytes.hex()}] {data_final.hex() if data_final else data_final!r}"
-        )
+        if log_multipacket:
+            self.logfn(
+                f"Received final data: [{status_bytes.hex()}] {data_final.hex() if data_final else data_final!r}"
+            )
 
         return data_final
 
