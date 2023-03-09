@@ -640,7 +640,7 @@ def reset(ctx: Context, force: bool) -> None:
     confirmed = force or click.confirm("Do you want to continue?")
     if not confirmed:
         local_print("Operation cancelled")
-        click.Abort()
+        raise click.Abort()
     with ctx.connect_device() as device:
         app = OTPApp(device)
         ask_to_touch_if_needed()
@@ -791,6 +791,8 @@ def set_password(ctx: Context, password: str, experimental: bool) -> None:
                 return
 
             current_password = ask_for_passphrase_if_needed(app)
+            if current_password is None:
+                raise click.Abort()
             app.change_pin_raw(current_password, new_password)
             local_print("Password changed")
         except fido2.ctap.CtapError as e:
