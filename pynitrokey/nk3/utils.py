@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2021 Nitrokey Developers
+# Copyright 2021-2023 Nitrokey Developers
 #
 # Licensed under the Apache License, Version 2.0, <LICENSE-APACHE or
 # http://apache.org/licenses/LICENSE-2.0> or the MIT license <LICENSE-MIT or
@@ -9,7 +9,6 @@
 
 from dataclasses import dataclass
 from functools import total_ordering
-from typing import Tuple
 
 from spsdk.sbfile.misc import BcdVersion3
 
@@ -27,34 +26,49 @@ class Uuid:
         return self.value
 
 
+@dataclass(frozen=True)
 @total_ordering
 class Version:
-    def __init__(self, major: int, minor: int, patch: int) -> None:
-        self.major = major
-        self.minor = minor
-        self.patch = patch
+    """
+    The version of a Nitrokey 3 device, following Semantic Versioning 2.0.0.
 
-    def __hash__(self) -> int:
-        return hash(self._as_tuple())
+    >>> Version(1, 0, 0)
+    Version(major=1, minor=0, patch=0)
+    >>> Version.from_str("1.0.0")
+    Version(major=1, minor=0, patch=0)
+    >>> Version.from_v_str("v1.0.0")
+    Version(major=1, minor=0, patch=0)
+    """
 
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, Version):
-            return NotImplemented
-        return self._as_tuple() == other._as_tuple()
-
-    def __lt__(self, other: object) -> bool:
-        if not isinstance(other, Version):
-            return NotImplemented
-        return self._as_tuple() < other._as_tuple()
-
-    def __repr__(self) -> str:
-        return f"Version(major={self.major}, minor={self.minor}, patch={self.patch})"
+    major: int
+    minor: int
+    patch: int
 
     def __str__(self) -> str:
+        """
+        >>> str(Version(major=1, minor=0, patch=0))
+        'v1.0.0'
+        """
+
         return f"v{self.major}.{self.minor}.{self.patch}"
 
-    def _as_tuple(self) -> Tuple[int, int, int]:
-        return (self.major, self.minor, self.patch)
+    def __lt__(self, other: object) -> bool:
+        """
+        >>> Version(1, 0, 0) < Version(1, 0, 0)
+        False
+        >>> Version(1, 0, 0) < Version(1, 0, 1)
+        True
+        >>> Version(1, 1, 0) < Version(2, 0, 0)
+        True
+        >>> Version(1, 1, 0) < Version(1, 0, 3)
+        False
+        """
+
+        if not isinstance(other, Version):
+            return NotImplemented
+        lhs = (self.major, self.minor, self.patch)
+        rhs = (other.major, other.minor, other.patch)
+        return lhs < rhs
 
     @classmethod
     def from_int(cls, version: int) -> "Version":
