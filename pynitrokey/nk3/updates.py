@@ -7,11 +7,12 @@
 # http://opensource.org/licenses/MIT>, at your option. This file may not be
 # copied, modified, or distributed except according to those terms.
 
+import enum
 import logging
 import platform
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
-from typing import Any, Callable, Iterator, Optional, Tuple, Union
+from typing import Any, Callable, Iterator, List, Optional, Tuple, Union
 
 from spsdk.mboot.exceptions import McuBootConnectionError
 
@@ -37,9 +38,53 @@ REPOSITORY_NAME = "nitrokey-3-firmware"
 REPOSITORY = Repository(owner=REPOSITORY_OWNER, name=REPOSITORY_NAME)
 
 
+@enum.unique
+class UpdatePath(enum.Enum):
+    default = enum.auto()
+    nRF_IFS_Migration_v1_3 = enum.auto()
+
+    @classmethod
+    def create(
+        cls, variant: Optional[Variant], current: Optional[Version], new: Version
+    ) -> "UpdatePath":
+        if variant == Variant.NRF52:
+            if (
+                current is None
+                or current <= Version(1, 2, 2)
+                and new >= Version(1, 3, 0)
+            ):
+                return cls.nRF_IFS_Migration_v1_3
+        return cls.default
+
+
 def get_firmware_update(release: Release, variant: Variant) -> Asset:
     pattern = get_firmware_filename_pattern(variant)
     return release.require_asset(pattern)
+
+
+def get_extra_information(upath: UpdatePath) -> List[str]:
+    """Return additional information for the device after update based on update-path"""
+
+    out = []
+    if upath == UpdatePath.nRF_IFS_Migration_v1_3:
+        out += [
+            "",
+            "During this update process the internal filesystem will be migrated!",
+            "- Migration will only work, if your internal filesystem does not contain more than 45 Resident Keys. If you have more please remove some.",
+            "- After the update it might take up to 3minutes for the first boot.",
+            "Never unplug the device while the LED is active!",
+        ]
+    return out
+
+
+def get_finalization_wait_retries(upath: UpdatePath) -> int:
+    """Return number of retries to wait for the device after update based on update-path"""
+
+    out = 30
+    if upath == UpdatePath.nRF_IFS_Migration_v1_3:
+        # max time 150secs == 300 retries
+        out = 500
+    return out
 
 
 class UpdateUi(ABC):
@@ -61,6 +106,10 @@ class UpdateUi(ABC):
 
     @abstractmethod
     def confirm_update(self, current: Optional[Version], new: Version) -> None:
+        pass
+
+    @abstractmethod
+    def confirm_extra_information(self, extra_info: List[str]) -> None:
         pass
 
     @abstractmethod
@@ -89,13 +138,24 @@ class UpdateUi(ABC):
     def update_progress_bar(self) -> Iterator[Callable[[int, int], None]]:
         pass
 
+    @abstractmethod
+    @contextmanager
+    def finalization_progress_bar(self) -> Iterator[Callable[[int, int], None]]:
+        pass
+
 
 class Updater:
     def __init__(
-        self, ui: UpdateUi, await_bootloader: Callable[[], Nitrokey3Bootloader]
+        self,
+        ui: UpdateUi,
+        await_bootloader: Callable[[], Nitrokey3Bootloader],
+        await_device: Callable[
+            [Optional[int], Optional[Callable[[int, int], None]]], Nitrokey3Device
+        ],
     ) -> None:
         self.ui = ui
         self.await_bootloader = await_bootloader
+        self.await_device = await_device
 
     def update(
         self,
@@ -110,8 +170,10 @@ class Updater:
         (new_version, firmware_or_release) = self._prepare_update(
             image, current_version, variant
         )
+
         self.ui.confirm_update(current_version, new_version)
 
+        update_path = UpdatePath.default
         if isinstance(device, Nitrokey3Device):
             self.ui.request_bootloader_confirmation()
             try:
@@ -135,6 +197,13 @@ class Updater:
                         metadata, data = self._get_update(
                             firmware_or_release, current_version, bootloader.variant
                         )
+                        update_path = UpdatePath.create(
+                            bootloader.variant, current_version, new_version
+                        )
+                        txt = get_extra_information(update_path)
+                        variant = bootloader.variant
+                        self.ui.confirm_extra_information(txt)
+
                         self._perform_update(bootloader, data)
                     break
                 except McuBootConnectionError as e:
@@ -149,9 +218,27 @@ class Updater:
             metadata, data = self._get_update(
                 firmware_or_release, current_version, device.variant
             )
+            update_path = UpdatePath.create(
+                device.variant, current_version, new_version
+            )
+            txt = get_extra_information(update_path)
+            self.ui.confirm_extra_information(txt)
+
+            variant = device.variant
+
             self._perform_update(device, data)
         else:
             raise self.ui.error(f"Unexpected Nitrokey 3 device: {device}")
+
+        wait_retries = get_finalization_wait_retries(update_path)
+        with self.ui.finalization_progress_bar() as callback:
+            with self.await_device(wait_retries, callback) as device:
+                version = device.version()
+                if version != new_version:
+                    raise self.ui.error(
+                        f"The firmware update to {new_version} was successful, but the firmware "
+                        f"is still reporting version {version}."
+                    )
 
         return metadata.version
 
@@ -251,3 +338,26 @@ class Updater:
             except Exception as e:
                 raise self.ui.error("Failed to perform firmware update", e)
         logger.debug("Firmware update finished successfully")
+
+
+def test_update_path_default() -> None:
+    assert (
+        UpdatePath.create(Variant.NRF52, Version(1, 0, 0), Version(1, 1, 0))
+        == UpdatePath.default
+    )
+    assert UpdatePath.create(None, None, Version(1, 1, 0)) == UpdatePath.default
+
+
+def test_update_path_match() -> None:
+    assert (
+        UpdatePath.create(Variant.NRF52, Version(1, 2, 2), Version(1, 3, 0))
+        == UpdatePath.nRF_IFS_Migration_v1_3
+    )
+    assert (
+        UpdatePath.create(Variant.NRF52, Version(1, 0, 0), Version(1, 3, 0))
+        == UpdatePath.nRF_IFS_Migration_v1_3
+    )
+    assert (
+        UpdatePath.create(Variant.NRF52, None, Version(1, 3, 0))
+        == UpdatePath.nRF_IFS_Migration_v1_3
+    )
