@@ -25,7 +25,7 @@ from . import FirmwareMetadata, Nitrokey3Bootloader, ProgressCallback, Variant
 RKHT = bytes.fromhex("050aad3e77791a81e59c5b2ba5a158937e9460ee325d8ccba09734b8fdebb171")
 KEK = bytes([0xAA] * 32)
 UUID_LEN = 4
-FILENAME_PATTERN = re.compile("firmware-nk3..-lpc55-.*\\.sb2$")
+FILENAME_PATTERN = re.compile("(firmware|alpha)-nk3..-lpc55-(?P<version>.*)\\.sb2$")
 
 logger = logging.getLogger(__name__)
 
