@@ -9,7 +9,7 @@
 import logging
 import os.path
 from hashlib import sha256
-from typing import BinaryIO, List, Optional, Type, TypeVar
+from typing import BinaryIO, Callable, List, Optional, Type, TypeVar
 
 import click
 from cryptography import x509
@@ -93,25 +93,45 @@ class Context:
         ]
         return self._select_unique("Nitrokey 3", devices)
 
-    def _await(self, name: str, ty: Type[T]) -> T:
-        for t in Retries(10):
+    def _await(
+        self,
+        name: str,
+        ty: Type[T],
+        retries: int,
+        callback: Optional[Callable[[int, int], None]] = None,
+    ) -> T:
+        for t in Retries(retries):
             logger.debug(f"Searching {name} device ({t})")
             devices = [device for device in self.list() if isinstance(device, ty)]
             if len(devices) == 0:
+                if callback:
+                    callback(int((t.i / retries) * 100), 100)
                 logger.debug(f"No {name} device found, continuing")
                 continue
             if len(devices) > 1:
                 raise CliException(f"Multiple {name} devices found")
+            if callback:
+                callback(100, 100)
             return devices[0]
 
         raise CliException(f"No {name} device found")
 
-    def await_device(self) -> Nitrokey3Device:
-        return self._await("Nitrokey 3", Nitrokey3Device)
+    def await_device(
+        self,
+        retries: Optional[int] = 30,
+        callback: Optional[Callable[[int, int], None]] = None,
+    ) -> Nitrokey3Device:
+        assert isinstance(retries, int)
+        return self._await("Nitrokey 3", Nitrokey3Device, retries, callback)
 
-    def await_bootloader(self) -> Nitrokey3Bootloader:
+    def await_bootloader(
+        self,
+        retries: Optional[int] = 30,
+        callback: Optional[Callable[[int, int], None]] = None,
+    ) -> Nitrokey3Bootloader:
+        assert isinstance(retries, int)
         # mypy does not allow abstract types here, but this is still valid
-        return self._await("Nitrokey 3 bootloader", Nitrokey3Bootloader)  # type: ignore
+        return self._await("Nitrokey 3 bootloader", Nitrokey3Bootloader, retries, callback)  # type: ignore
 
 
 @click.group()
@@ -442,18 +462,7 @@ def update(
 
     from .update import update as exec_update
 
-    update_version = exec_update(ctx, image, variant)
-
-    local_print("")
-    with ctx.await_device() as device:
-        version = device.version()
-        if version == update_version:
-            local_print(f"Successfully updated the firmware to version {version}.")
-        else:
-            raise CliException(
-                f"The firmware update to {update_version} was successful, but the firmware "
-                f"is still reporting version {version}."
-            )
+    exec_update(ctx, image, variant)
 
 
 @nk3.command()

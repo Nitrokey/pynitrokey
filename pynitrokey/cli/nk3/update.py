@@ -9,7 +9,7 @@
 
 import logging
 from contextlib import contextmanager
-from typing import Any, Callable, Iterator, Optional
+from typing import Any, Callable, Iterator, List, Optional
 
 from click import Abort
 
@@ -71,6 +71,12 @@ class UpdateCli(UpdateUi):
         ):
             raise Abort()
 
+    def confirm_extra_information(self, txt: List[str]) -> None:
+        if txt:
+            local_print("\n".join(txt))
+            if not confirm("Have you read these information? Do you want to continue?"):
+                raise Abort()
+
     def request_repeated_update(self) -> Exception:
         local_print(
             "Bootloader mode enabled. Please repeat this command to apply the update."
@@ -99,6 +105,11 @@ class UpdateCli(UpdateUi):
         ) as bar:
             yield bar.update_sum
 
+    @contextmanager
+    def finalization_progress_bar(self) -> Iterator[Callable[[int, int], None]]:
+        with ProgressBar(desc="Finalize upgrade", unit="%", unit_scale=False) as bar:
+            yield bar.update_sum
+
     def _print_firmware_versions(
         self, current: Optional[Version], new: Optional[Version]
     ) -> None:
@@ -111,5 +122,5 @@ class UpdateCli(UpdateUi):
 
 def update(ctx: Context, image: Optional[str], variant: Optional[Variant]) -> Version:
     with ctx.connect() as device:
-        updater = Updater(UpdateCli(), ctx.await_bootloader)
+        updater = Updater(UpdateCli(), ctx.await_bootloader, ctx.await_device)
         return updater.update(device, image, variant)
