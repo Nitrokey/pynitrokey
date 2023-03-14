@@ -31,7 +31,7 @@ from . import FirmwareMetadata, Nitrokey3Bootloader, ProgressCallback, Variant
 
 logger = logging.getLogger(__name__)
 
-FILENAME_PATTERN = re.compile("(firmware|alpha)-nk3..-nrf52-.*\\.zip$")
+FILENAME_PATTERN = re.compile("(firmware|alpha)-nk3..-nrf52-(?P<version>.*)\\.zip$")
 
 
 @dataclass

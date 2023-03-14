@@ -22,8 +22,8 @@ from pynitrokey.nk3.bootloader import (
     FirmwareMetadata,
     Nitrokey3Bootloader,
     Variant,
-    detect_variant,
     get_firmware_filename_pattern,
+    parse_filename,
     validate_firmware_image,
 )
 from pynitrokey.nk3.device import BootMode, Nitrokey3Device
@@ -249,16 +249,23 @@ class Updater:
         variant: Optional[Variant],
     ) -> Tuple[Version, Union[Tuple[FirmwareMetadata, bytes], Release]]:
         if image:
+            version = None
             if not variant:
-                variant = detect_variant(image)
+                parsed_filename = parse_filename(image)
+                if parsed_filename:
+                    (variant, version) = parsed_filename
             if not variant:
                 variant = self.ui.prompt_variant()
 
             with open(image, "rb") as f:
                 data = f.read()
-            metadata = validate_firmware_image(variant, data)
-            self._validate_version(current_version, metadata.version)
-            return (metadata.version, (metadata, data))
+            metadata = validate_firmware_image(variant, data, version)
+            if not version:
+                version = metadata.version
+
+            self._validate_version(current_version, version)
+
+            return (version, (metadata, data))
         else:
             try:
                 release = REPOSITORY.get_latest_release()
@@ -307,13 +314,11 @@ class Updater:
                 f"Failed to download latest firmware update {update.tag}", e
             )
 
-        metadata = validate_firmware_image(variant, data)
         release_version = Version.from_v_str(release.tag)
-        if Version.from_v_str(release.tag) != metadata.version:
-            raise self.ui.error(
-                f"The firmware image for the release {release} has the unexpected product "
-                f"version {metadata.version}."
-            )
+        try:
+            metadata = validate_firmware_image(variant, data, release_version)
+        except Exception as e:
+            raise self.ui.error("Failed to validate firmwage image", e)
         metadata.version = release_version
 
         return (metadata, data)

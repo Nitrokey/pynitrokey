@@ -32,7 +32,7 @@ from pynitrokey.nk3.base import Nitrokey3Base
 from pynitrokey.nk3.bootloader import (
     Nitrokey3Bootloader,
     Variant,
-    detect_variant,
+    parse_filename,
     parse_firmware_image,
 )
 from pynitrokey.nk3.device import BootMode, Nitrokey3Device
@@ -402,8 +402,11 @@ def validate_update(image: str, variant: Optional[Variant]) -> None:
     If the name of the firmware image name is changed so that the device variant can no longer be
     detected from the filename, it has to be set explictly with --variant.
     """
+    version = None
     if not variant:
-        variant = detect_variant(image)
+        parsed_filename = parse_filename(image)
+        if parsed_filename:
+            (variant, version) = parsed_filename
     if not variant:
         variant = Variant.from_str(
             prompt("Firmware image variant", type=VARIANT_CHOICE)
@@ -421,6 +424,13 @@ def validate_update(image: str, variant: Optional[Variant]) -> None:
 
     print(f"version:    {metadata.version}")
     print(f"signed by:  {signed_by}")
+
+    if version:
+        if version.core() != metadata.version:
+            raise CliException(
+                f"The firmware image for the release {version} has an unexpected product "
+                f"version ({metadata.version})."
+            )
 
 
 @nk3.command()

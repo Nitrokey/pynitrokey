@@ -13,7 +13,7 @@ import sys
 from abc import abstractmethod
 from dataclasses import dataclass
 from re import Pattern
-from typing import Callable, List, Optional
+from typing import Callable, List, Optional, Tuple
 
 from ..base import Nitrokey3Base
 from ..utils import Version
@@ -95,20 +95,33 @@ def get_firmware_filename_pattern(variant: Variant) -> Pattern:
         raise ValueError(f"Unexpected variant {variant}")
 
 
-def detect_variant(filename: str) -> Optional[Variant]:
+def parse_filename(filename: str) -> Optional[Tuple[Variant, Version]]:
     for variant in Variant:
         pattern = get_firmware_filename_pattern(variant)
-        if pattern.search(filename):
-            return variant
+        match = pattern.search(filename)
+        if match:
+            version = Version.from_v_str(match.group("version"))
+            return (variant, version)
     return None
 
 
-def validate_firmware_image(variant: Variant, data: bytes) -> FirmwareMetadata:
+def validate_firmware_image(
+    variant: Variant,
+    data: bytes,
+    version: Optional[Version],
+) -> FirmwareMetadata:
     try:
         metadata = parse_firmware_image(variant, data)
     except Exception:
         logger.exception("Failed to parse firmware image", exc_info=sys.exc_info())
         raise Exception("Failed to parse firmware image")
+
+    if version:
+        if version.core() != metadata.version:
+            raise Exception(
+                f"The firmware image for the release {version} has an unexpected product "
+                f"version ({metadata.version})."
+            )
 
     if not metadata.signed_by:
         raise Exception("Firmware image is not signed")
