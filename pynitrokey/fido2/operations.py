@@ -9,13 +9,17 @@
 
 import binascii
 import struct
+from typing import Dict, List, Optional
 
+import ecdsa
 from intelhex import IntelHex
 
 from pynitrokey import helpers
 
 
-def genkey(output_pem_file, input_seed_file=None):
+def genkey(
+    output_pem_file: str, input_seed_file: Optional[str] = None
+) -> ecdsa.VerifyingKey:
     from ecdsa import NIST256p, SigningKey
     from ecdsa.util import randrange_from_seed__trytryagain
 
@@ -75,14 +79,14 @@ hacker_attestation_cert = b"".join(
 
 
 def mergehex(
-    input_hex_files,
-    output_hex_file,
-    attestation_key=None,
-    attestation_cert=None,
-    APPLICATION_END_PAGE=20,
-    PAGES=128,
-    lock=False,
-):
+    input_hex_files: List[str],
+    output_hex_file: str,
+    attestation_key: Optional[bytes] = None,
+    attestation_cert: Optional[bytes] = None,
+    APPLICATION_END_PAGE: int = 20,
+    PAGES: int = 128,
+    lock: bool = False,
+) -> None:
     """Merges hex files, and patches in the attestation key.
 
     If no attestation key is passed, uses default Nitrokey Hacker one.
@@ -100,7 +104,7 @@ def mergehex(
         # generic / hacker attestation key
         print("*** Using development attestation key")
         attestation_key = (
-            "1b2626ecc8f69b0f69e34fb236d76466ba12ac16c3ab5750ba064e8b90e02448"
+            b"1b2626ecc8f69b0f69e34fb236d76466ba12ac16c3ab5750ba064e8b90e02448"
         )
     assert len(attestation_key) == 2 * 32
 
@@ -112,7 +116,7 @@ def mergehex(
             raise RuntimeError("Attestation certificate is invalid")
 
     # TODO put definitions somewhere else
-    def flash_addr(num):
+    def flash_addr(num: int) -> int:
         return 0x08000000 + num * 2048
 
     APPLICATION_END_PAGE = PAGES - APPLICATION_END_PAGE
@@ -146,7 +150,7 @@ def mergehex(
     first[AUTH_WORD_ADDR + 7] = 0xFF
 
     # patch in the attestation key
-    print(f"Using attestation key[:2]: {attestation_key[:4]}...")
+    print(f"Using attestation key[:2]: {attestation_key[:4]!r}...")
     key = binascii.unhexlify(attestation_key)
 
     for i, x in enumerate(key):
@@ -179,7 +183,9 @@ def mergehex(
     first.tofile(output_hex_file, format="hex")
 
 
-def sign_firmware(sk_name, hex_file, APPLICATION_END_PAGE=20, PAGES=128):
+def sign_firmware(
+    sk_name: str, hex_file: str, APPLICATION_END_PAGE: int = 20, PAGES: int = 128
+) -> Dict:
     v1 = sign_firmware_for_version(sk_name, hex_file, 19)
     v2 = sign_firmware_for_version(sk_name, hex_file, 20, PAGES=PAGES)
 
@@ -198,7 +204,9 @@ def sign_firmware(sk_name, hex_file, APPLICATION_END_PAGE=20, PAGES=128):
     }
 
 
-def sign_firmware_for_version(sk_name, hex_file, APPLICATION_END_PAGE, PAGES=128):
+def sign_firmware_for_version(
+    sk_name: str, hex_file: str, APPLICATION_END_PAGE: int, PAGES: int = 128
+) -> Dict:
     # Maybe this is not the optimal module...
 
     import base64
@@ -209,9 +217,9 @@ def sign_firmware_for_version(sk_name, hex_file, APPLICATION_END_PAGE, PAGES=128
     from intelhex import IntelHex
 
     sk = SigningKey.from_pem(open(sk_name).read())
-    fw = open(hex_file, "r").read()
-    fw = base64.b64encode(fw.encode())
-    fw = helpers.to_websafe(fw.decode())
+    fw = open(hex_file, "rb").read()
+    fw = base64.b64encode(fw)
+    fw = helpers.to_websafe(fw.decode()).encode()
     ih = IntelHex()
     ih.fromfile(hex_file, format="hex")
     # start of firmware and the size of the flash region allocated for it.
@@ -240,7 +248,7 @@ def sign_firmware_for_version(sk_name, hex_file, APPLICATION_END_PAGE, PAGES=128
     print("sig", binascii.hexlify(sig))
 
     sig = base64.b64encode(sig)
-    sig = helpers.to_websafe(sig.decode())
+    sig = helpers.to_websafe(sig.decode()).encode()
 
     # msg = {'data': read()}
     msg = {"firmware": fw, "signature": sig}
