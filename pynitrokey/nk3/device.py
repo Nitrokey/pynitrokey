@@ -42,6 +42,7 @@ class Command(Enum):
     LOCKED = 0x63
     OTP = 0x70
     PROVISIONER = 0x71
+    ADMIN = 0x72
 
 
 @enum.unique
@@ -55,6 +56,7 @@ class Nitrokey3Device(Nitrokey3Base):
 
     def __init__(self, device: CtapHidDevice) -> None:
         from . import PID_NITROKEY3_DEVICE, VID_NITROKEY
+        from .admin_app import AdminApp
 
         (vid, pid) = (device.descriptor.vid, device.descriptor.pid)
         if (vid, pid) != (VID_NITROKEY, PID_NITROKEY3_DEVICE):
@@ -66,6 +68,9 @@ class Nitrokey3Device(Nitrokey3Base):
         self.device = device
         self._path = device_path_to_str(device.descriptor.path)
         self.logger = logger.getChild(self._path)
+
+        self.admin = AdminApp(self)
+        self.admin.status()
 
     @property
     def path(self) -> str:
@@ -107,9 +112,7 @@ class Nitrokey3Device(Nitrokey3Base):
         return Uuid(int.from_bytes(uuid, byteorder="big"))
 
     def version(self) -> Version:
-        version_bytes = self._call(Command.VERSION, response_len=VERSION_LEN)
-        version = int.from_bytes(version_bytes, "big")
-        return Version.from_int(version)
+        return self.admin.version()
 
     def wink(self) -> None:
         self.device.wink()

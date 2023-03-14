@@ -38,6 +38,7 @@ check: lint
 	@echo "Note: run semi-clean target in case this fails without any proper reason"
 	$(VENV)/bin/python3 -m black $(BLACK_FLAGS) --check $(PACKAGE_NAME)/
 	$(VENV)/bin/python3 -m isort $(ISORT_FLAGS) --check-only $(PACKAGE_NAME)/
+	$(VENV)/bin/python3 -m doctest pynitrokey/nk3/utils.py
 	@echo All good!
 
 # automatic code fixes
