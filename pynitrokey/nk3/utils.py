@@ -60,6 +60,9 @@ class Version:
     pre: Optional[str] = None
     complete: bool = field(default=False, repr=False)
 
+    def __hash__(self) -> int:
+        return hash((self.major, self.minor, self.patch, self.pre))
+
     def __str__(self) -> str:
         """
         >>> str(Version(major=1, minor=0, patch=0))
