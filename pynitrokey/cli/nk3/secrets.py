@@ -29,7 +29,7 @@ def secrets(ctx: click.Context) -> None:
     # help="The shared secret string (by default in base32)",  # Help can't be enabled on the positional argument
 )
 @click.option(
-    "--digits_str",
+    "--digits-str",
     "digits_str",
     type=click.Choice(["6", "8"]),
     help="Digits count",
@@ -50,14 +50,14 @@ def secrets(ctx: click.Context) -> None:
     default="SHA1",
 )
 @click.option(
-    "--counter_start",
+    "--counter-start",
     "counter_start",
     type=click.INT,
     help="Starting value for the counter (HOTP only)",
     default=0,
 )
 @click.option(
-    "--touch_button",
+    "--touch-button",
     "touch_button",
     type=click.BOOL,
     help="This credential requires button press before use",
@@ -201,8 +201,7 @@ def get(
 
     from datetime import datetime
 
-    now = datetime.now()
-    timestamp = timestamp if timestamp else int(datetime.timestamp(now))
+    timestamp = timestamp if timestamp else int(datetime.timestamp(datetime.now()))
     with ctx.connect_device() as device:
         try:
             app = SecretsApp(device)
@@ -210,7 +209,7 @@ def get(
             authenticate_if_needed(app)
             code = app.calculate(name.encode(), timestamp // period)
             local_print(
-                f"Timestamp: {datetime.isoformat(now, timespec='seconds')} ({timestamp}), period: {period}"
+                f"Timestamp: {datetime.isoformat(datetime.fromtimestamp(timestamp), timespec='seconds')} ({timestamp}), period: {period}"
             )
             local_print(code.decode())
         except fido2.ctap.CtapError as e:
