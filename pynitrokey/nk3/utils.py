@@ -61,7 +61,17 @@ class Version:
     complete: bool = field(default=False, repr=False)
 
     def __hash__(self) -> int:
-        return hash((self.major, self.minor, self.patch, self.pre))
+        """
+        >>> def cmp(a, b):
+        ...     return hash(a) == hash(b)
+        >>> cmp(Version(1, 0, 0), Version(1, 0, 0))
+        True
+        >>> cmp(Version.from_str("1.0.0-rc.1"), Version.from_str("1.0.0-rc.1"))
+        True
+        >>> cmp(Version(1, 0, 0, complete=False), Version.from_str("1.0.0-rc.1"))
+        True
+        """
+        return hash((self.major, self.minor, self.patch))
 
     def __str__(self) -> str:
         """
