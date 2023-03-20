@@ -80,7 +80,7 @@ def get_extra_information(upath: UpdatePath) -> List[str]:
 def get_finalization_wait_retries(upath: UpdatePath) -> int:
     """Return number of retries to wait for the device after update based on update-path"""
 
-    out = 30
+    out = 60
     if upath == UpdatePath.nRF_IFS_Migration_v1_3:
         # max time 150secs == 300 retries
         out = 500
