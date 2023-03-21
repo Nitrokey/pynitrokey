@@ -10,20 +10,21 @@
 import enum
 import logging
 import platform
+import re
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
-from typing import Any, Callable, Iterator, List, Optional, Tuple, Union
+from io import BytesIO
+from typing import Any, Callable, Iterator, List, Optional
 
 from spsdk.mboot.exceptions import McuBootConnectionError
 
+import pynitrokey
 from pynitrokey.helpers import Retries
 from pynitrokey.nk3 import Nitrokey3Base
 from pynitrokey.nk3.bootloader import (
-    FirmwareMetadata,
+    FirmwareContainer,
     Nitrokey3Bootloader,
     Variant,
-    get_firmware_filename_pattern,
-    parse_filename,
     validate_firmware_image,
 )
 from pynitrokey.nk3.device import BootMode, Nitrokey3Device
@@ -36,6 +37,7 @@ logger = logging.getLogger(__name__)
 REPOSITORY_OWNER = "Nitrokey"
 REPOSITORY_NAME = "nitrokey-3-firmware"
 REPOSITORY = Repository(owner=REPOSITORY_OWNER, name=REPOSITORY_NAME)
+FIRMWARE_PATTERN = re.compile("firmware-nk3-v.*\\.zip$")
 
 
 @enum.unique
@@ -57,9 +59,8 @@ class UpdatePath(enum.Enum):
         return cls.default
 
 
-def get_firmware_update(release: Release, variant: Variant) -> Asset:
-    pattern = get_firmware_filename_pattern(variant)
-    return release.require_asset(pattern)
+def get_firmware_update(release: Release) -> Asset:
+    return release.require_asset(FIRMWARE_PATTERN)
 
 
 def get_extra_information(upath: UpdatePath) -> List[str]:
@@ -101,11 +102,21 @@ class UpdateUi(ABC):
         pass
 
     @abstractmethod
+    def abort_pynitrokey_version(
+        self, current: Version, required: Version
+    ) -> Exception:
+        pass
+
+    @abstractmethod
     def confirm_download(self, current: Optional[Version], new: Version) -> None:
         pass
 
     @abstractmethod
     def confirm_update(self, current: Optional[Version], new: Version) -> None:
+        pass
+
+    @abstractmethod
+    def confirm_pynitrokey_version(self, current: Version, required: Version) -> None:
         pass
 
     @abstractmethod
@@ -122,10 +133,6 @@ class UpdateUi(ABC):
 
     @abstractmethod
     def request_bootloader_confirmation(self) -> None:
-        pass
-
-    @abstractmethod
-    def prompt_variant(self) -> Variant:
         pass
 
     @abstractmethod
@@ -161,19 +168,144 @@ class Updater:
         self,
         device: Nitrokey3Base,
         image: Optional[str],
-        variant: Optional[Variant],
+        ignore_pynitrokey_version: bool = False,
     ) -> Version:
         current_version = (
             device.version() if isinstance(device, Nitrokey3Device) else None
         )
         logger.info(f"Firmware version before update: {current_version or ''}")
-        (new_version, firmware_or_release) = self._prepare_update(
-            image, current_version, variant
-        )
+        container = self._prepare_update(image, current_version)
 
-        self.ui.confirm_update(current_version, new_version)
+        if container.pynitrokey:
+            pynitrokey_version = Version.from_str(pynitrokey.__version__)
+            if container.pynitrokey > pynitrokey_version:
+                if ignore_pynitrokey_version:
+                    self.ui.confirm_pynitrokey_version(
+                        current=pynitrokey_version, required=container.pynitrokey
+                    )
+                else:
+                    raise self.ui.abort_pynitrokey_version(
+                        current=pynitrokey_version, required=container.pynitrokey
+                    )
 
-        update_path = UpdatePath.default
+        self.ui.confirm_update(current_version, container.version)
+
+        with self._get_bootloader(device) as bootloader:
+            if bootloader.variant not in container.images:
+                raise self.ui.error(
+                    "The firmware release does not contain an image for the "
+                    f"{bootloader.variant.value} hardware variant"
+                )
+            try:
+                validate_firmware_image(
+                    bootloader.variant,
+                    container.images[bootloader.variant],
+                    container.version,
+                )
+            except Exception as e:
+                raise self.ui.error("Failed to validate firmware image", e)
+
+            update_path = UpdatePath.create(
+                bootloader.variant, current_version, container.version
+            )
+            txt = get_extra_information(update_path)
+            self.ui.confirm_extra_information(txt)
+
+            self._perform_update(bootloader, container)
+
+        wait_retries = get_finalization_wait_retries(update_path)
+        with self.ui.finalization_progress_bar() as callback:
+            with self.await_device(wait_retries, callback) as device:
+                version = device.version()
+                if version != container.version:
+                    raise self.ui.error(
+                        f"The firmware update to {container.version} was successful, but the "
+                        f"firmware is still reporting version {version}."
+                    )
+
+        return container.version
+
+    def _prepare_update(
+        self,
+        image: Optional[str],
+        current_version: Optional[Version],
+    ) -> FirmwareContainer:
+        if image:
+            try:
+                container = FirmwareContainer.parse(image)
+            except Exception as e:
+                raise self.ui.error("Failed to parse firmware container", e)
+            self._validate_version(current_version, container.version)
+            return container
+        else:
+            try:
+                release = REPOSITORY.get_latest_release()
+                logger.info(f"Latest firmware version: {release}")
+            except Exception as e:
+                raise self.ui.error("Failed to find latest firmware release", e)
+
+            try:
+                release_version = Version.from_v_str(release.tag)
+            except ValueError as e:
+                raise self.ui.error("Failed to parse version from release tag", e)
+            self._validate_version(current_version, release_version)
+            self.ui.confirm_download(current_version, release_version)
+            return self._download_update(release)
+
+    def _download_update(self, release: Release) -> FirmwareContainer:
+        try:
+            update = get_firmware_update(release)
+        except Exception as e:
+            raise self.ui.error(
+                f"Failed to find firmware image for release {release}",
+                e,
+            )
+
+        try:
+            logger.info(f"Trying to download firmware update from URL: {update.url}")
+
+            with self.ui.download_progress_bar(update.tag) as callback:
+                data = update.read(callback=callback)
+        except Exception as e:
+            raise self.ui.error(
+                f"Failed to download latest firmware update {update.tag}", e
+            )
+
+        try:
+            container = FirmwareContainer.parse(BytesIO(data))
+        except Exception as e:
+            raise self.ui.error(
+                f"Failed to parse firmware container for {update.tag}", e
+            )
+
+        release_version = Version.from_v_str(release.tag)
+        if release_version != container.version:
+            raise self.ui.error(
+                f"The firmware container for {update.tag} has the version {container.version}"
+            )
+
+        return container
+
+    def _validate_version(
+        self,
+        current_version: Optional[Version],
+        new_version: Version,
+    ) -> None:
+        logger.info(f"Current firmware version: {current_version}")
+        logger.info(f"Updated firmware version: {new_version}")
+
+        if current_version:
+            if current_version.core() > new_version.core():
+                raise self.ui.abort_downgrade(current_version, new_version)
+            elif current_version == new_version:
+                if current_version.complete and new_version.complete:
+                    same_version = current_version
+                else:
+                    same_version = current_version.core()
+                self.ui.confirm_update_same_version(same_version)
+
+    @contextmanager
+    def _get_bootloader(self, device: Nitrokey3Base) -> Iterator[Nitrokey3Bootloader]:
         if isinstance(device, Nitrokey3Device):
             self.ui.request_bootloader_confirmation()
             try:
@@ -194,18 +326,10 @@ class Updater:
                 logger.debug(f"Trying to connect to bootloader ({t})")
                 try:
                     with self.await_bootloader() as bootloader:
-                        metadata, data = self._get_update(
-                            firmware_or_release, current_version, bootloader.variant
-                        )
-                        update_path = UpdatePath.create(
-                            bootloader.variant, current_version, new_version
-                        )
-                        txt = get_extra_information(update_path)
-                        variant = bootloader.variant
-                        self.ui.confirm_extra_information(txt)
-
-                        self._perform_update(bootloader, data)
-                    break
+                        # noop to test communication
+                        bootloader.uuid
+                        yield bootloader
+                        break
                 except McuBootConnectionError as e:
                     logger.debug("Received connection error", exc_info=True)
                     exc = e
@@ -215,134 +339,15 @@ class Updater:
                     msgs += ["Are the Nitrokey udev rules installed and active?"]
                 raise self.ui.error(*msgs, exc)
         elif isinstance(device, Nitrokey3Bootloader):
-            metadata, data = self._get_update(
-                firmware_or_release, current_version, device.variant
-            )
-            update_path = UpdatePath.create(
-                device.variant, current_version, new_version
-            )
-            txt = get_extra_information(update_path)
-            self.ui.confirm_extra_information(txt)
-
-            variant = device.variant
-
-            self._perform_update(device, data)
+            yield device
         else:
             raise self.ui.error(f"Unexpected Nitrokey 3 device: {device}")
 
-        wait_retries = get_finalization_wait_retries(update_path)
-        with self.ui.finalization_progress_bar() as callback:
-            with self.await_device(wait_retries, callback) as device:
-                version = device.version()
-                if version != new_version:
-                    raise self.ui.error(
-                        f"The firmware update to {new_version} was successful, but the firmware "
-                        f"is still reporting version {version}."
-                    )
-
-        return metadata.version
-
-    def _prepare_update(
-        self,
-        image: Optional[str],
-        current_version: Optional[Version],
-        variant: Optional[Variant],
-    ) -> Tuple[Version, Union[Tuple[FirmwareMetadata, bytes], Release]]:
-        if image:
-            version = None
-            if not variant:
-                parsed_filename = parse_filename(image)
-                if parsed_filename:
-                    (variant, version) = parsed_filename
-            if not variant:
-                variant = self.ui.prompt_variant()
-
-            with open(image, "rb") as f:
-                data = f.read()
-            metadata = validate_firmware_image(variant, data, version)
-            if not version:
-                version = metadata.version
-
-            self._validate_version(current_version, version)
-
-            return (version, (metadata, data))
-        else:
-            try:
-                release = REPOSITORY.get_latest_release()
-                logger.info(f"Latest firmware version: {release}")
-            except Exception as e:
-                raise self.ui.error("Failed to find latest firmware release", e)
-
-            try:
-                release_version = Version.from_v_str(release.tag)
-            except ValueError as e:
-                raise self.ui.error("Failed to parse version from release tag", e)
-            self._validate_version(current_version, release_version)
-            self.ui.confirm_download(current_version, release_version)
-            return (release_version, release)
-
-    def _get_update(
-        self,
-        firmware_or_release: Union[Tuple[FirmwareMetadata, bytes], Release],
-        current_version: Optional[Version],
-        variant: Variant,
-    ) -> Tuple[FirmwareMetadata, bytes]:
-        if isinstance(firmware_or_release, Release):
-            release = firmware_or_release
-            return self._download_update(release, current_version, variant)
-        else:
-            return firmware_or_release
-
-    def _download_update(
-        self, release: Release, current_version: Optional[Version], variant: Variant
-    ) -> Tuple[FirmwareMetadata, bytes]:
-        try:
-            update = get_firmware_update(release, variant)
-        except Exception as e:
-            raise self.ui.error(
-                f"Failed to find firmware image for release {release} and variant {variant}",
-                e,
-            )
-
-        try:
-            logger.info(f"Trying to download firmware update from URL: {update.url}")
-
-            with self.ui.download_progress_bar(update.tag) as callback:
-                data = update.read(callback=callback)
-        except Exception as e:
-            raise self.ui.error(
-                f"Failed to download latest firmware update {update.tag}", e
-            )
-
-        release_version = Version.from_v_str(release.tag)
-        try:
-            metadata = validate_firmware_image(variant, data, release_version)
-        except Exception as e:
-            raise self.ui.error("Failed to validate firmwage image", e)
-        metadata.version = release_version
-
-        return (metadata, data)
-
-    def _validate_version(
-        self,
-        current_version: Optional[Version],
-        new_version: Version,
+    def _perform_update(
+        self, device: Nitrokey3Bootloader, container: FirmwareContainer
     ) -> None:
-        logger.info(f"Current firmware version: {current_version}")
-        logger.info(f"Updated firmware version: {new_version}")
-
-        if current_version:
-            if current_version.core() > new_version.core():
-                raise self.ui.abort_downgrade(current_version, new_version)
-            elif current_version == new_version:
-                if current_version.complete and new_version.complete:
-                    same_version = current_version
-                else:
-                    same_version = current_version.core()
-                self.ui.confirm_update_same_version(same_version)
-
-    def _perform_update(self, device: Nitrokey3Bootloader, image: bytes) -> None:
         logger.debug("Starting firmware update")
+        image = container.images[device.variant]
         with self.ui.update_progress_bar() as callback:
             try:
                 device.update(image, callback=callback)

@@ -8,12 +8,16 @@
 # copied, modified, or distributed except according to those terms.
 
 import enum
+import hashlib
+import json
 import logging
 import sys
 from abc import abstractmethod
 from dataclasses import dataclass
+from io import BytesIO
 from re import Pattern
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple, Union
+from zipfile import ZipFile
 
 from ..base import Nitrokey3Base
 from ..utils import Version
@@ -34,6 +38,54 @@ class Variant(enum.Enum):
             if variant.value == s:
                 return variant
         raise ValueError(f"Unknown variant {s}")
+
+
+def _validate_checksum(checksums: dict[str, str], path: str, data: bytes) -> None:
+    if path not in checksums:
+        raise Exception(f"Missing checksum for file {path} in firmware container")
+    m = hashlib.sha256()
+    m.update(data)
+    checksum = m.hexdigest()
+    if checksum != checksums[path]:
+        raise Exception(f"Invalid checksum for file {path} in firmware container")
+
+
+@dataclass
+class FirmwareContainer:
+    version: Version
+    pynitrokey: Optional[Version]
+    images: Dict[Variant, bytes]
+
+    @classmethod
+    def parse(cls, path: Union[str, BytesIO]) -> "FirmwareContainer":
+        with ZipFile(path) as z:
+            checksum_lines = z.read("sha256sums").decode("utf-8").splitlines()
+            checksum_pairs = [line.split("  ", maxsplit=1) for line in checksum_lines]
+            checksums = {path: checksum for checksum, path in checksum_pairs}
+
+            manifest_bytes = z.read("manifest.json")
+            _validate_checksum(checksums, "manifest.json", manifest_bytes)
+            manifest = json.loads(manifest_bytes)
+            if manifest["device"] != "Nitrokey 3":
+                raise Exception(
+                    f"Unexpected device value in manifest: {manifest['device']}"
+                )
+            version = Version.from_v_str(manifest["version"])
+            pynitrokey = None
+            if "pynitrokey" in manifest:
+                pynitrokey = Version.from_v_str(manifest["pynitrokey"])
+
+            images = {}
+            for variant, image in manifest["images"].items():
+                image_bytes = z.read(image)
+                _validate_checksum(checksums, image, image_bytes)
+                images[Variant.from_str(variant)] = image_bytes
+
+            return cls(
+                version=version,
+                pynitrokey=pynitrokey,
+                images=images,
+            )
 
 
 @dataclass

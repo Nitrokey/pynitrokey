@@ -22,7 +22,6 @@ from pynitrokey.helpers import (
     DownloadProgressBar,
     Retries,
     local_print,
-    prompt,
     require_windows_admin,
 )
 from pynitrokey.nk3 import list as list_nk3
@@ -30,9 +29,8 @@ from pynitrokey.nk3 import open as open_nk3
 from pynitrokey.nk3.admin_app import AdminApp
 from pynitrokey.nk3.base import Nitrokey3Base
 from pynitrokey.nk3.bootloader import (
+    FirmwareContainer,
     Nitrokey3Bootloader,
-    Variant,
-    parse_filename,
     parse_firmware_image,
 )
 from pynitrokey.nk3.device import BootMode, Nitrokey3Device
@@ -44,17 +42,6 @@ from pynitrokey.updates import OverwriteError
 T = TypeVar("T", bound=Nitrokey3Base)
 
 logger = logging.getLogger(__name__)
-
-VARIANT_CHOICE = click.Choice(
-    [variant.value for variant in Variant],
-    case_sensitive=False,
-)
-
-
-def variant_callback(
-    _ctx: object, _param: object, value: Optional[str]
-) -> Optional[Variant]:
-    return Variant.from_str(value) if value else None
 
 
 class Context:
@@ -327,13 +314,6 @@ def test(
 @nk3.command()
 @click.argument("path", default=".")
 @click.option(
-    "--variant",
-    type=VARIANT_CHOICE,
-    callback=variant_callback,
-    required=True,
-    help="The variant to fetch the update for",
-)
-@click.option(
     "-f",
     "--force",
     is_flag=True,
@@ -341,9 +321,7 @@ def test(
     help="Overwrite the firmware image if it already exists",
 )
 @click.option("--version", help="Download this version instead of the latest one")
-def fetch_update(
-    path: str, force: bool, variant: Variant, version: Optional[str]
-) -> None:
+def fetch_update(path: str, force: bool, version: Optional[str]) -> None:
     """
     Fetches a firmware update for the Nitrokey 3 and stores it at the given path.
 
@@ -357,7 +335,7 @@ def fetch_update(
     """
     try:
         release = REPOSITORY.get_release_or_latest(version)
-        update = get_firmware_update(release, variant)
+        update = get_firmware_update(release)
     except Exception as e:
         if version:
             raise CliException(f"Failed to find firmware update {version}", e)
@@ -389,57 +367,43 @@ def fetch_update(
 
 @nk3.command()
 @click.argument("image")
-@click.option(
-    "--variant",
-    type=VARIANT_CHOICE,
-    callback=variant_callback,
-    help="The variant of the given firmage image",
-)
-def validate_update(image: str, variant: Optional[Variant]) -> None:
+def validate_update(image: str) -> None:
     """
-    Validates the given firmware image and prints the firmware version and the signer.
-
-    If the name of the firmware image name is changed so that the device variant can no longer be
-    detected from the filename, it has to be set explictly with --variant.
+    Validates the given firmware image and prints the firmware version and the signer for all
+    available variants.
     """
-    version = None
-    if not variant:
-        parsed_filename = parse_filename(image)
-        if parsed_filename:
-            (variant, version) = parsed_filename
-    if not variant:
-        variant = Variant.from_str(
-            prompt("Firmware image variant", type=VARIANT_CHOICE)
-        )
+    container = FirmwareContainer.parse(image)
+    print(f"version:      {container.version}")
+    if container.pynitrokey:
+        print(f"pynitrokey:   >= {container.pynitrokey}")
 
-    with open(image, "rb") as f:
-        data = f.read()
+    for variant in container.images:
+        data = container.images[variant]
+        try:
+            metadata = parse_firmware_image(variant, data)
+        except Exception as e:
+            raise CliException("Failed to parse and validate firmware image", e)
 
-    try:
-        metadata = parse_firmware_image(variant, data)
-    except Exception as e:
-        raise CliException("Failed to parse and validate firmware image", e)
+        signed_by = metadata.signed_by or "unsigned"
 
-    signed_by = metadata.signed_by or "unsigned"
+        print(f"variant:      {variant.value}")
+        print(f"  version:    {metadata.version}")
+        print(f"  signed by:  {signed_by}")
 
-    print(f"version:    {metadata.version}")
-    print(f"signed by:  {signed_by}")
-
-    if version:
-        if version.core() != metadata.version:
+        if container.version != metadata.version:
             raise CliException(
-                f"The firmware image for the release {version} has an unexpected product "
-                f"version ({metadata.version})."
+                f"The firmware image for the {variant} variant and the release {version} has an "
+                f"unexpected product version ({metadata.version})."
             )
 
 
 @nk3.command()
 @click.argument("image", required=False)
 @click.option(
-    "--variant",
-    type=VARIANT_CHOICE,
-    callback=variant_callback,
-    help="The variant of the given firmage image",
+    "--ignore-pynitrokey-version",
+    default=False,
+    is_flag=True,
+    help="Allow updates with an outdated pynitrokey version (dangerous)",
 )
 @click.option(
     "--experimental",
@@ -450,7 +414,10 @@ def validate_update(image: str, variant: Optional[Variant]) -> None:
 )
 @click.pass_obj
 def update(
-    ctx: Context, image: Optional[str], variant: Optional[Variant], experimental: bool
+    ctx: Context,
+    image: Optional[str],
+    ignore_pynitrokey_version: bool,
+    experimental: bool,
 ) -> None:
     """
     Update the firmware of the device using the given image.
@@ -460,9 +427,7 @@ def update(
     not be removed during the update.  Also, additional Nitrokey 3 devices may not be connected
     during the update.
 
-    If no firmware image is given, the latest firmware release is downloaded automatically.  If a
-    firmware image is given and its name is changed so that the device variant can no longer be
-    detected from the filename, it has to be set explictly with --variant.
+    If no firmware image is given, the latest firmware release is downloaded automatically.
 
     If the connected Nitrokey 3 device is in firmware mode, the user is prompted to touch the
     device’s button to confirm rebooting to bootloader mode.
@@ -473,7 +438,7 @@ def update(
 
     from .update import update as exec_update
 
-    exec_update(ctx, image, variant)
+    exec_update(ctx, image, ignore_pynitrokey_version)
 
 
 @nk3.command()
