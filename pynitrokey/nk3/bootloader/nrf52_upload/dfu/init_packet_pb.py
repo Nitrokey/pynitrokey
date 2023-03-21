@@ -1,4 +1,3 @@
-
 #
 # Copyright (c) 2016 Nordic Semiconductor ASA
 # All rights reserved.
@@ -35,15 +34,19 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-from . import dfu_cc_pb2 as pb
 from enum import Enum
+
+from . import dfu_cc_pb2 as pb
+
 
 class SigningTypes(Enum):
     ECDSA_P256_SHA256 = pb.ECDSA_P256_SHA256
     ED25519 = pb.ED25519
 
+
 class CommandTypes(Enum):
     INIT = pb.INIT
+
 
 class HashTypes(Enum):
     NONE = pb.NO_HASH
@@ -60,35 +63,38 @@ class DFUType(Enum):
     SOFTDEVICE_BOOTLOADER = pb.SOFTDEVICE_BOOTLOADER
     EXTERNAL_APPLICATION = pb.EXTERNAL_APPLICATION
 
+
 class ValidationTypes(Enum):
     NO_VALIDATION = pb.NO_VALIDATION
     VALIDATE_GENERATED_CRC = pb.VALIDATE_GENERATED_CRC
     VALIDATE_GENERATED_SHA256 = pb.VALIDATE_SHA256
     VALIDATE_ECDSA_P256_SHA256 = pb.VALIDATE_ECDSA_P256_SHA256
 
+
 class InitPacketPB:
-    def __init__(self,
-                 from_bytes = None,
-                 hash_bytes = None,
-                 hash_type = None,
-                 boot_validation_type = [],
-                 boot_validation_bytes = [],
-                 dfu_type = None,
-                 is_debug=False,
-                 fw_version=0xffffffff,
-                 hw_version=0xffffffff,
-                 sd_size=0,
-                 app_size=0,
-                 bl_size=0,
-                 sd_req=None
-                 ):
+    def __init__(
+        self,
+        from_bytes=None,
+        hash_bytes=None,
+        hash_type=None,
+        boot_validation_type=[],
+        boot_validation_bytes=[],
+        dfu_type=None,
+        is_debug=False,
+        fw_version=0xFFFFFFFF,
+        hw_version=0xFFFFFFFF,
+        sd_size=0,
+        app_size=0,
+        bl_size=0,
+        sd_req=None,
+    ):
 
         if from_bytes is not None:
             # construct from a protobuf string/buffer
             self.packet = pb.Packet()
             self.packet.ParseFromString(from_bytes)
 
-            if self.packet.HasField('signed_command'):
+            if self.packet.HasField("signed_command"):
                 self.init_command = self.packet.signed_command.command.init
             else:
                 self.init_command = self.packet.command.init
@@ -96,12 +102,14 @@ class InitPacketPB:
         else:
             # construct from input variables
             if not sd_req:
-                sd_req = [0xfffe]  # Set to default value
+                sd_req = [0xFFFE]  # Set to default value
             self.packet = pb.Packet()
 
             boot_validation = []
             for i, x in enumerate(boot_validation_type):
-                boot_validation.append(pb.BootValidation(type=x.value, bytes=boot_validation_bytes[i]))
+                boot_validation.append(
+                    pb.BootValidation(type=x.value, bytes=boot_validation_bytes[i])
+                )
 
             # By default, set the packet's command to an unsigned command
             # If a signature is set (via set_signature), this will get overwritten
@@ -126,20 +134,38 @@ class InitPacketPB:
         self._validate()
 
     def _validate(self):
-        if (self.init_command.type == pb.APPLICATION or self.init_command.type == pb.EXTERNAL_APPLICATION ) and self.init_command.app_size == 0:
-            raise RuntimeError("app_size is not set. It must be set when type is APPLICATION/EXTERNAL_APPLICATION")
+        if (
+            self.init_command.type == pb.APPLICATION
+            or self.init_command.type == pb.EXTERNAL_APPLICATION
+        ) and self.init_command.app_size == 0:
+            raise RuntimeError(
+                "app_size is not set. It must be set when type is APPLICATION/EXTERNAL_APPLICATION"
+            )
         elif self.init_command.type == pb.SOFTDEVICE and self.init_command.sd_size == 0:
-            raise RuntimeError("sd_size is not set. It must be set when type is SOFTDEVICE")
+            raise RuntimeError(
+                "sd_size is not set. It must be set when type is SOFTDEVICE"
+            )
         elif self.init_command.type == pb.BOOTLOADER and self.init_command.bl_size == 0:
-            raise RuntimeError("bl_size is not set. It must be set when type is BOOTLOADER")
-        elif self.init_command.type == pb.SOFTDEVICE_BOOTLOADER and \
-                (self.init_command.sd_size == 0 or self.init_command.bl_size == 0):
-            raise RuntimeError("Either sd_size or bl_size is not set. Both must be set when type "
-                               "is SOFTDEVICE_BOOTLOADER")
+            raise RuntimeError(
+                "bl_size is not set. It must be set when type is BOOTLOADER"
+            )
+        elif self.init_command.type == pb.SOFTDEVICE_BOOTLOADER and (
+            self.init_command.sd_size == 0 or self.init_command.bl_size == 0
+        ):
+            raise RuntimeError(
+                "Either sd_size or bl_size is not set. Both must be set when type "
+                "is SOFTDEVICE_BOOTLOADER"
+            )
 
-        if self.init_command.fw_version < 0 or self.init_command.fw_version > 0xffffffff or \
-           self.init_command.hw_version < 0 or self.init_command.hw_version > 0xffffffff:
-            raise RuntimeError("Invalid range of firmware argument. [0 - 0xffffffff] is valid range")
+        if (
+            self.init_command.fw_version < 0
+            or self.init_command.fw_version > 0xFFFFFFFF
+            or self.init_command.hw_version < 0
+            or self.init_command.hw_version > 0xFFFFFFFF
+        ):
+            raise RuntimeError(
+                "Invalid range of firmware argument. [0 - 0xffffffff] is valid range"
+            )
 
     def _is_valid(self):
         try:

@@ -35,7 +35,8 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-def calc_crc16(binary_data: bytes, crc=0xffff):
+
+def calc_crc16(binary_data: bytes, crc=0xFFFF):
     """
     Calculates CRC16 on binary_data
 

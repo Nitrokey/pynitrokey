@@ -7,4 +7,3 @@ class NordicSemiException(Exception):
         super(NordicSemiException, self).__init__(msg)
         self.msg = msg
         self.error_code = error_code
-

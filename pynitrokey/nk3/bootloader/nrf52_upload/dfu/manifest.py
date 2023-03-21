@@ -40,7 +40,7 @@ import json
 import os
 
 # Nordic libraries
-from .model import HexType, FirmwareKeys
+from .model import FirmwareKeys, HexType
 
 
 class ManifestGenerator:
@@ -62,15 +62,22 @@ class ManifestGenerator:
             if key == HexType.SD_BL:
                 _firmware = SoftdeviceBootloaderFirmware()
                 _firmware.info_read_only_metadata = FWMetaData()
-                _firmware.info_read_only_metadata.bl_size = firmware_dict[FirmwareKeys.BL_SIZE]
-                _firmware.info_read_only_metadata.sd_size = firmware_dict[FirmwareKeys.SD_SIZE]
+                _firmware.info_read_only_metadata.bl_size = firmware_dict[
+                    FirmwareKeys.BL_SIZE
+                ]
+                _firmware.info_read_only_metadata.sd_size = firmware_dict[
+                    FirmwareKeys.SD_SIZE
+                ]
             else:
                 _firmware = Firmware()
 
-
             # Strip path, add only filename
-            _firmware.bin_file = os.path.basename(firmware_dict[FirmwareKeys.BIN_FILENAME])
-            _firmware.dat_file = os.path.basename(firmware_dict[FirmwareKeys.DAT_FILENAME])
+            _firmware.bin_file = os.path.basename(
+                firmware_dict[FirmwareKeys.BIN_FILENAME]
+            )
+            _firmware.dat_file = os.path.basename(
+                firmware_dict[FirmwareKeys.DAT_FILENAME]
+            )
 
             if key == HexType.APPLICATION or key == HexType.EXTERNAL_APPLICATION:
                 self.manifest.application = _firmware
@@ -81,7 +88,9 @@ class ManifestGenerator:
             elif key == HexType.SD_BL:
                 self.manifest.softdevice_bootloader = _firmware
             else:
-                raise NotImplementedError("Support for firmware type {0} not implemented yet.".format(key))
+                raise NotImplementedError(
+                    "Support for firmware type {0} not implemented yet.".format(key)
+                )
 
         return self.to_json()
 
@@ -90,23 +99,29 @@ class ManifestGenerator:
             if not isinstance(d, dict):
                 return d
 
-            return dict((k, remove_none_entries(v)) for k, v in d.items() if v is not None)
+            return dict(
+                (k, remove_none_entries(v)) for k, v in d.items() if v is not None
+            )
 
-        return json.dumps({'manifest': self.manifest},
-                          default=lambda o: remove_none_entries(o.__dict__),
-                          sort_keys=True, indent=4,
-                          separators=(',', ': '))
+        return json.dumps(
+            {"manifest": self.manifest},
+            default=lambda o: remove_none_entries(o.__dict__),
+            sort_keys=True,
+            indent=4,
+            separators=(",", ": "),
+        )
 
 
 class FWMetaData:
-    def __init__(self,
-                 is_debug=None,
-                 hw_version=None,
-                 fw_version=None,
-                 softdevice_req=None,
-                 sd_size=None,
-                 bl_size=None
-                 ):
+    def __init__(
+        self,
+        is_debug=None,
+        hw_version=None,
+        fw_version=None,
+        softdevice_req=None,
+        sd_size=None,
+        bl_size=None,
+    ):
         """
         The FWMetaData data model.
 
@@ -127,10 +142,7 @@ class FWMetaData:
 
 
 class Firmware:
-    def __init__(self,
-                 bin_file=None,
-                 dat_file=None,
-                 info_read_only_metadata=None):
+    def __init__(self, bin_file=None, dat_file=None, info_read_only_metadata=None):
         """
         The firmware datamodel
 
@@ -149,10 +161,7 @@ class Firmware:
 
 
 class SoftdeviceBootloaderFirmware(Firmware):
-    def __init__(self,
-                 bin_file=None,
-                 dat_file=None,
-                 info_read_only_metadata=None):
+    def __init__(self, bin_file=None, dat_file=None, info_read_only_metadata=None):
         """
         The SoftdeviceBootloaderFirmware data model
 
@@ -161,17 +170,17 @@ class SoftdeviceBootloaderFirmware(Firmware):
         :param int info_read_only_metadata: The metadata about this firwmare image
         :return: SoftdeviceBootloaderFirmware
         """
-        super().__init__(
-            bin_file,
-            dat_file,
-            info_read_only_metadata)
+        super().__init__(bin_file, dat_file, info_read_only_metadata)
+
 
 class Manifest:
-    def __init__(self,
-                 application=None,
-                 bootloader=None,
-                 softdevice=None,
-                 softdevice_bootloader=None):
+    def __init__(
+        self,
+        application=None,
+        bootloader=None,
+        softdevice=None,
+        softdevice_bootloader=None,
+    ):
         """
         The Manifest data model.
 
@@ -181,8 +190,11 @@ class Manifest:
         :param dict softdevice_bootloader: Combined softdevice and bootloader firmware in package
         :return: Manifest
         """
-        self.softdevice_bootloader = \
-            SoftdeviceBootloaderFirmware(**softdevice_bootloader) if softdevice_bootloader else None
+        self.softdevice_bootloader = (
+            SoftdeviceBootloaderFirmware(**softdevice_bootloader)
+            if softdevice_bootloader
+            else None
+        )
 
         self.softdevice = Firmware(**softdevice) if softdevice else None
         self.bootloader = Firmware(**bootloader) if bootloader else None
@@ -197,4 +209,4 @@ class Manifest:
         :return: Manifest
         """
         kwargs = json.loads(data)
-        return Manifest(**kwargs['manifest'])
+        return Manifest(**kwargs["manifest"])

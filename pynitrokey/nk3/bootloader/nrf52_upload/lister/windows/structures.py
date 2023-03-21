@@ -24,21 +24,23 @@ SOFTWARE.
 
 import ctypes
 
-_ole32 = ctypes.WinDLL('ole32')
+_ole32 = ctypes.WinDLL("ole32")
 
 
 class _GUID(ctypes.Structure):
     _fields_ = [
-        ('Data1', ctypes.c_uint32),
-        ('Data2', ctypes.c_uint16),
-        ('Data3', ctypes.c_uint16),
-        ('Data4', ctypes.c_ubyte * 8),
+        ("Data1", ctypes.c_uint32),
+        ("Data2", ctypes.c_uint16),
+        ("Data3", ctypes.c_uint16),
+        ("Data4", ctypes.c_ubyte * 8),
     ]
 
     def __init__(self, guid="{00000000-0000-0000-0000-000000000000}"):
         super().__init__()
         if isinstance(guid, str):
-            ret = _ole32.CLSIDFromString(ctypes.create_unicode_buffer(guid), ctypes.byref(self))
+            ret = _ole32.CLSIDFromString(
+                ctypes.create_unicode_buffer(guid), ctypes.byref(self)
+            )
             if ret < 0:
                 err_no = ctypes.GetLastError()
                 raise WindowsError(err_no, ctypes.FormatError(err_no), guid)
@@ -78,10 +80,7 @@ class GUID:
 
 class DevicePropertyKey(ctypes.Structure):
     # noinspection SpellCheckingInspection
-    _fields_ = [
-        ('fmtid', _GUID),
-        ('pid', ctypes.c_ulong)
-    ]
+    _fields_ = [("fmtid", _GUID), ("pid", ctypes.c_ulong)]
 
     def __init__(self, guid, pid, name=None):
         super().__init__()
@@ -94,7 +93,7 @@ class DevicePropertyKey(ctypes.Structure):
         return "<DevPropKey: {}>".format(str(self))
 
     def __str__(self):
-        if not hasattr(self, 'name') or self.name is None:
+        if not hasattr(self, "name") or self.name is None:
             # noinspection SpellCheckingInspection
             return "{} {}".format(self.fmtid, self.pid)
         else:
@@ -109,10 +108,10 @@ class DevicePropertyKey(ctypes.Structure):
 
 class DeviceInfoData(ctypes.Structure):
     _fields_ = [
-        ('cbSize', ctypes.c_ulong),
-        ('ClassGuid', _GUID),
-        ('DevInst', ctypes.c_ulong),
-        ('Reserved', ctypes.c_void_p),
+        ("cbSize", ctypes.c_ulong),
+        ("ClassGuid", _GUID),
+        ("DevInst", ctypes.c_ulong),
+        ("Reserved", ctypes.c_void_p),
     ]
 
     def __init__(self):

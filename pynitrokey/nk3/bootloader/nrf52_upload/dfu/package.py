@@ -1,4 +1,3 @@
-
 #
 # Copyright (c) 2016 Nordic Semiconductor ASA
 # All rights reserved.
@@ -36,38 +35,49 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
+import binascii
+import hashlib
+
 # Python standard library
 import os
-import tempfile
 import shutil
-import binascii
+import tempfile
 from enum import Enum
 
 # 3rd party libraries
 from zipfile import ZipFile
-import hashlib
 
+from .crc16 import calc_crc16
+from .init_packet_pb import (
+    CommandTypes,
+    DFUType,
+    HashTypes,
+    InitPacketPB,
+    SigningTypes,
+    ValidationTypes,
+)
+from .manifest import Manifest, ManifestGenerator
+from .model import FirmwareKeys, HexType
 
 # Nordic libraries
 from .nrfhex import nRFHex
-from .init_packet_pb import InitPacketPB, DFUType, CommandTypes, ValidationTypes, SigningTypes, HashTypes
-from .manifest import ManifestGenerator, Manifest
-from .model import HexType, FirmwareKeys
-from .crc16 import calc_crc16
-#from csemi.zigbee.ota_file import OTA_file
-
 from .signing import Signing
 
+# from csemi.zigbee.ota_file import OTA_file
+
+
 HexTypeToInitPacketFwTypemap = {
-    HexType.APPLICATION:            DFUType.APPLICATION,
-    HexType.BOOTLOADER:             DFUType.BOOTLOADER,
-    HexType.SOFTDEVICE:             DFUType.SOFTDEVICE,
-    HexType.SD_BL:                  DFUType.SOFTDEVICE_BOOTLOADER,
-    HexType.EXTERNAL_APPLICATION:   DFUType.EXTERNAL_APPLICATION
+    HexType.APPLICATION: DFUType.APPLICATION,
+    HexType.BOOTLOADER: DFUType.BOOTLOADER,
+    HexType.SOFTDEVICE: DFUType.SOFTDEVICE,
+    HexType.SD_BL: DFUType.SOFTDEVICE_BOOTLOADER,
+    HexType.EXTERNAL_APPLICATION: DFUType.EXTERNAL_APPLICATION,
 }
+
 
 class PackageException(Exception):
     pass
+
 
 class PacketField(Enum):
     DEBUG_MODE = 1
@@ -75,33 +85,34 @@ class PacketField(Enum):
     FW_VERSION = 3
     REQUIRED_SOFTDEVICES_ARRAY = 4
 
+
 class Package:
     """
-        Packages and unpacks Nordic DFU packages. Nordic DFU packages are zip files that contains firmware and meta-information
-        necessary for utilities to perform a DFU on nRF5X devices.
+    Packages and unpacks Nordic DFU packages. Nordic DFU packages are zip files that contains firmware and meta-information
+    necessary for utilities to perform a DFU on nRF5X devices.
 
-        The internal data model used in Package is a dictionary. The dictionary is expressed like this in
-         json format:
+    The internal data model used in Package is a dictionary. The dictionary is expressed like this in
+     json format:
 
-         {
-            "manifest": {
-                "bootloader": {
-                    "bin_file": "asdf.bin",
-                    "dat_file": "asdf.dat",
-                    "init_packet_data": {
-                        "application_version": null,
-                        "device_revision": null,
-                        "device_type": 5,
-                        "firmware_hash": "asdfasdkfjhasdkfjashfkjasfhaskjfhkjsdfhasjkhf",
-                        "softdevice_req": [
-                            17,
-                            18
-                        ]
-                    }
+     {
+        "manifest": {
+            "bootloader": {
+                "bin_file": "asdf.bin",
+                "dat_file": "asdf.dat",
+                "init_packet_data": {
+                    "application_version": null,
+                    "device_revision": null,
+                    "device_type": 5,
+                    "firmware_hash": "asdfasdkfjhasdkfjashfkjasfhaskjfhkjsdfhasjkhf",
+                    "softdevice_req": [
+                        17,
+                        18
+                    ]
                 }
-        }
+            }
+    }
 
-        Attributes application, bootloader, softdevice, softdevice_bootloader shall not be put into the manifest if they are null
+    Attributes application, bootloader, softdevice, softdevice_bootloader shall not be put into the manifest if they are null
 
     """
 
@@ -115,26 +126,28 @@ class Package:
     MANIFEST_FILENAME = "manifest.json"
     DEFAULT_BOOT_VALIDATION_TYPE = ValidationTypes.VALIDATE_GENERATED_CRC.name
 
-    def __init__(self,
-                 debug_mode=DEFAULT_DEBUG_MODE,
-                 hw_version=DEFAULT_HW_VERSION,
-                 app_version=DEFAULT_APP_VERSION,
-                 bl_version=DEFAULT_BL_VERSION,
-                 sd_req=DEFAULT_SD_REQ,
-                 sd_id=DEFAULT_SD_ID,
-                 app_fw=None,
-                 bootloader_fw=None,
-                 softdevice_fw=None,
-                 sd_boot_validation=DEFAULT_BOOT_VALIDATION_TYPE,
-                 app_boot_validation=DEFAULT_BOOT_VALIDATION_TYPE,
-                 signer=None,
-                 is_external=False,
-                 zigbee_format=False,
-                 manufacturer_id=0,
-                 image_type=0,
-                 comment='',
-                 zigbee_ota_min_hw_version=None,
-                 zigbee_ota_max_hw_version=None):
+    def __init__(
+        self,
+        debug_mode=DEFAULT_DEBUG_MODE,
+        hw_version=DEFAULT_HW_VERSION,
+        app_version=DEFAULT_APP_VERSION,
+        bl_version=DEFAULT_BL_VERSION,
+        sd_req=DEFAULT_SD_REQ,
+        sd_id=DEFAULT_SD_ID,
+        app_fw=None,
+        bootloader_fw=None,
+        softdevice_fw=None,
+        sd_boot_validation=DEFAULT_BOOT_VALIDATION_TYPE,
+        app_boot_validation=DEFAULT_BOOT_VALIDATION_TYPE,
+        signer=None,
+        is_external=False,
+        zigbee_format=False,
+        manufacturer_id=0,
+        image_type=0,
+        comment="",
+        zigbee_ota_min_hw_version=None,
+        zigbee_ota_max_hw_version=None,
+    ):
 
         """
         Constructor that requires values used for generating a Nordic DFU package.
@@ -176,14 +189,17 @@ class Package:
 
         self.firmwares_data = {}
 
-
         if app_fw:
-            firmware_type = HexType.EXTERNAL_APPLICATION if is_external else HexType.APPLICATION
-            self.__add_firmware_info(firmware_type=firmware_type,
-                                     firmware_version=app_version,
-                                     filename=app_fw,
-                                     boot_validation_type=app_boot_validation_type,
-                                     init_packet_data=init_packet_vars)
+            firmware_type = (
+                HexType.EXTERNAL_APPLICATION if is_external else HexType.APPLICATION
+            )
+            self.__add_firmware_info(
+                firmware_type=firmware_type,
+                firmware_version=app_version,
+                filename=app_fw,
+                boot_validation_type=app_boot_validation_type,
+                init_packet_data=init_packet_vars,
+            )
 
         # WARNING
         # Do not move the setting of the `REQUIRED_SOFTDEVICES_ARRAY`
@@ -207,20 +223,24 @@ class Package:
             init_packet_vars[PacketField.REQUIRED_SOFTDEVICES_ARRAY] = sd_req
 
         if bootloader_fw:
-            self.__add_firmware_info(firmware_type=HexType.BOOTLOADER,
-                                     firmware_version=bl_version,
-                                     filename=bootloader_fw,
-                                     boot_validation_type=[ValidationTypes.VALIDATE_GENERATED_CRC],
-                                     init_packet_data=init_packet_vars)
+            self.__add_firmware_info(
+                firmware_type=HexType.BOOTLOADER,
+                firmware_version=bl_version,
+                filename=bootloader_fw,
+                boot_validation_type=[ValidationTypes.VALIDATE_GENERATED_CRC],
+                init_packet_data=init_packet_vars,
+            )
 
         if softdevice_fw:
-            self.__add_firmware_info(firmware_type=HexType.SOFTDEVICE,
-                                     firmware_version=0xFFFFFFFF,
-                                     filename=softdevice_fw,
-                                     boot_validation_type=sd_boot_validation_type,
-                                     init_packet_data=init_packet_vars)
+            self.__add_firmware_info(
+                firmware_type=HexType.SOFTDEVICE,
+                firmware_version=0xFFFFFFFF,
+                filename=softdevice_fw,
+                boot_validation_type=sd_boot_validation_type,
+                init_packet_data=init_packet_vars,
+            )
 
-        assert(not signer or isinstance(signer, Signing))
+        assert not signer or isinstance(signer, Signing)
         self.signer = signer
 
         self.work_dir = None
@@ -260,17 +280,19 @@ class Package:
         self.work_dir = self.__create_temp_workspace()
 
         self.zip_file = filename
-        self.zip_dir  = os.path.join(self.work_dir, 'unpacked_zip')
+        self.zip_dir = os.path.join(self.work_dir, "unpacked_zip")
         self.manifest = Package.unpack_package(filename, self.zip_dir)
 
         self.rm_work_dir(preserve_work_dir)
 
     def image_str(self, index, hex_type, img):
-        type_strs = {HexType.SD_BL : "sd_bl",
-                    HexType.SOFTDEVICE : "softdevice",
-                    HexType.BOOTLOADER : "bootloader",
-                    HexType.APPLICATION : "application",
-                    HexType.EXTERNAL_APPLICATION : "external application"}
+        type_strs = {
+            HexType.SD_BL: "sd_bl",
+            HexType.SOFTDEVICE: "softdevice",
+            HexType.BOOTLOADER: "bootloader",
+            HexType.APPLICATION: "application",
+            HexType.EXTERNAL_APPLICATION: "external application",
+        }
 
         # parse init packet
         with open(os.path.join(self.zip_dir, img.dat_file), "rb") as imgf:
@@ -285,14 +307,16 @@ class Package:
         if len(sd_req) != 0:
             sd_req = sd_req[:-2]
 
-        if (initp.packet.HasField('signed_command')):
+        if initp.packet.HasField("signed_command"):
             cmd = initp.packet.signed_command.command
-            signature_type = SigningTypes(initp.packet.signed_command.signature_type).name
+            signature_type = SigningTypes(
+                initp.packet.signed_command.signature_type
+            ).name
             signature_hex = binascii.hexlify(initp.packet.signed_command.signature)
         else:
             cmd = initp.packet.command
-            signature_type = 'UNSIGNED'
-            signature_hex = 'N/A'
+            signature_type = "UNSIGNED"
+            signature_hex = "N/A"
 
         boot_validation_type = []
         boot_validation_bytes = []
@@ -326,25 +350,26 @@ class Package:
       |
       |- is_debug: {18}
 
-""".format(index,
-        type_strs[hex_type],
-        img.bin_file,
-        img.dat_file,
-        CommandTypes(cmd.op_code).name,
-        signature_type,
-        signature_hex,
-        cmd.init.fw_version,
-        cmd.init.hw_version,
-        sd_req,
-        DFUType(cmd.init.type).name,
-        cmd.init.sd_size,
-        cmd.init.bl_size,
-        cmd.init.app_size,
-        HashTypes(cmd.init.hash.hash_type).name,
-        binascii.hexlify(cmd.init.hash.hash),
-        boot_validation_type,
-        boot_validation_bytes,
-        cmd.init.is_debug,
+""".format(
+            index,
+            type_strs[hex_type],
+            img.bin_file,
+            img.dat_file,
+            CommandTypes(cmd.op_code).name,
+            signature_type,
+            signature_hex,
+            cmd.init.fw_version,
+            cmd.init.hw_version,
+            sd_req,
+            DFUType(cmd.init.type).name,
+            cmd.init.sd_size,
+            cmd.init.bl_size,
+            cmd.init.app_size,
+            HashTypes(cmd.init.hash.hash_type).name,
+            binascii.hexlify(cmd.init.hash.hash),
+            boot_validation_type,
+            boot_validation_bytes,
+            cmd.init.is_debug,
         )
 
         return s
@@ -354,26 +379,36 @@ class Package:
         imgs = ""
         i = 0
         if self.manifest.softdevice_bootloader:
-            imgs = imgs + self.image_str(i, HexType.SD_BL, self.manifest.softdevice_bootloader)
+            imgs = imgs + self.image_str(
+                i, HexType.SD_BL, self.manifest.softdevice_bootloader
+            )
             i = i + 1
 
         if self.manifest.softdevice:
-            imgs = imgs + self.image_str(i, HexType.SOFTDEVICE, self.manifest.softdevice)
+            imgs = imgs + self.image_str(
+                i, HexType.SOFTDEVICE, self.manifest.softdevice
+            )
             i = i + 1
 
         if self.manifest.bootloader:
-            imgs = imgs + self.image_str(i, HexType.BOOTLOADER, self.manifest.bootloader)
+            imgs = imgs + self.image_str(
+                i, HexType.BOOTLOADER, self.manifest.bootloader
+            )
             i = i + 1
 
         if self.manifest.application:
-            imgs = imgs + self.image_str(i, HexType.APPLICATION, self.manifest.application)
+            imgs = imgs + self.image_str(
+                i, HexType.APPLICATION, self.manifest.application
+            )
             i = i + 1
 
         s = """
 DFU Package: <{0}>:
 |
 |- Image count: {1}
-""".format(self.zip_file, i)
+""".format(
+            self.zip_file, i
+        )
 
         s = s + imgs
         return s
@@ -411,30 +446,45 @@ DFU Package: <{0}>:
             bootloader_size = nrf_hex.bootloadersize()
 
             boot_validation_type = []
-            boot_validation_type.extend(softdevice_fw_data[FirmwareKeys.BOOT_VALIDATION_TYPE])
-            boot_validation_type.extend(bootloader_fw_data[FirmwareKeys.BOOT_VALIDATION_TYPE])
+            boot_validation_type.extend(
+                softdevice_fw_data[FirmwareKeys.BOOT_VALIDATION_TYPE]
+            )
+            boot_validation_type.extend(
+                bootloader_fw_data[FirmwareKeys.BOOT_VALIDATION_TYPE]
+            )
 
-            self.__add_firmware_info(firmware_type=HexType.SD_BL,
-                                     firmware_version=bootloader_fw_data[FirmwareKeys.INIT_PACKET_DATA][PacketField.FW_VERSION],  # use bootloader version in combination with SD
-                                     filename=sd_bl_file_path,
-                                     init_packet_data=softdevice_fw_data[FirmwareKeys.INIT_PACKET_DATA],
-                                     boot_validation_type=boot_validation_type,
-                                     sd_size=softdevice_size,
-                                     bl_size=bootloader_size)
+            self.__add_firmware_info(
+                firmware_type=HexType.SD_BL,
+                firmware_version=bootloader_fw_data[FirmwareKeys.INIT_PACKET_DATA][
+                    PacketField.FW_VERSION
+                ],  # use bootloader version in combination with SD
+                filename=sd_bl_file_path,
+                init_packet_data=softdevice_fw_data[FirmwareKeys.INIT_PACKET_DATA],
+                boot_validation_type=boot_validation_type,
+                sd_size=softdevice_size,
+                bl_size=bootloader_size,
+            )
 
             # Need to generate SD only bin for boot validation signature
-            sd_bin = Package.normalize_firmware_to_bin(self.work_dir, softdevice_fw_data[FirmwareKeys.FIRMWARE_FILENAME])
+            sd_bin = Package.normalize_firmware_to_bin(
+                self.work_dir, softdevice_fw_data[FirmwareKeys.FIRMWARE_FILENAME]
+            )
             sd_bin_path = os.path.join(self.work_dir, sd_bin)
             sd_bin_created = True
 
         for key, firmware_data in self.firmwares_data.items():
 
             # Normalize the firmware file and store it in the work directory
-            firmware_data[FirmwareKeys.BIN_FILENAME] = \
-                Package.normalize_firmware_to_bin(self.work_dir, firmware_data[FirmwareKeys.FIRMWARE_FILENAME])
+            firmware_data[
+                FirmwareKeys.BIN_FILENAME
+            ] = Package.normalize_firmware_to_bin(
+                self.work_dir, firmware_data[FirmwareKeys.FIRMWARE_FILENAME]
+            )
 
             # Calculate the hash for the .bin file located in the work directory
-            bin_file_path = os.path.join(self.work_dir, firmware_data[FirmwareKeys.BIN_FILENAME])
+            bin_file_path = os.path.join(
+                self.work_dir, firmware_data[FirmwareKeys.BIN_FILENAME]
+            )
             firmware_hash = Package.calculate_sha256_hash(bin_file_path)
             bin_length = int(Package.calculate_file_size(bin_file_path))
 
@@ -451,64 +501,85 @@ DFU Package: <{0}>:
                 bl_size = firmware_data[FirmwareKeys.BL_SIZE]
                 sd_size = firmware_data[FirmwareKeys.SD_SIZE]
 
-            boot_validation_type_array = firmware_data[FirmwareKeys.BOOT_VALIDATION_TYPE]
+            boot_validation_type_array = firmware_data[
+                FirmwareKeys.BOOT_VALIDATION_TYPE
+            ]
             boot_validation_bytes_array = []
             for x in boot_validation_type_array:
-                if x  == ValidationTypes.VALIDATE_ECDSA_P256_SHA256:
+                if x == ValidationTypes.VALIDATE_ECDSA_P256_SHA256:
                     if key == HexType.SD_BL:
-                        boot_validation_bytes_array.append(Package.sign_firmware(self.signer, sd_bin_path))
+                        boot_validation_bytes_array.append(
+                            Package.sign_firmware(self.signer, sd_bin_path)
+                        )
                     else:
-                        boot_validation_bytes_array.append(Package.sign_firmware(self.signer, bin_file_path))
+                        boot_validation_bytes_array.append(
+                            Package.sign_firmware(self.signer, bin_file_path)
+                        )
                 else:
-                    boot_validation_bytes_array.append(b'')
-
+                    boot_validation_bytes_array.append(b"")
 
             init_packet = InitPacketPB(
-                            from_bytes = None,
-                            hash_bytes=firmware_hash,
-                            hash_type=HashTypes.SHA256,
-                            boot_validation_type=boot_validation_type_array,
-                            boot_validation_bytes=boot_validation_bytes_array,
-                            dfu_type=HexTypeToInitPacketFwTypemap[key],
-                            is_debug=firmware_data[FirmwareKeys.INIT_PACKET_DATA][PacketField.DEBUG_MODE],
-                            fw_version=firmware_data[FirmwareKeys.INIT_PACKET_DATA][PacketField.FW_VERSION],
-                            hw_version=firmware_data[FirmwareKeys.INIT_PACKET_DATA][PacketField.HW_VERSION],
-                            sd_size=sd_size,
-                            app_size=app_size,
-                            bl_size=bl_size,
-                            sd_req=firmware_data[FirmwareKeys.INIT_PACKET_DATA][PacketField.REQUIRED_SOFTDEVICES_ARRAY])
+                from_bytes=None,
+                hash_bytes=firmware_hash,
+                hash_type=HashTypes.SHA256,
+                boot_validation_type=boot_validation_type_array,
+                boot_validation_bytes=boot_validation_bytes_array,
+                dfu_type=HexTypeToInitPacketFwTypemap[key],
+                is_debug=firmware_data[FirmwareKeys.INIT_PACKET_DATA][
+                    PacketField.DEBUG_MODE
+                ],
+                fw_version=firmware_data[FirmwareKeys.INIT_PACKET_DATA][
+                    PacketField.FW_VERSION
+                ],
+                hw_version=firmware_data[FirmwareKeys.INIT_PACKET_DATA][
+                    PacketField.HW_VERSION
+                ],
+                sd_size=sd_size,
+                app_size=app_size,
+                bl_size=bl_size,
+                sd_req=firmware_data[FirmwareKeys.INIT_PACKET_DATA][
+                    PacketField.REQUIRED_SOFTDEVICES_ARRAY
+                ],
+            )
 
-            if (self.signer is not None):
+            if self.signer is not None:
                 signature = self.signer.sign(init_packet.get_init_command_bytes())
                 init_packet.set_signature(signature, SigningTypes.ECDSA_P256_SHA256)
 
             # Store the .dat file in the work directory
-            init_packet_filename = firmware_data[FirmwareKeys.BIN_FILENAME].replace(".bin", ".dat")
+            init_packet_filename = firmware_data[FirmwareKeys.BIN_FILENAME].replace(
+                ".bin", ".dat"
+            )
 
-            with open(os.path.join(self.work_dir, init_packet_filename), 'wb') as init_packet_file:
+            with open(
+                os.path.join(self.work_dir, init_packet_filename), "wb"
+            ) as init_packet_file:
                 init_packet_file.write(init_packet.get_init_packet_pb_bytes())
 
-            firmware_data[FirmwareKeys.DAT_FILENAME] = \
-                init_packet_filename
+            firmware_data[FirmwareKeys.DAT_FILENAME] = init_packet_filename
 
             if self.is_zigbee:
-                firmware_version = firmware_data[FirmwareKeys.INIT_PACKET_DATA][PacketField.FW_VERSION]
+                firmware_version = firmware_data[FirmwareKeys.INIT_PACKET_DATA][
+                    PacketField.FW_VERSION
+                ]
                 file_name = firmware_data[FirmwareKeys.BIN_FILENAME]
 
-                self.zigbee_ota_file = OTA_file(firmware_version,
-                                                len(init_packet.get_init_packet_pb_bytes()),
-                                                binascii.crc32(init_packet.get_init_packet_pb_bytes()) & 0xFFFFFFFF,
-                                                init_packet.get_init_packet_pb_bytes(),
-                                                os.path.getsize(file_name),
-                                                self.calculate_crc(32, file_name) & 0xFFFFFFFF,
-                                                bytes(open(file_name, 'rb').read()),
-                                                self.manufacturer_id,
-                                                self.image_type,
-                                                self.comment,
-                                                self.zigbee_ota_min_hw_version,
-                                                self.zigbee_ota_max_hw_version)
+                self.zigbee_ota_file = OTA_file(
+                    firmware_version,
+                    len(init_packet.get_init_packet_pb_bytes()),
+                    binascii.crc32(init_packet.get_init_packet_pb_bytes()) & 0xFFFFFFFF,
+                    init_packet.get_init_packet_pb_bytes(),
+                    os.path.getsize(file_name),
+                    self.calculate_crc(32, file_name) & 0xFFFFFFFF,
+                    bytes(open(file_name, "rb").read()),
+                    self.manufacturer_id,
+                    self.image_type,
+                    self.comment,
+                    self.zigbee_ota_min_hw_version,
+                    self.zigbee_ota_max_hw_version,
+                )
 
-                ota_file_handle = open(self.zigbee_ota_file.filename, 'wb')
+                ota_file_handle = open(self.zigbee_ota_file.filename, "wb")
                 ota_file_handle.write(self.zigbee_ota_file.binary)
                 ota_file_handle.close()
 
@@ -519,7 +590,9 @@ DFU Package: <{0}>:
         # Store the manifest to manifest.json
         manifest = self.create_manifest()
 
-        with open(os.path.join(self.work_dir, Package.MANIFEST_FILENAME), "w") as manifest_file:
+        with open(
+            os.path.join(self.work_dir, Package.MANIFEST_FILENAME), "w"
+        ) as manifest_file:
             manifest_file.write(manifest)
 
         # Package the work_dir to a zip file
@@ -536,7 +609,7 @@ DFU Package: <{0}>:
     def create_zip_package(work_dir, filename):
         files = os.listdir(work_dir)
 
-        with ZipFile(filename, 'w') as package:
+        with ZipFile(filename, "w") as package:
             for _file in files:
                 file_path = os.path.join(work_dir, _file)
                 package.write(file_path, _file)
@@ -552,7 +625,7 @@ DFU Package: <{0}>:
 
         digest = hashlib.sha256()
 
-        with open(firmware_filename, 'rb') as firmware_file:
+        with open(firmware_filename, "rb") as firmware_file:
             while True:
                 data = firmware_file.read(read_buffer)
 
@@ -572,10 +645,10 @@ DFU Package: <{0}>:
 
         :type str firmware_filename:
         """
-        data_buffer = b''
+        data_buffer = b""
         read_size = 4096
 
-        with open(firmware_filename, 'rb') as firmware_file:
+        with open(firmware_filename, "rb") as firmware_file:
             while True:
                 data = firmware_file.read(read_size)
 
@@ -584,7 +657,7 @@ DFU Package: <{0}>:
                 else:
                     break
         if crc == 16:
-            return calc_crc16(data_buffer, 0xffff)
+            return calc_crc16(data_buffer, 0xFFFF)
         elif crc == 32:
             return binascii.crc32(data_buffer)
         else:
@@ -592,9 +665,9 @@ DFU Package: <{0}>:
 
     @staticmethod
     def sign_firmware(signer, firmware_filename):
-        assert(isinstance(signer, Signing))
-        data_buffer = b''
-        with open(firmware_filename, 'rb') as firmware_file:
+        assert isinstance(signer, Signing)
+        data_buffer = b""
+        with open(firmware_filename, "rb") as firmware_file:
             data_buffer = firmware_file.read()
         return signer.sign(data_buffer)
 
@@ -606,20 +679,31 @@ DFU Package: <{0}>:
     def _is_bootloader_softdevice_combination(firmwares):
         return (HexType.BOOTLOADER in firmwares) and (HexType.SOFTDEVICE in firmwares)
 
-    def __add_firmware_info(self, firmware_type, firmware_version, filename, init_packet_data, boot_validation_type, sd_size=None, bl_size=None):
+    def __add_firmware_info(
+        self,
+        firmware_type,
+        firmware_version,
+        filename,
+        init_packet_data,
+        boot_validation_type,
+        sd_size=None,
+        bl_size=None,
+    ):
         self.firmwares_data[firmware_type] = {
             FirmwareKeys.FIRMWARE_FILENAME: filename,
             FirmwareKeys.INIT_PACKET_DATA: init_packet_data.copy(),
             # Copying init packet to avoid using the same for all firmware
             FirmwareKeys.BOOT_VALIDATION_TYPE: boot_validation_type,
-            }
+        }
 
         if firmware_type == HexType.SD_BL:
             self.firmwares_data[firmware_type][FirmwareKeys.SD_SIZE] = sd_size
             self.firmwares_data[firmware_type][FirmwareKeys.BL_SIZE] = bl_size
 
         if firmware_version is not None:
-            self.firmwares_data[firmware_type][FirmwareKeys.INIT_PACKET_DATA][PacketField.FW_VERSION] = firmware_version
+            self.firmwares_data[firmware_type][FirmwareKeys.INIT_PACKET_DATA][
+                PacketField.FW_VERSION
+            ] = firmware_version
 
     @staticmethod
     def normalize_firmware_to_bin(work_dir, firmware_path):
@@ -651,20 +735,29 @@ DFU Package: <{0}>:
         target_base_path = os.path.dirname(target_dir)
 
         if not os.path.exists(target_base_path):
-            raise PackageException("Base path to target directory {0} does not exist.".format(target_base_path))
+            raise PackageException(
+                "Base path to target directory {0} does not exist.".format(
+                    target_base_path
+                )
+            )
 
         if not os.path.isdir(target_base_path):
-            raise PackageException("Base path to target directory {0} is not a directory.".format(target_base_path))
+            raise PackageException(
+                "Base path to target directory {0} is not a directory.".format(
+                    target_base_path
+                )
+            )
 
         if os.path.exists(target_dir):
             raise PackageException(
                 "Target directory {0} exists, not able to unpack to that directory.",
-                target_dir)
+                target_dir,
+            )
 
-        with ZipFile(package_path, 'r') as pkg:
+        with ZipFile(package_path, "r") as pkg:
             pkg.extractall(target_dir)
 
-            with open(os.path.join(target_dir, Package.MANIFEST_FILENAME), 'r') as f:
+            with open(os.path.join(target_dir, Package.MANIFEST_FILENAME), "r") as f:
                 _json = f.read()
                 """:type :str """
 

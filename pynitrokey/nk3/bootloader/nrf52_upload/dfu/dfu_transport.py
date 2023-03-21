@@ -34,7 +34,6 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import logging
-
 from abc import ABC, abstractmethod
 
 # Nordic Semiconductor imports
@@ -62,26 +61,26 @@ class DfuTransport(ABC):
     """
 
     OP_CODE = {
-        'CreateObject'          : 0x01,
-        'SetPRN'                : 0x02,
-        'CalcChecSum'           : 0x03,
-        'Execute'               : 0x04,
-        'ReadObject'            : 0x06,
-        'Response'              : 0x60,
+        "CreateObject": 0x01,
+        "SetPRN": 0x02,
+        "CalcChecSum": 0x03,
+        "Execute": 0x04,
+        "ReadObject": 0x06,
+        "Response": 0x60,
     }
 
     RES_CODE = {
-        'InvalidCode'           : 0x00,
-        'Success'               : 0x01,
-        'NotSupported'          : 0x02,
-        'InvalidParameter'      : 0x03,
-        'InsufficientResources' : 0x04,
-        'InvalidObject'         : 0x05,
-        'InvalidSignature'      : 0x06,
-        'UnsupportedType'       : 0x07,
-        'OperationNotPermitted' : 0x08,
-        'OperationFailed'       : 0x0A,
-        'ExtendedError'         : 0x0B,
+        "InvalidCode": 0x00,
+        "Success": 0x01,
+        "NotSupported": 0x02,
+        "InvalidParameter": 0x03,
+        "InsufficientResources": 0x04,
+        "InvalidObject": 0x05,
+        "InvalidSignature": 0x06,
+        "UnsupportedType": 0x07,
+        "OperationNotPermitted": 0x08,
+        "OperationFailed": 0x0A,
+        "ExtendedError": 0x0B,
     }
 
     EXT_ERROR_CODE = [
@@ -90,7 +89,8 @@ class DfuTransport(ABC):
         "The format of the command was incorrect. This error code is not used in the current implementation, because @ref NRF_DFU_RES_CODE_OP_CODE_NOT_SUPPORTED and @ref NRF_DFU_RES_CODE_INVALID_PARAMETER cover all possible format errors.",
         "The command was successfully parsed, but it is not supported or unknown.",
         "The init command is invalid. The init packet either has an invalid update type or it is missing required fields for the update type (for example, the init packet for a SoftDevice update is missing the SoftDevice size field).",
-        "The firmware version is too low. For an application, the version must be greater than or equal to the current application. For a bootloader, it must be greater than the current version. This requirement prevents downgrade attacks.""",
+        "The firmware version is too low. For an application, the version must be greater than or equal to the current application. For a bootloader, it must be greater than the current version. This requirement prevents downgrade attacks."
+        "",
         "The hardware version of the device does not match the required hardware version for the update.",
         "The array of supported SoftDevices for the update does not contain the FWID of the current SoftDevice.",
         "The init packet does not contain a signature, but this bootloader requires all updates to have one.",
@@ -106,7 +106,6 @@ class DfuTransport(ABC):
     def __init__(self):
         self.callbacks = {}
 
-
     @abstractmethod
     def open(self):
         """
@@ -114,7 +113,6 @@ class DfuTransport(ABC):
         :return:
         """
         pass
-
 
     @abstractmethod
     def close(self):
@@ -136,7 +134,6 @@ class DfuTransport(ABC):
         """
         pass
 
-
     @abstractmethod
     def send_firmware(self, firmware):
         """
@@ -149,7 +146,6 @@ class DfuTransport(ABC):
         """
         pass
 
-
     def register_events_callback(self, event_type, callback):
         """
         Register a callback.
@@ -161,7 +157,6 @@ class DfuTransport(ABC):
             self.callbacks[event_type] = []
 
         self.callbacks[event_type].append(callback)
-
 
     def _send_event(self, event_type, **kwargs):
         """

@@ -1,4 +1,3 @@
-
 #
 # Copyright (c) 2016 Nordic Semiconductor ASA
 # All rights reserved.
@@ -45,8 +44,8 @@
 # WARRANTY of ANY KIND is provided. This heading must NOT be removed from
 # the file.
 
-import hashlib
 import datetime
+import hashlib
 
 try:
     from ecdsa import SigningKey
@@ -62,10 +61,12 @@ AwEHoUQDQgAEaHYrUu/oFKIXN457GH+8IOuv6OIPBRLqoHjaEKM0wIzJZ0lhfO/A
 53hKGjKEjYT3VNTQ3Zq1YB3o5QSQMP/LRg==
 -----END EC PRIVATE KEY-----"""
 
+
 class Signing:
     """
     Class for singing of hex-files
     """
+
     def gen_key(self, filename):
         """
         Generate a new Signing key using NIST P-256 curve
@@ -97,7 +98,9 @@ class Signing:
             raise AssertionError("Can't save key. No key created/loaded")
 
         # Sign the init-packet
-        signature = self.sk.sign(init_packet_data, hashfunc=hashlib.sha256, sigencode=sigencode_string)
+        signature = self.sk.sign(
+            init_packet_data, hashfunc=hashlib.sha256, sigencode=sigencode_string
+        )
         return signature[31::-1] + signature[63:31:-1]
 
     def verify(self, init_packet, signature):
@@ -127,11 +130,11 @@ class Signing:
 
         if output_type is None:
             raise ValueError("Invalid output type for public key.")
-        elif output_type == 'hex':
+        elif output_type == "hex":
             return self.get_vk_hex()
-        elif output_type == 'code':
+        elif output_type == "code":
             return self.get_vk_code(dbg)
-        elif output_type == 'pem':
+        elif output_type == "pem":
             return self.get_vk_pem()
         else:
             raise ValueError("Invalid argument. Can't get key")
@@ -145,11 +148,11 @@ class Signing:
 
         if output_type is None:
             raise ValueError("Invalid output type for private key.")
-        elif output_type == 'hex':
+        elif output_type == "hex":
             return self.get_sk_hex()
-        elif output_type == 'code':
+        elif output_type == "code":
             raise ValueError("Private key cannot be shown as code")
-        elif output_type == 'pem':
+        elif output_type == "pem":
             # Return pem as str to conform in type with the other cases.
             return self.sk.to_pem().decode()
         else:
@@ -192,7 +195,9 @@ class Signing:
 
 #include "stdint.h"
 #include "compiler_abstraction.h"
-""".format(datetime.datetime.now().strftime("%Y-%m-%d (YY-MM-DD) at %H:%M:%S"))
+""".format(
+            datetime.datetime.now().strftime("%Y-%m-%d (YY-MM-DD) at %H:%M:%S")
+        )
 
         dbg_header = """
 /* This file was generated with a throwaway private key, that is only intended for a debug version of the DFU project.
@@ -211,7 +216,6 @@ class Signing:
             code = header + key_code
         return code
 
-
     def get_vk_code(self, dbg):
         """
         Get the verification key as code
@@ -219,13 +223,11 @@ class Signing:
         if self.sk is None:
             raise AssertionError("Can't get key. No key created/loaded")
 
-        to_two_digit_hex_with_0x = '0x{0:02x}'.format
+        to_two_digit_hex_with_0x = "0x{0:02x}".format
 
         key = self.sk.get_verifying_key().to_string()
-        vk_x_separated = ', '.join(map(to_two_digit_hex_with_0x,
-                                       key[:32][::-1]))
-        vk_y_separated = ', '.join(map(to_two_digit_hex_with_0x,
-                                       key[32:][::-1]))
+        vk_x_separated = ", ".join(map(to_two_digit_hex_with_0x, key[:32][::-1]))
+        vk_y_separated = ", ".join(map(to_two_digit_hex_with_0x, key[32:][::-1]))
 
         key_code = """
 /** @brief Public key used to verify DFU images */

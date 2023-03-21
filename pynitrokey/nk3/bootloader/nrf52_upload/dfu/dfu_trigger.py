@@ -36,13 +36,13 @@
 #
 
 
+import ctypes
+import logging
 import os
 import sys
-import ctypes
 from importlib import import_module
-import logging
 
-#from pc_ble_driver_py.exceptions import NordicSemiException
+# from pc_ble_driver_py.exceptions import NordicSemiException
 from ..exceptions import NordicSemiException
 
 LIBUSB_ENDPOINT_IN = 0x80
@@ -79,41 +79,56 @@ else:
     abs_file_dir = abs_file_dir.replace(dfu_path, libusb_path)
     rel_import_dir = os.path.join(".", libusb_path)
 
-for path in ['PATH', 'LD_LIBRARY_PATH', 'DYLD_LIBRARY_PATH', 'DYLD_FALLBACK_LIBRARY_PATH']:
+for path in [
+    "PATH",
+    "LD_LIBRARY_PATH",
+    "DYLD_LIBRARY_PATH",
+    "DYLD_FALLBACK_LIBRARY_PATH",
+]:
     if path not in os.environ:
         os.environ[path] = ""
-    os.environ[path] = rel_import_dir + os.pathsep + abs_file_dir + os.pathsep + os.environ[path]
+    os.environ[path] = (
+        rel_import_dir + os.pathsep + abs_file_dir + os.pathsep + os.environ[path]
+    )
+
 
 class DFUTrigger:
     def __init__(self):
         self.context = None
 
-        if sys.platform == 'win32':
+        if sys.platform == "win32":
             try:
                 # Load the libusb dll in advance so that libusb1 module is better able to load it
-                ctypes.CDLL(os.path.join(abs_file_dir, "libusb-1.0.dll"));
+                ctypes.CDLL(os.path.join(abs_file_dir, "libusb-1.0.dll"))
             except OSError as err:
                 logger.info(err)
 
         try:
-            self.usb1 = import_module('usb1')
+            self.usb1 = import_module("usb1")
             self.context = self.usb1.USBContext()
         except OSError as err:
             if "libusb" in str(err):
-                if sys.platform == 'win32' or sys.platform == 'darwin':
-                    show_msg = "Libusb1 binaries are bundled with nrfutil for Windows and MacOS. " \
-                               "Python is unable to locate or load the binaries. "
-                elif 'linux' in sys.platform:
-                    show_msg = "Libusb1 binaries are bundled with some linux distributions. " \
-                                    "If you see this message, they are probably not installed on your system. "\
-                                    "If you want to use DFU trigger, please install 'libusb1' using your package manager. "\
-                                    "E.g: 'sudo apt-get install libusb-dev'."
+                if sys.platform == "win32" or sys.platform == "darwin":
+                    show_msg = (
+                        "Libusb1 binaries are bundled with nrfutil for Windows and MacOS. "
+                        "Python is unable to locate or load the binaries. "
+                    )
+                elif "linux" in sys.platform:
+                    show_msg = (
+                        "Libusb1 binaries are bundled with some linux distributions. "
+                        "If you see this message, they are probably not installed on your system. "
+                        "If you want to use DFU trigger, please install 'libusb1' using your package manager. "
+                        "E.g: 'sudo apt-get install libusb-dev'."
+                    )
                 else:
                     show_msg = "Libusb1 is not compatible with your operating system."
 
-                logger.warning("Could not load libusb1-0 library, which is a requirement to use DFU trigger. "\
-                            "This is not a problem unless you intend to use this functionality. "\
-                            "{}".format(show_msg))
+                logger.warning(
+                    "Could not load libusb1-0 library, which is a requirement to use DFU trigger. "
+                    "This is not a problem unless you intend to use this functionality. "
+                    "{}".format(show_msg)
+                )
+
     def clean(self):
         self.usb1 = None
         if self.context:
@@ -121,9 +136,12 @@ class DFUTrigger:
 
     def select_device(self, listed_device):
         all_devices = self.context.getDeviceList()
-        filtered_devices = [dev for dev in all_devices
-            if hex(dev.getVendorID())[2:].lower() == listed_device.vendor_id.lower() and
-            hex(dev.getProductID())[2:].lower() == listed_device.product_id.lower()]
+        filtered_devices = [
+            dev
+            for dev in all_devices
+            if hex(dev.getVendorID())[2:].lower() == listed_device.vendor_id.lower()
+            and hex(dev.getProductID())[2:].lower() == listed_device.product_id.lower()
+        ]
 
         access_error = False
         triggerless_devices = 0
@@ -133,7 +151,7 @@ class DFUTrigger:
                 handle = nordic_device.open()
                 SNO = handle.getSerialNumber()
                 handle.close()
-                if (SNO.lower() == listed_device.serial_number.lower()):
+                if SNO.lower() == listed_device.serial_number.lower():
                     return nordic_device
 
             except self.usb1.USBErrorNotFound as err:
@@ -142,32 +160,46 @@ class DFUTrigger:
             except self.usb1.USBErrorAccess as err:
                 access_error = True
             except self.usb1.USBErrorNotSupported as err:
-                pass #  Unsupported device. Moving on
+                pass  #  Unsupported device. Moving on
 
         if triggerless_devices > 0:
-            logger.debug("DFU trigger: Could not find trigger interface for device with serial number {}. "\
-            "{}/{} devices with same VID/PID were missing a trigger interface."\
-            .format(listed_device.serial_number, triggerless_devices, len(filtered_devices)))
+            logger.debug(
+                "DFU trigger: Could not find trigger interface for device with serial number {}. "
+                "{}/{} devices with same VID/PID were missing a trigger interface.".format(
+                    listed_device.serial_number,
+                    triggerless_devices,
+                    len(filtered_devices),
+                )
+            )
 
         if access_error:
-            raise NordicSemiException("LIBUSB_ERROR_ACCESS: Unable to connect to trigger interface.")
+            raise NordicSemiException(
+                "LIBUSB_ERROR_ACCESS: Unable to connect to trigger interface."
+            )
 
     def get_dfu_interface_num(self, libusb_device):
         for setting in libusb_device.iterSettings():
-            if setting.getClass() == 255 and \
-            setting.getSubClass() == 1 and \
-            setting.getProtocol() == 1:
+            if (
+                setting.getClass() == 255
+                and setting.getSubClass() == 1
+                and setting.getProtocol() == 1
+            ):
                 return setting.getNumber()
 
     def no_trigger_exception(self, device):
-        return NordicSemiException("No trigger interface found for device with serial number: {}, Product ID: 0x{} and Vendor ID: 0x{}\n"
-        .format(device.serial_number, device.product_id, device.vendor_id))
+        return NordicSemiException(
+            "No trigger interface found for device with serial number: {}, Product ID: 0x{} and Vendor ID: 0x{}\n".format(
+                device.serial_number, device.product_id, device.vendor_id
+            )
+        )
 
     def enter_bootloader_mode(self, listed_device):
         if self.context is None:
-            raise NordicSemiException("No Libusb1 context found, but is required to use DFU trigger. " \
-                                    "This likely happens because the libusb1-0 binaries are missing from your system, "\
-                                    "or Python is unable to locate them.")
+            raise NordicSemiException(
+                "No Libusb1 context found, but is required to use DFU trigger. "
+                "This likely happens because the libusb1-0 binaries are missing from your system, "
+                "or Python is unable to locate them."
+            )
         libusb_device = self.select_device(listed_device)
         if libusb_device is None:
             raise self.no_trigger_exception(listed_device)
@@ -178,13 +210,20 @@ class DFUTrigger:
             raise self.no_trigger_exception(listed_device)
 
         with device_handle.claimInterface(dfu_iface):
-            arr = bytearray("0", 'utf-8')
+            arr = bytearray("0", "utf-8")
             try:
-                device_handle.controlWrite(ReqTypeOUT, DFU_DETACH_REQUEST, 0, dfu_iface, arr)
+                device_handle.controlWrite(
+                    ReqTypeOUT, DFU_DETACH_REQUEST, 0, dfu_iface, arr
+                )
             except Exception as err:
                 if "LIBUSB_ERROR_PIPE" in str(err):
                     return
-        raise NordicSemiException("A diconnection event from libusb is expected when the usb device restarts after triggering bootloder. "\
-        "The event was not received. This can be an indication that the device was unable to leave application mode. "\
-        "Serial number: {}, Product ID: 0x{}, Vendor ID: 0x{}\n\n"
-        .format(listed_device.serial_number, listed_device.product_id, listed_device.vendor_id))
+        raise NordicSemiException(
+            "A diconnection event from libusb is expected when the usb device restarts after triggering bootloder. "
+            "The event was not received. This can be an indication that the device was unable to leave application mode. "
+            "Serial number: {}, Product ID: 0x{}, Vendor ID: 0x{}\n\n".format(
+                listed_device.serial_number,
+                listed_device.product_id,
+                listed_device.vendor_id,
+            )
+        )

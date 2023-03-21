@@ -33,18 +33,21 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import intelhex
-from struct import unpack
 from enum import Enum
+from struct import unpack
+
+import intelhex
+
 
 class nRFArch(Enum):
     NRF51 = 1
     NRF52 = 2
     NRF52840 = 3
 
+
 class nRFHex(intelhex.IntelHex):
     """
-        Converts and merges .hex and .bin files into one .bin file.
+    Converts and merges .hex and .bin files into one .bin file.
     """
 
     info_struct_address_base = 0x00003000
@@ -67,14 +70,14 @@ class nRFHex(intelhex.IntelHex):
         """
         super().__init__()
         self.arch = arch
-        self.file_format = 'hex'
+        self.file_format = "hex"
 
-        if source.endswith('.bin'):
-            self.file_format = 'bin'
+        if source.endswith(".bin"):
+            self.file_format = "bin"
 
         self.loadfile(source, self.file_format)
 
-        if self.file_format == 'hex':
+        if self.file_format == "hex":
             self._removeuicr()
             self._removembr()
 
@@ -94,13 +97,15 @@ class nRFHex(intelhex.IntelHex):
     def address_has_magic_number(self, address):
         try:
             potential_magic_number = self.gets(address, 4)
-            potential_magic_number = unpack('I', potential_magic_number)[0]
+            potential_magic_number = unpack("I", potential_magic_number)[0]
             return nRFHex.info_struct_magic_number == potential_magic_number
         except Exception:
             return False
 
     def get_softdevice_variant(self):
-        potential_magic_number_address = nRFHex.info_struct_address_base + nRFHex.info_struct_magic_number_offset
+        potential_magic_number_address = (
+            nRFHex.info_struct_address_base + nRFHex.info_struct_magic_number_offset
+        )
 
         if self.address_has_magic_number(potential_magic_number_address):
             return "s1x0"
@@ -125,7 +130,7 @@ class nRFHex(intelhex.IntelHex):
         min_address = super().minaddr()
 
         # Lower addresses are reserved for master boot record
-        if self.file_format != 'bin':
+        if self.file_format != "bin":
             min_address = max(self.get_mbr_end_address(), min_address)
 
         return min_address

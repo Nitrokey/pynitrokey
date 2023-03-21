@@ -36,41 +36,58 @@
 #
 
 import sys
-from ..lister_backend import AbstractLister
+
 from ..enumerated_device import EnumeratedDevice
+from ..lister_backend import AbstractLister
 
-if sys.platform == 'win32':
-    from .constants import DIGCF_PRESENT, DEVPKEY, DIGCF_DEVICEINTERFACE
-    from .structures import (GUID, DeviceInfoData, ctypesInternalGUID, _GUID,
-                             ValidHandle)
-
+if sys.platform == "win32":
     import ctypes
     import winreg
+
+    from .constants import DEVPKEY, DIGCF_DEVICEINTERFACE, DIGCF_PRESENT
+    from .structures import _GUID, GUID, DeviceInfoData, ValidHandle, ctypesInternalGUID
+
     setup_api = ctypes.windll.setupapi
 
     SetupDiGetClassDevs = setup_api.SetupDiGetClassDevsW
-    SetupDiGetClassDevs.argtypes = [ctypes.POINTER(_GUID), ctypes.c_wchar_p,
-                                    ctypes.c_void_p, ctypes.c_uint32]
+    SetupDiGetClassDevs.argtypes = [
+        ctypes.POINTER(_GUID),
+        ctypes.c_wchar_p,
+        ctypes.c_void_p,
+        ctypes.c_uint32,
+    ]
     SetupDiGetClassDevs.restype = ctypes.c_void_p
     SetupDiGetClassDevs.errcheck = ValidHandle
 
     SetupDiEnumDeviceInfo = setup_api.SetupDiEnumDeviceInfo
-    SetupDiEnumDeviceInfo.argtypes = [ctypes.c_void_p, ctypes.c_uint32,
-                                      ctypes.POINTER(DeviceInfoData)]
+    SetupDiEnumDeviceInfo.argtypes = [
+        ctypes.c_void_p,
+        ctypes.c_uint32,
+        ctypes.POINTER(DeviceInfoData),
+    ]
     SetupDiEnumDeviceInfo.restype = ctypes.c_bool
 
     SetupDiGetDeviceInstanceId = setup_api.SetupDiGetDeviceInstanceIdW
-    SetupDiGetDeviceInstanceId.argtypes = [ctypes.c_void_p,
-                                           ctypes.POINTER(DeviceInfoData),
-                                           ctypes.c_wchar_p, ctypes.c_uint32,
-                                           ctypes.POINTER(ctypes.c_uint32)]
+    SetupDiGetDeviceInstanceId.argtypes = [
+        ctypes.c_void_p,
+        ctypes.POINTER(DeviceInfoData),
+        ctypes.c_wchar_p,
+        ctypes.c_uint32,
+        ctypes.POINTER(ctypes.c_uint32),
+    ]
     SetupDiGetDeviceInstanceId.restype = ctypes.c_bool
 
     SetupDiGetDeviceProperty = setup_api.SetupDiGetDevicePropertyW
-    SetupDiGetDeviceProperty.argtypes = [ctypes.c_void_p, ctypes.c_void_p,
-                                         ctypes.c_void_p, ctypes.c_void_p,
-                                         ctypes.c_void_p, ctypes.c_uint,
-                                         ctypes.c_void_p, ctypes.c_uint]
+    SetupDiGetDeviceProperty.argtypes = [
+        ctypes.c_void_p,
+        ctypes.c_void_p,
+        ctypes.c_void_p,
+        ctypes.c_void_p,
+        ctypes.c_void_p,
+        ctypes.c_uint,
+        ctypes.c_void_p,
+        ctypes.c_uint,
+    ]
     SetupDiGetDeviceProperty.restype = ctypes.c_bool
 
 #  constants
@@ -85,20 +102,34 @@ def get_serial_serial_no(vendor_id, product_id, h_dev_info, device_info_data):
     required_size = ctypes.c_ulong()
 
     instance_id_buffer = ctypes.create_unicode_buffer(MAX_BUFSIZE)
-    res = SetupDiGetDeviceProperty(h_dev_info, ctypes.byref(device_info_data),
-                                   ctypes.byref(DEVPKEY.Device.ContainerId),
-                                   ctypes.byref(prop_type), instance_id_buffer,
-                                   MAX_BUFSIZE, ctypes.byref(required_size), 0)
+    res = SetupDiGetDeviceProperty(
+        h_dev_info,
+        ctypes.byref(device_info_data),
+        ctypes.byref(DEVPKEY.Device.ContainerId),
+        ctypes.byref(prop_type),
+        instance_id_buffer,
+        MAX_BUFSIZE,
+        ctypes.byref(required_size),
+        0,
+    )
 
     wanted_GUID = GUID(ctypesInternalGUID(instance_id_buffer))
 
     device_address = ctypes.c_int32()
-    res = setup_api.SetupDiGetDevicePropertyW(h_dev_info, ctypes.byref(device_info_data),
-                                              ctypes.byref(DEVPKEY.Device.DeviceAddress),
-                                              ctypes.byref(prop_type), ctypes.byref(device_address),
-                                              ctypes.sizeof(ctypes.c_int32), ctypes.byref(required_size), 0)
+    res = setup_api.SetupDiGetDevicePropertyW(
+        h_dev_info,
+        ctypes.byref(device_info_data),
+        ctypes.byref(DEVPKEY.Device.DeviceAddress),
+        ctypes.byref(prop_type),
+        ctypes.byref(device_address),
+        ctypes.sizeof(ctypes.c_int32),
+        ctypes.byref(required_size),
+        0,
+    )
 
-    hkey_path = "SYSTEM\\CurrentControlSet\\Enum\\USB\\VID_{}&PID_{}".format(vendor_id, product_id)
+    hkey_path = "SYSTEM\\CurrentControlSet\\Enum\\USB\\VID_{}&PID_{}".format(
+        vendor_id, product_id
+    )
     try:
         vendor_product_hkey = winreg.OpenKeyEx(winreg.HKEY_LOCAL_MACHINE, hkey_path)
     except EnvironmentError as err:
@@ -112,8 +143,9 @@ def get_serial_serial_no(vendor_id, product_id, h_dev_info, device_info_data):
         except EnvironmentError as err:
             continue
 
-        hkey_path = "SYSTEM\\CurrentControlSet\\Enum\\USB\\VID_{}&PID_{}\\{}"\
-                    .format(vendor_id, product_id, serial_number)
+        hkey_path = "SYSTEM\\CurrentControlSet\\Enum\\USB\\VID_{}&PID_{}\\{}".format(
+            vendor_id, product_id, serial_number
+        )
 
         try:
             device_hkey = winreg.OpenKeyEx(winreg.HKEY_LOCAL_MACHINE, hkey_path)
@@ -134,7 +166,10 @@ def get_serial_serial_no(vendor_id, product_id, h_dev_info, device_info_data):
 
         winreg.CloseKey(device_hkey)
 
-        if queried_container_id.lower() == str(wanted_GUID).lower() and queried_address == device_address.value:
+        if (
+            queried_container_id.lower() == str(wanted_GUID).lower()
+            and queried_address == device_address.value
+        ):
             winreg.CloseKey(vendor_product_hkey)
             return serial_number
 
@@ -165,8 +200,9 @@ def com_port_is_open(port):
 def list_all_com_ports(vendor_id, product_id, serial_number):
     ports = []
 
-    hkey_path = "SYSTEM\\CurrentControlSet\\Enum\\USB\\VID_{}&PID_{}\\{}"\
-                .format(vendor_id, product_id, serial_number)
+    hkey_path = "SYSTEM\\CurrentControlSet\\Enum\\USB\\VID_{}&PID_{}\\{}".format(
+        vendor_id, product_id, serial_number
+    )
 
     try:
         device_hkey = winreg.OpenKeyEx(winreg.HKEY_LOCAL_MACHINE, hkey_path)
@@ -181,8 +217,9 @@ def list_all_com_ports(vendor_id, product_id, serial_number):
 
     winreg.CloseKey(device_hkey)
 
-    hkey_path = "SYSTEM\\CurrentControlSet\\Enum\\USB\\VID_{}&PID_{}\\{}\\Device Parameters"\
-                .format(vendor_id, product_id, serial_number)
+    hkey_path = "SYSTEM\\CurrentControlSet\\Enum\\USB\\VID_{}&PID_{}\\{}\\Device Parameters".format(
+        vendor_id, product_id, serial_number
+    )
     try:
         device_hkey = winreg.OpenKeyEx(winreg.HKEY_LOCAL_MACHINE, hkey_path)
         try:
@@ -198,10 +235,16 @@ def list_all_com_ports(vendor_id, product_id, serial_number):
 
     iface_id = 0
     while True:
-        hkey_path = "SYSTEM\\CurrentControlSet\\Enum\\USB\\VID_{vid_val}&PID_{pid_val}&"\
-        "MI_{mi_val}\\{parent_val}&{parent_iface}\\Device Parameters"\
-        .format(vid_val=vendor_id, pid_val=product_id, mi_val=str(iface_id).zfill(2),
-                parent_val=parent_id, parent_iface=str(iface_id).zfill(4))
+        hkey_path = (
+            "SYSTEM\\CurrentControlSet\\Enum\\USB\\VID_{vid_val}&PID_{pid_val}&"
+            "MI_{mi_val}\\{parent_val}&{parent_iface}\\Device Parameters".format(
+                vid_val=vendor_id,
+                pid_val=product_id,
+                mi_val=str(iface_id).zfill(2),
+                parent_val=parent_id,
+                parent_iface=str(iface_id).zfill(4),
+            )
+        )
         iface_id += 1
         try:
             device_hkey = winreg.OpenKeyEx(winreg.HKEY_LOCAL_MACHINE, hkey_path)
@@ -223,12 +266,18 @@ def list_all_com_ports(vendor_id, product_id, serial_number):
 
 class Win32Lister(AbstractLister):
     def __init__(self):
-        self.GUID_DEVINTERFACE_USB_DEVICE = GUID("{A5DCBF10-6530-11D2-901F-00C04FB951ED}")
+        self.GUID_DEVINTERFACE_USB_DEVICE = GUID(
+            "{A5DCBF10-6530-11D2-901F-00C04FB951ED}"
+        )
 
     def enumerate(self):
         enumerated_devices = []
-        h_dev_info = SetupDiGetClassDevs(ctypes.byref(self.GUID_DEVINTERFACE_USB_DEVICE._guid),
-                                         None, 0, DIGCF_PRESENT | DIGCF_DEVICEINTERFACE)
+        h_dev_info = SetupDiGetClassDevs(
+            ctypes.byref(self.GUID_DEVINTERFACE_USB_DEVICE._guid),
+            None,
+            0,
+            DIGCF_PRESENT | DIGCF_DEVICEINTERFACE,
+        )
         dev_info_data = DeviceInfoData()
         if h_dev_info == -1:
             return enumerated_devices
@@ -239,23 +288,31 @@ class Win32Lister(AbstractLister):
 
             sz_buffer = ctypes.create_unicode_buffer(MAX_BUFSIZE)
             dw_size = ctypes.c_ulong()
-            res = SetupDiGetDeviceInstanceId(h_dev_info, ctypes.byref(dev_info_data),
-                                             sz_buffer, MAX_BUFSIZE,
-                                             ctypes.byref(dw_size))
+            res = SetupDiGetDeviceInstanceId(
+                h_dev_info,
+                ctypes.byref(dev_info_data),
+                sz_buffer,
+                MAX_BUFSIZE,
+                ctypes.byref(dw_size),
+            )
             if not res:
                 #  failed to fetch pid vid
                 continue
             vendor_id = sz_buffer.value[8:12]
             product_id = sz_buffer.value[17:21]
 
-            serial_number = get_serial_serial_no(vendor_id, product_id, h_dev_info, dev_info_data)
+            serial_number = get_serial_serial_no(
+                vendor_id, product_id, h_dev_info, dev_info_data
+            )
             if not serial_number:
                 continue
 
             COM_ports = list_all_com_ports(vendor_id, product_id, serial_number)
 
             if len(COM_ports) > 0:
-                device = EnumeratedDevice(vendor_id, product_id, serial_number, COM_ports)
+                device = EnumeratedDevice(
+                    vendor_id, product_id, serial_number, COM_ports
+                )
                 enumerated_devices.append(device)
 
         return enumerated_devices

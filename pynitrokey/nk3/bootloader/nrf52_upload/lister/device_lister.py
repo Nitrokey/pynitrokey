@@ -36,17 +36,18 @@
 #
 
 import sys
-from .windows.lister_win32 import Win32Lister
+
 from .unix.unix_lister import UnixLister
+from .windows.lister_win32 import Win32Lister
 
 
 class DeviceLister:
     def __init__(self):
-        if sys.platform == 'win32':
+        if sys.platform == "win32":
             self.lister_backend = Win32Lister()
-        elif 'linux' in sys.platform:
+        elif "linux" in sys.platform:
             self.lister_backend = UnixLister()
-        elif sys.platform == 'darwin':
+        elif sys.platform == "darwin":
             self.lister_backend = UnixLister()
         else:
             self.lister_backend = None
@@ -60,12 +61,20 @@ class DeviceLister:
         devices = self.enumerate()
         matching_devices = []
         for dev in devices:
-            if "vendor_id" in kwargs and kwargs["vendor_id"].lower() != dev.vendor_id.lower():
+            if (
+                "vendor_id" in kwargs
+                and kwargs["vendor_id"].lower() != dev.vendor_id.lower()
+            ):
                 continue
-            if "product_id" in kwargs and kwargs["product_id"].lower() != dev.product_id.lower():
+            if (
+                "product_id" in kwargs
+                and kwargs["product_id"].lower() != dev.product_id.lower()
+            ):
                 continue
-            if "serial_number" in kwargs and (kwargs["serial_number"].lower().lstrip('0') !=
-                                              dev.serial_number.lower().lstrip('0')):
+            if "serial_number" in kwargs and (
+                kwargs["serial_number"].lower().lstrip("0")
+                != dev.serial_number.lower().lstrip("0")
+            ):
                 continue
             if "com" in kwargs and not dev.has_com_port(kwargs["com"]):
                 continue

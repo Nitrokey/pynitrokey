@@ -36,10 +36,12 @@
 #
 
 import sys
+
 from ..lister_backend import AbstractLister
 
-if 'linux' in sys.platform or sys.platform == 'darwin':
+if "linux" in sys.platform or sys.platform == "darwin":
     import serial.tools.list_ports
+
     from ..enumerated_device import EnumeratedDevice
 
 
@@ -48,7 +50,6 @@ def create_id_string(sno, PID, VID):
 
 
 class UnixLister(AbstractLister):
-
     def enumerate(self):
         device_identities = {}
         available_ports = serial.tools.list_ports.comports()
@@ -66,6 +67,8 @@ class UnixLister(AbstractLister):
             if id in device_identities:
                 device_identities[id].add_com_port(com_port)
             else:
-                device_identities[id] = EnumeratedDevice(vendor_id, product_id, serial_number, [com_port])
+                device_identities[id] = EnumeratedDevice(
+                    vendor_id, product_id, serial_number, [com_port]
+                )
 
         return [device for device in list(device_identities.values())]
