@@ -19,12 +19,13 @@ from zipfile import ZipFile
 import ecdsa
 import ecdsa.curves
 from ecdsa.keys import BadSignatureError
-from nordicsemi.dfu.dfu_transport import DfuEvent
-from nordicsemi.dfu.dfu_transport_serial import DfuTransportSerial
-from nordicsemi.dfu.init_packet_pb import InitPacketPB
-from nordicsemi.dfu.manifest import Manifest
-from nordicsemi.dfu.package import Package
-from nordicsemi.lister.device_lister import DeviceLister
+
+from .nrf52_upload.dfu.dfu_transport import DfuEvent
+from .nrf52_upload.dfu.dfu_transport_serial import DfuTransportSerial
+from .nrf52_upload.dfu.init_packet_pb import InitPacketPB
+from .nrf52_upload.dfu.manifest import Manifest
+from .nrf52_upload.dfu.package import Package
+from .nrf52_upload.lister.device_lister import DeviceLister
 
 from ..utils import Uuid, Version
 from . import FirmwareMetadata, Nitrokey3Bootloader, ProgressCallback, Variant
