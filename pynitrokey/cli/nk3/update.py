@@ -14,15 +14,8 @@ from typing import Any, Callable, Iterator, List, Optional
 from click import Abort
 
 from pynitrokey.cli.exceptions import CliException
-from pynitrokey.cli.nk3 import VARIANT_CHOICE, Context
-from pynitrokey.helpers import (
-    DownloadProgressBar,
-    ProgressBar,
-    confirm,
-    local_print,
-    prompt,
-)
-from pynitrokey.nk3.bootloader import Variant
+from pynitrokey.cli.nk3 import Context
+from pynitrokey.helpers import DownloadProgressBar, ProgressBar, confirm, local_print
 from pynitrokey.nk3.updates import Updater, UpdateUi
 from pynitrokey.nk3.utils import Version
 
@@ -45,12 +38,31 @@ class UpdateCli(UpdateUi):
             "The firmware image is older than the firmware on the device."
         )
 
+    def abort_pynitrokey_version(
+        self, current: Version, required: Version
+    ) -> Exception:
+        return self.abort(
+            f"This update requires pynitrokey version {required} (current: {current}). "
+            "Please update pynitrokey to install the update."
+        )
+
     def confirm_download(self, current: Optional[Version], new: Version) -> None:
         confirm(
             f"Do you want to download the firmware version {new}?",
             default=True,
             abort=True,
         )
+
+    def confirm_pynitrokey_version(self, current: Version, required: Version) -> None:
+        local_print(
+            f"This update requires pynitrokey version {required} (current: {current})."
+        )
+        local_print("Using an outdated pynitrokey version is strongly discouraged.")
+        if not confirm(
+            "Do you want to continue with an outdated pynitrokey version at your own risk?"
+        ):
+            logger.info("Update cancelled by user")
+            raise Abort()
 
     def confirm_update(self, current: Optional[Version], new: Version) -> None:
         self._print_firmware_versions(current, new)
@@ -90,9 +102,6 @@ class UpdateCli(UpdateUi):
         )
         local_print("")
 
-    def prompt_variant(self) -> Variant:
-        return Variant.from_str(prompt("Firmware image variant", type=VARIANT_CHOICE))
-
     @contextmanager
     def download_progress_bar(self, desc: str) -> Iterator[Callable[[int, int], None]]:
         with DownloadProgressBar(desc) as bar:
@@ -120,7 +129,9 @@ class UpdateCli(UpdateUi):
             self._version_printed = True
 
 
-def update(ctx: Context, image: Optional[str], variant: Optional[Variant]) -> Version:
+def update(
+    ctx: Context, image: Optional[str], ignore_pynitrokey_version: bool
+) -> Version:
     with ctx.connect() as device:
         updater = Updater(UpdateCli(), ctx.await_bootloader, ctx.await_device)
-        return updater.update(device, image, variant)
+        return updater.update(device, image, ignore_pynitrokey_version)
