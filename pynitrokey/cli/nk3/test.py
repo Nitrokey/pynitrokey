@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from enum import Enum, auto, unique
 from hashlib import sha256
 from types import TracebackType
-from typing import Any, Callable, Iterable, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, Iterable, Optional, Tuple, Type, Union
 
 from pynitrokey.cli.exceptions import CliException
 from pynitrokey.fido2 import device_path_to_str
@@ -23,23 +23,12 @@ from pynitrokey.helpers import local_print
 from pynitrokey.nk3.admin_app import AdminApp
 from pynitrokey.nk3.base import Nitrokey3Base
 from pynitrokey.nk3.device import Nitrokey3Device
-from pynitrokey.nk3.utils import Uuid, Version
+from pynitrokey.nk3.utils import Fido2Certs, Uuid, Version
 
 logger = logging.getLogger(__name__)
 
 
 TEST_CASES = []
-
-FIDO2_CERT_HASHES = {
-    Version(0, 1, 0): [
-        "ad8fd1d16f59104b9e06ef323cc03f777ed5303cd421a101c9cb00bb3fdf722d"
-    ],
-    Version(1, 0, 3): [
-        "aa1cb760c2879530e7d7fed3da75345d25774be9cfdbbcbd36fdee767025f34b",  # NK3xN/lpc55
-        "4c331d7af869fd1d8217198b917a33d1fa503e9778da7638504a64a438661ae0",  # NK3AM/nrf52
-        "f1ed1aba24b16e8e3fabcda72b10cbfa54488d3b778bda552162d60c6dd7b4fa",  # NK3AM/nrf52 test
-    ],
-}
 
 AID_ADMIN = [0xA0, 0x00, 0x00, 0x08, 0x47, 0x00, 0x00, 0x00, 0x01]
 AID_PROVISIONER = [0xA0, 0x00, 0x00, 0x08, 0x47, 0x01, 0x00, 0x00, 0x01]
@@ -48,14 +37,6 @@ DEFAULT_EXCLUDES = ["bootloader"]
 
 
 ExcInfo = Tuple[Type[BaseException], BaseException, TracebackType]
-
-
-def get_fido2_cert_hashes(version: Version) -> Optional[List[str]]:
-    versions = [v for v in FIDO2_CERT_HASHES if version >= v]
-    if versions:
-        return FIDO2_CERT_HASHES[max(versions)]
-    else:
-        return None
 
 
 class TestContext:
@@ -315,8 +296,8 @@ def test_fido2(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
 
     firmware_version = ctx.firmware_version or device.version()
     if firmware_version:
-        expected_cert_hashes = get_fido2_cert_hashes(firmware_version)
-        if expected_cert_hashes and cert_hash not in expected_cert_hashes:
+        expected_certs = Fido2Certs.get(firmware_version)
+        if expected_certs and cert_hash not in expected_certs.hashes:
             return TestResult(
                 TestStatus.FAILURE,
                 f"Unexpected FIDO2 cert hash for version {firmware_version}: {cert_hash}",
