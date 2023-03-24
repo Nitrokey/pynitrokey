@@ -168,13 +168,14 @@ class Updater:
         self,
         device: Nitrokey3Base,
         image: Optional[str],
+        update_version: Optional[str],
         ignore_pynitrokey_version: bool = False,
     ) -> Version:
         current_version = (
             device.version() if isinstance(device, Nitrokey3Device) else None
         )
         logger.info(f"Firmware version before update: {current_version or ''}")
-        container = self._prepare_update(image, current_version)
+        container = self._prepare_update(image, update_version, current_version)
 
         if container.pynitrokey:
             pynitrokey_version = Version.from_str(pynitrokey.__version__)
@@ -228,6 +229,7 @@ class Updater:
     def _prepare_update(
         self,
         image: Optional[str],
+        version: Optional[str],
         current_version: Optional[Version],
     ) -> FirmwareContainer:
         if image:
@@ -238,11 +240,18 @@ class Updater:
             self._validate_version(current_version, container.version)
             return container
         else:
-            try:
-                release = REPOSITORY.get_latest_release()
-                logger.info(f"Latest firmware version: {release}")
-            except Exception as e:
-                raise self.ui.error("Failed to find latest firmware release", e)
+            if version:
+                try:
+                    logger.info(f"Downloading firmare version {version}")
+                    release = REPOSITORY.get_release(version)
+                except Exception as e:
+                    raise self.ui.error(f"Failed to get firmware release {version}", e)
+            else:
+                try:
+                    release = REPOSITORY.get_latest_release()
+                    logger.info(f"Latest firmware version: {release}")
+                except Exception as e:
+                    raise self.ui.error("Failed to find latest firmware release", e)
 
             try:
                 release_version = Version.from_v_str(release.tag)

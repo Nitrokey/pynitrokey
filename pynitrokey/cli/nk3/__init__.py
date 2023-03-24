@@ -400,6 +400,10 @@ def validate_update(image: str) -> None:
 @nk3.command()
 @click.argument("image", required=False)
 @click.option(
+    "--version",
+    help="Set the firmware version to update to (default: latest stable)",
+)
+@click.option(
     "--ignore-pynitrokey-version",
     default=False,
     is_flag=True,
@@ -416,6 +420,7 @@ def validate_update(image: str) -> None:
 def update(
     ctx: Context,
     image: Optional[str],
+    version: Optional[str],
     ignore_pynitrokey_version: bool,
     experimental: bool,
 ) -> None:
@@ -427,7 +432,8 @@ def update(
     not be removed during the update.  Also, additional Nitrokey 3 devices may not be connected
     during the update.
 
-    If no firmware image is given, the latest firmware release is downloaded automatically.
+    If no firmware image is given, the latest firmware release is downloaded automatically.  If
+    the --version option is set, the given version is downloaded instead.
 
     If the connected Nitrokey 3 device is in firmware mode, the user is prompted to touch the
     device’s button to confirm rebooting to bootloader mode.
@@ -438,7 +444,7 @@ def update(
 
     from .update import update as exec_update
 
-    exec_update(ctx, image, ignore_pynitrokey_version)
+    exec_update(ctx, image, version, ignore_pynitrokey_version)
 
 
 @nk3.command()
