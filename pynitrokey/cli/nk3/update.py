@@ -130,8 +130,11 @@ class UpdateCli(UpdateUi):
 
 
 def update(
-    ctx: Context, image: Optional[str], ignore_pynitrokey_version: bool
+    ctx: Context,
+    image: Optional[str],
+    version: Optional[str],
+    ignore_pynitrokey_version: bool,
 ) -> Version:
     with ctx.connect() as device:
         updater = Updater(UpdateCli(), ctx.await_bootloader, ctx.await_device)
-        return updater.update(device, image, ignore_pynitrokey_version)
+        return updater.update(device, image, version, ignore_pynitrokey_version)
