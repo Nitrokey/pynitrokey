@@ -218,8 +218,6 @@ def list_credentials(serial, pin):
         CredentialManagement.RESULT.MAX_REMAINING_COUNT
     )
 
-    reliable_party_list = cred_manager.enumerate_rps()
-
     if cred_count == 0:
         local_print("There are no registered credentials")
         local_print(
@@ -229,6 +227,8 @@ def list_credentials(serial, pin):
 
     # Get amount of registered creds from first key in list (Same trick is used in the CredentialManager)
     local_print(f"There are {cred_count} registered credentials")
+
+    reliable_party_list = cred_manager.enumerate_rps()
 
     for reliable_party_result in reliable_party_list:
         reliable_party = reliable_party_result.get(CredentialManagement.RESULT.RP)
