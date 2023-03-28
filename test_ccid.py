@@ -14,8 +14,10 @@ CCID_PROTOCOL_0 = 0x00
 
 l = logging.getLogger("ccid")
 
+
 def icc_compose(msg_type, data_len, slot, seq, param, data):
     return pack("<BiBBBH", msg_type, data_len, slot, seq, 0, param) + data
+
 
 def iso7816_compose(ins, p1, p2, data, cls=0x00, le=None):
     data_len = len(data)
@@ -29,7 +31,6 @@ def iso7816_compose(ins, p1, p2, data, cls=0x00, le=None):
             return pack(">BBBBB", cls, ins, p1, p2, data_len) + data
         else:
             return pack(">BBBBB", cls, ins, p1, p2, data_len) + data + pack(">B", le)
-
 
 
 def devices():
@@ -50,6 +51,7 @@ def devices():
                             l.debug(f"dev {dev} {alt.interfaceClass} {alt.interfaceProtocol} ")
                             yield dev, config, alt
     raise RuntimeError("No devices")
+
 
 def get_device() -> Optional[gnuk_token]:
     for (dev, config, intf) in devices():
@@ -73,33 +75,50 @@ def get_device() -> Optional[gnuk_token]:
 
 
 def test_main():
-
-    assert iso7816_compose(0xA4, 0x04, 0x00, bytes([0xA0, 0x00, 0x00, 0x05, 0x27, 0x21, 0x01]), le=0).hex() == "00a4040007a000000527210100"
+    assert iso7816_compose(0xA4, 0x04, 0x00, bytes([0xA0, 0x00, 0x00, 0x05, 0x27, 0x21, 0x01]),
+                           le=0).hex() == "00a4040007a000000527210100"
 
     g = get_device()
-    data = [
-        # "00a4040009a0000008470000000100",
-        # "0062000000",
-        # poweron
-        icc_compose(0x62, 0, 0, 0, 0, b"").hex(),
-        # "00a4040009a0000008470000000100",
-        # "0063000000",
-        # poweroff ?
-        icc_compose(0x63, 0, 0, 0, 0, b"").hex(),
-        # "00a4040009a0000008470000000100",
-        # "0061000000",
-        # solo version command (works)
-        icc_compose(0x61, 0, 0, 0, 0, b"").hex(),
-        # "00a4040007a000000527210100",
-        # select oath app (here it fails)
-        # iso7816_compose(0xA4, 0x04, 0x00, bytes([0xA0, 0x00, 0x00, 0x05, 0x27, 0x21, 0x01, 0x00])).hex(),
-        iso7816_compose(0xA4, 0x04, 0x00, bytes([0xA0, 0x00, 0x00, 0x05])).hex(),
-        # send reset command
-        iso7816_compose(0x04, 0xDE, 0xAD, data=b'').hex()
-    # usb_ccd
-    ]
-    for d in data:
-        l.debug(f"sending {d} ")
-        d = binascii.a2b_hex(d)
-        r = g.raw_send(d, l)
-        l.debug(f"recv {binascii.b2a_hex(r)} ")
+    g.reset_device()
+    with g.release_on_exit():
+
+        for d in [
+            # "00a4040007a000000527210100",
+            # select oath app
+            iso7816_compose(0xA4, 0x04, 0x00, bytes([0xA0, 0x00, 0x00, 0x05, 0x27, 0x21, 0x01])),
+        ]:
+            l.debug(f"sending {d.hex()} ")
+            r = g.icc_send_cmd(d)
+            l.debug(f"recv d{bytes(r).hex()} ")
+
+
+        data = [
+            # "00a4040009a0000008470000000100",
+            # "0062000000",
+            # poweron
+            icc_compose(0x62, 0, 0, 0, 0, b""),
+            # "00a4040009a0000008470000000100",
+            # "0063000000",
+            # poweroff ?
+            icc_compose(0x63, 0, 0, 0, 0, b""),
+            # "00a4040009a0000008470000000100",
+            # "0061000000",
+            # solo version command (works)
+            icc_compose(0x61, 0, 0, 0, 0, b""),
+        ]
+        for d in data:
+            l.debug(f"sending {d.hex()} ")
+            r = g.raw_send(d, l)
+            l.debug(f"recv {bytes([*r]).hex()} ")
+
+        for d in [
+            # "00a4040007a000000527210100",
+            # select oath app
+            iso7816_compose(0xA4, 0x04, 0x00, bytes([0xA0, 0x00, 0x00, 0x05, 0x27, 0x21, 0x01])),
+            # send reset command
+            iso7816_compose(0x04, 0xDE, 0xAD, data=b'')
+        ]:
+            l.debug(f"sending {d.hex()} ")
+            r = g.icc_send_cmd(d)
+            l.debug(f"recv d{bytes(r).hex()} ")
+

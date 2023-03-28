@@ -252,7 +252,7 @@ class gnuk_token(object):
         self.increment_seq()
         return self.icc_get_result()
 
-    def raw_send(self, data: bytes, l: Optional[logging.Logger] = None):
+    def raw_send(self, data: bytes, l: Optional[logging.Logger] = None) -> bytes:
         if l:
             l.debug(f'sending [{len(data)}] {self.__bulkout:02x} {binascii.b2a_hex(data)}')
         self.__devhandle.bulkWrite(self.__bulkout, data, self.__timeout)
