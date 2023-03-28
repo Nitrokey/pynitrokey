@@ -236,16 +236,21 @@ def list_credentials(serial, pin):
             CredentialManagement.RESULT.RP_ID_HASH
         )
         local_print("-----------------------------------")
-        local_print(f"{reliable_party['name']}: ")
+        if "name" in reliable_party:
+            local_print(f"{reliable_party['name']}: ")
+        else:
+            local_print(f"{reliable_party['id']}: ")
         for cred in cred_manager.enumerate_creds(reliable_party_hash):
             cred_id = cred.get(CredentialManagement.RESULT.CREDENTIAL_ID)["id"]
             cred_user = cred.get(CredentialManagement.RESULT.USER)
             if cred_user["name"] == cred_user["displayName"]:
                 local_print(f"- id: {cred_id.hex()}")
-                local_print(f"user: {cred_user['name']}\n")
+                local_print(f"  user: {cred_user['name']}\n")
             else:
                 local_print(f"- id: {cred_id.hex()}")
-                local_print(f"user: {cred_user['displayName']} ({cred_user['name']})\n")
+                local_print(
+                    f"  user: {cred_user['displayName']} ({cred_user['name']})\n"
+                )
 
         local_print("-----------------------------------")
     local_print(
