@@ -4,10 +4,6 @@ PACKAGE_NAME=pynitrokey
 VENV=venv
 PYTHON3=python3
 
-BLACK_FLAGS=-t py39 --extend-exclude pynitrokey/nethsm/client
-FLAKE8_FLAGS=--extend-exclude pynitrokey/nethsm/client,pynitrokey/nk3/bootloader/nrf52_upload
-ISORT_FLAGS=--py 39 --extend-skip pynitrokey/nethsm/client
-
 # whitelist of directories for flake8
 FLAKE8_DIRS=pynitrokey/nethsm pynitrokey/cli/nk3 pynitrokey/nk3
 
@@ -35,13 +31,13 @@ builde:
 
 # code checks
 check-format:
-	$(PYTHON3) -m black $(BLACK_FLAGS) --check $(PACKAGE_NAME)/
+	$(PYTHON3) -m black --check $(PACKAGE_NAME)/
 
 check-import-sorting:
-	$(PYTHON3) -m isort $(ISORT_FLAGS) --check-only $(PACKAGE_NAME)/
+	$(PYTHON3) -m isort --check-only $(PACKAGE_NAME)/
 
 check-style:
-	$(PYTHON3) -m flake8 $(FLAKE8_FLAGS) $(FLAKE8_DIRS)
+	$(PYTHON3) -m flake8 $(FLAKE8_DIRS)
 
 check-typing:
 	$(PYTHON3) -m mypy $(PACKAGE_NAME)/
