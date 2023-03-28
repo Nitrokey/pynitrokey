@@ -33,13 +33,24 @@ rune:
 builde:
 	earthly +build
 
-# ensure this passes before committing
-check: lint
+# code checks
+check-format:
+	$(PYTHON3) -m black $(BLACK_FLAGS) --check $(PACKAGE_NAME)/
+
+check-import-sorting:
+	$(PYTHON3) -m isort $(ISORT_FLAGS) --check-only $(PACKAGE_NAME)/
+
+check-style:
+	$(PYTHON3) -m flake8 $(FLAKE8_FLAGS) $(FLAKE8_DIRS)
+
+check-typing:
+	$(PYTHON3) -m mypy $(PACKAGE_NAME)/
+
+check-doctest:
+	$(PYTHON3) -m doctest $(PACKAGE_NAME)/nk3/utils.py
+
+check: check-format check-import-sorting check-style check-typing check-doctest
 	@echo "Note: run semi-clean target in case this fails without any proper reason"
-	$(VENV)/bin/python3 -m black $(BLACK_FLAGS) --check $(PACKAGE_NAME)/
-	$(VENV)/bin/python3 -m isort $(ISORT_FLAGS) --check-only $(PACKAGE_NAME)/
-	$(VENV)/bin/python3 -m doctest pynitrokey/nk3/utils.py
-	@echo All good!
 
 # automatic code fixes
 fix: black isort
