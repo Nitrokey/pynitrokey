@@ -358,6 +358,7 @@ class NKFido2Client:
                     "Your device has been blocked after too many failed unlock attempts, to fix this it "
                     "will have to be reset. (If no pin is set, plugging it in again might fix this warning)"
                 )
+            raise
 
         return CredentialManagement(device.ctap2, client_pin.protocol, client_token)
 
