@@ -53,17 +53,9 @@ check: check-format check-import-sorting check-style check-typing check-doctest
 	@echo "Note: run semi-clean target in case this fails without any proper reason"
 
 # automatic code fixes
-fix: black isort
-
-black:
+fix:
 	$(VENV)/bin/python3 -m black $(BLACK_FLAGS) $(PACKAGE_NAME)/
-
-isort:
 	$(VENV)/bin/python3 -m isort $(ISORT_FLAGS) $(PACKAGE_NAME)/
-
-lint:
-	$(VENV)/bin/python3 -m flake8 $(FLAKE8_FLAGS) $(FLAKE8_DIRS)
-	$(VENV)/bin/python3 -m mypy $(PACKAGE_NAME)
 
 semi-clean:
 	rm -rf ./**/__pycache__
