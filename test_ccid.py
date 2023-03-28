@@ -91,10 +91,12 @@ def test_main():
         # solo version command (works)
         icc_compose(0x61, 0, 0, 0, 0, b"").hex(),
         # "00a4040007a000000527210100",
-        # select oath app
-        iso7816_compose(0xA4, 0x04, 0x00, bytes([0xA0, 0x00, 0x00, 0x05, 0x27, 0x21, 0x01, 0x00])).hex(),
+        # select oath app (here it fails)
+        # iso7816_compose(0xA4, 0x04, 0x00, bytes([0xA0, 0x00, 0x00, 0x05, 0x27, 0x21, 0x01, 0x00])).hex(),
+        iso7816_compose(0xA4, 0x04, 0x00, bytes([0xA0, 0x00, 0x00, 0x05])).hex(),
         # send reset command
         iso7816_compose(0x04, 0xDE, 0xAD, data=b'').hex()
+    # usb_ccd
     ]
     for d in data:
         l.debug(f"sending {d} ")

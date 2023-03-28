@@ -254,12 +254,15 @@ class gnuk_token(object):
 
     def raw_send(self, data: bytes, l: Optional[logging.Logger] = None):
         if l:
-            l.debug(f'sending {self.__bulkout:02x} {binascii.b2a_hex(data)}')
+            l.debug(f'sending [{len(data)}] {self.__bulkout:02x} {binascii.b2a_hex(data)}')
         self.__devhandle.bulkWrite(self.__bulkout, data, self.__timeout)
+        # TODO check if the size of the data
+        # self.__devhandle.bulkWrite(self.__bulkout, b'', self.__timeout)
         self.increment_seq()
         if l:
             l.debug(f'recv {self.__bulkin:02x}')
         usbmsg = self.__devhandle.bulkRead(self.__bulkin, 1024, self.__timeout)
+        # TODO receive until the size is smaller than multiple
         return usbmsg
 
         # status, chain, data_rcv = self.icc_get_result()
