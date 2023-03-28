@@ -108,7 +108,7 @@ class gnuk_token(object):
         self.__bulkout = 1
         self.__bulkin = 0x81
 
-        self.__timeout = 10000
+        self.__timeout = 3000
         self.__seq = 0
         self.logger = logging.getLogger("gnuk_token")
 
@@ -251,6 +251,18 @@ class gnuk_token(object):
         self.__devhandle.bulkWrite(self.__bulkout, msg, self.__timeout)
         self.increment_seq()
         return self.icc_get_result()
+
+    def raw_send(self, data: bytes, l: Optional[logging.Logger] = None):
+        if l:
+            l.debug(f'sending {self.__bulkout:02x} {binascii.b2a_hex(data)}')
+        self.__devhandle.bulkWrite(self.__bulkout, data, self.__timeout)
+        self.increment_seq()
+        if l:
+            l.debug(f'recv {self.__bulkin:02x}')
+        usbmsg = self.__devhandle.bulkRead(self.__bulkin, 1024, self.__timeout)
+        return usbmsg
+
+        # status, chain, data_rcv = self.icc_get_result()
 
     def icc_send_cmd(self, data):
         status, chain, data_rcv = self.icc_send_data_block(data)
