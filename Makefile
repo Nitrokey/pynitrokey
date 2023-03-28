@@ -5,7 +5,7 @@ VENV=venv
 PYTHON3=python3
 
 BLACK_FLAGS=-t py39 --extend-exclude pynitrokey/nethsm/client
-FLAKE8_FLAGS=--extend-exclude pynitrokey/nethsm/client
+FLAKE8_FLAGS=--extend-exclude pynitrokey/nethsm/client,pynitrokey/nk3/bootloader/nrf52_upload
 ISORT_FLAGS=--py 39 --extend-skip pynitrokey/nethsm/client
 
 # whitelist of directories for flake8

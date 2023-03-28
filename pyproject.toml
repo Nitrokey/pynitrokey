@@ -29,7 +29,6 @@ dependencies = [
   "fido2 >=1.1.0,<2",
   "intelhex",
   "nkdfu",
-  "nrfutil >=6.1.4,<7",
   "python-dateutil ~= 2.7.0",
   "pyusb",
   "requests",
@@ -37,7 +36,9 @@ dependencies = [
   "tqdm",
   "urllib3 ~= 1.26.7",
   "tlv8",
-  "typing_extensions ~= 4.3.0"
+  "typing_extensions ~= 4.3.0",
+  "pyserial",
+  "protobuf >=3.17.3, < 4.0.0",
 ]
 dynamic = ["version", "description"]
 
@@ -82,6 +83,11 @@ disallow_untyped_defs = true
 # pynitrokey.nethsm.client is auto-generated
 [[tool.mypy.overrides]]
 module = "pynitrokey.nethsm.client.*"
+ignore_errors = true
+
+# pynitrokey.nk3.bootloader.nrf52_upload is only temporary in this package
+[[tool.mypy.overrides]]
+module = "pynitrokey.nk3.bootloader.nrf52_upload.*"
 ignore_errors = true
 
 # libraries without annotations

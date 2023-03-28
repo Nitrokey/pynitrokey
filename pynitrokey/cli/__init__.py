@@ -69,7 +69,6 @@ def nitropy():
         "cryptography",
         "ecdsa",
         "fido2",
-        "nrfutil",
         "pyusb",
         "spsdk",
     ]
