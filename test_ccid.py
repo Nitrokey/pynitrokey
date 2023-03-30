@@ -100,7 +100,7 @@ def test_main():
             # "00a4040009a0000008470000000100",
             # "0063000000",
             # poweroff ?
-            icc_compose(0x63, 0, 0, 0, 0, b""),
+            icc_compose(0x63, 0, 0, 0, 0, b""),  # this one does not seem to be needed
             # "00a4040009a0000008470000000100",
             # "0061000000",
             # solo version command (works)

@@ -111,6 +111,7 @@ class gnuk_token(object):
         self.__timeout = 3000
         self.__seq = 0
         self.logger = logging.getLogger("gnuk_token")
+        self.logger.debug(f'int number {self.__intf}, alt: {self.__alt}, conf: {self.__conf}')
 
     def set_logger(self, logger: logging.Logger):
         self.logger = logger.getChild("gnuk_token")
@@ -218,6 +219,7 @@ class gnuk_token(object):
         error = msg[8]
         chain = msg[9]
         data = msg[10:]
+        self.logger.debug(f'reading m{bytearray(msg).hex()} s{status} c{chain} [{len(data)}] {self.__bulkout:02x} {binascii.b2a_hex(data)}')
         # XXX: check msg_type, data_len, slot, seq, error
         return (status, chain, data)
 
@@ -248,6 +250,7 @@ class gnuk_token(object):
 
     def icc_send_data_block(self, data):
         msg = icc_compose(0x6F, len(data), 0, self.__seq, 0, data)
+        self.logger.debug(f'icc sending [{len(msg)}] {self.__bulkout:02x} {binascii.b2a_hex(msg)}')
         self.__devhandle.bulkWrite(self.__bulkout, msg, self.__timeout)
         self.increment_seq()
         return self.icc_get_result()
@@ -278,6 +281,7 @@ class gnuk_token(object):
             while True:
                 msg = icc_compose(0x6F, 0, 0, self.__seq, 0x10, b"")
                 self.__devhandle.bulkWrite(self.__bulkout, msg, self.__timeout)
+                self.logger.debug(f'icc recv {self.__bulkin:02x}')
                 self.increment_seq()
                 status, chain, data_rcv = self.icc_get_result()
                 # XXX: check status
