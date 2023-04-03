@@ -31,25 +31,6 @@ build-pypi:
     paths:
       - artifacts
 
-build-msi:
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "push"'
-    - if: '$CI_PIPELINE_SOURCE == "schedule"'
-    - if: '$CI_PIPELINE_SOURCE == "web"'
-  tags:
-    - lxc
-  stage: build
-  script:
-    - make wine-build
-  after_script:
-    - wget $icon_server/checkmark/$CI_COMMIT_REF_NAME/$CI_COMMIT_SHA/$CI_JOB_NAME/$CI_JOB_STATUS/${CI_JOB_URL#*/*/*/} || true
-    - mkdir -p artifacts
-    - cp wine-build/*.exe artifacts
-    - cp wine-build/*.msi artifacts
-  artifacts:
-    paths:
-    - artifacts
-
 build-and-publish-pypi:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "web"'
