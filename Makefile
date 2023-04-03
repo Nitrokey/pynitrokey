@@ -1,4 +1,4 @@
-.PHONY: black build clean publish reinstall
+.PHONY: all black build clean publish reinstall
 
 PACKAGE_NAME=pynitrokey
 VENV=venv
@@ -10,6 +10,8 @@ ISORT_FLAGS=--py 39 --extend-skip pynitrokey/nethsm/client
 
 # whitelist of directories for flake8
 FLAKE8_DIRS=pynitrokey/nethsm pynitrokey/cli/nk3 pynitrokey/nk3
+
+all: init
 
 .PHONY: init-fedora37
 init-fedora37:
