@@ -1,0 +1,80 @@
+name: Continuous delivery - Windows
+
+on:
+  release:
+    types: [published, unpublished]
+
+env:
+  FLIT_ROOT_INSTALL: 1
+
+jobs:
+  version-check:
+    name: Check versioning
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Check version tag format
+        run: |
+          $VERSION_TAG="${{ github.event.release.tag_name }}"
+          if ($VERSION_TAG -match "^v[0-9]+.[0-9]+.[0-9]+$") {exit 0} else {exit 1}
+      - name: Check if version tag and package version are equal
+        run: |
+          $VERSION_TAG="${{ github.event.release.tag_name }}"
+          $VERSION_FILE=Get-Content .\pynitrokey\VERSION
+          if ($VERSION_TAG.Substring(1) -eq $VERSION_FILE) {exit 0} else {exit 1}
+  build-onefile:
+    name: Build onefile
+    runs-on: windows-latest
+    needs: version-check
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Create virtual environment
+        run: |
+          python -m venv venv
+          .\venv\Scripts\Activate.ps1
+          .\venv\Scripts\pip install pip
+          .\venv\Scripts\pip install flit
+          .\venv\Scripts\flit install --symlink
+      - name: Create Windows version info file
+        run: |
+          .\venv\Scripts\Activate.ps1
+          create-version-file `
+            --outfile .\ci-scripts\windows\pyinstaller\file_version_info.txt `
+            --version "$(Get-Content .\pynitrokey\VERSION)" `
+            .\ci-scripts\windows\pyinstaller\file_version_info_metadata.yaml
+      - name: Build onefile
+        run: |
+          .\venv\Scripts\Activate.ps1
+          pyinstaller ci-scripts/windows/pyinstaller/pynitrokey-onefile.spec
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: pynitrokey-onefile
+          path: dist/nitropy.exe
+  publish-binary:
+    name: Publish binary
+    runs-on: windows-latest
+    needs: build-onefile
+    permissions:
+      contents: write
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: pynitrokey-onefile
+      - name: Rename binary
+        run: |
+          mv `
+            nitropy.exe `
+            nitropy-${{ github.event.release.tag_name }}-x64-windows-binary.exe
+      - name: Create archive
+        run: |
+          7z a -tzip -mx9 `
+            nitropy-${{ github.event.release.tag_name }}-x64-windows-binary.zip `
+            nitropy-${{ github.event.release.tag_name }}-x64-windows-binary.exe
+      - name: Publish release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: nitropy-${{ github.event.release.tag_name }}-x64-windows-binary.zip
