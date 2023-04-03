@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+    <Product Id="*"
+        Name="Nitropy"
+        Language="1033"
+        Version="!(bind.FileVersion.nitropy.exe)"
+        Manufacturer="Nitrokey GmbH"
+        UpgradeCode="{0EF8A76B-070C-407E-AED2-BED822A6F4F5}">
+
+        <Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" Platform="x64" />
+
+        <MajorUpgrade DowngradeErrorMessage="A newer version of Nitropy is already installed." />
+
+        <MediaTemplate EmbedCab="yes"/>
+
+        <Feature Id="ProductFeature" Title="Nitropy" Level="1">
+            <ComponentGroupRef Id="ApplicationFiles" />
+            <ComponentRef Id="PathVariable" />
+        </Feature>
+    </Product>
+
+    <!-- Paths for installation-->
+    <Fragment>
+        <Directory Id="TARGETDIR" Name="SourceDir">
+            <!-- Application files -->
+            <Directory Id="ProgramFiles64Folder">
+                <Directory Id="MANUFACTURER" Name="Nitrokey">
+                    <Directory Id="INSTALLFOLDER" Name="Nitropy" />
+                </Directory>
+            </Directory>
+        </Directory>
+    </Fragment>
+
+    <!-- Application files component -->
+    <Fragment>
+        <ComponentGroup Id="ApplicationFiles" Directory="INSTALLFOLDER">
+            <ComponentGroupRef Id="ApplicationFilesDynamic" />
+        </ComponentGroup>
+    </Fragment>
+
+   <!-- Path variable component -->
+   <Fragment>
+       <Component Id="PathVariable" Directory="INSTALLFOLDER" Guid="{A7D3660F-C57D-4011-AF8F-F528FD4065FD}">
+           <Environment Id="UpdatePath" Name="Path" Value="[INSTALLFOLDER]" Action="set" Part="last" System="yes" Separator=";" />
+           <CreateFolder />
+       </Component>
+   </Fragment>
+</Wix>
