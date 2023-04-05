@@ -3,6 +3,7 @@
 PACKAGE_NAME=pynitrokey
 VENV=venv
 PYTHON3=python3
+PYTHON3_VENV=venv/bin/python3
 
 # whitelist of directories for flake8
 FLAKE8_DIRS=pynitrokey/nethsm pynitrokey/cli/nk3 pynitrokey/nk3
@@ -31,27 +32,27 @@ builde:
 
 # code checks
 check-format:
-	$(PYTHON3) -m black --check $(PACKAGE_NAME)/
+	$(PYTHON3_VENV) -m black --check $(PACKAGE_NAME)/
 
 check-import-sorting:
-	$(PYTHON3) -m isort --check-only $(PACKAGE_NAME)/
+	$(PYTHON3_VENV) -m isort --check-only $(PACKAGE_NAME)/
 
 check-style:
-	$(PYTHON3) -m flake8 $(FLAKE8_DIRS)
+	$(PYTHON3_VENV) -m flake8 $(FLAKE8_DIRS)
 
 check-typing:
-	$(PYTHON3) -m mypy $(PACKAGE_NAME)/
+	$(PYTHON3_VENV) -m mypy $(PACKAGE_NAME)/
 
 check-doctest:
-	$(PYTHON3) -m doctest $(PACKAGE_NAME)/nk3/utils.py
+	$(PYTHON3_VENV) -m doctest $(PACKAGE_NAME)/nk3/utils.py
 
 check: check-format check-import-sorting check-style check-typing check-doctest
 	@echo "Note: run semi-clean target in case this fails without any proper reason"
 
 # automatic code fixes
 fix:
-	$(VENV)/bin/python3 -m black $(BLACK_FLAGS) $(PACKAGE_NAME)/
-	$(VENV)/bin/python3 -m isort $(ISORT_FLAGS) $(PACKAGE_NAME)/
+	$(PYTHON3_VENV) -m black $(BLACK_FLAGS) $(PACKAGE_NAME)/
+	$(PYTHON3_VENV) -m isort $(ISORT_FLAGS) $(PACKAGE_NAME)/
 
 semi-clean:
 	rm -rf ./**/__pycache__
@@ -73,13 +74,13 @@ tag:
 
 .PHONY: build-forced
 build-forced:
-	$(VENV)/bin/python3 -m flit build
+	$(PYTHON3_VENV) -m flit build
 
 build: check
-	$(VENV)/bin/python3 -m flit build
+	$(PYTHON3_VENV) -m flit build
 
 publish:
-	$(VENV)/bin/python3 -m flit --repository pypi publish
+	$(PYTHON3_VENV) -m flit --repository pypi publish
 
 system-pip-install-upgrade:
 	$(PYTHON3) -m pip install -U pynitrokey
@@ -100,15 +101,15 @@ system-nitropy-test-simple:
 
 $(VENV):
 	$(PYTHON3) -m venv $(VENV)
-	$(VENV)/bin/python3 -m pip install -U pip
+	$(PYTHON3_VENV) -m pip install -U pip
 
 
 # re-run if dev or runtime dependencies change,
 # or when adding new scripts
 update-venv: $(VENV)
-	$(VENV)/bin/python3 -m pip install -U pip
-	$(VENV)/bin/python3 -m pip install flit
-	$(VENV)/bin/python3 -m flit install --symlink
+	$(PYTHON3_VENV) -m pip install -U pip
+	$(PYTHON3_VENV) -m pip install flit
+	$(PYTHON3_VENV) -m flit install --symlink
 
 .PHONY: CI
 CI:
