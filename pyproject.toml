@@ -63,8 +63,14 @@ Source = "https://github.com/Nitrokey/pynitrokey"
 [project.scripts]
 nitropy = "pynitrokey.cli:main"
 
+[tool.black]
+target-version = ["py39"]
+extend-exclude = 'pynitrokey/nethsm/client'
+
 [tool.isort]
+py_version = "39"
 profile = "black"
+extend_skip = ["pynitrokey/nethsm/client"]
 
 [tool.mypy]
 mypy_path = "stubs"

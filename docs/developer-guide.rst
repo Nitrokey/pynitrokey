@@ -47,7 +47,7 @@ If you have an OpenPGP key, please sign all your commits with it.  We require al
 Supported Python Versions
 -------------------------
 
-The current minimum required Python version is documented in the readme.  Make sure that your code works with this Python version.  The minimum required Python version is selected to be compatible with the latest Ubuntu LTS and regular releases and with the latest Debian stable release. If there has not been a point release for the latest Ubuntu LTS release yet, we also support the second-latest Ubuntu LTS release.
+The current minimum required Python version is documented in the readme.  Make sure that your code works with this Python version.  The minimum required Python version is selected to be compatible with the latest Ubuntu LTS and regular releases and with the latest Debian stable release. If there has not been a point release for the latest Ubuntu LTS release yet, we also support the second-latest Ubuntu LTS release. Raising the required Python version requires adapting the CI to this new minimum too.
 
 Commit Hooks
 --------------

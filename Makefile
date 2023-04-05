@@ -3,10 +3,7 @@
 PACKAGE_NAME=pynitrokey
 VENV=venv
 PYTHON3=python3
-
-BLACK_FLAGS=-t py39 --extend-exclude pynitrokey/nethsm/client
-FLAKE8_FLAGS=--extend-exclude pynitrokey/nethsm/client,pynitrokey/nk3/bootloader/nrf52_upload
-ISORT_FLAGS=--py 39 --extend-skip pynitrokey/nethsm/client
+PYTHON3_VENV=venv/bin/python3
 
 # whitelist of directories for flake8
 FLAKE8_DIRS=pynitrokey/nethsm pynitrokey/cli/nk3 pynitrokey/nk3
@@ -35,26 +32,29 @@ rune:
 builde:
 	earthly +build
 
-# ensure this passes before committing
-check: lint
+# code checks
+check-format:
+	$(PYTHON3_VENV) -m black --check $(PACKAGE_NAME)/
+
+check-import-sorting:
+	$(PYTHON3_VENV) -m isort --check-only $(PACKAGE_NAME)/
+
+check-style:
+	$(PYTHON3_VENV) -m flake8 $(FLAKE8_DIRS)
+
+check-typing:
+	$(PYTHON3_VENV) -m mypy $(PACKAGE_NAME)/
+
+check-doctest:
+	$(PYTHON3_VENV) -m doctest $(PACKAGE_NAME)/nk3/utils.py
+
+check: check-format check-import-sorting check-style check-typing check-doctest
 	@echo "Note: run semi-clean target in case this fails without any proper reason"
-	$(VENV)/bin/python3 -m black $(BLACK_FLAGS) --check $(PACKAGE_NAME)/
-	$(VENV)/bin/python3 -m isort $(ISORT_FLAGS) --check-only $(PACKAGE_NAME)/
-	$(VENV)/bin/python3 -m doctest pynitrokey/nk3/utils.py
-	@echo All good!
 
 # automatic code fixes
-fix: black isort
-
-black:
-	$(VENV)/bin/python3 -m black $(BLACK_FLAGS) $(PACKAGE_NAME)/
-
-isort:
-	$(VENV)/bin/python3 -m isort $(ISORT_FLAGS) $(PACKAGE_NAME)/
-
-lint:
-	$(VENV)/bin/python3 -m flake8 $(FLAKE8_FLAGS) $(FLAKE8_DIRS)
-	$(VENV)/bin/python3 -m mypy $(PACKAGE_NAME)
+fix:
+	$(PYTHON3_VENV) -m black $(BLACK_FLAGS) $(PACKAGE_NAME)/
+	$(PYTHON3_VENV) -m isort $(ISORT_FLAGS) $(PACKAGE_NAME)/
 
 semi-clean:
 	rm -rf ./**/__pycache__
@@ -76,13 +76,13 @@ tag:
 
 .PHONY: build-forced
 build-forced:
-	$(VENV)/bin/python3 -m flit build
+	$(PYTHON3_VENV) -m flit build
 
 build: check
-	$(VENV)/bin/python3 -m flit build
+	$(PYTHON3_VENV) -m flit build
 
 publish:
-	$(VENV)/bin/python3 -m flit --repository pypi publish
+	$(PYTHON3_VENV) -m flit --repository pypi publish
 
 system-pip-install-upgrade:
 	$(PYTHON3) -m pip install -U pynitrokey
@@ -103,15 +103,15 @@ system-nitropy-test-simple:
 
 $(VENV):
 	$(PYTHON3) -m venv $(VENV)
-	$(VENV)/bin/python3 -m pip install -U pip
+	$(PYTHON3_VENV) -m pip install -U pip
 
 
 # re-run if dev or runtime dependencies change,
 # or when adding new scripts
 update-venv: $(VENV)
-	$(VENV)/bin/python3 -m pip install -U pip
-	$(VENV)/bin/python3 -m pip install flit
-	$(VENV)/bin/python3 -m flit install --symlink
+	$(PYTHON3_VENV) -m pip install -U pip
+	$(PYTHON3_VENV) -m pip install flit
+	$(PYTHON3_VENV) -m flit install --symlink
 
 .PHONY: CI
 CI:

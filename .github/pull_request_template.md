@@ -8,8 +8,9 @@ This PR...
 
 ## Checklist
 
+Make sure to run `make check` and `make fix` before creating a PR, otherwise the CI will fail.
+
 - [ ] tested with Python3.9
-- [ ] run `make check` or `make fix` for the formatting check
 - [ ] signed commits
 - [ ] updated documentation (e.g. parameter description, inline doc, docs.nitrokey)
 - [ ] added labels

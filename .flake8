@@ -7,3 +7,4 @@ max-line-length = 80
 # temporary increase due to solo.key.update complexity
 max-complexity = 30
 select = B,C,E,F,W,T4,B9
+extend-exclude = pynitrokey/nethsm/client,pynitrokey/nk3/bootloader/nrf52_upload
