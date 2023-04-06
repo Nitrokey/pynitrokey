@@ -148,15 +148,6 @@ nethsm-client: nethsm-api.yaml
 		-g=python -o=/out/python --package-name=pynitrokey.nethsm.client
 	cp -r "${OPENAPI_OUTPUT_DIR}/python/pynitrokey/nethsm/client" pynitrokey/nethsm
 
-.PHONY: wine-build
-wine-build: wine-build/pynitrokey-$(VERSION).msi wine-build/nitropy-$(VERSION).exe
-
-wine-build/pynitrokey-$(VERSION).msi wine-build/nitropy-$(VERSION).exe:
-	bash build-wine.sh
-	#cp wine-build/out/pynitrokey-$(VERSION)-win32.msi wine-build
-	cp wine-build/out/nitropy-$(VERSION).exe wine-build
-
-
 .PHONY: secrets-test-all secrets-test
 TESTPARAM=-x -s -o log_cli=true
 secrets-test-all: init

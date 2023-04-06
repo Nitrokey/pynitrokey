@@ -3,6 +3,7 @@
 # before adding to this file
 
 dist/
+build/
 venv/
 venv-ci/
 firmware-*.json
