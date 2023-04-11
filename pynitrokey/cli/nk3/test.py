@@ -33,7 +33,7 @@ TEST_CASES = []
 AID_ADMIN = [0xA0, 0x00, 0x00, 0x08, 0x47, 0x00, 0x00, 0x00, 0x01]
 AID_PROVISIONER = [0xA0, 0x00, 0x00, 0x08, 0x47, 0x01, 0x00, 0x00, 0x01]
 
-DEFAULT_EXCLUDES = ["bootloader"]
+DEFAULT_EXCLUDES = ["bootloader", "provisioner"]
 
 
 ExcInfo = Tuple[Type[BaseException], BaseException, TracebackType]
@@ -187,10 +187,15 @@ def test_bootloader_configuration(
         return TestResult(TestStatus.FAILURE, "bootloader not locked")
 
 
-try:
-    from smartcard import System
-    from smartcard.CardConnection import CardConnection
-    from smartcard.Exceptions import NoCardException
+@test_case("provisioner", "Firmware mode")
+def test_firmware_mode(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
+    try:
+        from smartcard import System
+        from smartcard.CardConnection import CardConnection
+        from smartcard.Exceptions import NoCardException
+    except ImportError:
+        logger.debug("pcsc feature is deactivated, skipping firmware mode test")
+        return TestResult(TestStatus.SKIPPED, "pcsc feature is deactivated")
 
     def find_smartcard(uuid: Uuid) -> CardConnection:
         for reader in System.readers():
@@ -218,20 +223,14 @@ try:
         _, sw1, sw2 = conn.transmit(apdu)
         return (sw1, sw2) == (0x90, 0x00)
 
-    @test_case("provisioner", "Firmware mode")
-    def test_firmware_mode(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
-        uuid = device.uuid()
-        if not uuid:
-            return TestResult(TestStatus.SKIPPED, "no UUID")
-        conn = find_smartcard(uuid)
-        if select(conn, AID_PROVISIONER):
-            return TestResult(TestStatus.FAILURE, "provisioner application active")
-        else:
-            return TestResult(TestStatus.SUCCESS)
-
-except ImportError:
-    logger.debug("pcsc feature is deactivated, skipping firmware mode test")
-    pass
+    uuid = device.uuid()
+    if not uuid:
+        return TestResult(TestStatus.SKIPPED, "no UUID")
+    conn = find_smartcard(uuid)
+    if select(conn, AID_PROVISIONER):
+        return TestResult(TestStatus.FAILURE, "provisioner application active")
+    else:
+        return TestResult(TestStatus.SUCCESS)
 
 
 @test_case("fido2", "FIDO2")
