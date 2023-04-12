@@ -39,5 +39,5 @@ build-and-publish-pypi:
   stage: build
   script:
     - make CI
-    - sed -e "s|\${passw}|$PYPI_TOKEN|" ci-scripts/.pypirc_tamplate > ~/.pypirc
+    - sed -e "s|\${passw}|$PYPI_TOKEN|" ci-scripts/pypi/.pypirc_template > ~/.pypirc
     - make publish
