@@ -7,8 +7,10 @@ import binascii
 import datetime
 import hashlib
 import hmac
+import logging
 import time
 from datetime import timedelta
+from os import wait
 from sys import stderr
 from typing import Any, Callable, List
 
@@ -19,6 +21,7 @@ import tlv8
 from pynitrokey.conftest import (
     CHALLENGE,
     CREDID,
+    DELAY_AFTER_FAILED_REQUEST_SECONDS,
     DIGITS,
     FEATURE_CHALLENGE_RESPONSE_ENABLED,
     HOTP_WINDOW_SIZE,
@@ -214,7 +217,7 @@ def test_calculated_codes_test_vector(secretsAppResetLogin):
         assert secretsApp.calculate(CREDID, i) == codes[i]
 
 
-def test_reverse_hotp(secretsAppResetLogin):
+def test_reverse_hotp_vectors(secretsAppResetLogin):
     """
     Test passing conditions for the HOTP reverse check
     Check against RFC4226 test vectors, as provided in
@@ -261,24 +264,36 @@ def test_reverse_hotp_failure(secretsAppResetLogin):
     secretsApp.register(
         CREDID, secretb, digits=6, kind=Kind.HotpReverse, algo=Algorithm.Sha1
     )
+    # Make sure the obligatory delay has passed in case the previous test has triggered it
+    helper_wait(DELAY_AFTER_FAILED_REQUEST_SECONDS)
     for i in range(3):
         c = codes[i]
         with pytest.raises(SecretsAppException, match="VerificationFailed"):
             assert not secretsApp.verify_code(CREDID, c)
+        helper_wait(DELAY_AFTER_FAILED_REQUEST_SECONDS)
 
     # Test parsing too long code
     with pytest.raises(SecretsAppException, match="VerificationFailed"):
         assert not secretsApp.verify_code(CREDID, 10**5)
+    helper_wait(DELAY_AFTER_FAILED_REQUEST_SECONDS)
 
     secretsApp.verify_pin_raw(PIN)
     secretsApp.register(CREDID, secretb, digits=7, kind=Kind.Hotp, algo=Algorithm.Sha1)
     with pytest.raises(SecretsAppException, match="ConditionsOfUseNotSatisfied"):
         assert not secretsApp.verify_code(CREDID, 10**6)
+    helper_wait(DELAY_AFTER_FAILED_REQUEST_SECONDS)
 
     secretsApp.verify_pin_raw(PIN)
     secretsApp.register(CREDID, secretb, digits=8, kind=Kind.Hotp, algo=Algorithm.Sha1)
     with pytest.raises(SecretsAppException, match="ConditionsOfUseNotSatisfied"):
         assert not secretsApp.verify_code(CREDID, 10**7)
+    helper_wait(DELAY_AFTER_FAILED_REQUEST_SECONDS)
+
+
+def helper_wait(seconds: int) -> None:
+    l = logging.getLogger()
+    l.debug(f"Waiting {seconds}")
+    time.sleep(seconds)
 
 
 @pytest.mark.parametrize(
@@ -324,6 +339,7 @@ def test_reverse_hotp_window(secretsAppResetLogin, offset, start_value):
         # calls with offset bigger than HOTP_WINDOW_SIZE should fail
         with pytest.raises(SecretsAppException, match="VerificationFailed"):
             secretsApp.verify_code(CREDID, code_to_send)
+        helper_wait(DELAY_AFTER_FAILED_REQUEST_SECONDS)
     else:
         # check if this code will be accepted on the given offset
         assert secretsApp.verify_code(CREDID, code_to_send)
@@ -337,8 +353,9 @@ def test_reverse_hotp_window(secretsAppResetLogin, offset, start_value):
                 SecretsAppException,
                 match="UnspecifiedPersistentExecutionError|VerificationFailed",
             ):
-                # send the same code once again
+                # send the same code once again - should be rejected
                 secretsApp.verify_code(CREDID, code_to_send)
+            helper_wait(DELAY_AFTER_FAILED_REQUEST_SECONDS)
             # test the very next value - should be accepted
             code_to_send = lib_at(start_value + offset + 1)
             code_to_send = int(code_to_send)
@@ -350,6 +367,7 @@ def test_reverse_hotp_window(secretsAppResetLogin, offset, start_value):
                     SecretsAppException, match="UnspecifiedPersistentExecutionError"
                 ):
                     secretsApp.verify_code(CREDID, code_to_send)
+                helper_wait(DELAY_AFTER_FAILED_REQUEST_SECONDS)
 
 
 @pytest.mark.parametrize(

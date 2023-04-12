@@ -103,6 +103,7 @@ def secretsAppNoLog(corpus_func, dev):
     return app
 
 
+DELAY_AFTER_FAILED_REQUEST_SECONDS = 2
 CREDID = "CRED ID"
 SECRET = b"00" * 20
 DIGITS = 6
