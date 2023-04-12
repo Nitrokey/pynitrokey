@@ -251,6 +251,7 @@ def test_reverse_hotp_vectors(secretsAppResetLogin):
         assert secretsApp.verify_code(CREDID, c)
 
 
+@pytest.mark.slow
 def test_reverse_hotp_failure(secretsAppResetLogin):
     """
     Test failing conditions for the HOTP reverse check
@@ -409,6 +410,7 @@ def test_calculated_codes_totp_hash_digits(
         assert secretsApp.calculate(CREDID, i) == lib_at(i)
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize(
     "long_labels",
     ["short_labels", "long_labels"],
@@ -499,6 +501,7 @@ def test_load(secretsAppResetLogin, kind: Kind, long_labels: str, count):
     assert len(l) == credentials_registered
 
 
+@pytest.mark.slow
 def test_remove_all_credentials_by_hand(secretsApp):
     """Remove all hold credentials by hand and test for being empty.
     Can fail if the previous test was not registering any credentials.
