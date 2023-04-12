@@ -55,6 +55,7 @@ dev = [
   "types-requests",
   "types-tqdm",
   "pytest",
+  "pytest-reporter-html1",
   "oath"
 ]
 pcsc = ["pyscard >=2.0.0,<3"]
