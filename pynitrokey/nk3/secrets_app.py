@@ -175,9 +175,13 @@ class SecretsApp:
                 return b""
             if isinstance(d, RawBytes):
                 # return b"".join(d.data)
-                return bytes(d.data)
-            if isinstance(d, tlv8.Entry):
-                return tlv8.encode([d])
+                res = bytes(d.data)
+                self.logfn(f"Transforming {d} -> {res.hex()}")
+                return res
+            elif isinstance(d, tlv8.Entry):
+                res = tlv8.encode([d])
+                self.logfn(f"Transforming {d} -> {res.hex()}")
+                return res
             return b""
 
         encoded_structure = b"".join(map(transform, structure))
