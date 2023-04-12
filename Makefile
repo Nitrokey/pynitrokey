@@ -149,10 +149,12 @@ nethsm-client: nethsm-api.yaml
 	cp -r "${OPENAPI_OUTPUT_DIR}/python/pynitrokey/nethsm/client" pynitrokey/nethsm
 
 .PHONY: secrets-test-all secrets-test
-TESTPARAM=-x -s -o log_cli=true
+LOG=info
+TESTADD=
+TESTPARAM=-x -s -o log_cli=true -o log_cli_level=$(LOG) -W ignore::DeprecationWarning $(TESTADD)
 secrets-test-all: init
 	./venv/bin/pytest  -v pynitrokey/test_secrets_app.py --durations=0 $(TESTPARAM)
 
-secrets-test: init
+secrets-test:
 	@echo "Skipping slow tests. Run secrets-test-all target for all tests."
 	./venv/bin/pytest  -v pynitrokey/test_secrets_app.py --durations=0 -m "not slow" $(TESTPARAM)
