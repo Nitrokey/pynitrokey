@@ -238,6 +238,8 @@ def verify(ctx: Context, name: str, code: int) -> None:
     with ctx.connect_device() as device:
         app = SecretsApp(device)
         ask_to_touch_if_needed()
+        authenticate_if_needed(app)
+
         try:
             app.verify_code(name.encode(), code)
         except fido2.ctap.CtapError as e:
