@@ -245,6 +245,13 @@ def rng(ctx: Context, length: int) -> None:
     default=False,
     help="List the selected tests instead of running them",
 )
+@click.option(
+    "--deny-skipped",
+    "deny_skipped",
+    is_flag=True,
+    default=False,
+    help="Return an error if one or more tests have been skipped",
+)
 @click.pass_obj
 def test(
     ctx: Context,
@@ -254,6 +261,7 @@ def test(
     include: Optional[str],
     exclude: Optional[str],
     list_: bool,
+    deny_skipped: bool,
 ) -> None:
     """Run some tests on all connected Nitrokey 3 devices."""
     from .test import (
@@ -296,7 +304,7 @@ def test(
     results = []
     test_ctx = TestContext(pin=pin)
     for device in devices:
-        results.append(run_tests(test_ctx, device, test_selector))
+        results.append(run_tests(test_ctx, device, test_selector, deny_skipped))
 
     n = len(devices)
     success = sum(results)
@@ -551,7 +559,7 @@ def provision_fido2(ctx: Context, key_file: BinaryIO, cert_file: BinaryIO) -> No
             raise CliException(f"Missing subject {name} in certificate")
     if subject_attrs["OU"] != "Authenticator Attestation":
         raise CliException(
-            f"Unexpected certificate subject OU {subject_attrs['OU']} (expected "
+            f"Unexpected certificate subject OU {subject_attrs['OU']!r} (expected "
             "Authenticator Attestation)"
         )
 
