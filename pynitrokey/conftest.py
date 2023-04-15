@@ -55,8 +55,12 @@ def generate_corpus_args(request: FixtureRequest):
     ), request.config.getoption("--fuzzing-corpus-path")
 
 
+# @pytest.fixture(scope="function")
 @pytest.fixture(scope="function")
 def corpus_func(request: FixtureRequest, generate_corpus_args):
+    """
+    This fixture has to be function-scoped, to get different prefix "pre" for the per-test output
+    """
     generate_corpus, corpus_path = generate_corpus_args
     if generate_corpus:
         print(
@@ -85,7 +89,7 @@ class CredentialsType(Enum):
     no_pin_based_encryption = auto()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def secretsAppRaw(corpus_func, dev):
     """
     Create Secrets App client with or without corpus files generations.
@@ -97,8 +101,7 @@ def secretsAppRaw(corpus_func, dev):
 
 
 @pytest.fixture(
-    # scope="function",
-    scope="session",
+    scope="function",
     params=[
         CredentialsType.no_pin_based_encryption,
         CredentialsType.pin_based_encryption,
