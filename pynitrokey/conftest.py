@@ -1,3 +1,4 @@
+import copy
 import logging
 import pathlib
 import secrets
@@ -107,7 +108,7 @@ def secretsApp(request, secretsAppRaw):
     """
     Create Secrets App client in two forms, w/ or w/o PIN-based encryption
     """
-    app = secretsAppRaw
+    app = copy.deepcopy(secretsAppRaw)
 
     credentials_type: CredentialsType = request.param
     if credentials_type == CredentialsType.pin_based_encryption:
