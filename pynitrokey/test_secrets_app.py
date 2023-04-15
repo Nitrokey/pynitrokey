@@ -359,12 +359,14 @@ def test_reverse_hotp_window(secretsAppResetLogin, offset, start_value):
                 SecretsAppException,
                 match="UnspecifiedPersistentExecutionError|VerificationFailed",
             ):
+                secretsAppResetLogin.verify_pin_raw(PIN)
                 # send the same code once again - should be rejected
                 secretsApp.verify_code(CREDID, code_to_send)
             helper_wait_after_failed_hotp_verification_request()
             # test the very next value - should be accepted
             code_to_send = lib_at(start_value + offset + 1)
             code_to_send = int(code_to_send)
+            secretsAppResetLogin.verify_pin_raw(PIN)
             assert secretsApp.verify_code(CREDID, code_to_send)
         else:
             # counter got saturated, error code will be returned
@@ -372,6 +374,7 @@ def test_reverse_hotp_window(secretsAppResetLogin, offset, start_value):
                 with pytest.raises(
                     SecretsAppException, match="UnspecifiedPersistentExecutionError"
                 ):
+                    secretsAppResetLogin.verify_pin_raw(PIN)
                     secretsApp.verify_code(CREDID, code_to_send)
                 helper_wait_after_failed_hotp_verification_request()
 
