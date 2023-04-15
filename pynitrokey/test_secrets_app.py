@@ -19,23 +19,28 @@ import pytest
 import tlv8
 
 from pynitrokey.conftest import (
+    CALCULATE_ALL_COMMANDS,
     CHALLENGE,
+    CHALLENGE_RESPONSE_COMMANDS,
     CREDID,
     DELAY_AFTER_FAILED_REQUEST_SECONDS,
     DIGITS,
+    FEATURE_BRUTEFORCE_PROTECTION_ENABLED,
     FEATURE_CHALLENGE_RESPONSE_ENABLED,
     HOTP_WINDOW_SIZE,
     PIN,
     PIN2,
     PIN_ATTEMPT_COUNTER_DEFAULT,
     SECRET,
-    CredentialsType,
+    CredEncryptionType,
 )
 from pynitrokey.nk3.secrets_app import (
     Algorithm,
+    CCIDInstruction,
     Instruction,
     Kind,
     RawBytes,
+    SecretsApp,
     SecretsAppException,
     Tag,
 )
@@ -85,9 +90,10 @@ def test_delete(secretsAppResetLogin):
 
 def test_delete_nonexisting(secretsAppResetLogin):
     """
-    Should not fail when trying to remove non-existing credential id.
+    Should fail when trying to remove non-existing credential id.
     """
-    secretsAppResetLogin.delete(CREDID)
+    with pytest.raises(SecretsAppException, match="NotFound"):
+        secretsAppResetLogin.delete(CREDID)
 
 
 def test_list_changes(secretsAppResetLogin):
@@ -252,8 +258,7 @@ def test_reverse_hotp_vectors(secretsAppResetLogin):
         assert secretsApp.verify_code(CREDID, c)
 
 
-@pytest.mark.slow
-def test_reverse_hotp_failure(secretsAppResetLogin):
+def test_reverse_hotp_failure(secretsAppRaw):
     """
     Test failing conditions for the HOTP reverse check
     """
@@ -262,7 +267,8 @@ def test_reverse_hotp_failure(secretsAppResetLogin):
 
     codes = [x for x in range(10)]
 
-    secretsApp = secretsAppResetLogin
+    secretsApp = secretsAppRaw
+    secretsApp.reset()
     secretsApp.register(
         CREDID, secretb, digits=6, kind=Kind.HotpReverse, algo=Algorithm.Sha1
     )
@@ -279,13 +285,11 @@ def test_reverse_hotp_failure(secretsAppResetLogin):
         assert not secretsApp.verify_code(CREDID, 10**5)
     helper_wait_after_failed_hotp_verification_request()
 
-    secretsApp.verify_pin_raw(PIN)
     secretsApp.register(CREDID, secretb, digits=7, kind=Kind.Hotp, algo=Algorithm.Sha1)
     with pytest.raises(SecretsAppException, match="ConditionsOfUseNotSatisfied"):
         assert not secretsApp.verify_code(CREDID, 10**6)
     helper_wait_after_failed_hotp_verification_request()
 
-    secretsApp.verify_pin_raw(PIN)
     secretsApp.register(CREDID, secretb, digits=8, kind=Kind.Hotp, algo=Algorithm.Sha1)
     with pytest.raises(SecretsAppException, match="ConditionsOfUseNotSatisfied"):
         assert not secretsApp.verify_code(CREDID, 10**7)
@@ -299,7 +303,8 @@ def helper_wait(seconds: int) -> None:
 
 
 def helper_wait_after_failed_hotp_verification_request():
-    helper_wait(DELAY_AFTER_FAILED_REQUEST_SECONDS)
+    if FEATURE_BRUTEFORCE_PROTECTION_ENABLED:
+        helper_wait(DELAY_AFTER_FAILED_REQUEST_SECONDS)
 
 
 @pytest.mark.parametrize(
@@ -343,11 +348,13 @@ def test_reverse_hotp_window(secretsAppResetLogin, offset, start_value):
     code_to_send = int(code_to_send)
     if offset > HOTP_WINDOW_SIZE:
         # calls with offset bigger than HOTP_WINDOW_SIZE should fail
+        secretsApp.verify_pin_raw(PIN)
         with pytest.raises(SecretsAppException, match="VerificationFailed"):
             secretsApp.verify_code(CREDID, code_to_send)
         helper_wait_after_failed_hotp_verification_request()
     else:
         # check if this code will be accepted on the given offset
+        secretsApp.verify_pin_raw(PIN)
         assert secretsApp.verify_code(CREDID, code_to_send)
         # the same code should not be accepted again, unless counted got saturated
         is_counter_saturated = (
@@ -509,26 +516,49 @@ def test_load(secretsAppResetLogin, kind: Kind, long_labels: str, count):
     assert len(l) == credentials_registered
 
 
-@pytest.mark.slow
-def test_remove_all_credentials_by_hand(secretsApp):
-    """Remove all hold credentials by hand and test for being empty.
-    Can fail if the previous test was not registering any credentials.
-    TODO: make it not depending on the execution order
+def test_remove_all_credentials_by_hand(secretsAppRaw):
     """
-    secretsApp.verify_pin_raw(PIN)
-    l = secretsApp.list()
-    assert len(l) > 0, "Empty credentials list"
-    for n in l:
+    Remove all hold credentials by hand and test for being empty.
+    """
+    secretsApp = secretsAppRaw
+    secretsApp.reset()
+    secretsApp.set_pin_raw(PIN)
+    cred_no_pbek = [f"CredNoPBEK{i}".encode() for i in range(1, 5)]
+    cred_pbek = [f"CredPBEK{i}".encode() for i in range(1, 5)]
+    all_registered = sorted([*cred_no_pbek, *cred_pbek])
+
+    for c in cred_no_pbek:
+        secretsApp.register(c, SECRET, DIGITS, pin_based_encryption=False)
+
+    for c in cred_pbek:
         secretsApp.verify_pin_raw(PIN)
-        secretsApp.delete(n)
+        secretsApp.register(c, SECRET, DIGITS, pin_based_encryption=True)
+
     secretsApp.verify_pin_raw(PIN)
-    l = secretsApp.list()
-    assert len(l) == 0
+    credential_list = secretsApp.list()
+    assert len(credential_list) > 0, "Empty credentials list"
+    assert sorted(secretsApp.list()) == cred_no_pbek
+    secretsApp.verify_pin_raw(PIN)
+    assert sorted(secretsApp.list()) == all_registered
+
+    # Delete all listed credentials by hand
+    for credential_name in credential_list:
+        try:
+            secretsApp.delete(credential_name)
+        except SecretsAppException as e:
+            if "NotFound" in str(e):
+                # Try again with provided PIN
+                secretsApp.verify_pin_raw(PIN)
+                secretsApp.delete(credential_name)
+
+    secretsApp.verify_pin_raw(PIN)
+    credential_list = secretsApp.list()
+    assert len(credential_list) == 0
 
 
-@pytest.mark.xfail
-def test_send_rubbish(secretsApp):
+def test_send_rubbish(secretsAppRaw):
     """Check if the application crashes, when sending unexpected data for the given command"""
+    secretsApp = secretsAppRaw
     secretsApp.reset()
     secretsApp.register(CREDID, SECRET, DIGITS)
 
@@ -539,9 +569,19 @@ def test_send_rubbish(secretsApp):
             secretsApp._send_receive_inner(invalid_data)
     secretsApp.list()
 
-    # Reset and List commands do not parse
-    for ins in set(Instruction).difference({Instruction.Reset, Instruction.List}):
-        with pytest.raises(fido2.ctap.CtapError):
+    # Skip some commands from test
+    for ins in set(Instruction).difference(
+        {
+            # These commands do not parse
+            Instruction.Reset,
+            Instruction.List,
+            Instruction.SendRemaining,
+            # Following are deactivated
+            *CHALLENGE_RESPONSE_COMMANDS,
+            *CALCULATE_ALL_COMMANDS,
+        }
+    ):
+        with pytest.raises(Exception, match="CTAP error|IncorrectDataParameter"):
             structure = [
                 RawBytes([0x02, 0x02]),
             ]
@@ -568,25 +608,35 @@ def test_too_long_message(secretsAppResetLogin):
     secretsApp.list()
 
 
-@pytest.mark.xfail
-def test_too_long_message2(secretsApp):
+def test_too_long_message2(secretsAppRaw):
     """
-    Test how long the secret could be (WIP)
+    Test how long the secret could be
     """
+    secretsApp = secretsAppRaw
     secretsApp.reset()
     secretsApp.register(CREDID, SECRET, DIGITS)
     secretsApp.list()
 
+    # Check maximum label length
     too_long_name = b"a" * 256
     additional_space = 100
-    secretsApp.register(
-        too_long_name[: -len(SECRET) - additional_space], SECRET, DIGITS
-    )
-    # find out the maximum secret length - 126 bytes?
-    for i in range(255):
-        print(i)
-        secretsApp.reset()
-        secretsApp.register(CREDID, too_long_name[:i], DIGITS)
+    max_label_length = len(SECRET) + additional_space
+    secretsApp.register(too_long_name[:-max_label_length], SECRET, DIGITS)
+
+    # Find out experimentally the maximum accepted secret length - 126 bytes
+    # Use minimal label length
+    codes = []
+    for i in range(1, 255, 5):
+        secretsApp.logfn(f"Testing secret length {i} bytes")
+        try:
+            secretsApp.register("C", too_long_name[:i], DIGITS)
+            codes.append(secretsApp.calculate("C"))
+        except Exception:
+            break
+    assert i >= 40, "Maximum secret length should be at least 320 bits"
+    assert len(list(set(codes))) == len(
+        codes
+    ), "All returned OTP codes should be unique"
 
 
 def test_status(secretsApp):
@@ -633,7 +683,7 @@ def test_set_code(secretsApp):
     not FEATURE_CHALLENGE_RESPONSE_ENABLED,
     reason="Challenge-Response feature should be activated",
 )
-def test_set_code_and_validate(secretsApp, remove_password_with: Instruction):
+def test_set_code_and_validate(secretsAppRaw, remove_password_with: Instruction):
     """
     Test device's behavior when the validation code is set.
     Non-authorized calls should be rejected, except for the selected.
@@ -658,6 +708,7 @@ def test_set_code_and_validate(secretsApp, remove_password_with: Instruction):
     CHALLENGE = b"12345678"  # in production should be random 8 bytes
 
     # Device should be in the non-protected mode, and list command is allowed
+    secretsApp = secretsAppRaw
     secretsApp.reset()
     secretsApp.list()
 
@@ -753,24 +804,34 @@ def test_revhotp_bruteforce(secretsAppNoLog):
             break
 
 
-@pytest.mark.xfail(reason="Not implemented in the firmware. Expected to fail.")
-def test_revhotp_delay_on_failure(secretsApp):
+@pytest.mark.skipif(
+    FEATURE_BRUTEFORCE_PROTECTION_ENABLED == False,
+    reason="Brute-force protection feature should be activated",
+)
+def test_revhotp_delay_on_failure(secretsAppRaw):
     """
     Check if the right delay is set, when the invalid code is given for the reverse HOTP operation.
     On failure the response time should take at least 1 second to prevent easy brute force.
     """
-    start_time = time.time()
+
+    secretsApp = secretsAppRaw
+    intentionally_wrong_code = 123123
+
     secretsApp.reset()
     secretsApp.register(
         CREDID, SECRET, digits=6, kind=Kind.HotpReverse, algo=Algorithm.Sha1
     )
-    current_code = 123123
-    secretsApp.verify_code(CREDID, current_code)
-    stop_time = time.time()
-
-    assert (
-        stop_time - start_time
-    ) > 1, "Replies' delay after the failed execution takes less than 1 second"
+    start_time = time.time()
+    stop_time = start_time + DELAY_AFTER_FAILED_REQUEST_SECONDS
+    with pytest.raises(SecretsAppException, match="VerificationFailed"):
+        secretsApp.verify_code(CREDID, intentionally_wrong_code)
+    while time.time() < stop_time:
+        with pytest.raises(SecretsAppException, match="SecurityStatusNotSatisfied"):
+            secretsApp.verify_code(CREDID, intentionally_wrong_code)
+        helper_wait(DELAY_AFTER_FAILED_REQUEST_SECONDS / 10)
+    with pytest.raises(SecretsAppException, match="VerificationFailed"):
+        helper_wait(DELAY_AFTER_FAILED_REQUEST_SECONDS / 10)
+        secretsApp.verify_code(CREDID, intentionally_wrong_code)
 
 
 def test_set_pin(secretsApp):
@@ -825,12 +886,8 @@ def test_change_pin(secretsApp):
 def test_change_pin_data_dont_change(secretsAppResetLogin):
     """
     Test for changing the proper PIN on the device.
-    Check if data remain the same
+    Check if data remain the same, both PIN and Hardware key encrypted
     """
-
-    if secretsAppResetLogin.fixture_type == CredentialsType.no_pin_based_encryption:
-        # TODO improv.: use separate function for credential use authentication?
-        pytest.skip("PIN verification is disabled for this fixture")
 
     def helper_test_calculated_codes_totp(secretsApp, secret: str, PIN: str):
         """Test TOTP codes against another OTP library."""
@@ -839,7 +896,8 @@ def test_change_pin_data_dont_change(secretsAppResetLogin):
             secret, format="dec6", period=30, t=t * 30
         ).encode()
         for i in range(10):
-            secretsApp.verify_pin_raw(PIN)
+            # Use non-modified verify_pin_raw_always call to always verify PIN, regardless of the fixture type
+            secretsApp.verify_pin_raw_always(PIN)
             assert secretsApp.calculate(CREDID, i) == lib_at(i)
 
     # Initial setup for the TOTP slot and test
@@ -875,7 +933,7 @@ def test_change_pin_data_dont_change(secretsAppResetLogin):
 
 def test_verify_pin(secretsApp):
     """
-    Simple test for PIN verificaiton
+    Simple test for PIN verification
     """
     secretsApp.reset()
     secretsApp.set_pin_raw(PIN)
@@ -883,25 +941,34 @@ def test_verify_pin(secretsApp):
     secretsApp.list()
     assert secretsApp.select().pin_attempt_counter == PIN_ATTEMPT_COUNTER_DEFAULT
 
-    # Make sure all the expected commands are failing, as in specification
-    with pytest.raises(SecretsAppException, match="ConditionsOfUseNotSatisfied"):
-        secretsApp.list()
+    # Make sure all the expected commands are working, as in specification
+    secretsApp.list()
 
-    # With PIN verified this should work
+    # With PIN verified this should work as well
     secretsApp.verify_pin_raw(PIN)
     secretsApp.list()
 
 
-def test_use_up_pin_counter(secretsApp):
-    if secretsApp.fixture_type == CredentialsType.no_pin_based_encryption:
-        # TODO improv.: use separate function for credential use authentication?
-        pytest.skip("PIN verification is disabled for this fixture")
-
+def test_use_up_pin_counter(secretsAppRaw):
+    secretsApp = secretsAppRaw
     secretsApp.reset()
     secretsApp.set_pin_raw(PIN)
-    secretsApp.verify_pin_raw(PIN)
-    secretsApp.list()
+    assert not secretsApp.list()
     assert secretsApp.select().pin_attempt_counter == PIN_ATTEMPT_COUNTER_DEFAULT
+
+    cred_no_pbek = [f"CredNoPBEK{i}".encode() for i in range(1, 5)]
+    cred_pbek = [f"CredPBEK{i}".encode() for i in range(1, 5)]
+
+    for i, c in enumerate(cred_no_pbek):
+        secretsApp.register(
+            c, SECRET, DIGITS, initial_counter_value=i, pin_based_encryption=False
+        )
+    assert sorted(secretsApp.list()) == cred_no_pbek
+
+    for c in cred_pbek:
+        secretsApp.verify_pin_raw(PIN)
+        secretsApp.register(c, SECRET, DIGITS, pin_based_encryption=True)
+    assert sorted(secretsApp.list()) == cred_no_pbek
 
     # Use all PIN counter attempts
     while secretsApp.select().pin_attempt_counter > 0:
@@ -914,6 +981,229 @@ def test_use_up_pin_counter(secretsApp):
         secretsApp.verify_pin_raw(PIN)
     assert secretsApp.select().pin_attempt_counter == 0
 
-    # As usual, standard commands should require authentication
+    # Standard commands should not require authentication
+    # Check if non-encrypted are still there and usable
+    assert sorted(secretsApp.list()) == cred_no_pbek
+    for c in cred_no_pbek:
+        secretsApp.calculate(c)
+
+    assert secretsApp.select().pin_attempt_counter == 0
+    with pytest.raises(SecretsAppException, match="VerificationFailed"):
+        secretsApp.verify_pin_raw(PIN)
+    for c in cred_pbek:
+        with pytest.raises(SecretsAppException, match="NotFound"):
+            secretsApp.calculate(c)
+
+    secretsApp.reset()
+    secretsApp.set_pin_raw(PIN)
+    assert not secretsApp.list()
+    assert secretsApp.select().pin_attempt_counter == PIN_ATTEMPT_COUNTER_DEFAULT
+
+
+def test_list_pin_no_pin(secretsAppRaw):
+    """
+    Check list command behavior in the presence of PIN and without it
+    1. Credential list should be empty after reset
+    2. Credential list should show only non-PIN-encrypted credentials, when unauthorized
+    3. Credential list should show both non- and PIN-encrypted credentials, when authorized
+    @param secretsAppRaw: Direct access to the Secret App API, without any additional setup
+    """
+    secretsApp = secretsAppRaw
+
+    secretsApp.reset()
+    secretsApp.set_pin_raw(PIN)
+    secretsApp.verify_pin_raw(PIN)
+    # 1. Credential list should be empty after reset
+    assert not secretsApp.list()
+
+    cred_no_pbek = [f"CredNoPBEK{i}".encode() for i in range(1, 5)]
+    cred_pbek = [f"CredPBEK{i}".encode() for i in range(1, 5)]
+
+    for c in cred_no_pbek:
+        secretsApp.register(c, SECRET, DIGITS, pin_based_encryption=False)
+
+    assert sorted(secretsApp.list()) == cred_no_pbek
+
+    for c in cred_pbek:
+        secretsApp.verify_pin_raw(PIN)
+        secretsApp.register(c, SECRET, DIGITS, pin_based_encryption=True)
+
+    # 2. Credential list should show only non-PIN-encrypted credentials, when unauthorized
+    assert sorted(secretsApp.list()) == cred_no_pbek
+
+    # 3. Credential list should show both non- and PIN-encrypted credentials, when authorized
+    secretsApp.verify_pin_raw(PIN)
+    assert sorted(secretsApp.list()) == sorted([*cred_no_pbek, *cred_pbek])
+
+    # 2. Credential list should show only non-PIN-encrypted credentials, when unauthorized
+    assert sorted(secretsApp.list()) == cred_no_pbek
+
+    # 1. Credential list should be empty after reset
+    secretsApp.reset()
+    secretsApp.set_pin_raw(PIN)
+    assert not secretsApp.list()
+    secretsApp.verify_pin_raw(PIN)
+    assert not secretsApp.list()
+
+
+def test_check_commands_access(secretsAppRaw):
+    """
+    Access to all commands should be always available. Sending garbage, and expecting parsing error.
+    If this was access guarded, the parsing would not happen.
+    """
+
+    # Not tested with challenge-response enabled
+    assert not FEATURE_CHALLENGE_RESPONSE_ENABLED
+
+    for ins in set(Instruction) - {
+        Instruction.CalculateAll,
+        *CHALLENGE_RESPONSE_COMMANDS,
+    }:
+        structure = [RawBytes([0x02] * 10)]
+        if ins not in [Instruction.Reset, Instruction.List, Instruction.SendRemaining]:
+            # Check if we get parsing error from these
+            with pytest.raises(SecretsAppException, match="IncorrectDataParameter"):
+                secretsAppRaw._send_receive(ins, structure)
+        elif ins == Instruction.SendRemaining:
+            # This one should not be allowed without data awaiting
+            with pytest.raises(
+                SecretsAppException, match="ConditionsOfUseNotSatisfied"
+            ):
+                secretsAppRaw._send_receive(ins, structure)
+        else:
+            # These commands do not accept arguments, so there is no parsing error
+            secretsAppRaw._send_receive(ins, structure)
+
+
+def test_register_pin_encrypted_without_auth(secretsAppRaw):
+    """
+    PIN-encrypted Credential registration should not be possible without previous verification
+    """
+    secretsAppRaw.reset()
+    with pytest.raises(SecretsAppException, match="SecurityStatusNotSatisfied"):
+        secretsAppRaw.register(CREDID, SECRET, DIGITS, pin_based_encryption=True)
+    assert not secretsAppRaw.list()
+
+    secretsAppRaw.set_pin_raw(PIN)
+    secretsAppRaw.verify_pin_raw(PIN)
+    secretsAppRaw.register(CREDID, SECRET, DIGITS, pin_based_encryption=True)
+    secretsAppRaw.verify_pin_raw(PIN)
+    assert secretsAppRaw.list()
+
+
+def test_pin_operations_do_not_authenticate(secretsAppRaw):
+    """
+    Make sure that PIN operations other than Verify do not authenticate
+    """
+    secretsAppRaw.reset()
+    with pytest.raises(SecretsAppException, match="SecurityStatusNotSatisfied"):
+        secretsAppRaw.register(CREDID, SECRET, DIGITS, pin_based_encryption=True)
+    assert not secretsAppRaw.list()
+
+    secretsAppRaw.set_pin_raw(PIN)
+    with pytest.raises(SecretsAppException, match="SecurityStatusNotSatisfied"):
+        secretsAppRaw.register(CREDID, SECRET, DIGITS, pin_based_encryption=True)
+    assert not secretsAppRaw.list()
+
+    secretsAppRaw.change_pin_raw(PIN, PIN2)
+    with pytest.raises(SecretsAppException, match="SecurityStatusNotSatisfied"):
+        secretsAppRaw.register(CREDID, SECRET, DIGITS, pin_based_encryption=True)
+    assert not secretsAppRaw.list()
+    secretsAppRaw.verify_pin_raw(PIN2)
+    assert not secretsAppRaw.list()
+
+    secretsAppRaw.verify_pin_raw(PIN2)
+    secretsAppRaw.register(CREDID, SECRET, DIGITS, pin_based_encryption=True)
+    secretsAppRaw.verify_pin_raw(PIN2)
+    assert secretsAppRaw.list()
+
+
+def test_credential_encryption_does_not_change(secretsAppRaw):
+    """
+    Check if counter-updated HOTP Credential does not change its encryption type after use.
+    """
+
+    secretsAppRaw.reset()
+    assert not secretsAppRaw.list()
+    secretsAppRaw.set_pin_raw(PIN)
+
+    # Register PIN-protected credential
+    secretsAppRaw.verify_pin_raw(PIN)
+    secretsAppRaw.register(CREDID, SECRET, DIGITS, pin_based_encryption=True)
+    assert not secretsAppRaw.list()
+    secretsAppRaw.verify_pin_raw(PIN)
+    assert secretsAppRaw.list()
+
+    # Credential should not be available for use without presenting the PIN
+    with pytest.raises(SecretsAppException, match="NotFound"):
+        secretsAppRaw.calculate(CREDID, CHALLENGE)
+    secretsAppRaw.verify_pin_raw(PIN)
+    secretsAppRaw.calculate(CREDID, CHALLENGE)
+
+    # After use the HOTP counter was updated, and the Credential saved back. The credential should still be PIN-protected.
+    with pytest.raises(SecretsAppException, match="NotFound"):
+        secretsAppRaw.calculate(CREDID, CHALLENGE)
+    assert not secretsAppRaw.list()
+
+
+def test_send_remaining(secretsApp):
+    secrets_app = secretsApp
+    secrets_app.reset()
+    secrets_app.set_pin_raw(PIN)
+
     with pytest.raises(SecretsAppException, match="ConditionsOfUseNotSatisfied"):
-        secretsApp.list()
+        secrets_app._send_receive(Instruction.SendRemaining)
+
+    # Call list which will have populated "remaining" buffer
+    # Call other command
+    # The send_remaining call should be denied
+    # We need a lot of data to push here, so the ctaphid buffer will be filled (3kB)
+    credential_name_length = 127
+    count = 3072 // credential_name_length + 1
+    secrets_app.logfn(f"Registering {count} credentials")
+    credentials = [
+        f"Credential{i}".zfill(credential_name_length).encode() for i in range(1, count)
+    ]
+    for c in credentials:
+        secrets_app.verify_pin_raw(PIN)
+        secrets_app.register(c, SECRET, DIGITS)
+    secrets_app.verify_pin_raw(PIN)
+    assert sorted(secrets_app.list()) == sorted(credentials)
+
+    def _trunc(s: str, l: int = 100) -> str:
+        return f"{s[:l]}.." if len(s) > l else s
+
+    def send_receive_ins(app: SecretsApp, ins, structure=None):
+        """
+        Helper for direct communication with the device
+        """
+        from pynitrokey.start.gnuk_token import iso7816_compose
+
+        ins_b, p1, p2 = app._encode_command(ins)
+        encoded_structure = app._custom_encode(structure)
+        data = iso7816_compose(ins_b, p1, p2, encoded_structure)
+        app.logfn(f">> {_trunc(data.hex())}")
+        res = app.dev.otp(data=data)
+        app.logfn(f"<< {_trunc(res.hex())}")
+        status_bytes, result = res[:2], res[2:]
+        return status_bytes, result
+
+    # Run PIN verification so all Credentials on List command will be visible
+    secrets_app.verify_pin_raw(PIN)
+    status_bytes, result = send_receive_ins(secrets_app, Instruction.List)
+    # Make sure there are remaining data to receive
+    MORE_DATA_STATUS_BYTE = 0x61
+    assert status_bytes[0] == MORE_DATA_STATUS_BYTE
+    # Call a different command now, like Delete, which should not add any new data to the buffer
+    status_bytes, result = send_receive_ins(
+        secrets_app,
+        Instruction.Delete,
+        structure=[
+            tlv8.Entry(Tag.CredentialId.value, credentials[-1]),
+        ],
+    )
+    assert status_bytes.hex() == "9000"
+
+    # Now that the buffer should be emptied, the SendRemaining call should be rejected
+    with pytest.raises(SecretsAppException, match="ConditionsOfUseNotSatisfied"):
+        secrets_app._send_receive(Instruction.SendRemaining)

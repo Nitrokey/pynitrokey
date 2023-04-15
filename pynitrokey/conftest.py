@@ -84,13 +84,15 @@ def dev():
             pytest.skip(f"Cannot connect to the Nitrokey 3 device. Error: {e}")
 
 
-class CredentialsType(Enum):
-    pin_based_encryption = auto()
-    no_pin_based_encryption = auto()
+class CredEncryptionType(Enum):
+    # This requires providing PIN for encryption to work
+    PinBased = auto()
+    # Standard encryption
+    HardwareBased = auto()
 
 
 @pytest.fixture(scope="function")
-def secretsAppRaw(corpus_func, dev):
+def secretsAppRaw(corpus_func, dev) -> SecretsApp:
     """
     Create Secrets App client with or without corpus files generations.
     No other functional alterations.
@@ -103,26 +105,27 @@ def secretsAppRaw(corpus_func, dev):
 @pytest.fixture(
     scope="function",
     params=[
-        CredentialsType.no_pin_based_encryption,
-        CredentialsType.pin_based_encryption,
+        CredEncryptionType.HardwareBased,
+        CredEncryptionType.PinBased,
     ],
 )
-def secretsApp(request, secretsAppRaw):
+def secretsApp(request, secretsAppRaw) -> SecretsApp:
     """
     Create Secrets App client in two forms, w/ or w/o PIN-based encryption
     """
     app = copy.deepcopy(secretsAppRaw)
 
-    credentials_type: CredentialsType = request.param
-    if credentials_type == CredentialsType.pin_based_encryption:
+    credentials_type: CredEncryptionType = request.param
+    app.verify_pin_raw_always = app.verify_pin_raw
+    if credentials_type == CredEncryptionType.PinBased:
         # Make all credentials registered with the PIN-based encryption
         # Leave verify_pin_raw() working
         app.register = partial(app.register, pin_based_encryption=True)
-    elif credentials_type == CredentialsType.no_pin_based_encryption:
+    elif credentials_type == CredEncryptionType.HardwareBased:
         # Make all verify_pin_raw() calls dormant
         # All credentials should register themselves as not requiring PIN
         app.verify_pin_raw = lambda x: secretsAppRaw.logfn(
-            "Skipping verify_pin_raw() call"
+            "Skipping verify_pin_raw() call due to fixture configuration"
         )
     else:
         raise RuntimeError("Wrong param value")
@@ -133,7 +136,7 @@ def secretsApp(request, secretsAppRaw):
 
 
 @pytest.fixture(scope="function")
-def secretsAppResetLogin(secretsApp):
+def secretsAppResetLogin(secretsApp) -> SecretsApp:
     secretsApp.reset()
     secretsApp.set_pin_raw(PIN)
     secretsApp.verify_pin_raw(PIN)
@@ -141,11 +144,12 @@ def secretsAppResetLogin(secretsApp):
 
 
 @pytest.fixture(scope="function")
-def secretsAppNoLog(secretsApp):
+def secretsAppNoLog(secretsApp) -> SecretsApp:
     return secretsApp
 
 
-DELAY_AFTER_FAILED_REQUEST_SECONDS = 5
+FEATURE_BRUTEFORCE_PROTECTION_ENABLED = False
+DELAY_AFTER_FAILED_REQUEST_SECONDS = 2
 CREDID = "CRED ID"
 SECRET = b"00" * 20
 DIGITS = 6
@@ -155,3 +159,5 @@ PIN = "12345678"
 PIN2 = "123123123"
 PIN_ATTEMPT_COUNTER_DEFAULT = 8
 FEATURE_CHALLENGE_RESPONSE_ENABLED = False
+CHALLENGE_RESPONSE_COMMANDS = {Instruction.Validate, Instruction.SetCode}
+CALCULATE_ALL_COMMANDS = {Instruction.CalculateAll}

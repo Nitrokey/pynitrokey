@@ -43,13 +43,13 @@ check-style:
 	$(PYTHON3_VENV) -m flake8 $(FLAKE8_DIRS)
 
 check-typing:
+	@echo "Note: run semi-clean target in case this fails without any proper reason"
 	$(PYTHON3_VENV) -m mypy $(PACKAGE_NAME)/
 
 check-doctest:
 	$(PYTHON3_VENV) -m doctest $(PACKAGE_NAME)/nk3/utils.py
 
 check: check-format check-import-sorting check-style check-typing check-doctest
-	@echo "Note: run semi-clean target in case this fails without any proper reason"
 
 # automatic code fixes
 fix:

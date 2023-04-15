@@ -90,6 +90,10 @@ class SecretsAppException(Exception):
         return self.__repr__()
 
 
+class CCIDInstruction(Enum):
+    Select = 0xA4
+
+
 class Instruction(Enum):
     Put = 0x1
     Delete = 0x2
@@ -98,10 +102,9 @@ class Instruction(Enum):
     List = 0xA1
     Calculate = 0xA2
     Validate = 0xA3
-    CalculateAll = 0xA4
+    CalculateAll = 0xA4  # 0xA4 is Select as well # Unused
     SendRemaining = 0xA5
     VerifyCode = 0xB1
-    Select = 0xA4
     # Place extending commands in 0xBx space
     VerifyPIN = 0xB2
     ChangePIN = 0xB3
@@ -187,7 +190,9 @@ class SecretsApp:
         return encoded_structure
 
     def _send_receive(
-        self, ins: Instruction, structure: Optional[List] = None
+        self,
+        ins: typing.Union[Instruction, CCIDInstruction],
+        structure: Optional[List] = None,
     ) -> bytes:
         encoded_structure = self._custom_encode(structure)
         ins_b, p1, p2 = self._encode_command(ins)
@@ -254,13 +259,15 @@ class SecretsApp:
         return data_final
 
     @classmethod
-    def _encode_command(cls, command: Instruction) -> bytes:
+    def _encode_command(
+        cls, command: typing.Union[Instruction, CCIDInstruction]
+    ) -> bytes:
         p1 = 0
         p2 = 0
         if command == Instruction.Reset:
             p1 = 0xDE
             p2 = 0xAD
-        elif command == Instruction.Select:
+        elif command == CCIDInstruction.Select:
             p1 = 0x04
             p2 = 0x00
         elif command == Instruction.Calculate or command == Instruction.CalculateAll:
@@ -330,7 +337,7 @@ class SecretsApp:
             )
 
         self.logfn(
-            f"Setting new credential: {credid!r}, {secret.hex()}, {kind}, {algo}, counter: {initial_counter_value}, {touch_button_required=}, {pin_based_encryption=}"
+            f"Setting new credential: {credid!r}, {kind}, {algo}, counter: {initial_counter_value}, {touch_button_required=}, {pin_based_encryption=}"
         )
 
         structure = [
@@ -355,7 +362,7 @@ class SecretsApp:
         ]
         self._send_receive(Instruction.Put, structure)
 
-    def calculate(self, cred_id: bytes, challenge: int) -> bytes:
+    def calculate(self, cred_id: bytes, challenge: Optional[int] = None) -> bytes:
         """
         Calculate the OTP code for the credential named `cred_id`, and with challenge `challenge`.
         :param cred_id: The name of the credential
@@ -363,6 +370,8 @@ class SecretsApp:
             Should be equal to: timestamp/period. The commonly used period value is 30.
         :return: OTP code as a byte string
         """
+        if challenge is None:
+            challenge = 0
         self.logfn(
             f"Sending calculate request for {cred_id!r} and challenge {challenge!r}"
         )
@@ -493,7 +502,7 @@ class SecretsApp:
         """
         AID = [0xA0, 0x00, 0x00, 0x05, 0x27, 0x21, 0x01]
         structure = [RawBytes(AID)]
-        raw_res = self._send_receive(Instruction.Select, structure=structure)
+        raw_res = self._send_receive(CCIDInstruction.Select, structure=structure)
         resd: tlv8.EntryList = tlv8.decode(raw_res)
         rd = {}
         for e in resd:
