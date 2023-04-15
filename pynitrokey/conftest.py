@@ -1,6 +1,7 @@
 import logging
 import pathlib
 import secrets
+from enum import Enum, IntEnum, auto
 from functools import partial
 
 import pytest
@@ -78,29 +79,64 @@ def dev():
             pytest.skip(f"Cannot connect to the Nitrokey 3 device. Error: {e}")
 
 
-@pytest.fixture(scope="function")
-def secretsApp(corpus_func, dev):
+class CredentialsType(Enum):
+    pin_based_encryption = auto()
+    no_pin_based_encryption = auto()
+
+
+@pytest.fixture(scope="session")
+def secretsAppRaw(corpus_func, dev):
+    """
+    Create Secrets App client with or without corpus files generations.
+    No other functional alterations.
+    """
     app = SecretsApp(dev, logfn=log)
     app.write_corpus_fn = corpus_func
     return app
 
 
-@pytest.fixture(scope="function")
-def secretsAppResetLogin(corpus_func, dev):
-    app = SecretsApp(dev, logfn=log)
-    app.write_corpus_fn = corpus_func
+@pytest.fixture(
+    # scope="function",
+    scope="session",
+    params=[
+        CredentialsType.no_pin_based_encryption,
+        CredentialsType.pin_based_encryption,
+    ],
+)
+def secretsApp(request, secretsAppRaw):
+    """
+    Create Secrets App client in two forms, w/ or w/o PIN-based encryption
+    """
+    app = secretsAppRaw
 
-    app.reset()
-    app.set_pin_raw(PIN)
-    app.verify_pin_raw(PIN)
+    credentials_type: CredentialsType = request.param
+    if credentials_type == CredentialsType.pin_based_encryption:
+        # Make all credentials registered with the PIN-based encryption
+        # Leave verify_pin_raw() working
+        app.register = partial(app.register, pin_based_encryption=True)
+    elif credentials_type == CredentialsType.no_pin_based_encryption:
+        # Make all verify_pin_raw() calls dormant
+        # All credentials should register themselves as not requiring PIN
+        app.verify_pin_raw = lambda x: x
+    else:
+        raise RuntimeError("Wrong param value")
+
+    app.fixture_type = credentials_type
+
     return app
 
 
 @pytest.fixture(scope="function")
-def secretsAppNoLog(corpus_func, dev):
-    app = SecretsApp(dev)
-    app.write_corpus_fn = corpus_func
-    return app
+def secretsAppResetLogin(secretsApp):
+    secretsApp.reset()
+    secretsApp.set_pin_raw(PIN)
+    secretsApp.verify_pin_raw(PIN)
+    return secretsApp
+
+
+@pytest.fixture(scope="function")
+def secretsAppNoLog(secretsApp):
+    return secretsApp
 
 
 DELAY_AFTER_FAILED_REQUEST_SECONDS = 5

@@ -301,7 +301,7 @@ class SecretsApp:
         algo: Algorithm = Algorithm.Sha1,
         initial_counter_value: int = 0,
         touch_button_required: bool = False,
-        pin_based_encryption: bool = True,
+        pin_based_encryption: bool = False,
     ) -> None:
         """
         Register new OTP credential
@@ -312,6 +312,7 @@ class SecretsApp:
         :param algo: The hash algorithm to use - SHA1, SHA256 or SHA512
         :param initial_counter_value: The counter's initial value for the HOTP credential (HOTP only)
         :param touch_button_required: User Presence confirmation is required to use this Credential
+        :param pin_based_encryption: User preference for additional PIN-based encryption
         :return: None
         """
         if initial_counter_value > 0xFFFFFFFF:
