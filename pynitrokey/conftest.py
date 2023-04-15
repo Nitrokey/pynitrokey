@@ -121,7 +121,9 @@ def secretsApp(request, secretsAppRaw):
     elif credentials_type == CredentialsType.no_pin_based_encryption:
         # Make all verify_pin_raw() calls dormant
         # All credentials should register themselves as not requiring PIN
-        app.verify_pin_raw = lambda x: x
+        app.verify_pin_raw = lambda x: secretsAppRaw.logfn(
+            "Skipping verify_pin_raw() call"
+        )
     else:
         raise RuntimeError("Wrong param value")
 

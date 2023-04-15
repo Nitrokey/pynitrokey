@@ -174,13 +174,12 @@ class SecretsApp:
             if not d:
                 return b""
             if isinstance(d, RawBytes):
-                # return b"".join(d.data)
                 res = bytes(d.data)
-                self.logfn(f"Transforming {d} -> {res.hex()}")
+                # self.logfn(f"Transforming {d} -> {res.hex()}")
                 return res
             elif isinstance(d, tlv8.Entry):
                 res = tlv8.encode([d])
-                self.logfn(f"Transforming {d} -> {res.hex()}")
+                # self.logfn(f"Transforming {d} -> {res.hex()}")
                 return res
             return b""
 
@@ -243,6 +242,14 @@ class SecretsApp:
             self.logfn(
                 f"Received final data: [{status_bytes.hex()}] {data_final.hex() if data_final else data_final!r}"
             )
+
+        if data_final:
+            try:
+                self.logfn(
+                    f"Decoded received: {[ e.data[1:] for e in tlv8.decode(data_final) ]}"
+                )
+            except Exception:
+                raise
 
         return data_final
 
@@ -323,7 +330,7 @@ class SecretsApp:
             )
 
         self.logfn(
-            f"Setting new credential: {credid!r}, {secret.hex()}, {kind}, {algo}, counter: {initial_counter_value}"
+            f"Setting new credential: {credid!r}, {secret.hex()}, {kind}, {algo}, counter: {initial_counter_value}, {touch_button_required=}, {pin_based_encryption=}"
         )
 
         structure = [
