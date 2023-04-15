@@ -29,6 +29,7 @@ from pynitrokey.conftest import (
     PIN2,
     PIN_ATTEMPT_COUNTER_DEFAULT,
     SECRET,
+    CredentialsType,
 )
 from pynitrokey.nk3.secrets_app import (
     Algorithm,
@@ -820,6 +821,10 @@ def test_change_pin_data_dont_change(secretsAppResetLogin):
     Check if data remain the same
     """
 
+    if secretsAppResetLogin.fixture_type == CredentialsType.no_pin_based_encryption:
+        # TODO improv.: use separate function for credential use authentication?
+        pytest.skip("PIN verification is disabled for this fixture")
+
     def helper_test_calculated_codes_totp(secretsApp, secret: str, PIN: str):
         """Test TOTP codes against another OTP library."""
         oath = pytest.importorskip("oath")
@@ -881,6 +886,10 @@ def test_verify_pin(secretsApp):
 
 
 def test_use_up_pin_counter(secretsApp):
+    if secretsApp.fixture_type == CredentialsType.no_pin_based_encryption:
+        # TODO improv.: use separate function for credential use authentication?
+        pytest.skip("PIN verification is disabled for this fixture")
+
     secretsApp.reset()
     secretsApp.set_pin_raw(PIN)
     secretsApp.verify_pin_raw(PIN)
