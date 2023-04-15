@@ -301,6 +301,7 @@ class SecretsApp:
         algo: Algorithm = Algorithm.Sha1,
         initial_counter_value: int = 0,
         touch_button_required: bool = False,
+        pin_based_encryption: bool = True,
     ) -> None:
         """
         Register new OTP credential
@@ -330,7 +331,16 @@ class SecretsApp:
             tlv8.Entry(
                 Tag.Key.value, bytes([kind.value | algo.value, digits]) + secret
             ),
-            RawBytes([Tag.Properties.value, 0x02 if touch_button_required else 0x00]),
+            RawBytes(
+                [
+                    Tag.Properties.value,
+                    0x02
+                    if touch_button_required
+                    else 0x00 | 0x04
+                    if pin_based_encryption
+                    else 0x00,
+                ]
+            ),
             tlv8.Entry(
                 Tag.InitialCounter.value, initial_counter_value.to_bytes(4, "big")
             ),
