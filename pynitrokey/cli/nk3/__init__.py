@@ -467,6 +467,8 @@ def status(ctx: Context) -> None:
             local_print(f"Free blocks (int):  {status.ifs_blocks}")
         if status.efs_blocks is not None:
             local_print(f"Free blocks (ext):  {status.efs_blocks}")
+        if status.variant is not None:
+            local_print(f"Variant:            {status.variant.name}")
 
 
 @nk3.command()
@@ -551,7 +553,7 @@ def provision_fido2(ctx: Context, key_file: BinaryIO, cert_file: BinaryIO) -> No
             raise CliException(f"Missing subject {name} in certificate")
     if subject_attrs["OU"] != "Authenticator Attestation":
         raise CliException(
-            f"Unexpected certificate subject OU {subject_attrs['OU']} (expected "
+            f"Unexpected certificate subject OU {subject_attrs['OU']!r} (expected "
             "Authenticator Attestation)"
         )
 

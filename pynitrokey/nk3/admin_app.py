@@ -37,11 +37,19 @@ class InitStatus(IntFlag):
         return ", ".join(messages) + " (" + hex(self.value) + ")"
 
 
+@enum.unique
+class Variant(Enum):
+    USBIP = 0
+    LPC55 = 1
+    NRF52 = 2
+
+
 @dataclass
 class Status:
     init_status: Optional[InitStatus] = None
     ifs_blocks: Optional[int] = None
     efs_blocks: Optional[int] = None
+    variant: Optional[Variant] = None
 
 
 class AdminApp:
@@ -76,6 +84,11 @@ class AdminApp:
             if len(reply) >= 4:
                 status.ifs_blocks = reply[1]
                 status.efs_blocks = int.from_bytes(reply[2:4], "big")
+            if len(reply) >= 5:
+                try:
+                    status.variant = Variant(reply[4])
+                except ValueError:
+                    pass
         return status
 
     def version(self) -> Version:
