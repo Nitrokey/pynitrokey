@@ -2,7 +2,6 @@ include: 'https://raw.githubusercontent.com/Nitrokey/common-ci-jobs/master/commo
 
 stages:
   - pull-github
-  - build
   - deploy
 
 variables:
@@ -12,32 +11,3 @@ variables:
   GIT_SUBMODULE_STRATEGY: recursive #This seems to have no effect also set in webinterface
   REPO_NAME: pynitrokey
   MAIN_BRANCH: master
-
-
-build-pypi:
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "push"'
-    - if: '$CI_PIPELINE_SOURCE == "schedule"'
-  tags:
-    - lxc
-  stage: build
-  script:
-    - make CI
-  after_script:
-    - wget $icon_server/checkmark/$CI_COMMIT_REF_NAME/$CI_COMMIT_SHA/$CI_JOB_NAME/$CI_JOB_STATUS/${CI_JOB_URL#*/*/*/}
-    - mkdir -p artifacts
-    - cp dist/* artifacts
-  artifacts:
-    paths:
-      - artifacts
-
-build-and-publish-pypi:
-  rules:
-    - if: '$CI_PIPELINE_SOURCE == "web"'
-  tags:
-    - lxc
-  stage: build
-  script:
-    - make CI
-    - sed -e "s|\${passw}|$PYPI_TOKEN|" ci-scripts/pypi/.pypirc_template > ~/.pypirc
-    - make publish
