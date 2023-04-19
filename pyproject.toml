@@ -127,3 +127,13 @@ log_cli_date_format = "%H:%M:%S"
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
 ]
+
+[tool.ruff]
+line-length = 120
+exclude = [
+    "venv",
+    "nethsm",
+    "start",
+    "nk3",
+]
+target-version = "py39"
