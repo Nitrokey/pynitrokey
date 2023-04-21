@@ -8,7 +8,7 @@ import dataclasses
 import hmac
 import logging
 import typing
-from enum import Enum
+from enum import Enum, IntEnum
 from hashlib import pbkdf2_hmac
 from secrets import token_bytes
 from struct import pack
@@ -52,10 +52,37 @@ class SelectResponse:
         )
 
 
+class SecretsAppExceptionID(IntEnum):
+    MoreDataAvailable = 0x61FF
+    VerificationFailed = 0x6300
+    UnspecifiedNonpersistentExecutionError = 0x6400
+    UnspecifiedPersistentExecutionError = 0x6500
+    WrongLength = 0x6700
+    LogicalChannelNotSupported = 0x6881
+    SecureMessagingNotSupported = 0x6882
+    CommandChainingNotSupported = 0x6884
+    SecurityStatusNotSatisfied = 0x6982
+    ConditionsOfUseNotSatisfied = 0x6985
+    OperationBlocked = 0x6983
+    IncorrectDataParameter = 0x6A80
+    FunctionNotSupported = 0x6A81
+    NotFound = 0x6A82
+    NotEnoughMemory = 0x6A84
+    IncorrectP1OrP2Parameter = 0x6A86
+    KeyReferenceNotFound = 0x6A88
+    InstructionNotSupportedOrInvalid = 0x6D00
+    ClassNotSupported = 0x6E00
+    UnspecifiedCheckingError = 0x6F00
+    Success = 0x9000
+
+
 @dataclasses.dataclass
 class SecretsAppException(Exception):
     code: str
     context: str
+
+    def to_id(self) -> SecretsAppExceptionID:
+        return SecretsAppExceptionID(int(self.code, 16))
 
     def to_string(self) -> str:
         d = {
@@ -84,7 +111,7 @@ class SecretsAppException(Exception):
         return d.get(self.code, "Unknown SW code")
 
     def __repr__(self) -> str:
-        return f"OTPAppException(code={self.code}/{self.to_string()})"
+        return f"SecretsAppException(code={self.code}/{self.to_string()})"
 
     def __str__(self) -> str:
         return self.__repr__()
@@ -455,19 +482,11 @@ class SecretsApp:
         ]
         self._send_receive(Instruction.SetCode, structure=structure)
 
-    def authentication_required(self, stat: Optional[SelectResponse] = None) -> bool:
-        return True
-
     def validate(self, passphrase: str) -> None:
         """
         Authenticate using a passphrase
         """
         stat = self.select()
-        if not self.authentication_required(stat):
-            # Assuming this should have been checked before calling validate()
-            raise RuntimeWarning(
-                "No passphrase is set. Authentication is not required."
-            )
         if stat.algorithm != bytes([Algorithm.Sha1.value]):
             raise RuntimeError("For the authentication only SHA1 is supported")
         challenge = stat.challenge

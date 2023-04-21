@@ -1,12 +1,17 @@
 from base64 import b32decode
-from typing import List, Optional
+from typing import Callable, List, Optional
 
 import click
-import fido2
 
 from pynitrokey.cli.nk3 import Context, nk3
 from pynitrokey.helpers import AskUser, local_print
-from pynitrokey.nk3.secrets_app import STRING_TO_KIND, Algorithm, SecretsApp
+from pynitrokey.nk3.secrets_app import (
+    STRING_TO_KIND,
+    Algorithm,
+    SecretsApp,
+    SecretsAppException,
+    SecretsAppExceptionID,
+)
 
 
 @nk3.group()
@@ -15,6 +20,39 @@ def secrets(ctx: click.Context) -> None:
     """Nitrokey Secrets App. Manage OTP secrets on the device.
     Use NITROPY_SECRETS_PASSWORD to pass password for the scripted execution."""
     pass
+
+
+def repeat_if_pin_needed(func) -> Callable:  # type: ignore[no-untyped-def]
+    """
+    Decorated function should have at least one argument,
+    of which the first one should be an instance of the SecretsApp. Otherwise, a RuntimeError is raised.
+    """
+
+    def wrapper(*args, **kwargs) -> None:  # type: ignore[no-untyped-def]
+        try:
+            func(*args, **kwargs)
+        except SecretsAppException as e:
+            if e.to_id() not in {
+                SecretsAppExceptionID.SecurityStatusNotSatisfied,
+                SecretsAppExceptionID.NotFound,
+            }:
+                raise
+            if e.to_id() == SecretsAppExceptionID.SecurityStatusNotSatisfied:
+                local_print("PIN is required to run this command.")
+            elif e.to_id() == SecretsAppExceptionID.NotFound:
+                local_print(
+                    "Credential not found. Please provide PIN below to search in the PIN-protected database."
+                )
+            # Ask for PIN and retry
+            assert len(args) >= 1 and isinstance(
+                args[0], SecretsApp
+            ), "repeat_if_pin_needed: SecretsApp should be passed as an argument to this decorator"
+
+            app: SecretsApp = args[0]
+            authenticate_if_needed(app)
+            func(*args, **kwargs)
+
+    return wrapper
 
 
 @secrets.command()
@@ -63,6 +101,13 @@ def secrets(ctx: click.Context) -> None:
     help="This credential requires button press before use",
     is_flag=True,
 )
+@click.option(
+    "--protect-with-pin",
+    "pin_protection",
+    type=click.BOOL,
+    help="This credential requires button press before use",
+    is_flag=True,
+)
 def register(
     ctx: Context,
     name: str,
@@ -72,6 +117,7 @@ def register(
     hash: str,
     counter_start: int,
     touch_button: bool,
+    pin_protection: bool,
 ) -> None:
     """Register OTP credential.
 
@@ -85,16 +131,22 @@ def register(
     with ctx.connect_device() as device:
         app = SecretsApp(device)
         ask_to_touch_if_needed()
-        authenticate_if_needed(app)
-        app.register(
-            name.encode(),
-            secret_bytes,
-            digits,
-            kind=otp_kind,
-            algo=hash_algorithm,
-            initial_counter_value=counter_start,
-            touch_button_required=touch_button,
-        )
+
+        @repeat_if_pin_needed
+        def call(app: SecretsApp) -> None:
+            app.register(
+                name.encode(),
+                secret_bytes,
+                digits,
+                kind=otp_kind,
+                algo=hash_algorithm,
+                initial_counter_value=counter_start,
+                touch_button_required=touch_button,
+                pin_based_encryption=pin_protection,
+            )
+
+        call(app)
+        local_print("Done")
 
 
 def check_experimental_flag(experimental: bool) -> None:
@@ -130,6 +182,9 @@ def list(ctx: Context, hex: bool) -> None:
     with ctx.connect_device() as device:
         app = SecretsApp(device)
         ask_to_touch_if_needed()
+        local_print(
+            "Please provide PIN to show PIN-protected entries (if any), or press ENTER to skip"
+        )
         authenticate_if_needed(app)
         for e in app.list():
             local_print(e.hex() if hex else e)
@@ -146,8 +201,12 @@ def remove(ctx: Context, name: str) -> None:
     with ctx.connect_device() as device:
         app = SecretsApp(device)
         ask_to_touch_if_needed()
-        authenticate_if_needed(app)
-        app.delete(name.encode())
+
+        @repeat_if_pin_needed
+        def call(app: SecretsApp) -> None:
+            app.delete(name.encode())
+
+        call(app)
 
 
 @secrets.command()
@@ -203,18 +262,24 @@ def get(
 
     timestamp = timestamp if timestamp else int(datetime.timestamp(datetime.now()))
     with ctx.connect_device() as device:
-        try:
-            app = SecretsApp(device)
-            ask_to_touch_if_needed()
-            authenticate_if_needed(app)
+        app = SecretsApp(device)
+        ask_to_touch_if_needed()
+
+        @repeat_if_pin_needed
+        def call(app: SecretsApp) -> None:
             code = app.calculate(name.encode(), timestamp // period)
             local_print(
                 f"Timestamp: {datetime.isoformat(datetime.fromtimestamp(timestamp), timespec='seconds')} ({timestamp}), period: {period}"
             )
             local_print(code.decode())
-        except fido2.ctap.CtapError as e:
+
+        try:
+            call(app)
+
+        except SecretsAppException as e:
             local_print(
-                f"Device returns error: {e}. This credential id might not be registered."
+                f"Device returns error: {e}. \n"
+                f"This credential id might not be registered, or its type does not allow to use it here."
             )
 
 
@@ -224,54 +289,56 @@ def get(
     "name",
     type=click.STRING,
 )
-@click.option(
-    "--code",
+@click.argument(
     "code",
     type=click.INT,
-    help="The code to verify",
-    default=0,
 )
 def verify(ctx: Context, name: str, code: int) -> None:
     """Proceed with the incoming OTP code verification (aka reverse HOTP).
-    Does not need authentication by design. Use the "register" command to create the credential for this action.
+    Use the "register" command to create the credential for this action.
     """
     with ctx.connect_device() as device:
         app = SecretsApp(device)
         ask_to_touch_if_needed()
-        authenticate_if_needed(app)
+
+        @repeat_if_pin_needed
+        def call(app: SecretsApp) -> None:
+            app.verify_code(name.encode(), code)
 
         try:
-            app.verify_code(name.encode(), code)
-        except fido2.ctap.CtapError as e:
+            call(app)
+        except SecretsAppException as e:
             local_print(
-                f"Device returns error: {e}. This credential id might not be registered, or the provided HOTP code has not passed verification."
+                f"Device returns error: {e}. \n"
+                f"This credential id might not be registered, or the provided HOTP code has not passed verification."
             )
 
 
 def ask_for_passphrase_if_needed(app: SecretsApp) -> Optional[str]:
-    passphrase = None
-    if app.authentication_required():
-        health_check = helper_secrets_app_health_check(app)
-        if health_check:
-            local_print(*health_check)
-        counter = app.select().pin_attempt_counter
-        if counter is None or counter == 0:
-            raise RuntimeError("PIN not available to use")
-        passphrase = AskUser(
-            f"Current Password ({counter} attempts left)",
-            envvar="NITROPY_SECRETS_PASSWORD",
-            hide_input=True,
-        ).ask()
+    health_check = helper_secrets_app_health_check(app)
+    if health_check:
+        local_print(*health_check)
+    counter = app.select().pin_attempt_counter
+    if counter is None or counter == 0:
+        raise RuntimeError("PIN not available to use")
+    passphrase = AskUser(
+        f"Current PIN ({counter} attempts left)",
+        envvar="NITROPY_SECRETS_PASSWORD",
+        hide_input=True,
+    ).ask()
     return passphrase
 
 
 def authenticate_if_needed(app: SecretsApp) -> None:
     try:
         passphrase = ask_for_passphrase_if_needed(app)
-        if passphrase is not None:
+        if passphrase:
             app.verify_pin_raw(passphrase)
     except Exception as e:
-        local_print(f'Authentication failed with error: "{e}"')
+        local_print(
+            f'Authentication failed with error: "{e}" \n'
+            "Please make sure the provided PIN is correct."
+        )
         raise click.Abort()
 
 
@@ -279,7 +346,7 @@ def authenticate_if_needed(app: SecretsApp) -> None:
 @click.pass_obj
 @click.password_option()
 def set_pin(ctx: Context, password: str) -> None:
-    """Set the PIN used to authenticate to other commands."""
+    """Set or change the PIN used to authenticate to other commands."""
     new_password = password
 
     with ctx.connect_device() as device:
@@ -297,9 +364,9 @@ def set_pin(ctx: Context, password: str) -> None:
                 raise click.Abort()
             app.change_pin_raw(current_password, new_password)
             local_print("Password changed")
-        except fido2.ctap.CtapError as e:
+        except SecretsAppException as e:
             local_print(
-                f"Device returns error: {e}. This passphrase might be invalid or is set already."
+                f"Device returns error: {e}. \n" f"The new or current PIN is invalid."
             )
 
 
