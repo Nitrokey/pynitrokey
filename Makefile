@@ -158,3 +158,6 @@ secrets-test-all: init
 secrets-test:
 	@echo "Skipping slow tests. Run secrets-test-all target for all tests."
 	./venv/bin/pytest  -v pynitrokey/test_secrets_app.py --durations=0 -m "not slow" $(TESTPARAM)
+
+secrets-test-report:
+	./venv/bin/pytest  -v pynitrokey/test_secrets_app.py --durations=0 -o log_cli=false -o log_cli_level=debug -W ignore::DeprecationWarning --template=html1/index.html --report report.html
