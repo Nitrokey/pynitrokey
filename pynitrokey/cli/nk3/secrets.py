@@ -105,7 +105,7 @@ def repeat_if_pin_needed(func) -> Callable:  # type: ignore[no-untyped-def]
     "--protect-with-pin",
     "pin_protection",
     type=click.BOOL,
-    help="This credential requires button press before use",
+    help="This credential should be additionally encrypted with a PIN, and require it before each use",
     is_flag=True,
 )
 def register(
