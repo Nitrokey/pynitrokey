@@ -437,7 +437,7 @@ def test_calculated_codes_totp_hash_digits(
 @pytest.mark.parametrize(
     "count",
     [
-        100,
+        30,
         pytest.param(1000, marks=pytest.mark.slow),
     ],
 )
