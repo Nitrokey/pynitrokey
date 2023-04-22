@@ -11,6 +11,7 @@ from pynitrokey.nk3.secrets_app import (
     SecretsApp,
     SecretsAppException,
     SecretsAppExceptionID,
+    SecretsAppHealthCheckException,
 )
 
 
@@ -29,9 +30,20 @@ def repeat_if_pin_needed(func) -> Callable:  # type: ignore[no-untyped-def]
     """
 
     def wrapper(*args, **kwargs) -> None:  # type: ignore[no-untyped-def]
+        assert len(args) >= 1 and isinstance(
+            args[0], SecretsApp
+        ), "repeat_if_pin_needed: SecretsApp should be passed as an argument to this decorator"
+        app: SecretsApp = args[0]
+
         try:
+            if app.protocol_v2_confirm_all_requests_with_pin():
+                authenticate_if_needed(app)
             func(*args, **kwargs)
         except SecretsAppException as e:
+            # Behavior below is for the v3 version of the protocol. Bail if v2 is used.
+            if app.protocol_v2_confirm_all_requests_with_pin():
+                raise
+
             if e.to_id() not in {
                 SecretsAppExceptionID.SecurityStatusNotSatisfied,
                 SecretsAppExceptionID.NotFound,
@@ -44,11 +56,6 @@ def repeat_if_pin_needed(func) -> Callable:  # type: ignore[no-untyped-def]
                     "Credential not found. Please provide PIN below to search in the PIN-protected database."
                 )
             # Ask for PIN and retry
-            assert len(args) >= 1 and isinstance(
-                args[0], SecretsApp
-            ), "repeat_if_pin_needed: SecretsApp should be passed as an argument to this decorator"
-
-            app: SecretsApp = args[0]
             authenticate_if_needed(app)
             func(*args, **kwargs)
 
@@ -181,13 +188,20 @@ def list(ctx: Context, hex: bool) -> None:
     """List registered OTP credentials."""
     with ctx.connect_device() as device:
         app = SecretsApp(device)
-        ask_to_touch_if_needed()
-        local_print(
-            "Please provide PIN to show PIN-protected entries (if any), or press ENTER to skip"
-        )
-        authenticate_if_needed(app)
-        for e in app.list():
+        if app.is_pin_healthy():
+            local_print(
+                "Please provide PIN to show PIN-protected entries (if any), or press ENTER to skip"
+            )
+            try:
+                ask_to_touch_if_needed()
+                authenticate_if_needed(app)
+            except click.Abort:
+                pass
+        credentials_list = app.list()
+        for e in credentials_list:
             local_print(e.hex() if hex else e)
+        if len(credentials_list) == 0:
+            local_print("No credentials found")
 
 
 @secrets.command()
@@ -207,6 +221,7 @@ def remove(ctx: Context, name: str) -> None:
             app.delete(name.encode())
 
         call(app)
+        local_print("Done")
 
 
 @secrets.command()
@@ -220,13 +235,12 @@ def reset(ctx: Context, force: bool) -> None:
     """Remove all OTP credentials from the device."""
     confirmed = force or click.confirm("Do you want to continue?")
     if not confirmed:
-        local_print("Operation cancelled")
         raise click.Abort()
     with ctx.connect_device() as device:
         app = SecretsApp(device)
         ask_to_touch_if_needed()
         app.reset()
-        local_print("Operation executed")
+        local_print("Done")
 
 
 @secrets.command()
@@ -279,7 +293,7 @@ def get(
         except SecretsAppException as e:
             local_print(
                 f"Device returns error: {e}. \n"
-                f"This credential id might not be registered, or its type does not allow to use it here."
+                f"This credential id might not be registered, or its not allowed to be used here."
             )
 
 
@@ -310,7 +324,7 @@ def verify(ctx: Context, name: str, code: int) -> None:
         except SecretsAppException as e:
             local_print(
                 f"Device returns error: {e}. \n"
-                f"This credential id might not be registered, or the provided HOTP code has not passed verification."
+                f"This credential id might not be registered, is of wrong type, or the provided HOTP code has not passed verification."
             )
 
 
@@ -318,11 +332,10 @@ def ask_for_passphrase_if_needed(app: SecretsApp) -> Optional[str]:
     health_check = helper_secrets_app_health_check(app)
     if health_check:
         local_print(*health_check)
-    counter = app.select().pin_attempt_counter
-    if counter is None or counter == 0:
-        raise RuntimeError("PIN not available to use")
+    if not app.is_pin_healthy():
+        raise SecretsAppHealthCheckException("PIN not available to use")
     passphrase = AskUser(
-        f"Current PIN ({counter} attempts left)",
+        f"Current PIN ({app.select().pin_attempt_counter} attempts left)",
         envvar="NITROPY_SECRETS_PASSWORD",
         hide_input=True,
     ).ask()
@@ -333,7 +346,12 @@ def authenticate_if_needed(app: SecretsApp) -> None:
     try:
         passphrase = ask_for_passphrase_if_needed(app)
         if passphrase:
+            ask_to_touch_if_needed()
             app.verify_pin_raw(passphrase)
+        else:
+            local_print("No PIN provided")
+    except SecretsAppHealthCheckException:
+        raise click.Abort()
     except Exception as e:
         local_print(
             f'Authentication failed with error: "{e}" \n'
@@ -390,13 +408,13 @@ def helper_secrets_app_health_check(app: SecretsApp) -> List[str]:
         )
     if r.pin_attempt_counter == 0:
         messages.append(
-            "- All attempts on the PIN counter are used. Call factory reset to use the device again."
+            "- All attempts on the PIN counter are used. Call factory reset to use the PIN feature of the secrets application again."
         )
     if (
         app.feature_challenge_response_support()
         or app.feature_old_application_version()
     ):
-        messages.append("- This application version might be outdated.")
+        messages.append("- This application version is outdated.")
 
     if messages:
         messages.insert(0, "Health check notes:")

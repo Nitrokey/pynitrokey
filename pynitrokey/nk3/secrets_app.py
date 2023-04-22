@@ -76,6 +76,10 @@ class SecretsAppExceptionID(IntEnum):
     Success = 0x9000
 
 
+class SecretsAppHealthCheckException(Exception):
+    pass
+
+
 @dataclasses.dataclass
 class SecretsAppException(Exception):
     code: str
@@ -578,3 +582,16 @@ class SecretsApp:
         if self.get_feature_status_cached().challenge is not None:
             return True
         return False
+
+    def protocol_v2_confirm_all_requests_with_pin(self) -> bool:
+        # 4.7.0 version requires providing PIN each request
+        return self.select().version_str() == "4.7.0"
+
+    def protocol_v3_separate_pin_and_no_pin_space(self) -> bool:
+        # 4.10.0 makes logical separation between the PIN-encrypted and non-PIN encrypted spaces, except
+        # for overwriting the credentials
+        return self.select().version_str() == "4.10.0"
+
+    def is_pin_healthy(self) -> bool:
+        counter = self.select().pin_attempt_counter
+        return not (counter is None or counter == 0)
