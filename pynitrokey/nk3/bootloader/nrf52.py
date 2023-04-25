@@ -136,6 +136,10 @@ class Nitrokey3BootloaderNrf52(Nitrokey3Bootloader):
         self._uuid = uuid
 
     @property
+    def is_open(self) -> bool:
+        return True
+
+    @property
     def variant(self) -> Variant:
         return Variant.NRF52
 

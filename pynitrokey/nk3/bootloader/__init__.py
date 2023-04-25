@@ -106,6 +106,11 @@ class Nitrokey3Bootloader(Nitrokey3Base):
 
     @property
     @abstractmethod
+    def is_open(self) -> bool:
+        ...
+
+    @property
+    @abstractmethod
     def variant(self) -> Variant:
         ...
 

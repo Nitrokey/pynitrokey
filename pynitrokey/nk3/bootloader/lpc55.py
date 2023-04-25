@@ -50,6 +50,10 @@ class Nitrokey3BootloaderLpc55(Nitrokey3Bootloader):
         return self
 
     @property
+    def is_open(self) -> bool:
+        return self.device.is_opened
+
+    @property
     def variant(self) -> Variant:
         return Variant.LPC55
 

@@ -338,6 +338,9 @@ class Updater:
                 logger.debug(f"Trying to connect to bootloader ({t})")
                 try:
                     with self.await_bootloader() as bootloader:
+                        if not bootloader.is_open:
+                            logger.warn("Bootloader is not open, continuing")
+                            continue
                         # noop to test communication
                         bootloader.uuid
                         yield bootloader
