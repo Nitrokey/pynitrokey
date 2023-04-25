@@ -331,14 +331,17 @@ class Updater:
                 raise self.ui.request_repeated_update()
 
             exc = None
+            found = False
             for t in Retries(3):
+                if found:
+                    break
                 logger.debug(f"Trying to connect to bootloader ({t})")
                 try:
                     with self.await_bootloader() as bootloader:
                         # noop to test communication
                         bootloader.uuid
                         yield bootloader
-                        break
+                        found = True
                 except McuBootConnectionError as e:
                     logger.debug("Received connection error", exc_info=True)
                     exc = e
