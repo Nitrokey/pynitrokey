@@ -44,17 +44,14 @@ def repeat_if_pin_needed(func) -> Callable:  # type: ignore[no-untyped-def]
             if app.protocol_v2_confirm_all_requests_with_pin():
                 raise
 
-            if e.to_id() not in {
-                SecretsAppExceptionID.SecurityStatusNotSatisfied,
-                SecretsAppExceptionID.NotFound,
-            }:
-                raise
             if e.to_id() == SecretsAppExceptionID.SecurityStatusNotSatisfied:
                 local_print("PIN is required to run this command.")
             elif e.to_id() == SecretsAppExceptionID.NotFound:
                 local_print(
                     "Credential not found. Please provide PIN below to search in the PIN-protected database."
                 )
+            else:
+                raise
             # Ask for PIN and retry
             authenticate_if_needed(app)
             func(*args, **kwargs)
