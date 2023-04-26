@@ -43,13 +43,13 @@ check-style:
 	$(PYTHON3_VENV) -m flake8 $(FLAKE8_DIRS)
 
 check-typing:
+	@echo "Note: run semi-clean target in case this fails without any proper reason"
 	$(PYTHON3_VENV) -m mypy $(PACKAGE_NAME)/
 
 check-doctest:
 	$(PYTHON3_VENV) -m doctest $(PACKAGE_NAME)/nk3/utils.py
 
 check: check-format check-import-sorting check-style check-typing check-doctest
-	@echo "Note: run semi-clean target in case this fails without any proper reason"
 
 # automatic code fixes
 fix:
@@ -149,10 +149,15 @@ nethsm-client: nethsm-api.yaml
 	cp -r "${OPENAPI_OUTPUT_DIR}/python/pynitrokey/nethsm/client" pynitrokey/nethsm
 
 .PHONY: secrets-test-all secrets-test
-TESTPARAM=-x -s -o log_cli=true
+LOG=info
+TESTADD=
+TESTPARAM=-x -s -o log_cli=true -o log_cli_level=$(LOG) -W ignore::DeprecationWarning $(TESTADD)
 secrets-test-all: init
 	./venv/bin/pytest  -v pynitrokey/test_secrets_app.py --durations=0 $(TESTPARAM)
 
-secrets-test: init
+secrets-test:
 	@echo "Skipping slow tests. Run secrets-test-all target for all tests."
 	./venv/bin/pytest  -v pynitrokey/test_secrets_app.py --durations=0 -m "not slow" $(TESTPARAM)
+
+secrets-test-report:
+	./venv/bin/pytest  -v pynitrokey/test_secrets_app.py --durations=0 -o log_cli=false -o log_cli_level=debug -W ignore::DeprecationWarning --template=html1/index.html --report report.html

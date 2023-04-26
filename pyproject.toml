@@ -55,6 +55,7 @@ dev = [
   "types-requests",
   "types-tqdm",
   "pytest",
+  "pytest-reporter-html1",
   "oath"
 ]
 pcsc = ["pyscard >=2.0.0,<3"]
@@ -120,9 +121,19 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 log_cli = false
-log_cli_level = "DEBUG"
+log_cli_level = "INFO"
 log_cli_format = "%(asctime)s [%(levelname)3s] %(message)s"
 log_cli_date_format = "%H:%M:%S"
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
 ]
+
+[tool.ruff]
+line-length = 120
+exclude = [
+    "venv",
+    "nethsm",
+    "start",
+    "nk3",
+]
+target-version = "py39"

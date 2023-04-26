@@ -8,7 +8,7 @@ import dataclasses
 import hmac
 import logging
 import typing
-from enum import Enum
+from enum import Enum, IntEnum
 from hashlib import pbkdf2_hmac
 from secrets import token_bytes
 from struct import pack
@@ -52,10 +52,41 @@ class SelectResponse:
         )
 
 
+class SecretsAppExceptionID(IntEnum):
+    MoreDataAvailable = 0x61FF
+    VerificationFailed = 0x6300
+    UnspecifiedNonpersistentExecutionError = 0x6400
+    UnspecifiedPersistentExecutionError = 0x6500
+    WrongLength = 0x6700
+    LogicalChannelNotSupported = 0x6881
+    SecureMessagingNotSupported = 0x6882
+    CommandChainingNotSupported = 0x6884
+    SecurityStatusNotSatisfied = 0x6982
+    ConditionsOfUseNotSatisfied = 0x6985
+    OperationBlocked = 0x6983
+    IncorrectDataParameter = 0x6A80
+    FunctionNotSupported = 0x6A81
+    NotFound = 0x6A82
+    NotEnoughMemory = 0x6A84
+    IncorrectP1OrP2Parameter = 0x6A86
+    KeyReferenceNotFound = 0x6A88
+    InstructionNotSupportedOrInvalid = 0x6D00
+    ClassNotSupported = 0x6E00
+    UnspecifiedCheckingError = 0x6F00
+    Success = 0x9000
+
+
+class SecretsAppHealthCheckException(Exception):
+    pass
+
+
 @dataclasses.dataclass
 class SecretsAppException(Exception):
     code: str
     context: str
+
+    def to_id(self) -> SecretsAppExceptionID:
+        return SecretsAppExceptionID(int(self.code, 16))
 
     def to_string(self) -> str:
         d = {
@@ -84,10 +115,14 @@ class SecretsAppException(Exception):
         return d.get(self.code, "Unknown SW code")
 
     def __repr__(self) -> str:
-        return f"OTPAppException(code={self.code}/{self.to_string()})"
+        return f"SecretsAppException(code={self.code}/{self.to_string()})"
 
     def __str__(self) -> str:
         return self.__repr__()
+
+
+class CCIDInstruction(Enum):
+    Select = 0xA4
 
 
 class Instruction(Enum):
@@ -98,10 +133,9 @@ class Instruction(Enum):
     List = 0xA1
     Calculate = 0xA2
     Validate = 0xA3
-    CalculateAll = 0xA4
+    CalculateAll = 0xA4  # 0xA4 is Select as well # Unused
     SendRemaining = 0xA5
     VerifyCode = 0xB1
-    Select = 0xA4
     # Place extending commands in 0xBx space
     VerifyPIN = 0xB2
     ChangePIN = 0xB3
@@ -174,17 +208,22 @@ class SecretsApp:
             if not d:
                 return b""
             if isinstance(d, RawBytes):
-                # return b"".join(d.data)
-                return bytes(d.data)
-            if isinstance(d, tlv8.Entry):
-                return tlv8.encode([d])
+                res = bytes(d.data)
+                # self.logfn(f"Transforming {d} -> {res.hex()}")
+                return res
+            elif isinstance(d, tlv8.Entry):
+                res = tlv8.encode([d])
+                # self.logfn(f"Transforming {d} -> {res.hex()}")
+                return res
             return b""
 
         encoded_structure = b"".join(map(transform, structure))
         return encoded_structure
 
     def _send_receive(
-        self, ins: Instruction, structure: Optional[List] = None
+        self,
+        ins: typing.Union[Instruction, CCIDInstruction],
+        structure: Optional[List] = None,
     ) -> bytes:
         encoded_structure = self._custom_encode(structure)
         ins_b, p1, p2 = self._encode_command(ins)
@@ -240,16 +279,26 @@ class SecretsApp:
                 f"Received final data: [{status_bytes.hex()}] {data_final.hex() if data_final else data_final!r}"
             )
 
+        if data_final:
+            try:
+                self.logfn(
+                    f"Decoded received: {[ e.data[1:] for e in tlv8.decode(data_final) ]}"
+                )
+            except Exception:
+                raise
+
         return data_final
 
     @classmethod
-    def _encode_command(cls, command: Instruction) -> bytes:
+    def _encode_command(
+        cls, command: typing.Union[Instruction, CCIDInstruction]
+    ) -> bytes:
         p1 = 0
         p2 = 0
         if command == Instruction.Reset:
             p1 = 0xDE
             p2 = 0xAD
-        elif command == Instruction.Select:
+        elif command == CCIDInstruction.Select:
             p1 = 0x04
             p2 = 0x00
         elif command == Instruction.Calculate or command == Instruction.CalculateAll:
@@ -297,6 +346,7 @@ class SecretsApp:
         algo: Algorithm = Algorithm.Sha1,
         initial_counter_value: int = 0,
         touch_button_required: bool = False,
+        pin_based_encryption: bool = False,
     ) -> None:
         """
         Register new OTP credential
@@ -307,6 +357,7 @@ class SecretsApp:
         :param algo: The hash algorithm to use - SHA1, SHA256 or SHA512
         :param initial_counter_value: The counter's initial value for the HOTP credential (HOTP only)
         :param touch_button_required: User Presence confirmation is required to use this Credential
+        :param pin_based_encryption: User preference for additional PIN-based encryption
         :return: None
         """
         if initial_counter_value > 0xFFFFFFFF:
@@ -317,7 +368,7 @@ class SecretsApp:
             )
 
         self.logfn(
-            f"Setting new credential: {credid!r}, {secret.hex()}, {kind}, {algo}, counter: {initial_counter_value}"
+            f"Setting new credential: {credid!r}, {kind}, {algo}, counter: {initial_counter_value}, {touch_button_required=}, {pin_based_encryption=}"
         )
 
         structure = [
@@ -326,14 +377,23 @@ class SecretsApp:
             tlv8.Entry(
                 Tag.Key.value, bytes([kind.value | algo.value, digits]) + secret
             ),
-            RawBytes([Tag.Properties.value, 0x02 if touch_button_required else 0x00]),
+            RawBytes(
+                [
+                    Tag.Properties.value,
+                    0x02
+                    if touch_button_required
+                    else 0x00 | 0x04
+                    if pin_based_encryption
+                    else 0x00,
+                ]
+            ),
             tlv8.Entry(
                 Tag.InitialCounter.value, initial_counter_value.to_bytes(4, "big")
             ),
         ]
         self._send_receive(Instruction.Put, structure)
 
-    def calculate(self, cred_id: bytes, challenge: int) -> bytes:
+    def calculate(self, cred_id: bytes, challenge: Optional[int] = None) -> bytes:
         """
         Calculate the OTP code for the credential named `cred_id`, and with challenge `challenge`.
         :param cred_id: The name of the credential
@@ -341,6 +401,8 @@ class SecretsApp:
             Should be equal to: timestamp/period. The commonly used period value is 30.
         :return: OTP code as a byte string
         """
+        if challenge is None:
+            challenge = 0
         self.logfn(
             f"Sending calculate request for {cred_id!r} and challenge {challenge!r}"
         )
@@ -424,19 +486,11 @@ class SecretsApp:
         ]
         self._send_receive(Instruction.SetCode, structure=structure)
 
-    def authentication_required(self, stat: Optional[SelectResponse] = None) -> bool:
-        return True
-
     def validate(self, passphrase: str) -> None:
         """
         Authenticate using a passphrase
         """
         stat = self.select()
-        if not self.authentication_required(stat):
-            # Assuming this should have been checked before calling validate()
-            raise RuntimeWarning(
-                "No passphrase is set. Authentication is not required."
-            )
         if stat.algorithm != bytes([Algorithm.Sha1.value]):
             raise RuntimeError("For the authentication only SHA1 is supported")
         challenge = stat.challenge
@@ -471,7 +525,7 @@ class SecretsApp:
         """
         AID = [0xA0, 0x00, 0x00, 0x05, 0x27, 0x21, 0x01]
         structure = [RawBytes(AID)]
-        raw_res = self._send_receive(Instruction.Select, structure=structure)
+        raw_res = self._send_receive(CCIDInstruction.Select, structure=structure)
         resd: tlv8.EntryList = tlv8.decode(raw_res)
         rd = {}
         for e in resd:
@@ -528,3 +582,16 @@ class SecretsApp:
         if self.get_feature_status_cached().challenge is not None:
             return True
         return False
+
+    def protocol_v2_confirm_all_requests_with_pin(self) -> bool:
+        # 4.7.0 version requires providing PIN each request
+        return self.select().version_str() == "4.7.0"
+
+    def protocol_v3_separate_pin_and_no_pin_space(self) -> bool:
+        # 4.10.0 makes logical separation between the PIN-encrypted and non-PIN encrypted spaces, except
+        # for overwriting the credentials
+        return self.select().version_str() == "4.10.0"
+
+    def is_pin_healthy(self) -> bool:
+        counter = self.select().pin_attempt_counter
+        return not (counter is None or counter == 0)

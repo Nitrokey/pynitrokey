@@ -1,6 +1,8 @@
+import copy
 import logging
 import pathlib
 import secrets
+from enum import Enum, IntEnum, auto
 from functools import partial
 
 import pytest
@@ -53,8 +55,12 @@ def generate_corpus_args(request: FixtureRequest):
     ), request.config.getoption("--fuzzing-corpus-path")
 
 
+# @pytest.fixture(scope="function")
 @pytest.fixture(scope="function")
 def corpus_func(request: FixtureRequest, generate_corpus_args):
+    """
+    This fixture has to be function-scoped, to get different prefix "pre" for the per-test output
+    """
     generate_corpus, corpus_path = generate_corpus_args
     if generate_corpus:
         print(
@@ -78,31 +84,72 @@ def dev():
             pytest.skip(f"Cannot connect to the Nitrokey 3 device. Error: {e}")
 
 
+class CredEncryptionType(Enum):
+    # This requires providing PIN for encryption to work
+    PinBased = auto()
+    # Standard encryption
+    HardwareBased = auto()
+
+
 @pytest.fixture(scope="function")
-def secretsApp(corpus_func, dev):
+def secretsAppRaw(corpus_func, dev) -> SecretsApp:
+    """
+    Create Secrets App client with or without corpus files generations.
+    No other functional alterations.
+    """
     app = SecretsApp(dev, logfn=log)
     app.write_corpus_fn = corpus_func
     return app
 
 
-@pytest.fixture(scope="function")
-def secretsAppResetLogin(corpus_func, dev):
-    app = SecretsApp(dev, logfn=log)
-    app.write_corpus_fn = corpus_func
+@pytest.fixture(
+    scope="function",
+    params=[
+        CredEncryptionType.HardwareBased,
+        CredEncryptionType.PinBased,
+    ],
+)
+def secretsApp(request, secretsAppRaw) -> SecretsApp:
+    """
+    Create Secrets App client in two forms, w/ or w/o PIN-based encryption
+    """
+    app = copy.deepcopy(secretsAppRaw)
 
-    app.reset()
-    app.set_pin_raw(PIN)
-    app.verify_pin_raw(PIN)
+    credentials_type: CredEncryptionType = request.param
+    app.verify_pin_raw_always = app.verify_pin_raw
+    if credentials_type == CredEncryptionType.PinBased:
+        # Make all credentials registered with the PIN-based encryption
+        # Leave verify_pin_raw() working
+        app.register = partial(app.register, pin_based_encryption=True)
+    elif credentials_type == CredEncryptionType.HardwareBased:
+        # Make all verify_pin_raw() calls dormant
+        # All credentials should register themselves as not requiring PIN
+        app.verify_pin_raw = lambda x: secretsAppRaw.logfn(
+            "Skipping verify_pin_raw() call due to fixture configuration"
+        )
+    else:
+        raise RuntimeError("Wrong param value")
+
+    app.fixture_type = credentials_type
+
     return app
 
 
 @pytest.fixture(scope="function")
-def secretsAppNoLog(corpus_func, dev):
-    app = SecretsApp(dev)
-    app.write_corpus_fn = corpus_func
-    return app
+def secretsAppResetLogin(secretsApp) -> SecretsApp:
+    secretsApp.reset()
+    secretsApp.set_pin_raw(PIN)
+    secretsApp.verify_pin_raw(PIN)
+    return secretsApp
 
 
+@pytest.fixture(scope="function")
+def secretsAppNoLog(secretsApp) -> SecretsApp:
+    return secretsApp
+
+
+FEATURE_BRUTEFORCE_PROTECTION_ENABLED = False
+DELAY_AFTER_FAILED_REQUEST_SECONDS = 2
 CREDID = "CRED ID"
 SECRET = b"00" * 20
 DIGITS = 6
@@ -112,3 +159,5 @@ PIN = "12345678"
 PIN2 = "123123123"
 PIN_ATTEMPT_COUNTER_DEFAULT = 8
 FEATURE_CHALLENGE_RESPONSE_ENABLED = False
+CHALLENGE_RESPONSE_COMMANDS = {Instruction.Validate, Instruction.SetCode}
+CALCULATE_ALL_COMMANDS = {Instruction.CalculateAll}
