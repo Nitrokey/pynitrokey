@@ -21,6 +21,30 @@ from pynitrokey.start.gnuk_token import iso7816_compose
 
 
 @dataclasses.dataclass
+class PasswordSafeEntry:
+    name: Optional[bytes]
+    login: Optional[bytes]
+    password: Optional[bytes]
+    metadata: Optional[bytes]
+    properties: Optional[bytes]
+
+    def tlv_encode(self) -> List[tlv8.Entry]:
+        entries = [
+            tlv8.Entry(Tag.PwsLogin.value, self.login)
+            if self.login is not None
+            else None,
+            tlv8.Entry(Tag.PwsPassword.value, self.password)
+            if self.password is not None
+            else None,
+            tlv8.Entry(Tag.PwsMetadata.value, self.metadata)
+            if self.metadata is not None
+            else None,
+        ]
+        entries = [r for r in entries if r is not None]
+        return entries
+
+
+@dataclasses.dataclass
 class RawBytes:
     data: List
 
@@ -140,6 +164,7 @@ class Instruction(Enum):
     VerifyPIN = 0xB2
     ChangePIN = 0xB3
     SetPIN = 0xB4
+    GetCredential = 0xB5
 
 
 class Tag(Enum):
@@ -157,12 +182,17 @@ class Tag(Enum):
     Password = 0x80
     NewPassword = 0x81
     PINCounter = 0x82
+    PwsLogin = 0x83
+    PwsPassword = 0x84
+    PwsMetadata = 0x85
 
 
 class Kind(Enum):
     Hotp = 0x10
     Totp = 0x20
     HotpReverse = 0x30
+    # FIXME ?
+    NotSet = 0x40
 
 
 STRING_TO_KIND = {
@@ -326,6 +356,29 @@ class SecretsApp:
             res.append(e.data[1:])
         return res
 
+    def get_credential(self, cred_id) -> PasswordSafeEntry:
+        structure = [
+            tlv8.Entry(Tag.CredentialId.value, cred_id),
+        ]
+        raw_res = self._send_receive(Instruction.GetCredential, structure=structure)
+        print(raw_res.hex())
+        resd: tlv8.EntryList = tlv8.decode(raw_res)
+        res = {}
+        for e in resd:
+            # e: tlv8.Entry
+            res[e.type_id] = e.data
+            print(f"{hex(e.type_id)} {hex(len(e.data))}  {e.data.hex()}")
+        p = PasswordSafeEntry(
+            login=res.get(Tag.PwsLogin.value),
+            password=res.get(Tag.PwsPassword.value),
+            metadata=res.get(Tag.PwsMetadata.value),
+            name=res.get(Tag.CredentialId.value),
+            properties=res.get(Tag.Properties.value),
+        )
+        # FIXME parse this properly
+        p.properties = p.properties.hex() if p.properties else None
+        return p
+
     def delete(self, cred_id: bytes) -> None:
         """
         Delete credential with the given id. Does not fail, if the given credential does not exist.
@@ -347,6 +400,9 @@ class SecretsApp:
         initial_counter_value: int = 0,
         touch_button_required: bool = False,
         pin_based_encryption: bool = False,
+        login: Optional[bytes] = None,
+        password: Optional[bytes] = None,
+        metadata: Optional[bytes] = None,
     ) -> None:
         """
         Register new OTP credential
@@ -358,6 +414,9 @@ class SecretsApp:
         :param initial_counter_value: The counter's initial value for the HOTP credential (HOTP only)
         :param touch_button_required: User Presence confirmation is required to use this Credential
         :param pin_based_encryption: User preference for additional PIN-based encryption
+        :param login:
+        :param password:
+        :param metadata:
         :return: None
         """
         if initial_counter_value > 0xFFFFFFFF:
@@ -390,6 +449,7 @@ class SecretsApp:
             tlv8.Entry(
                 Tag.InitialCounter.value, initial_counter_value.to_bytes(4, "big")
             ),
+            *PasswordSafeEntry(login, password, metadata).tlv_encode(),
         ]
         self._send_receive(Instruction.Put, structure)
 

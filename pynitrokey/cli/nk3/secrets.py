@@ -112,6 +112,27 @@ def repeat_if_pin_needed(func) -> Callable:  # type: ignore[no-untyped-def]
     help="This credential should be additionally encrypted with a PIN, and require it before each use",
     is_flag=True,
 )
+@click.option(
+    "--login",
+    "login",
+    type=click.STRING,
+    help="PWS Login",
+    default=None,
+)
+@click.option(
+    "--password",
+    "password",
+    type=click.STRING,
+    help="PWS Password",
+    default=None,
+)
+@click.option(
+    "--metadata",
+    "metadata",
+    type=click.STRING,
+    help="PWS Metadata",
+    default=None,
+)
 def register(
     ctx: Context,
     name: str,
@@ -122,6 +143,9 @@ def register(
     counter_start: int,
     touch_button: bool,
     pin_protection: bool,
+    login: Optional[bytes] = None,
+    password: Optional[bytes] = None,
+    metadata: Optional[bytes] = None,
 ) -> None:
     """Register OTP credential.
 
@@ -147,6 +171,9 @@ def register(
                 initial_counter_value=counter_start,
                 touch_button_required=touch_button,
                 pin_based_encryption=pin_protection,
+                login=login,
+                password=password,
+                metadata=metadata,
             )
 
         call(app)
