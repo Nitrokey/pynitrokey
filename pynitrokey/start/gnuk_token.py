@@ -67,10 +67,22 @@ def iso7816_compose(ins, p1, p2, data, cls=0x00, le=None):
         else:
             return pack(">BBBBB", cls, ins, p1, p2, le)
     else:
-        if not le:
-            return pack(">BBBBB", cls, ins, p1, p2, data_len) + data
+        if data_len <= 255:
+            if not le:
+                return pack(">BBBBB", cls, ins, p1, p2, data_len) + data
+            else:
+                return (
+                    pack(">BBBBB", cls, ins, p1, p2, data_len) + data + pack(">B", le)
+                )
         else:
-            return pack(">BBBBB", cls, ins, p1, p2, data_len) + data + pack(">B", le)
+            if not le:
+                return pack(">BBBBBH", cls, ins, p1, p2, 0, data_len) + data
+            else:
+                return (
+                    pack(">BBBBBH", cls, ins, p1, p2, 0, data_len)
+                    + data
+                    + pack(">B", le)
+                )
 
 
 # This class only supports Gnuk (for now)

@@ -39,6 +39,7 @@ from pynitrokey.nk3.secrets_app import (
     CCIDInstruction,
     Instruction,
     Kind,
+    PasswordSafeEntry,
     RawBytes,
     SecretsApp,
     SecretsAppException,
@@ -464,7 +465,7 @@ def test_load(secretsAppResetLogin, kind: Kind, long_labels: str, count):
         try:
             secretsApp.verify_pin_raw(PIN)
             secretsApp.register(
-                name, secretb, digits=6, kind=kind, initial_counter_value=i
+                name.encode(), secretb, digits=6, kind=kind, initial_counter_value=i
             )
             names_registered.append(name.encode())
             if i > count:
@@ -1207,3 +1208,97 @@ def test_send_remaining(secretsApp):
     # Now that the buffer should be emptied, the SendRemaining call should be rejected
     with pytest.raises(SecretsAppException, match="ConditionsOfUseNotSatisfied"):
         secrets_app._send_receive(Instruction.SendRemaining)
+
+
+@pytest.mark.parametrize(
+    "length",
+    [
+        # Average daily use case
+        30,
+        # Maximum field length -> 128B
+        128 - 1,
+    ],
+)
+def test_password_safe(secretsAppResetLogin, length):
+    """
+    Create a full credential, with both OTP and PWS fields populated. Test working both, with and without PIN-based encryption.
+    """
+    secretsApp = secretsAppResetLogin
+    oath = pytest.importorskip("oath")
+    login = b"login".center(length, b"=")
+    password = b"password".center(length, b"=")
+    metadata = b"metadata".center(length, b"=")
+    name = CREDID.center(length, "=")
+    secretb = binascii.a2b_hex(SECRET)
+    secretsApp.register(
+        name,
+        secretb,
+        digits=6,
+        kind=Kind.Totp,
+        algo=Algorithm.Sha1,
+        login=login,
+        password=password,
+        metadata=metadata,
+    )
+    lib_at = lambda t: oath.totp(
+        SECRET.decode(), format="dec6", period=30, t=t * 30
+    ).encode()
+    for i in range(10):
+        secretsApp.verify_pin_raw(PIN)
+        assert secretsApp.calculate(name, i) == lib_at(i)
+
+    secretsApp.verify_pin_raw(PIN)
+    p: PasswordSafeEntry = secretsApp.get_credential(name)
+    assert p.name == name.encode()
+    assert p.login == login
+    assert p.password == password
+    assert p.metadata == metadata
+
+
+def test_password_safe_empty_credential(secretsAppResetLogin):
+    """
+    It should be possible to create an empty credential, with just the name presented
+    """
+    secretsAppResetLogin.verify_pin_raw(PIN)
+    secretsAppResetLogin.register(CREDID)
+
+    secretsAppResetLogin.verify_pin_raw(PIN)
+    secretsAppResetLogin.calculate(CREDID, 0)
+
+    secretsAppResetLogin.verify_pin_raw(PIN)
+    p: PasswordSafeEntry = secretsAppResetLogin.get_credential(CREDID)
+    assert p.name == CREDID.encode()
+    assert p.login is None
+    assert p.password is None
+    assert p.metadata is None
+
+    secretsAppResetLogin.verify_pin_raw(PIN)
+    assert CREDID.encode() in secretsAppResetLogin.list()
+
+
+def test_password_safe_just_pws_entry(secretsAppResetLogin):
+    """
+    It should be possible to create a PWS-only credential
+    """
+    length = 20
+    login = b"login".center(length, b"=")
+    password = b"password".center(length, b"=")
+    metadata = b"metadata".center(length, b"=")
+
+    secretsAppResetLogin.verify_pin_raw(PIN)
+    secretsAppResetLogin.register(
+        CREDID, login=login, password=password, metadata=metadata
+    )
+
+    secretsAppResetLogin.verify_pin_raw(PIN)
+    secretsAppResetLogin.calculate(CREDID, 0)
+
+    secretsAppResetLogin.verify_pin_raw(PIN)
+    p: PasswordSafeEntry = secretsAppResetLogin.get_credential(CREDID)
+    assert p.name == CREDID.encode()
+    assert p.login == login
+    assert p.password == password
+    assert p.metadata == metadata
+
+    secretsAppResetLogin.verify_pin_raw(PIN)
+    assert CREDID.encode() in secretsAppResetLogin.list()

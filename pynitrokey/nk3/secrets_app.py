@@ -22,11 +22,11 @@ from pynitrokey.start.gnuk_token import iso7816_compose
 
 @dataclasses.dataclass
 class PasswordSafeEntry:
-    name: Optional[bytes]
     login: Optional[bytes]
     password: Optional[bytes]
     metadata: Optional[bytes]
-    properties: Optional[bytes]
+    properties: Optional[bytes] = None
+    name: Optional[bytes] = None
 
     def tlv_encode(self) -> List[tlv8.Entry]:
         entries = [
@@ -40,6 +40,7 @@ class PasswordSafeEntry:
             if self.metadata is not None
             else None,
         ]
+        # Filter out empty entries
         entries = [r for r in entries if r is not None]
         return entries
 
@@ -312,7 +313,7 @@ class SecretsApp:
         if data_final:
             try:
                 self.logfn(
-                    f"Decoded received: {[ e.data[1:] for e in tlv8.decode(data_final) ]}"
+                    f"Decoded received: {[ e.data for e in tlv8.decode(data_final) ]}"
                 )
             except Exception:
                 pass
@@ -361,13 +362,13 @@ class SecretsApp:
             tlv8.Entry(Tag.CredentialId.value, cred_id),
         ]
         raw_res = self._send_receive(Instruction.GetCredential, structure=structure)
-        print(raw_res.hex())
         resd: tlv8.EntryList = tlv8.decode(raw_res)
         res = {}
+        self.logfn("Per field dissection:")
         for e in resd:
             # e: tlv8.Entry
             res[e.type_id] = e.data
-            print(f"{hex(e.type_id)} {hex(len(e.data))}  {e.data.hex()}")
+            self.logfn(f"{hex(e.type_id)} {hex(len(e.data))}  {e.data.hex()}")
         p = PasswordSafeEntry(
             login=res.get(Tag.PwsLogin.value),
             password=res.get(Tag.PwsPassword.value),
@@ -375,8 +376,7 @@ class SecretsApp:
             name=res.get(Tag.CredentialId.value),
             properties=res.get(Tag.Properties.value),
         )
-        # FIXME parse this properly
-        p.properties = p.properties.hex() if p.properties else None
+        p.properties = p.properties.hex().encode() if p.properties else None
         return p
 
     def delete(self, cred_id: bytes) -> None:
@@ -393,9 +393,9 @@ class SecretsApp:
     def register(
         self,
         credid: bytes,
-        secret: bytes,
-        digits: int,
-        kind: Kind = Kind.Hotp,
+        secret: bytes = b"0" * 20,
+        digits: int = 6,
+        kind: Kind = Kind.Totp,
         algo: Algorithm = Algorithm.Sha1,
         initial_counter_value: int = 0,
         touch_button_required: bool = False,
@@ -405,13 +405,13 @@ class SecretsApp:
         metadata: Optional[bytes] = None,
     ) -> None:
         """
-        Register new OTP credential
+        Register new OTP Credential
         :param credid: Credential ID
         :param secret: The shared key
         :param digits: Digits of the produced code
         :param kind: OTP variant - HOTP or TOTP
         :param algo: The hash algorithm to use - SHA1, SHA256 or SHA512
-        :param initial_counter_value: The counter's initial value for the HOTP credential (HOTP only)
+        :param initial_counter_value: The counter's initial value for the HOTP Credential (HOTP only)
         :param touch_button_required: User Presence confirmation is required to use this Credential
         :param pin_based_encryption: User preference for additional PIN-based encryption
         :param login:
@@ -449,7 +449,9 @@ class SecretsApp:
             tlv8.Entry(
                 Tag.InitialCounter.value, initial_counter_value.to_bytes(4, "big")
             ),
-            *PasswordSafeEntry(login, password, metadata).tlv_encode(),
+            *PasswordSafeEntry(
+                name=credid, login=login, password=password, metadata=metadata
+            ).tlv_encode(),
         ]
         self._send_receive(Instruction.Put, structure)
 

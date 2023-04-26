@@ -25,6 +25,7 @@ def secrets(ctx: click.Context) -> None:
 
 def repeat_if_pin_needed(func) -> Callable:  # type: ignore[no-untyped-def]
     """
+    Repeat the call of the decorated function, if PIN is required.
     Decorated function should have at least one argument,
     of which the first one should be an instance of the SecretsApp. Otherwise, a RuntimeError is raised.
     """
@@ -35,9 +36,14 @@ def repeat_if_pin_needed(func) -> Callable:  # type: ignore[no-untyped-def]
         ), "repeat_if_pin_needed: SecretsApp should be passed as an argument to this decorator"
         app: SecretsApp = args[0]
 
+        repeat_if_pin_needed.cached_PIN = getattr(  # type: ignore[attr-defined]
+            repeat_if_pin_needed, "cached_PIN", None
+        )
         try:
             if app.protocol_v2_confirm_all_requests_with_pin():
-                authenticate_if_needed(app)
+                repeat_if_pin_needed.cached_PIN = authenticate_if_needed(  # type: ignore[attr-defined]
+                    app, repeat_if_pin_needed.cached_PIN  # type: ignore[attr-defined]
+                )
             func(*args, **kwargs)
         except SecretsAppException as e:
             # Behavior below is for the v3 version of the protocol. Bail if v2 is used.
@@ -53,7 +59,9 @@ def repeat_if_pin_needed(func) -> Callable:  # type: ignore[no-untyped-def]
             else:
                 raise
             # Ask for PIN and retry
-            authenticate_if_needed(app)
+            repeat_if_pin_needed.cached_PIN = authenticate_if_needed(  # type: ignore[attr-defined]
+                app, repeat_if_pin_needed.cached_PIN  # type: ignore[attr-defined]
+            )
             func(*args, **kwargs)
 
     return wrapper
@@ -311,8 +319,13 @@ def get(
             )
             local_print(code.decode())
 
+        @repeat_if_pin_needed
+        def call2(app: SecretsApp) -> None:
+            local_print(app.get_credential(name.encode()))
+
         try:
             call(app)
+            call2(app)
 
         except SecretsAppException as e:
             local_print(
@@ -366,9 +379,13 @@ def ask_for_passphrase_if_needed(app: SecretsApp) -> Optional[str]:
     return passphrase
 
 
-def authenticate_if_needed(app: SecretsApp) -> None:
+def authenticate_if_needed(
+    app: SecretsApp, passphrase: Optional[str] = None
+) -> Optional[str]:
     try:
-        passphrase = ask_for_passphrase_if_needed(app)
+        passphrase = (
+            ask_for_passphrase_if_needed(app) if passphrase is None else passphrase
+        )
         if passphrase:
             ask_to_touch_if_needed()
             app.verify_pin_raw(passphrase)
@@ -382,6 +399,7 @@ def authenticate_if_needed(app: SecretsApp) -> None:
             "Please make sure the provided PIN is correct."
         )
         raise click.Abort()
+    return passphrase
 
 
 @secrets.command()
