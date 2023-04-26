@@ -315,7 +315,7 @@ class SecretsApp:
                     f"Decoded received: {[ e.data[1:] for e in tlv8.decode(data_final) ]}"
                 )
             except Exception:
-                raise
+                pass
 
         return data_final
 
