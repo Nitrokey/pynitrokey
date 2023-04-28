@@ -192,14 +192,27 @@ class Kind(Enum):
     Hotp = 0x10
     Totp = 0x20
     HotpReverse = 0x30
-    # FIXME ?
     NotSet = 0x40
+
+    @classmethod
+    def from_attribute_byte(cls, attribute_byte: bytes) -> str:
+        a = int(attribute_byte)
+        res = "U"
+        for k in Kind:
+            if k.value & a == k.value:
+                if k != Kind.NotSet:
+                    res = str(k).split(".")[-1].upper()
+                else:
+                    res = "PWS"
+                break
+        return res
 
 
 STRING_TO_KIND = {
     "HOTP": Kind.Hotp,
     "TOTP": Kind.Totp,
     "HOTP_REVERSE": Kind.HotpReverse,
+    "NOT_SET": Kind.NotSet,
 }
 
 
@@ -344,7 +357,7 @@ class SecretsApp:
         self.logfn("Executing reset")
         self._send_receive(Instruction.Reset)
 
-    def list(self) -> List[bytes]:
+    def list(self, extended: bool = False) -> List[typing.Tuple[bytes, bytes]]:
         """
         Return a list of the registered credentials
         :return: List of bytestrings
@@ -354,10 +367,13 @@ class SecretsApp:
         res = []
         for e in resd:
             # e: tlv8.Entry
-            res.append(e.data[1:])
+            if extended:
+                res.append((e.data[0], e.data[1:]))
+            else:
+                res.append(e.data[1:])
         return res
 
-    def get_credential(self, cred_id) -> PasswordSafeEntry:
+    def get_credential(self, cred_id: bytes) -> PasswordSafeEntry:
         structure = [
             tlv8.Entry(Tag.CredentialId.value, cred_id),
         ]
@@ -395,7 +411,7 @@ class SecretsApp:
         credid: bytes,
         secret: bytes = b"0" * 20,
         digits: int = 6,
-        kind: Kind = Kind.Totp,
+        kind: Kind = Kind.NotSet,
         algo: Algorithm = Algorithm.Sha1,
         initial_counter_value: int = 0,
         touch_button_required: bool = False,
@@ -448,11 +464,14 @@ class SecretsApp:
             ),
             tlv8.Entry(
                 Tag.InitialCounter.value, initial_counter_value.to_bytes(4, "big")
-            ),
+            )
+            if kind in [Kind.Hotp, Kind.HotpReverse]
+            else None,
             *PasswordSafeEntry(
                 name=credid, login=login, password=password, metadata=metadata
             ).tlv_encode(),
         ]
+        structure = list(filter(lambda x: x is not None, structure))
         self._send_receive(Instruction.Put, structure)
 
     def calculate(self, cred_id: bytes, challenge: Optional[int] = None) -> bytes:
