@@ -178,7 +178,7 @@ def register(
     hash_algorithm = Algorithm.Sha1 if hash == "SHA1" else Algorithm.Sha256
 
     with ctx.connect_device() as device:
-        app = SecretsApp(device, logfn=logger.debug)
+        app = SecretsApp(device)
         ask_to_touch_if_needed()
 
         @repeat_if_pin_needed
