@@ -192,7 +192,8 @@ class Kind(Enum):
     Hotp = 0x10
     Totp = 0x20
     HotpReverse = 0x30
-    NotSet = 0x40
+    Hmac = 0x40
+    NotSet = 0xF0
 
     @classmethod
     def from_attribute_byte(cls, attribute_byte: bytes) -> str:
@@ -212,6 +213,7 @@ STRING_TO_KIND = {
     "HOTP": Kind.Hotp,
     "TOTP": Kind.Totp,
     "HOTP_REVERSE": Kind.HotpReverse,
+    "HMAC": Kind.Hmac,
     "NOT_SET": Kind.NotSet,
 }
 
@@ -308,6 +310,7 @@ class SecretsApp:
             except Exception as e:
                 self.logfn(f"Got exception: {e}")
                 raise
+            # Data order is different here than in APDU - SW is first, then the data if any
             status_bytes, result = result[:2], result[2:]
             self.logfn(
                 f"Received [{status_bytes.hex()}] {result.hex() if result else result!r}"
