@@ -12,7 +12,7 @@ import time
 from datetime import timedelta
 from os import wait
 from sys import stderr
-from typing import Any, Callable, List, Tuple, Optional
+from typing import Any, Callable, List, Optional, Tuple
 
 import fido2
 import pytest
