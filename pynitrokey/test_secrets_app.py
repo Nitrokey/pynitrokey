@@ -67,7 +67,7 @@ def test_register(secretsAppResetLogin):
     """
     Register credential with the given id and properties. Simple test.
     """
-    secretsAppResetLogin.register(CREDID, SECRET, DIGITS)
+    secretsAppResetLogin.register(CREDID, SECRET, DIGITS, kind=Kind.Hotp)
 
 
 def test_calculate(secretsAppResetLogin):
@@ -84,7 +84,7 @@ def test_delete(secretsAppResetLogin):
     """
     Remove credential with the given id. Simple test.
     """
-    secretsAppResetLogin.register(CREDID, SECRET, DIGITS)
+    secretsAppResetLogin.register(CREDID, SECRET, DIGITS, kind=Kind.Hotp)
     secretsAppResetLogin.verify_pin_raw(PIN)
     secretsAppResetLogin.delete(CREDID)
 
@@ -109,11 +109,11 @@ def test_list_changes(secretsAppResetLogin):
     assert not secretsApp.list()
 
     secretsApp.verify_pin_raw(PIN)
-    secretsApp.register(cred1, SECRET, DIGITS)
+    secretsApp.register(cred1, SECRET, DIGITS, kind=Kind.Hotp)
     secretsApp.verify_pin_raw(PIN)
     assert cred1 in secretsApp.list()
     secretsApp.verify_pin_raw(PIN)
-    secretsApp.register(cred2, SECRET, DIGITS)
+    secretsApp.register(cred2, SECRET, DIGITS, kind=Kind.Hotp)
     secretsApp.verify_pin_raw(PIN)
     assert cred2 in secretsApp.list()
 
@@ -535,7 +535,9 @@ def test_remove_all_credentials_by_hand(secretsAppRaw):
 
     for c in cred_pbek:
         secretsApp.verify_pin_raw(PIN)
-        secretsApp.register(c, SECRET, DIGITS, pin_based_encryption=True)
+        secretsApp.register(
+            c, SECRET, DIGITS, pin_based_encryption=True, kind=Kind.Hotp
+        )
 
     secretsApp.verify_pin_raw(PIN)
     credential_list = secretsApp.list()
@@ -563,7 +565,7 @@ def test_send_rubbish(secretsAppRaw):
     """Check if the application crashes, when sending unexpected data for the given command"""
     secretsApp = secretsAppRaw
     secretsApp.reset()
-    secretsApp.register(CREDID, SECRET, DIGITS)
+    secretsApp.register(CREDID, SECRET, DIGITS, kind=Kind.Hotp)
 
     # Just randomly selected 20 bytes of non-TLV data
     invalid_data = bytes([0x11] * 20)
@@ -600,7 +602,7 @@ def test_too_long_message(secretsAppResetLogin):
     Check device's response for the too long message
     """
     secretsApp = secretsAppResetLogin
-    secretsApp.register(CREDID, SECRET, DIGITS)
+    secretsApp.register(CREDID, SECRET, DIGITS, kind=Kind.Hotp)
     secretsApp.verify_pin_raw(PIN)
     secretsApp.list()
 
@@ -620,14 +622,16 @@ def test_too_long_message2(secretsAppRaw):
     """
     secretsApp = secretsAppRaw
     secretsApp.reset()
-    secretsApp.register(CREDID, SECRET, DIGITS)
+    secretsApp.register(CREDID, SECRET, DIGITS, kind=Kind.Hotp)
     secretsApp.list()
 
     # Check maximum label length
     too_long_name = b"a" * 256
     additional_space = 100
     max_label_length = len(SECRET) + additional_space
-    secretsApp.register(too_long_name[:-max_label_length], SECRET, DIGITS)
+    secretsApp.register(
+        too_long_name[:-max_label_length], SECRET, DIGITS, kind=Kind.Hotp
+    )
 
     # Find out experimentally the maximum accepted secret length - 126 bytes
     # Use minimal label length
