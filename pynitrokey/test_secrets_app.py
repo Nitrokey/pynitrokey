@@ -1433,7 +1433,12 @@ def test_hmac_low_level(secretsAppRaw):
     # calculation on the special-named slots does not work on factory-reset state
     for slot in [YK_P1_CMD_HMAC_2, YK_P1_CMD_HMAC_1]:
         helper_send_receive_ins(
-            secretsAppRaw, YK_API_REQ, p1=slot, le=20, expected_SW="6a82"
+            secretsAppRaw,
+            YK_API_REQ,
+            p1=slot,
+            le=20,
+            expected_SW="6a82",
+            data_raw=helper_get_padded(b"1"),
         )
 
     # registration on the special-named slots works
