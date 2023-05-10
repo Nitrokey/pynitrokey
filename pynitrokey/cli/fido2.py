@@ -236,23 +236,20 @@ def list_credentials(serial, pin):
             CredentialManagement.RESULT.RP_ID_HASH
         )
         local_print("-----------------------------------")
-        if "name" in reliable_party:
-            local_print(f"{reliable_party['name']}: ")
-        else:
-            local_print(f"{reliable_party['id']}: ")
+        name_or_id = reliable_party.get("name", reliable_party.get("id", "(no id)"))
+        local_print(f"{name_or_id}: ")
         for cred in cred_manager.enumerate_creds(reliable_party_hash):
             cred_id = cred.get(CredentialManagement.RESULT.CREDENTIAL_ID)["id"]
+            local_print(f"- id: {cred_id.hex()}")
             cred_user = cred.get(CredentialManagement.RESULT.USER)
-            if cred_user["name"] == cred_user["displayName"]:
-                local_print(f"- id: {cred_id.hex()}")
-                local_print(f"  user: {cred_user['name']}\n")
+            display_name = cred_user.get("displayName")
+            user_name = cred_user.get("name", "(no name)")
+            if display_name is None or user_name == display_name:
+                local_print(f"  user: {cred_user['name']}")
             else:
-                local_print(f"- id: {cred_id.hex()}")
-                local_print(
-                    f"  user: {cred_user['displayName']} ({cred_user['name']})\n"
-                )
+                local_print(f"  user: {display_name} ({cred_user['name']})")
 
-        local_print("-----------------------------------")
+    local_print("-----------------------------------")
     local_print(
         f"There is an estimated amount of {remaining_cred_space} credential slots left"
     )
