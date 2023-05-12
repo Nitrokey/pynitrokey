@@ -62,6 +62,8 @@ class SelectResponse:
     challenge: Optional[bytes]
     # Selected algorithm, challenge-response auth only
     algorithm: Optional[bytes]
+    # Serial number of the device
+    serial_number: Optional[bytes]
 
     def version_str(self) -> str:
         if self.version:
@@ -73,7 +75,8 @@ class SelectResponse:
         return (
             "Nitrokey Secrets\n"
             f"\tVersion: {self.version_str()}\n"
-            f"\tPIN attempt counter: {self.pin_attempt_counter}"
+            f"\tPIN attempt counter: {self.pin_attempt_counter}\n"
+            f"\tSerial number: {self.serial_number.hex()}"
         )
 
 
@@ -186,6 +189,7 @@ class Tag(Enum):
     PwsLogin = 0x83
     PwsPassword = 0x84
     PwsMetadata = 0x85
+    SerialNumber = 0x8F
 
 
 class Kind(Enum):
@@ -627,6 +631,7 @@ class SecretsApp:
             salt=rd.get(Tag.CredentialId.value),
             challenge=rd.get(Tag.Challenge.value),
             algorithm=rd.get(Tag.Algorithm.value),
+            serial_number=rd.get(Tag.SerialNumber.value),
         )
         return r
 
