@@ -31,7 +31,7 @@ import pynitrokey.exceptions
 import pynitrokey.fido2 as nkfido2
 from pynitrokey import helpers
 from pynitrokey.fido2.commands import SoloBootloader, SoloExtension
-from pynitrokey.helpers import local_critical
+from pynitrokey.helpers import local_critical, local_print
 
 
 class CliOrProvidedInteraction(UserInteraction):
@@ -543,11 +543,17 @@ class NKFido2Client:
                     raise
                 print("...error!")
 
-        # if not success:
-        #     for v in firmware_file_data["versions"]:
-        #         sig = v["signature"]
-        #         print(f'Trying with {sig}')
-        #         self.verify_flash(sig)
+        if not success:
+            msg = """Bootloader reports failure in the signature verification. If your device is staying in the
+            bootloader mode after reinserting it into the USB port, please execute the following to make it work again:
+
+            # Download the compressed firmware file for Nitrokey FIDO2 128 v2.4.1 and extract it
+            wget https://github.com/Nitrokey/nitrokey-fido2-firmware/releases/download/2.4.1.nitrokey/nitrokey-fido2-firmware-2.4.1-128kB-app-signed.zip
+            unzip nitrokey-fido2-firmware-2.4.1-128kB-app-signed.zip
+            # Run the update process again with the just downloaded firmware
+            nitropy fido2 util program bootloader nitrokey-fido2-firmware-2.4.1-128kB-app-signed.json
+            """
+            local_critical(msg, support_hint=False)
 
         return sig
 
