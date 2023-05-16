@@ -103,7 +103,7 @@ class SelectResponse:
             "Nitrokey Secrets\n"
             f"\tVersion: {self.version_str()}\n"
             f"\tPIN attempt counter: {self.pin_attempt_counter}\n"
-            f"\tSerial number: {self.serial_number.hex()}"
+            f"\tSerial number: {self.serial_number.hex() if self.serial_number else 'None'}"
         )
 
 
@@ -229,21 +229,19 @@ class Kind(Enum):
     @classmethod
     def from_attribute_byte(cls, attribute_byte: bytes) -> str:
         a = int(attribute_byte)
-        res = "U"
-        for k in Kind:
-            if k.value & a == k.value:
-                if k != Kind.NotSet:
-                    res = str(k).split(".")[-1].upper()
-                else:
-                    res = "PWS"
-                break
-        return res
+        k = cls.from_attribute_byte_type(a)
+        if k != Kind.NotSet:
+            return str(k).split(".")[-1].upper()
+        else:
+            return "PWS"
 
     @classmethod
     def from_attribute_byte_type(cls, a: int) -> "Kind":
+        v = a & 0xF0
         for k in Kind:
-            if k.value & a == k.value:
+            if k.value == v:
                 return k
+        raise ValueError("Invalid attribute byte")
 
 
 STRING_TO_KIND = {
@@ -401,7 +399,7 @@ class SecretsApp:
 
     def list(
         self, extended: bool = False
-    ) -> List[typing.Union[typing.Tuple[bytes, bytes], bytes]]:
+    ) -> typing.List[typing.Union[typing.Tuple[bytes, bytes], bytes]]:
         """
         Return a list of the registered credentials
         :return: List of bytestrings, or tuple of bytestrings, if "extended" switch is provided
@@ -409,7 +407,7 @@ class SecretsApp:
         """
         raw_res = self._send_receive(Instruction.List)
         resd: tlv8.EntryList = tlv8.decode(raw_res)
-        res = []
+        res: List[typing.Union[typing.Tuple[bytes, bytes], bytes]] = []
         for e in resd:
             # e: tlv8.Entry
             if extended:
