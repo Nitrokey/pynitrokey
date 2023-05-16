@@ -108,6 +108,7 @@ def secretsAppRaw(corpus_func, dev) -> SecretsApp:
         CredEncryptionType.HardwareBased,
         CredEncryptionType.PinBased,
     ],
+    ids=lambda x: f"Key{str(x).split('.')[-1]}",
 )
 def secretsApp(request, secretsAppRaw) -> SecretsApp:
     """
@@ -130,7 +131,7 @@ def secretsApp(request, secretsAppRaw) -> SecretsApp:
     else:
         raise RuntimeError("Wrong param value")
 
-    app.fixture_type = credentials_type
+    app._metadata["fixture_type"] = credentials_type
 
     return app
 
