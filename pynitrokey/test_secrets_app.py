@@ -1407,7 +1407,7 @@ def test_hmac_low_level(secretsAppRaw):
     """
     Test HMAC Challenge setup and use, for KeepassXC support.
     Low-level test.
-    Support for this feature is not added in the Secrets API.
+    Support for this feature is not added in the SecretsApp API.
     """
 
     # getting version through status call works
