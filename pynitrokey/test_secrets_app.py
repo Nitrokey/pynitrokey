@@ -1510,6 +1510,13 @@ def test_hmac_low_level(secretsAppRaw):
                 kind=Kind.Hmac,
             )
 
+    # ... or with Algorithm different from SHA1
+    for algo in [Algorithm.Sha256]:  # Algorithm.Sha512
+        with pytest.raises(SecretsAppException, match="IncorrectDataParameter"):
+            secretsAppRaw.register(
+                b"HmacSlot2", secret=b"x" * 20, kind=Kind.Hmac, algo=algo
+            )
+
     # Test various challenge lengths against local calculations
 
     """
