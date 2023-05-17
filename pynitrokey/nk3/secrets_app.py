@@ -38,6 +38,14 @@ class ListItemProperties:
             pws_data_exist=cls._get_bit(b, 2),
         )
 
+    def __str__(self) -> str:
+        data = [
+            "touch required" if self.touch_required else "",
+            "PIN required" if self.secret_encryption else "",
+            "PWS data available" if self.pws_data_exist else "",
+        ]
+        return ",".join([d for d in data if d])
+
 
 @dataclasses.dataclass
 class ListItem:
@@ -45,6 +53,17 @@ class ListItem:
     algorithm: "Algorithm"
     label: bytes
     properties: ListItemProperties
+
+    @classmethod
+    def get_type_name(cls, x: typing.Any) -> str:
+        return str(x).split(".")[-1]
+
+    def __str__(self) -> str:
+        return (
+            f"{self.label.decode()}"
+            f"\t{self.get_type_name(self.kind)}/{self.get_type_name(self.algorithm)}"
+            f"\t{self.properties}"
+        )
 
 
 @dataclasses.dataclass
