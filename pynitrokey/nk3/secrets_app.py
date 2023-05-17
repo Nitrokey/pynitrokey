@@ -76,7 +76,7 @@ class SelectResponse:
             "Nitrokey Secrets\n"
             f"\tVersion: {self.version_str()}\n"
             f"\tPIN attempt counter: {self.pin_attempt_counter}\n"
-            f"\tSerial number: {self.serial_number.hex()}"
+            f"\tSerial number: {self.serial_number.hex() if self.serial_number else 'None'}"
         )
 
 
