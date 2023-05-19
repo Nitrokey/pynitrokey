@@ -260,7 +260,7 @@ def check_experimental_flag(experimental: bool) -> None:
 
 def ask_to_touch_if_needed() -> None:
     """Helper function to show common request for the touch if device signalizes it"""
-    local_print("Please touch the device if it blinks")
+    local_print("Please touch the device if it blinks", file=sys.stderr)
 
 
 @secrets.command()
