@@ -496,6 +496,19 @@ class SecretsApp:
         ]
         self._send_receive(Instruction.Delete, structure)
 
+    def register_yk_hmac(self, slot: int, secret: bytes) -> None:
+        """
+        Register a Yubikey-compatible challenge-response slot.
+        @param slot: challenge-response slot
+        @param secret: the secret
+        """
+        assert slot in [1, 2]
+        self.register(
+            f"HmacSlot{slot}".encode(),
+            secret,
+            kind=Kind.Hmac,
+        )
+
     def register(
         self,
         credid: bytes,

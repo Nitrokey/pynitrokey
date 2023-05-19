@@ -10,7 +10,7 @@ import click
 from click_aliases import ClickAliasedGroup
 
 from pynitrokey.cli.nk3 import Context, nk3
-from pynitrokey.helpers import AskUser, local_print
+from pynitrokey.helpers import AskUser, local_critical, local_print
 from pynitrokey.nk3.secrets_app import (
     ALGORITHM_TO_KIND,
     STRING_TO_KIND,
@@ -242,6 +242,37 @@ def add_password(
                 password=password,
                 metadata=metadata,
             )
+
+        call(app)
+        local_print("Done")
+
+
+@secrets.command
+@click.pass_obj
+@click.argument(
+    "slot",
+    type=click.Choice(["1", "2"]),
+)
+@click.argument(
+    "secret",
+    type=click.STRING,
+)
+def add_challenge_response(ctx: Context, slot: str, secret: str) -> None:
+    """Register Challenge-Response Credential."""
+
+    secret_bytes = b32decode(secret)
+    sl = len(secret_bytes)
+    if sl != 20:
+        local_critical(f"Secret has to be exactly 20 bytes in length (got {sl})")
+
+    with ctx.connect_device() as device:
+        app = SecretsApp(device)
+        abort_if_not_supported(app.feature_pws_support(), "Password Safe")
+        ask_to_touch_if_needed()
+
+        @repeat_if_pin_needed
+        def call(app: SecretsApp) -> None:
+            app.register_yk_hmac(int(slot), secret_bytes)
 
         call(app)
         local_print("Done")

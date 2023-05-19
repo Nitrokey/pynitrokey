@@ -1407,7 +1407,7 @@ def test_hmac_low_level(secretsAppRaw):
     """
     Test HMAC Challenge setup and use, for KeepassXC support.
     Low-level test.
-    Support for this feature is not added in the SecretsApp API.
+    Support for this feature is not planned to be added in the SecretsApp API.
     """
 
     # getting version through status call works
@@ -1442,7 +1442,6 @@ def test_hmac_low_level(secretsAppRaw):
         )
 
     # registration on the special-named slots works
-    # TODO Do not offer actual names in CLI, but rather select slot by number
     for i, slot in enumerate([b"HmacSlot2", b"HmacSlot1"]):
         secretsAppRaw.register(
             slot,
