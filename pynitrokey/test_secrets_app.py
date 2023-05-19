@@ -1581,6 +1581,9 @@ def test_list_with_properties(secretsAppResetLogin, touch, pws):
 
 
 def test_light_load(secretsAppRaw):
+    """
+    Add a couple of different Credentials' types for the manual CLI listing tests
+    """
     secretb = binascii.a2b_hex(SECRET)
 
     secretsAppRaw.reset()
