@@ -533,9 +533,9 @@ class SecretsApp:
         :param initial_counter_value: The counter's initial value for the HOTP Credential (HOTP only)
         :param touch_button_required: User Presence confirmation is required to use this Credential
         :param pin_based_encryption: User preference for additional PIN-based encryption
-        :param login:
-        :param password:
-        :param metadata:
+        :param login: Login field for Password Safe
+        :param password: Password field for Password Safe
+        :param metadata: Metadata field for Password Safe
         :return: None
         """
         if initial_counter_value > 0xFFFFFFFF:
