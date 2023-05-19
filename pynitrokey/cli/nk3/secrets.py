@@ -388,13 +388,8 @@ def get_otp(
             )
             local_print(code.decode())
 
-        @repeat_if_pin_needed
-        def call2(app: SecretsApp) -> None:
-            local_print(app.get_credential(name.encode()))
-
         try:
             call(app)
-            # call2(app)
 
         except SecretsAppException as e:
             local_print(
