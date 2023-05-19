@@ -226,8 +226,10 @@ def add_password(
     Write Credential under the NAME.
 
     """
+
     with ctx.connect_device() as device:
         app = SecretsApp(device)
+        abort_if_not_supported(app.feature_pws_support(), "Password Safe")
         ask_to_touch_if_needed()
 
         @repeat_if_pin_needed
@@ -243,6 +245,15 @@ def add_password(
 
         call(app)
         local_print("Done")
+
+
+def abort_if_not_supported(cond: bool, name: str = "") -> None:
+    if not cond:
+        message = (
+            f'Feature unsupported by this firmware version{f": {name}" if name else ""}'
+        )
+        local_print(message)
+        raise click.Abort()
 
 
 def check_experimental_flag(experimental: bool) -> None:
@@ -417,6 +428,7 @@ def get_password(
     """Get Password Safe Entry"""
     with ctx.connect_device() as device:
         app = SecretsApp(device)
+        abort_if_not_supported(app.feature_pws_support(), "Password Safe")
         ask_to_touch_if_needed()
 
         def decode_if_bytes(x: typing.Union[bytes, str], on_empty: str = "") -> str:

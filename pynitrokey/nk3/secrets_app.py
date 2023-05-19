@@ -14,6 +14,7 @@ from secrets import token_bytes
 from struct import pack
 from typing import List, Optional
 
+import semver
 import tlv8
 
 from pynitrokey.nk3 import Nitrokey3Device
@@ -751,15 +752,23 @@ class SecretsApp:
             return True
         return False
 
+    def feature_pws_support(self) -> bool:
+        return self._semver_equal_or_newer("4.11.0")
+
     def protocol_v2_confirm_all_requests_with_pin(self) -> bool:
         # 4.7.0 version requires providing PIN each request
-        return self.select().version_str() == "4.7.0"
+        return self.get_feature_status_cached().version_str() == "4.7.0"
 
     def protocol_v3_separate_pin_and_no_pin_space(self) -> bool:
         # 4.10.0 makes logical separation between the PIN-encrypted and non-PIN encrypted spaces, except
         # for overwriting the credentials
-        return self.select().version_str() == "4.10.0"
+        return self._semver_equal_or_newer("4.10.0")
 
     def is_pin_healthy(self) -> bool:
         counter = self.select().pin_attempt_counter
         return not (counter is None or counter == 0)
+
+    def _semver_equal_or_newer(self, required_version: str) -> bool:
+        current = semver.Version.parse(self.get_feature_status_cached().version_str())
+        semver_req_version = semver.Version.parse(required_version)
+        return current >= semver_req_version

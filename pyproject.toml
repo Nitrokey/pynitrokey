@@ -40,6 +40,7 @@ dependencies = [
   "pyserial",
   "protobuf >=3.17.3, < 4.0.0",
   "click-aliases",
+  "semver",
 ]
 dynamic = ["version", "description"]
 
