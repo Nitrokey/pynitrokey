@@ -24,7 +24,7 @@ from pynitrokey.nk3.secrets_app import (
 @nk3.group(cls=ClickAliasedGroup)
 @click.pass_context
 def secrets(ctx: click.Context) -> None:
-    """Nitrokey Secrets App. Manage OTP secrets on the device.
+    """Nitrokey Secrets App. Manage OTP and Password Safe secrets on the device.
     Use NITROPY_SECRETS_PASSWORD to pass password for the scripted execution."""
     pass
 
@@ -140,7 +140,7 @@ def add_otp(
     """Register OTP Credential.
 
     Write Credential under the NAME.
-
+    Secret should be base32 encoded.
     """
     otp_kind = STRING_TO_KIND[kind.upper()]
     if not secret:
