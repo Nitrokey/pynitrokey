@@ -75,12 +75,9 @@ def repeat_if_pin_needed(func) -> Callable:  # type: ignore[no-untyped-def]
     "name",
     type=click.STRING,
 )
-@click.option(
-    "--secret",
+@click.argument(
     "secret",
     type=click.STRING,
-    help="The shared secret string (encoded in base32, e.g. AAAAAAAA)",
-    default="",
 )
 @click.option(
     "--digits-str",
