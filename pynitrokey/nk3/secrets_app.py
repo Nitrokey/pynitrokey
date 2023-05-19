@@ -268,7 +268,6 @@ STRING_TO_KIND = {
     "TOTP": Kind.Totp,
     "HOTP_REVERSE": Kind.HotpReverse,
     "HMAC": Kind.Hmac,
-    "NOT_SET": Kind.NotSet,
 }
 
 
@@ -276,6 +275,12 @@ class Algorithm(Enum):
     Sha1 = 0x01
     Sha256 = 0x02
     Sha512 = 0x03
+
+
+ALGORITHM_TO_KIND = {
+    "SHA1": Algorithm.Sha1,
+    "SHA256": Algorithm.Sha256,
+}
 
 
 class SecretsApp:

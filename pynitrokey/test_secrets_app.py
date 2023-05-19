@@ -1578,3 +1578,43 @@ def test_list_with_properties(secretsAppResetLogin, touch, pws):
         secretsAppResetLogin._metadata.get("fixture_type")
         == CredEncryptionType.PinBased
     )
+
+
+def test_light_load(secretsAppRaw):
+    secretb = binascii.a2b_hex(SECRET)
+
+    secretsAppRaw.reset()
+    secretsAppRaw.set_pin_raw(PIN)
+
+    for encrypted in [True, False]:
+        for touch in [True, False]:
+            secretsAppRaw.verify_pin_raw(PIN)
+            secretsAppRaw.register(
+                f'otp:{"t" if touch else ""}:{"enc" if encrypted else ""}'.encode(),
+                secretb,
+                digits=6,
+                kind=Kind.Totp,
+                algo=Algorithm.Sha1,
+                touch_button_required=touch,
+                pin_based_encryption=encrypted,
+            )
+
+    for pws in [True, False]:
+        secretsAppRaw.register(
+            f'otp:{"pws" if pws else ""}'.encode(),
+            secretb,
+            digits=6,
+            kind=Kind.Totp,
+            algo=Algorithm.Sha1,
+            login="login" if pws else None,
+            password="password" if pws else None,
+            metadata="metadata" if pws else None,
+            touch_button_required=False,
+        )
+
+    secretsAppRaw.register(
+        b"pws",
+        login=b"login",
+        password=b"password",
+        metadata=b"metadata",
+    )

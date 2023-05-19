@@ -2,13 +2,13 @@ from base64 import b32decode
 from typing import Callable, List, Optional
 
 import click
+from click_aliases import ClickAliasedGroup
 
 from pynitrokey.cli.nk3 import Context, nk3
 from pynitrokey.helpers import AskUser, local_print
 from pynitrokey.nk3.secrets_app import (
+    ALGORITHM_TO_KIND,
     STRING_TO_KIND,
-    Algorithm,
-    Kind,
     SecretsApp,
     SecretsAppException,
     SecretsAppExceptionID,
@@ -16,7 +16,7 @@ from pynitrokey.nk3.secrets_app import (
 )
 
 
-@nk3.group()
+@nk3.group(cls=ClickAliasedGroup)
 @click.pass_context
 def secrets(ctx: click.Context) -> None:
     """Nitrokey Secrets App. Manage OTP secrets on the device.
@@ -69,7 +69,7 @@ def repeat_if_pin_needed(func) -> Callable:  # type: ignore[no-untyped-def]
     return wrapper
 
 
-@secrets.command()
+@secrets.command(aliases=["register"])
 @click.pass_obj
 @click.argument(
     "name",
@@ -99,7 +99,7 @@ def repeat_if_pin_needed(func) -> Callable:  # type: ignore[no-untyped-def]
 @click.option(
     "--hash",
     "hash",
-    type=click.Choice(["SHA1", "SHA256"]),
+    type=click.Choice(choices=ALGORITHM_TO_KIND.keys(), case_sensitive=False),  # type: ignore[arg-type]
     help="Hash algorithm to use",
     default="SHA1",
 )
@@ -109,6 +109,71 @@ def repeat_if_pin_needed(func) -> Callable:  # type: ignore[no-untyped-def]
     type=click.INT,
     help="Starting value for the counter (HOTP only)",
     default=0,
+)
+@click.option(
+    "--touch-button",
+    "touch_button",
+    type=click.BOOL,
+    help="This credential requires button press before use",
+    is_flag=True,
+)
+@click.option(
+    "--protect-with-pin",
+    "pin_protection",
+    type=click.BOOL,
+    help="This credential should be additionally encrypted with a PIN, which will be required before each use",
+    is_flag=True,
+)
+def add_otp(
+    ctx: Context,
+    name: str,
+    secret: str,
+    digits_str: str,
+    kind: str,
+    hash: str,
+    counter_start: int,
+    touch_button: bool,
+    pin_protection: bool,
+) -> None:
+    """Register OTP Credential.
+
+    Write Credential under the NAME.
+
+    """
+    otp_kind = STRING_TO_KIND[kind.upper()]
+    if not secret:
+        raise click.ClickException("Please provide secret for the OTP to work")
+
+    digits = int(digits_str)
+    secret_bytes = b32decode(secret)
+    hash_algorithm = ALGORITHM_TO_KIND[hash.upper()]
+
+    with ctx.connect_device() as device:
+        app = SecretsApp(device)
+        ask_to_touch_if_needed()
+
+        @repeat_if_pin_needed
+        def call(app: SecretsApp) -> None:
+            app.register(
+                name.encode(),
+                secret_bytes,
+                digits,
+                kind=otp_kind,
+                algo=hash_algorithm,
+                initial_counter_value=counter_start,
+                touch_button_required=touch_button,
+                pin_based_encryption=pin_protection,
+            )
+
+        call(app)
+        local_print("Done")
+
+
+@secrets.command
+@click.pass_obj
+@click.argument(
+    "name",
+    type=click.STRING,
 )
 @click.option(
     "--touch-button",
@@ -145,38 +210,20 @@ def repeat_if_pin_needed(func) -> Callable:  # type: ignore[no-untyped-def]
     help="Password Safe Metadata - additional field, to which extra information can be encoded in the future",
     default=None,
 )
-def register(
+def add_password(
     ctx: Context,
     name: str,
-    secret: str,
-    digits_str: str,
-    kind: str,
-    hash: str,
-    counter_start: int,
     touch_button: bool,
     pin_protection: bool,
     login: Optional[bytes] = None,
     password: Optional[bytes] = None,
     metadata: Optional[bytes] = None,
 ) -> None:
-    """Register OTP/Password Safe Credential.
+    """Register Password Safe Credential.
 
     Write Credential under the NAME.
 
     """
-    otp_kind = STRING_TO_KIND[kind.upper()]
-
-    if otp_kind != Kind.NotSet and not secret:
-        raise click.ClickException("Please provide secret for the OTP to work")
-
-    if otp_kind == Kind.NotSet and not secret:
-        # Set default value for the non-otp use
-        secret = "AAAAAAAA"
-
-    digits = int(digits_str)
-    secret_bytes = b32decode(secret)
-    hash_algorithm = Algorithm.Sha1 if hash == "SHA1" else Algorithm.Sha256
-
     with ctx.connect_device() as device:
         app = SecretsApp(device)
         ask_to_touch_if_needed()
@@ -185,11 +232,6 @@ def register(
         def call(app: SecretsApp) -> None:
             app.register(
                 name.encode(),
-                secret_bytes,
-                digits,
-                kind=otp_kind,
-                algo=hash_algorithm,
-                initial_counter_value=counter_start,
                 touch_button_required=touch_button,
                 pin_based_encryption=pin_protection,
                 login=login,
@@ -289,7 +331,7 @@ def reset(ctx: Context, force: bool) -> None:
         local_print("Done")
 
 
-@secrets.command()
+@secrets.command(aliases=["get"])
 @click.pass_obj
 @click.argument(
     "name",
@@ -309,7 +351,7 @@ def reset(ctx: Context, force: bool) -> None:
     help="The period to use in seconds (TOTP only)",
     default=30,
 )
-def get(
+def get_otp(
     ctx: Context,
     name: str,
     timestamp: int,

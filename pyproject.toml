@@ -39,6 +39,7 @@ dependencies = [
   "typing_extensions ~= 4.3.0",
   "pyserial",
   "protobuf >=3.17.3, < 4.0.0",
+  "click-aliases",
 ]
 dynamic = ["version", "description"]
 
@@ -116,6 +117,7 @@ module = [
     "usb1.*",
     "tlv8.*",
     "pytest.*",
+    "click_aliases.*",
 ]
 ignore_missing_imports = true
 
