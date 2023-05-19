@@ -1,3 +1,8 @@
+import csv
+import io
+import json
+import sys
+import typing
 from base64 import b32decode
 from typing import Callable, List, Optional
 
@@ -393,22 +398,57 @@ def get_otp(
     "name",
     type=click.STRING,
 )
+@click.option(
+    "--password",
+    is_flag=True,
+    help="Print password only",
+)
+@click.option(
+    "--format",
+    type=click.Choice(["json", "csv"]),
+    help="Format of the output",
+)
 def get_password(
     ctx: Context,
     name: str,
+    password: bool,
+    format: str,
 ) -> None:
     """Get Password Safe Entry"""
     with ctx.connect_device() as device:
         app = SecretsApp(device)
         ask_to_touch_if_needed()
 
+        def decode_if_bytes(x: typing.Union[bytes, str], on_empty: str = "") -> str:
+            if not x:
+                return on_empty
+            if isinstance(x, bytes):
+                return x.decode()
+            elif isinstance(x, str):
+                return x
+            raise ValueError("Invalid type")
+
         @repeat_if_pin_needed
         def call(app: SecretsApp) -> None:
             cred = app.get_credential(name.encode())
-            for f, v in cred.__dict__.items():
-                # f: str
-                # v: bytes
-                local_print(f"{f:20}: {v.decode() if v else '---'}")
+            data = {k: decode_if_bytes(v) for k, v in cred.__dict__.items()}
+            if password:
+                if cred.password:
+                    local_print(decode_if_bytes(cred.password))
+            elif format == "json":
+                js = json.dumps(data)
+                local_print(js)
+            elif format == "csv":
+                si = io.StringIO()
+                writer = csv.DictWriter(si, fieldnames=data)
+                writer.writeheader()
+                writer.writerow(data)
+                local_print(si.getvalue().strip())
+            else:
+                for f, v in data.items():
+                    # f: str
+                    # v: bytes
+                    local_print(f"{f:20}: {decode_if_bytes(v, '---')}")
 
         try:
             call(app)
