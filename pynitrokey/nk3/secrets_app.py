@@ -21,6 +21,31 @@ from pynitrokey.start.gnuk_token import iso7816_compose
 
 
 @dataclasses.dataclass
+class PasswordSafeEntry:
+    login: Optional[bytes]
+    password: Optional[bytes]
+    metadata: Optional[bytes]
+    properties: Optional[bytes] = None
+    name: Optional[bytes] = None
+
+    def tlv_encode(self) -> List[tlv8.Entry]:
+        entries = [
+            tlv8.Entry(Tag.PwsLogin.value, self.login)
+            if self.login is not None
+            else None,
+            tlv8.Entry(Tag.PwsPassword.value, self.password)
+            if self.password is not None
+            else None,
+            tlv8.Entry(Tag.PwsMetadata.value, self.metadata)
+            if self.metadata is not None
+            else None,
+        ]
+        # Filter out empty entries
+        entries = [r for r in entries if r is not None]
+        return entries
+
+
+@dataclasses.dataclass
 class RawBytes:
     data: List
 
@@ -140,6 +165,7 @@ class Instruction(Enum):
     VerifyPIN = 0xB2
     ChangePIN = 0xB3
     SetPIN = 0xB4
+    GetCredential = 0xB5
 
 
 class Tag(Enum):
@@ -157,18 +183,36 @@ class Tag(Enum):
     Password = 0x80
     NewPassword = 0x81
     PINCounter = 0x82
+    PwsLogin = 0x83
+    PwsPassword = 0x84
+    PwsMetadata = 0x85
 
 
 class Kind(Enum):
     Hotp = 0x10
     Totp = 0x20
     HotpReverse = 0x30
+    NotSet = 0x40
+
+    @classmethod
+    def from_attribute_byte(cls, attribute_byte: bytes) -> str:
+        a = int(attribute_byte)
+        res = "U"
+        for k in Kind:
+            if k.value & a == k.value:
+                if k != Kind.NotSet:
+                    res = str(k).split(".")[-1].upper()
+                else:
+                    res = "PWS"
+                break
+        return res
 
 
 STRING_TO_KIND = {
     "HOTP": Kind.Hotp,
     "TOTP": Kind.Totp,
     "HOTP_REVERSE": Kind.HotpReverse,
+    "NOT_SET": Kind.NotSet,
 }
 
 
@@ -282,10 +326,10 @@ class SecretsApp:
         if data_final:
             try:
                 self.logfn(
-                    f"Decoded received: {[ e.data[1:] for e in tlv8.decode(data_final) ]}"
+                    f"Decoded received: {[ e.data for e in tlv8.decode(data_final) ]}"
                 )
             except Exception:
-                raise
+                pass
 
         return data_final
 
@@ -313,7 +357,7 @@ class SecretsApp:
         self.logfn("Executing reset")
         self._send_receive(Instruction.Reset)
 
-    def list(self) -> List[bytes]:
+    def list(self, extended: bool = False) -> List[typing.Tuple[bytes, bytes]]:
         """
         Return a list of the registered credentials
         :return: List of bytestrings
@@ -323,8 +367,33 @@ class SecretsApp:
         res = []
         for e in resd:
             # e: tlv8.Entry
-            res.append(e.data[1:])
+            if extended:
+                res.append((e.data[0], e.data[1:]))
+            else:
+                res.append(e.data[1:])
         return res
+
+    def get_credential(self, cred_id: bytes) -> PasswordSafeEntry:
+        structure = [
+            tlv8.Entry(Tag.CredentialId.value, cred_id),
+        ]
+        raw_res = self._send_receive(Instruction.GetCredential, structure=structure)
+        resd: tlv8.EntryList = tlv8.decode(raw_res)
+        res = {}
+        self.logfn("Per field dissection:")
+        for e in resd:
+            # e: tlv8.Entry
+            res[e.type_id] = e.data
+            self.logfn(f"{hex(e.type_id)} {hex(len(e.data))}  {e.data.hex()}")
+        p = PasswordSafeEntry(
+            login=res.get(Tag.PwsLogin.value),
+            password=res.get(Tag.PwsPassword.value),
+            metadata=res.get(Tag.PwsMetadata.value),
+            name=res.get(Tag.CredentialId.value),
+            properties=res.get(Tag.Properties.value),
+        )
+        p.properties = p.properties.hex().encode() if p.properties else None
+        return p
 
     def delete(self, cred_id: bytes) -> None:
         """
@@ -340,24 +409,30 @@ class SecretsApp:
     def register(
         self,
         credid: bytes,
-        secret: bytes,
-        digits: int,
-        kind: Kind = Kind.Hotp,
+        secret: bytes = b"0" * 20,
+        digits: int = 6,
+        kind: Kind = Kind.NotSet,
         algo: Algorithm = Algorithm.Sha1,
         initial_counter_value: int = 0,
         touch_button_required: bool = False,
         pin_based_encryption: bool = False,
+        login: Optional[bytes] = None,
+        password: Optional[bytes] = None,
+        metadata: Optional[bytes] = None,
     ) -> None:
         """
-        Register new OTP credential
+        Register new OTP Credential
         :param credid: Credential ID
         :param secret: The shared key
         :param digits: Digits of the produced code
         :param kind: OTP variant - HOTP or TOTP
         :param algo: The hash algorithm to use - SHA1, SHA256 or SHA512
-        :param initial_counter_value: The counter's initial value for the HOTP credential (HOTP only)
+        :param initial_counter_value: The counter's initial value for the HOTP Credential (HOTP only)
         :param touch_button_required: User Presence confirmation is required to use this Credential
         :param pin_based_encryption: User preference for additional PIN-based encryption
+        :param login:
+        :param password:
+        :param metadata:
         :return: None
         """
         if initial_counter_value > 0xFFFFFFFF:
@@ -389,8 +464,14 @@ class SecretsApp:
             ),
             tlv8.Entry(
                 Tag.InitialCounter.value, initial_counter_value.to_bytes(4, "big")
-            ),
+            )
+            if kind in [Kind.Hotp, Kind.HotpReverse]
+            else None,
+            *PasswordSafeEntry(
+                name=credid, login=login, password=password, metadata=metadata
+            ).tlv_encode(),
         ]
+        structure = list(filter(lambda x: x is not None, structure))
         self._send_receive(Instruction.Put, structure)
 
     def calculate(self, cred_id: bytes, challenge: Optional[int] = None) -> bytes:

@@ -8,6 +8,7 @@ from pynitrokey.helpers import AskUser, local_print
 from pynitrokey.nk3.secrets_app import (
     STRING_TO_KIND,
     Algorithm,
+    Kind,
     SecretsApp,
     SecretsAppException,
     SecretsAppExceptionID,
@@ -25,6 +26,7 @@ def secrets(ctx: click.Context) -> None:
 
 def repeat_if_pin_needed(func) -> Callable:  # type: ignore[no-untyped-def]
     """
+    Repeat the call of the decorated function, if PIN is required.
     Decorated function should have at least one argument,
     of which the first one should be an instance of the SecretsApp. Otherwise, a RuntimeError is raised.
     """
@@ -35,9 +37,14 @@ def repeat_if_pin_needed(func) -> Callable:  # type: ignore[no-untyped-def]
         ), "repeat_if_pin_needed: SecretsApp should be passed as an argument to this decorator"
         app: SecretsApp = args[0]
 
+        repeat_if_pin_needed.cached_PIN = getattr(  # type: ignore[attr-defined]
+            repeat_if_pin_needed, "cached_PIN", None
+        )
         try:
             if app.protocol_v2_confirm_all_requests_with_pin():
-                authenticate_if_needed(app)
+                repeat_if_pin_needed.cached_PIN = authenticate_if_needed(  # type: ignore[attr-defined]
+                    app, repeat_if_pin_needed.cached_PIN  # type: ignore[attr-defined]
+                )
             func(*args, **kwargs)
         except SecretsAppException as e:
             # Behavior below is for the v3 version of the protocol. Bail if v2 is used.
@@ -47,13 +54,16 @@ def repeat_if_pin_needed(func) -> Callable:  # type: ignore[no-untyped-def]
             if e.to_id() == SecretsAppExceptionID.SecurityStatusNotSatisfied:
                 local_print("PIN is required to run this command.")
             elif e.to_id() == SecretsAppExceptionID.NotFound:
-                local_print(
-                    "Credential not found. Please provide PIN below to search in the PIN-protected database."
-                )
+                if repeat_if_pin_needed.cached_PIN is None:  # type: ignore[attr-defined]
+                    local_print(
+                        "Credential not found. Please provide PIN below to search in the PIN-protected database."
+                    )
             else:
                 raise
             # Ask for PIN and retry
-            authenticate_if_needed(app)
+            repeat_if_pin_needed.cached_PIN = authenticate_if_needed(  # type: ignore[attr-defined]
+                app, repeat_if_pin_needed.cached_PIN  # type: ignore[attr-defined]
+            )
             func(*args, **kwargs)
 
     return wrapper
@@ -65,10 +75,12 @@ def repeat_if_pin_needed(func) -> Callable:  # type: ignore[no-untyped-def]
     "name",
     type=click.STRING,
 )
-@click.argument(
+@click.option(
+    "--secret",
     "secret",
     type=click.STRING,
-    # help="The shared secret string (by default in base32)",  # Help can't be enabled on the positional argument
+    help="The shared secret string (encoded in base32, e.g. AAAAAAAA)",
+    default="",
 )
 @click.option(
     "--digits-str",
@@ -82,7 +94,7 @@ def repeat_if_pin_needed(func) -> Callable:  # type: ignore[no-untyped-def]
     "kind",
     type=click.Choice(choices=STRING_TO_KIND.keys(), case_sensitive=False),  # type: ignore[arg-type]
     help="OTP mechanism to use. Case insensitive.",
-    default="TOTP",
+    default="NOT_SET",
 )
 @click.option(
     "--hash",
@@ -109,8 +121,29 @@ def repeat_if_pin_needed(func) -> Callable:  # type: ignore[no-untyped-def]
     "--protect-with-pin",
     "pin_protection",
     type=click.BOOL,
-    help="This credential should be additionally encrypted with a PIN, and require it before each use",
+    help="This credential should be additionally encrypted with a PIN, which will be required before each use",
     is_flag=True,
+)
+@click.option(
+    "--login",
+    "login",
+    type=click.STRING,
+    help="Password Safe Login",
+    default=None,
+)
+@click.option(
+    "--password",
+    "password",
+    type=click.STRING,
+    help="Password Safe Password",
+    default=None,
+)
+@click.option(
+    "--metadata",
+    "metadata",
+    type=click.STRING,
+    help="Password Safe Metadata - additional field, to which extra information can be encoded in the future",
+    default=None,
 )
 def register(
     ctx: Context,
@@ -122,16 +155,28 @@ def register(
     counter_start: int,
     touch_button: bool,
     pin_protection: bool,
+    login: Optional[bytes] = None,
+    password: Optional[bytes] = None,
+    metadata: Optional[bytes] = None,
 ) -> None:
-    """Register OTP credential.
+    """Register OTP/Password Safe Credential.
 
-    Write SECRET under the NAME.
-    SECRET should be encoded in base32 format.
+    Write Credential under the NAME.
+
     """
+    otp_kind = STRING_TO_KIND[kind.upper()]
+
+    if otp_kind != Kind.NotSet and not secret:
+        raise click.ClickException("Please provide secret for the OTP to work")
+
+    if otp_kind == Kind.NotSet and not secret:
+        # Set default value for the non-otp use
+        secret = "AAAAAAAA"
+
     digits = int(digits_str)
     secret_bytes = b32decode(secret)
-    otp_kind = STRING_TO_KIND[kind.upper()]
     hash_algorithm = Algorithm.Sha1 if hash == "SHA1" else Algorithm.Sha256
+
     with ctx.connect_device() as device:
         app = SecretsApp(device)
         ask_to_touch_if_needed()
@@ -147,6 +192,9 @@ def register(
                 initial_counter_value=counter_start,
                 touch_button_required=touch_button,
                 pin_based_encryption=pin_protection,
+                login=login,
+                password=password,
+                metadata=metadata,
             )
 
         call(app)
@@ -174,14 +222,14 @@ def ask_to_touch_if_needed() -> None:
 @secrets.command()
 @click.pass_obj
 @click.option(
-    "--hex",
-    "hex",
+    "--hexa",
+    "hexa",
     type=click.BOOL,
     help="Use hex representation",
     default=False,
     is_flag=True,
 )
-def list(ctx: Context, hex: bool) -> None:
+def list(ctx: Context, hexa: bool) -> None:
     """List registered OTP credentials."""
     with ctx.connect_device() as device:
         app = SecretsApp(device)
@@ -194,9 +242,12 @@ def list(ctx: Context, hex: bool) -> None:
                 authenticate_if_needed(app)
             except click.Abort:
                 pass
-        credentials_list = app.list()
-        for e in credentials_list:
-            local_print(e.hex() if hex else e)
+
+        credentials_list = app.list(extended=True)
+        for a, e in credentials_list:
+            local_print(
+                f"{Kind.from_attribute_byte(a):4} : {e.hex() if hexa else e.decode()}"
+            )
         if len(credentials_list) == 0:
             local_print("No credentials found")
 
@@ -284,6 +335,44 @@ def get(
             )
             local_print(code.decode())
 
+        @repeat_if_pin_needed
+        def call2(app: SecretsApp) -> None:
+            local_print(app.get_credential(name.encode()))
+
+        try:
+            call(app)
+            # call2(app)
+
+        except SecretsAppException as e:
+            local_print(
+                f"Device returns error: {e}. \n"
+                f"This credential id might not be registered, or its not allowed to be used here."
+            )
+
+
+@secrets.command()
+@click.pass_obj
+@click.argument(
+    "name",
+    type=click.STRING,
+)
+def get_password(
+    ctx: Context,
+    name: str,
+) -> None:
+    """Get Password Safe Entry"""
+    with ctx.connect_device() as device:
+        app = SecretsApp(device)
+        ask_to_touch_if_needed()
+
+        @repeat_if_pin_needed
+        def call(app: SecretsApp) -> None:
+            cred = app.get_credential(name.encode())
+            for f, v in cred.__dict__.items():
+                # f: str
+                # v: bytes
+                local_print(f"{f:20}: {v.decode() if v else '---'}")
+
         try:
             call(app)
 
@@ -339,9 +428,13 @@ def ask_for_passphrase_if_needed(app: SecretsApp) -> Optional[str]:
     return passphrase
 
 
-def authenticate_if_needed(app: SecretsApp) -> None:
+def authenticate_if_needed(
+    app: SecretsApp, passphrase: Optional[str] = None
+) -> Optional[str]:
     try:
-        passphrase = ask_for_passphrase_if_needed(app)
+        passphrase = (
+            ask_for_passphrase_if_needed(app) if passphrase is None else passphrase
+        )
         if passphrase:
             ask_to_touch_if_needed()
             app.verify_pin_raw(passphrase)
@@ -355,6 +448,7 @@ def authenticate_if_needed(app: SecretsApp) -> None:
             "Please make sure the provided PIN is correct."
         )
         raise click.Abort()
+    return passphrase
 
 
 @secrets.command()
