@@ -28,7 +28,7 @@ from pynitrokey.cli.pro import pro
 from pynitrokey.cli.start import start
 from pynitrokey.cli.storage import storage
 from pynitrokey.confconsts import LOG_FN, LOG_FORMAT
-from pynitrokey.helpers import local_critical
+from pynitrokey.helpers import filter_sensitive_parameters, local_critical
 
 # from . import _patches  # noqa  (since otherwise "unused")
 
@@ -64,6 +64,7 @@ def nitropy():
     logger.info(f"Timestamp: {datetime.now()}")
     logger.info(f"OS: {platform.uname()}")
     logger.info(f"Python version: {platform.python_version()}")
+    logger.info(f"Cli arguments: {filter_sensitive_parameters(sys.argv[1:])}")
     pymodules = [
         "pynitrokey",
         "cryptography",
