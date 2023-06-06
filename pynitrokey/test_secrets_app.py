@@ -1407,7 +1407,7 @@ def test_hmac_low_level(secretsAppRaw):
     """
     Test HMAC Challenge setup and use, for KeepassXC support.
     Low-level test.
-    Support for this feature is not added in the Secrets API.
+    Support for this feature is not added in the SecretsApp API.
     """
 
     # getting version through status call works
@@ -1545,3 +1545,43 @@ def test_hmac_low_level(secretsAppRaw):
         )
         response_lib = secretsAppRaw.get_response_for_secret(challenge, secret)
         assert response_lib == response_device
+
+
+@pytest.mark.parametrize("touch", [True, False], ids=lambda x: "touch" if x else "")
+@pytest.mark.parametrize("pws", [True, False], ids=lambda x: "pws" if x else "")
+def test_list_with_properties(secretsAppResetLogin, touch, pws):
+    """Test list commands with additional properties field
+    @param touch: should touch_button request be set
+    @param pws: should Password Safe fields be populated
+    """
+    length = 20
+    secretsApp = secretsAppResetLogin
+    login = b"login".center(length, b"=")
+    password = b"password".center(length, b"=")
+    metadata = b"metadata".center(length, b"=")
+    name = CREDID.center(length, "=").encode()
+    secretb = binascii.a2b_hex(SECRET)
+
+    secretsApp.verify_pin_raw(PIN)
+    secretsApp.register(
+        name,
+        secretb,
+        digits=6,
+        kind=Kind.Totp,
+        algo=Algorithm.Sha1,
+        login=login if pws else None,
+        password=password if pws else None,
+        metadata=metadata if pws else None,
+        touch_button_required=touch,
+    )
+
+    secretsApp.verify_pin_raw(PIN)
+    items_list = secretsApp.list_with_properties()
+    assert len(items_list) == 1
+    item = items_list[0]
+    assert item.properties.touch_required == touch
+    assert item.properties.pws_data_exist == pws
+    assert item.properties.secret_encryption == (
+        secretsAppResetLogin._metadata.get("fixture_type")
+        == CredEncryptionType.PinBased
+    )

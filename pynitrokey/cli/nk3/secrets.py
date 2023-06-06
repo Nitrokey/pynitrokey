@@ -243,11 +243,9 @@ def list(ctx: Context, hexa: bool) -> None:
             except click.Abort:
                 pass
 
-        credentials_list = app.list(extended=True)
-        for a, e in credentials_list:
-            local_print(
-                f"{Kind.from_attribute_byte(a):4} : {e.hex() if hexa else e.decode()}"
-            )
+        credentials_list = sorted(app.list_with_properties(), key=lambda x: x.label)
+        for i, credential in enumerate(credentials_list):
+            local_print(f"{i+1:02}. {credential}")
         if len(credentials_list) == 0:
             local_print("No credentials found")
 

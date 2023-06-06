@@ -148,16 +148,19 @@ nethsm-client: nethsm-api.yaml
 		-g=python -o=/out/python --package-name=pynitrokey.nethsm.client
 	cp -r "${OPENAPI_OUTPUT_DIR}/python/pynitrokey/nethsm/client" pynitrokey/nethsm
 
-.PHONY: secrets-test-all secrets-test
+.PHONY: secrets-test-all secrets-test secrets-test-report
 LOG=info
 TESTADD=
 TESTPARAM=-x -s -o log_cli=true -o log_cli_level=$(LOG) -W ignore::DeprecationWarning $(TESTADD)
 secrets-test-all: init
-	./venv/bin/pytest  -v pynitrokey/test_secrets_app.py --durations=0 $(TESTPARAM)
+	./venv/bin/pytest  -v pynitrokey/test_secrets_app.py --durations=20 $(TESTPARAM)
 
 secrets-test:
 	@echo "Skipping slow tests. Run secrets-test-all target for all tests."
-	./venv/bin/pytest  -v pynitrokey/test_secrets_app.py --durations=0 -m "not slow" $(TESTPARAM)
+	./venv/bin/pytest  -v pynitrokey/test_secrets_app.py --durations=20 -m "not slow" $(TESTPARAM)
 
+REPORT=report.html
 secrets-test-report:
-	./venv/bin/pytest  -v pynitrokey/test_secrets_app.py --durations=0 -o log_cli=false -o log_cli_level=debug -W ignore::DeprecationWarning --template=html1/index.html --report report.html
+	./venv/bin/pytest  -v pynitrokey/test_secrets_app.py --durations=0 -o log_cli=false -o log_cli_level=debug -W ignore::DeprecationWarning --template=html1/index.html --report $(REPORT)
+	@echo "Report written to $(REPORT)"
+	xdg-open $(REPORT)

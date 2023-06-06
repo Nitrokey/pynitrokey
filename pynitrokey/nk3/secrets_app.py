@@ -21,6 +21,52 @@ from pynitrokey.start.gnuk_token import iso7816_compose
 
 
 @dataclasses.dataclass
+class ListItemProperties:
+    touch_required: bool
+    secret_encryption: bool
+    pws_data_exist: bool
+
+    @classmethod
+    def _get_bit(cls, x: int, n: int) -> bool:
+        return ((x >> n) & 1) == 1
+
+    @classmethod
+    def from_byte(cls, b: int) -> "ListItemProperties":
+        return ListItemProperties(
+            touch_required=cls._get_bit(b, 0),
+            secret_encryption=cls._get_bit(b, 1),
+            pws_data_exist=cls._get_bit(b, 2),
+        )
+
+    def __str__(self) -> str:
+        data = [
+            "touch required" if self.touch_required else "",
+            "PIN required" if self.secret_encryption else "",
+            "PWS data available" if self.pws_data_exist else "",
+        ]
+        return ",".join([d for d in data if d])
+
+
+@dataclasses.dataclass
+class ListItem:
+    kind: "Kind"
+    algorithm: "Algorithm"
+    label: bytes
+    properties: ListItemProperties
+
+    @classmethod
+    def get_type_name(cls, x: typing.Any) -> str:
+        return str(x).split(".")[-1]
+
+    def __str__(self) -> str:
+        return (
+            f"{self.label.decode()}"
+            f"\t{self.get_type_name(self.kind)}/{self.get_type_name(self.algorithm)}"
+            f"\t{self.properties}"
+        )
+
+
+@dataclasses.dataclass
 class PasswordSafeEntry:
     login: Optional[bytes]
     password: Optional[bytes]
@@ -202,15 +248,19 @@ class Kind(Enum):
     @classmethod
     def from_attribute_byte(cls, attribute_byte: bytes) -> str:
         a = int(attribute_byte)
-        res = "U"
+        k = cls.from_attribute_byte_type(a)
+        if k != Kind.NotSet:
+            return str(k).split(".")[-1].upper()
+        else:
+            return "PWS"
+
+    @classmethod
+    def from_attribute_byte_type(cls, a: int) -> "Kind":
+        v = a & 0xF0
         for k in Kind:
-            if k.value & a == k.value:
-                if k != Kind.NotSet:
-                    res = str(k).split(".")[-1].upper()
-                else:
-                    res = "PWS"
-                break
-        return res
+            if k.value == v:
+                return k
+        raise ValueError("Invalid attribute byte")
 
 
 STRING_TO_KIND = {
@@ -239,6 +289,7 @@ class SecretsApp:
     dev: Nitrokey3Device
     write_corpus_fn: Optional[typing.Callable]
     _cache_status: Optional[SelectResponse]
+    _metadata: dict
 
     def __init__(self, dev: Nitrokey3Device, logfn: Optional[typing.Callable] = None):
         self._cache_status = None
@@ -249,6 +300,7 @@ class SecretsApp:
         else:
             self.logfn = self.log.info  # type: ignore [assignment]
         self.dev = dev
+        self._metadata = {}
 
     def _custom_encode(self, structure: Optional[List] = None) -> bytes:
         if not structure:
@@ -333,7 +385,7 @@ class SecretsApp:
         if data_final:
             try:
                 self.logfn(
-                    f"Decoded received: {[ e.data for e in tlv8.decode(data_final) ]}"
+                    f"Decoded received: {[e.data for e in tlv8.decode(data_final)]}"
                 )
             except Exception:
                 pass
@@ -364,20 +416,45 @@ class SecretsApp:
         self.logfn("Executing reset")
         self._send_receive(Instruction.Reset)
 
-    def list(self, extended: bool = False) -> List[typing.Tuple[bytes, bytes]]:
+    def list(
+        self, extended: bool = False
+    ) -> typing.List[typing.Union[typing.Tuple[bytes, bytes], bytes]]:
         """
         Return a list of the registered credentials
-        :return: List of bytestrings
+        :return: List of bytestrings, or tuple of bytestrings, if "extended" switch is provided
+        @deprecated
         """
         raw_res = self._send_receive(Instruction.List)
         resd: tlv8.EntryList = tlv8.decode(raw_res)
-        res = []
+        res: List[typing.Union[typing.Tuple[bytes, bytes], bytes]] = []
         for e in resd:
             # e: tlv8.Entry
             if extended:
                 res.append((e.data[0], e.data[1:]))
             else:
                 res.append(e.data[1:])
+        return res
+
+    def list_with_properties(self, version: int = 1) -> List[ListItem]:
+        """
+        Return a list of the registered credentials with properties
+        :return: List of ListItems
+        """
+        data = [RawBytes([version])]
+        raw_res = self._send_receive(Instruction.List, data)
+        resd: tlv8.EntryList = tlv8.decode(raw_res)
+        res = []
+        for e in resd:
+            # e: tlv8.Entry
+            attribute_byte, label, properties = e.data[0], e.data[1:-1], e.data[-1]
+            res.append(
+                ListItem(
+                    kind=Kind.from_attribute_byte_type(attribute_byte),
+                    algorithm=Algorithm.Sha1,
+                    label=label,
+                    properties=ListItemProperties.from_byte(properties),
+                )
+            )
         return res
 
     def get_credential(self, cred_id: bytes) -> PasswordSafeEntry:
@@ -462,11 +539,8 @@ class SecretsApp:
             RawBytes(
                 [
                     Tag.Properties.value,
-                    0x02
-                    if touch_button_required
-                    else 0x00 | 0x04
-                    if pin_based_encryption
-                    else 0x00,
+                    (0x02 if touch_button_required else 0x00)
+                    | (0x04 if pin_based_encryption else 0x00),
                 ]
             ),
             tlv8.Entry(
