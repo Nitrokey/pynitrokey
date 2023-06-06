@@ -12,7 +12,7 @@ import time
 from datetime import timedelta
 from os import wait
 from sys import stderr
-from typing import Any, Callable, List
+from typing import Any, Callable, List, Optional, Tuple
 
 import fido2
 import pytest
@@ -67,7 +67,7 @@ def test_register(secretsAppResetLogin):
     """
     Register credential with the given id and properties. Simple test.
     """
-    secretsAppResetLogin.register(CREDID, SECRET, DIGITS)
+    secretsAppResetLogin.register(CREDID, SECRET, DIGITS, kind=Kind.Hotp)
 
 
 def test_calculate(secretsAppResetLogin):
@@ -84,7 +84,7 @@ def test_delete(secretsAppResetLogin):
     """
     Remove credential with the given id. Simple test.
     """
-    secretsAppResetLogin.register(CREDID, SECRET, DIGITS)
+    secretsAppResetLogin.register(CREDID, SECRET, DIGITS, kind=Kind.Hotp)
     secretsAppResetLogin.verify_pin_raw(PIN)
     secretsAppResetLogin.delete(CREDID)
 
@@ -109,11 +109,11 @@ def test_list_changes(secretsAppResetLogin):
     assert not secretsApp.list()
 
     secretsApp.verify_pin_raw(PIN)
-    secretsApp.register(cred1, SECRET, DIGITS)
+    secretsApp.register(cred1, SECRET, DIGITS, kind=Kind.Hotp)
     secretsApp.verify_pin_raw(PIN)
     assert cred1 in secretsApp.list()
     secretsApp.verify_pin_raw(PIN)
-    secretsApp.register(cred2, SECRET, DIGITS)
+    secretsApp.register(cred2, SECRET, DIGITS, kind=Kind.Hotp)
     secretsApp.verify_pin_raw(PIN)
     assert cred2 in secretsApp.list()
 
@@ -476,7 +476,7 @@ def test_load(secretsAppResetLogin, kind: Kind, long_labels: str, count):
             print(f"Registered {i} credentials")
             size = len(secret) + len(name)
             print(f"Single Credential size: {size} B")
-            print(f"Total size: {size*i} B")
+            print(f"Total size: {size * i} B")
             credentials_registered = i
             break
         i += 1
@@ -535,7 +535,9 @@ def test_remove_all_credentials_by_hand(secretsAppRaw):
 
     for c in cred_pbek:
         secretsApp.verify_pin_raw(PIN)
-        secretsApp.register(c, SECRET, DIGITS, pin_based_encryption=True)
+        secretsApp.register(
+            c, SECRET, DIGITS, pin_based_encryption=True, kind=Kind.Hotp
+        )
 
     secretsApp.verify_pin_raw(PIN)
     credential_list = secretsApp.list()
@@ -563,7 +565,7 @@ def test_send_rubbish(secretsAppRaw):
     """Check if the application crashes, when sending unexpected data for the given command"""
     secretsApp = secretsAppRaw
     secretsApp.reset()
-    secretsApp.register(CREDID, SECRET, DIGITS)
+    secretsApp.register(CREDID, SECRET, DIGITS, kind=Kind.Hotp)
 
     # Just randomly selected 20 bytes of non-TLV data
     invalid_data = bytes([0x11] * 20)
@@ -584,7 +586,10 @@ def test_send_rubbish(secretsAppRaw):
             *CALCULATE_ALL_COMMANDS,
         }
     ):
-        with pytest.raises(Exception, match="CTAP error|IncorrectDataParameter"):
+        with pytest.raises(
+            Exception,
+            match="CTAP error|IncorrectDataParameter|InstructionNotSupportedOrInvalid",
+        ):
             structure = [
                 RawBytes([0x02, 0x02]),
             ]
@@ -597,7 +602,7 @@ def test_too_long_message(secretsAppResetLogin):
     Check device's response for the too long message
     """
     secretsApp = secretsAppResetLogin
-    secretsApp.register(CREDID, SECRET, DIGITS)
+    secretsApp.register(CREDID, SECRET, DIGITS, kind=Kind.Hotp)
     secretsApp.verify_pin_raw(PIN)
     secretsApp.list()
 
@@ -617,14 +622,16 @@ def test_too_long_message2(secretsAppRaw):
     """
     secretsApp = secretsAppRaw
     secretsApp.reset()
-    secretsApp.register(CREDID, SECRET, DIGITS)
+    secretsApp.register(CREDID, SECRET, DIGITS, kind=Kind.Hotp)
     secretsApp.list()
 
     # Check maximum label length
     too_long_name = b"a" * 256
     additional_space = 100
     max_label_length = len(SECRET) + additional_space
-    secretsApp.register(too_long_name[:-max_label_length], SECRET, DIGITS)
+    secretsApp.register(
+        too_long_name[:-max_label_length], SECRET, DIGITS, kind=Kind.Hotp
+    )
 
     # Find out experimentally the maximum accepted secret length - 126 bytes
     # Use minimal label length
@@ -797,7 +804,7 @@ def test_revhotp_bruteforce(secretsAppNoLog):
             secretsApp.verify_code(CREDID, current_code)
             stop_time = time.time()
             tqdm.write(
-                f"Found code {current_code} after {stop_time-start_time} seconds"
+                f"Found code {current_code} after {stop_time - start_time} seconds"
             )
             break
         except KeyboardInterrupt:
@@ -1039,7 +1046,9 @@ def test_list_pin_no_pin(secretsAppRaw):
 
     for c in cred_pbek:
         secretsApp.verify_pin_raw(PIN)
-        secretsApp.register(c, SECRET, DIGITS, pin_based_encryption=True)
+        secretsApp.register(
+            c, SECRET, DIGITS, pin_based_encryption=True, kind=Kind.Hotp
+        )
 
     # 2. Credential list should show only non-PIN-encrypted credentials, when unauthorized
     assert sorted(secretsApp.list()) == cred_no_pbek
@@ -1173,6 +1182,50 @@ def test_credential_encryption_does_not_change(secretsAppRaw):
     assert not secretsAppRaw.list()
 
 
+def helper_send_receive_ins(
+    app: SecretsApp,
+    ins,
+    structure=None,
+    p1=None,
+    le=None,
+    data_raw: bytes = b"",
+    expected_SW: Optional[str] = "9000",
+) -> Tuple[bytes, bytes]:
+    """
+    Helper for direct communication with the device
+    Send data directly to the CTAP bridge.
+    @param app: App
+    @param ins: CCID Ins; if sent as int, it is used verbatim, otherwise will be encoded as default
+    @param structure: a list of TLV entries to encode
+    @param p1: CCID P1 parameter to be called; if not provided, a default for given Ins will be used
+    @param le: CCID Le
+    @param data_raw: Raw CCID data field to send; used, when structure is None
+    @param expected_SW: expected SW code, which is checked before returning
+    """
+
+    def _trunc(s: str, l: int = 100) -> str:
+        return f"{s[:l]}.." if len(s) > l else s
+
+    from pynitrokey.start.gnuk_token import iso7816_compose
+
+    p2 = 0
+    p1 = 0 if p1 is None else p1
+    if isinstance(ins, int):
+        ins_b = ins
+    else:
+        ins_b, p1, p2 = app._encode_command(ins)
+    data_to_send = app._custom_encode(structure) if structure is not None else data_raw
+    data = iso7816_compose(ins_b, p1, p2, data_to_send, le=le)
+    app.logfn(f">> {_trunc(data.hex())}")
+    res = app.dev.otp(data=data)
+    app.logfn(f"<< {_trunc(res.hex())}")
+    status_bytes, result = res[:2], res[2:]
+
+    if expected_SW:
+        assert status_bytes.hex() == expected_SW
+    return status_bytes, result
+
+
 def test_send_remaining(secretsApp):
     secrets_app = secretsApp
     secrets_app.reset()
@@ -1197,37 +1250,22 @@ def test_send_remaining(secretsApp):
     secrets_app.verify_pin_raw(PIN)
     assert sorted(secrets_app.list()) == sorted(credentials)
 
-    def _trunc(s: str, l: int = 100) -> str:
-        return f"{s[:l]}.." if len(s) > l else s
-
-    def send_receive_ins(app: SecretsApp, ins, structure=None):
-        """
-        Helper for direct communication with the device
-        """
-        from pynitrokey.start.gnuk_token import iso7816_compose
-
-        ins_b, p1, p2 = app._encode_command(ins)
-        encoded_structure = app._custom_encode(structure)
-        data = iso7816_compose(ins_b, p1, p2, encoded_structure)
-        app.logfn(f">> {_trunc(data.hex())}")
-        res = app.dev.otp(data=data)
-        app.logfn(f"<< {_trunc(res.hex())}")
-        status_bytes, result = res[:2], res[2:]
-        return status_bytes, result
-
     # Run PIN verification so all Credentials on List command will be visible
     secrets_app.verify_pin_raw(PIN)
-    status_bytes, result = send_receive_ins(secrets_app, Instruction.List)
+    status_bytes, result = helper_send_receive_ins(
+        secrets_app, Instruction.List, expected_SW=None
+    )
     # Make sure there are remaining data to receive
     MORE_DATA_STATUS_BYTE = 0x61
     assert status_bytes[0] == MORE_DATA_STATUS_BYTE
     # Call a different command now, like Delete, which should not add any new data to the buffer
-    status_bytes, result = send_receive_ins(
+    status_bytes, result = helper_send_receive_ins(
         secrets_app,
         Instruction.Delete,
         structure=[
             tlv8.Entry(Tag.CredentialId.value, credentials[-1]),
         ],
+        expected_SW=None,
     )
     assert status_bytes.hex() == "9000"
 
@@ -1337,3 +1375,173 @@ def test_password_safe_just_pws_entry(secretsAppResetLogin):
 
     secretsAppResetLogin.verify_pin_raw(PIN)
     assert CREDID.encode() in secretsAppResetLogin.list()
+
+
+def test_select_applet(secretsAppRaw):
+    """
+    Low-level test for testing the response of the select command
+    """
+    data = "00 a4 04 00   07 a0 00 00   05 27 21 01"
+    data = data.replace(" ", "")
+    data = binascii.a2b_hex(data)
+    res = secretsAppRaw.dev.otp(data=data)
+    assert res.hex() != "6a82"
+    assert res.hex().startswith("9000")  # 90007903040a00710869f72b4b3712f627
+    print(res.hex())
+
+
+def helper_get_padded(challenge: bytes, l: int = 64) -> bytes:
+    """
+    Get PKCS#7 padded buffer
+    """
+    from cryptography.hazmat.primitives import padding
+
+    # The value passed here is in bits
+    padder = padding.PKCS7(l * 8).padder()
+    challenge_padded = padder.update(challenge)
+    challenge_padded += padder.finalize()
+    return challenge_padded
+
+
+def test_hmac_low_level(secretsAppRaw):
+    """
+    Test HMAC Challenge setup and use, for KeepassXC support.
+    Low-level test.
+    Support for this feature is not added in the Secrets API.
+    """
+
+    # getting version through status call works
+    YK_STATUS = 0x03
+    status, data = helper_send_receive_ins(secretsAppRaw, YK_STATUS, le=6)
+    assert len(data) == 6
+    assert data.hex()[:6] == "040b00"
+
+    # getting serial number works
+    YK_API_REQ = 0x01
+    YK_P1_CMD_GET_SERIAL = 0x10
+    status, data = helper_send_receive_ins(
+        secretsAppRaw, YK_API_REQ, p1=YK_P1_CMD_GET_SERIAL, le=4
+    )
+    assert len(data) == 4
+
+    # test HMAC calculation calls
+    secretsAppRaw.reset()
+
+    YK_P1_CMD_HMAC_1 = 0x30
+    YK_P1_CMD_HMAC_2 = 0x38
+
+    # calculation on the special-named slots does not work on factory-reset state
+    for slot in [YK_P1_CMD_HMAC_2, YK_P1_CMD_HMAC_1]:
+        helper_send_receive_ins(
+            secretsAppRaw,
+            YK_API_REQ,
+            p1=slot,
+            le=20,
+            expected_SW="6a82",
+            data_raw=helper_get_padded(b"1"),
+        )
+
+    # registration on the special-named slots works
+    # TODO Do not offer actual names in CLI, but rather select slot by number
+    for i, slot in enumerate([b"HmacSlot2", b"HmacSlot1"]):
+        secretsAppRaw.register(
+            slot,
+            secret=i.to_bytes(1, "little") * 20,
+            kind=Kind.Hmac,
+            pin_based_encryption=False,
+        )
+
+    for slot in [YK_P1_CMD_HMAC_2, YK_P1_CMD_HMAC_1]:
+        # calculation on the hmac slot works
+        status, data = helper_send_receive_ins(
+            secretsAppRaw,
+            YK_API_REQ,
+            p1=slot,
+            le=20,
+            data_raw=helper_get_padded(slot.to_bytes(1, "little") * 63),
+        )
+        assert len(data) == 20
+
+        # different input gives different output
+        status, data = helper_send_receive_ins(
+            secretsAppRaw,
+            YK_API_REQ,
+            p1=slot,
+            le=20,
+            data_raw=helper_get_padded(b"1" * 63),
+        )
+        status, data2 = helper_send_receive_ins(
+            secretsAppRaw,
+            YK_API_REQ,
+            p1=slot,
+            le=20,
+            data_raw=helper_get_padded(b"2" * 63),
+        )
+        assert data != data2
+
+        # same input gives same output
+        status, data3 = helper_send_receive_ins(
+            secretsAppRaw,
+            YK_API_REQ,
+            p1=slot,
+            le=20,
+            data_raw=helper_get_padded(b"2" * 63),
+        )
+        assert data3 == data2
+
+    # As the last step, set the secret as the one used in the KeepassXC tests
+    # $ ninja testykchallengeresponsekey && ./tests/testykchallengeresponsekey
+    secret = binascii.a2b_hex(
+        "1c e3 0f d7 8d 20 dc fa 40 b5 0c 18 77 9a fb 0f 02 28 8d b7".replace(" ", "")
+    )
+    for slot_name in [b"HmacSlot2", b"HmacSlot1"]:
+        secretsAppRaw.register(
+            slot_name,
+            secret=secret,
+            kind=Kind.Hmac,
+        )
+
+    # Do not allow to register secret with different lengths than expected 20 bytes
+    for secret_len in [18, 21, 200]:
+        with pytest.raises(SecretsAppException, match="IncorrectDataParameter"):
+            secretsAppRaw.register(
+                b"HmacSlot2",
+                secret=b"x" * secret_len,
+                kind=Kind.Hmac,
+            )
+
+    # ... or with Algorithm different from SHA1
+    for algo in [Algorithm.Sha256]:  # Algorithm.Sha512
+        with pytest.raises(SecretsAppException, match="IncorrectDataParameter"):
+            secretsAppRaw.register(
+                b"HmacSlot2", secret=b"x" * 20, kind=Kind.Hmac, algo=algo
+            )
+
+    # Test various challenge lengths against local calculations
+
+    """
+    Comment from the KeepassXC implementation, copied verbatim:
+    /*
+     * The challenge sent to the Yubikey should always be 64 bytes for
+     * compatibility with all configurations.  Follow PKCS7 padding.
+     *
+     * There is some question whether or not 64 bytes fixed length
+     * configurations even work, some docs say avoid it.
+     *
+     * In fact, the Yubikey always assumes the last byte (nr. 64)
+     * and all bytes of the same value preceding it to be padding.
+     * This does not conform fully to PKCS7, because the the actual value
+     * of the padding bytes is ignored.
+     */
+    """
+
+    # The length of "1" is used by KeepassXC for test purposes. "63" is the maximum.
+    # "64" should not work, as the last byte is always treated as the padding byte value.
+    for challenge_len in [1, 32, 63]:
+        challenge = b"c" * challenge_len
+        challenge_padded = helper_get_padded(challenge)
+        status, response_device = helper_send_receive_ins(
+            secretsAppRaw, YK_API_REQ, p1=slot, le=20, data_raw=challenge_padded
+        )
+        response_lib = secretsAppRaw.get_response_for_secret(challenge, secret)
+        assert response_lib == response_device

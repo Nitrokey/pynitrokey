@@ -62,6 +62,8 @@ class SelectResponse:
     challenge: Optional[bytes]
     # Selected algorithm, challenge-response auth only
     algorithm: Optional[bytes]
+    # Serial number of the device
+    serial_number: Optional[bytes]
 
     def version_str(self) -> str:
         if self.version:
@@ -73,7 +75,8 @@ class SelectResponse:
         return (
             "Nitrokey Secrets\n"
             f"\tVersion: {self.version_str()}\n"
-            f"\tPIN attempt counter: {self.pin_attempt_counter}"
+            f"\tPIN attempt counter: {self.pin_attempt_counter}\n"
+            f"\tSerial number: {self.serial_number.hex() if self.serial_number else 'None'}"
         )
 
 
@@ -186,13 +189,15 @@ class Tag(Enum):
     PwsLogin = 0x83
     PwsPassword = 0x84
     PwsMetadata = 0x85
+    SerialNumber = 0x8F
 
 
 class Kind(Enum):
     Hotp = 0x10
     Totp = 0x20
     HotpReverse = 0x30
-    NotSet = 0x40
+    Hmac = 0x40
+    NotSet = 0xF0
 
     @classmethod
     def from_attribute_byte(cls, attribute_byte: bytes) -> str:
@@ -212,6 +217,7 @@ STRING_TO_KIND = {
     "HOTP": Kind.Hotp,
     "TOTP": Kind.Totp,
     "HOTP_REVERSE": Kind.HotpReverse,
+    "HMAC": Kind.Hmac,
     "NOT_SET": Kind.NotSet,
 }
 
@@ -308,6 +314,7 @@ class SecretsApp:
             except Exception as e:
                 self.logfn(f"Got exception: {e}")
                 raise
+            # Data order is different here than in APDU - SW is first, then the data if any
             status_bytes, result = result[:2], result[2:]
             self.logfn(
                 f"Received [{status_bytes.hex()}] {result.hex() if result else result!r}"
@@ -624,6 +631,7 @@ class SecretsApp:
             salt=rd.get(Tag.CredentialId.value),
             challenge=rd.get(Tag.Challenge.value),
             algorithm=rd.get(Tag.Algorithm.value),
+            serial_number=rd.get(Tag.SerialNumber.value),
         )
         return r
 
