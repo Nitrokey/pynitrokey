@@ -1407,7 +1407,7 @@ def test_hmac_low_level(secretsAppRaw):
     """
     Test HMAC Challenge setup and use, for KeepassXC support.
     Low-level test.
-    Support for this feature is not added in the SecretsApp API.
+    Support for this feature is not planned to be added in the SecretsApp API.
     """
 
     # getting version through status call works
@@ -1442,7 +1442,6 @@ def test_hmac_low_level(secretsAppRaw):
         )
 
     # registration on the special-named slots works
-    # TODO Do not offer actual names in CLI, but rather select slot by number
     for i, slot in enumerate([b"HmacSlot2", b"HmacSlot1"]):
         secretsAppRaw.register(
             slot,
@@ -1584,4 +1583,47 @@ def test_list_with_properties(secretsAppResetLogin, touch, pws):
     assert item.properties.secret_encryption == (
         secretsAppResetLogin._metadata.get("fixture_type")
         == CredEncryptionType.PinBased
+    )
+
+
+def test_light_load(secretsAppRaw):
+    """
+    Add a couple of different Credentials' types for the manual CLI listing tests
+    """
+    secretb = binascii.a2b_hex(SECRET)
+
+    secretsAppRaw.reset()
+    secretsAppRaw.set_pin_raw(PIN)
+
+    for encrypted in [True, False]:
+        for touch in [True, False]:
+            secretsAppRaw.verify_pin_raw(PIN)
+            secretsAppRaw.register(
+                f'otp:{"t" if touch else ""}:{"enc" if encrypted else ""}'.encode(),
+                secretb,
+                digits=6,
+                kind=Kind.Totp,
+                algo=Algorithm.Sha1,
+                touch_button_required=touch,
+                pin_based_encryption=encrypted,
+            )
+
+    for pws in [True, False]:
+        secretsAppRaw.register(
+            f'otp:{"pws" if pws else ""}'.encode(),
+            secretb,
+            digits=6,
+            kind=Kind.Totp,
+            algo=Algorithm.Sha1,
+            login="login" if pws else None,
+            password="password" if pws else None,
+            metadata="metadata" if pws else None,
+            touch_button_required=False,
+        )
+
+    secretsAppRaw.register(
+        b"pws",
+        login=b"login",
+        password=b"password",
+        metadata=b"metadata",
     )

@@ -14,6 +14,7 @@ from secrets import token_bytes
 from struct import pack
 from typing import List, Optional
 
+import semver
 import tlv8
 
 from pynitrokey.nk3 import Nitrokey3Device
@@ -268,7 +269,6 @@ STRING_TO_KIND = {
     "TOTP": Kind.Totp,
     "HOTP_REVERSE": Kind.HotpReverse,
     "HMAC": Kind.Hmac,
-    "NOT_SET": Kind.NotSet,
 }
 
 
@@ -276,6 +276,12 @@ class Algorithm(Enum):
     Sha1 = 0x01
     Sha256 = 0x02
     Sha512 = 0x03
+
+
+ALGORITHM_TO_KIND = {
+    "SHA1": Algorithm.Sha1,
+    "SHA256": Algorithm.Sha256,
+}
 
 
 class SecretsApp:
@@ -490,6 +496,19 @@ class SecretsApp:
         ]
         self._send_receive(Instruction.Delete, structure)
 
+    def register_yk_hmac(self, slot: int, secret: bytes) -> None:
+        """
+        Register a Yubikey-compatible challenge-response slot.
+        @param slot: challenge-response slot
+        @param secret: the secret
+        """
+        assert slot in [1, 2]
+        self.register(
+            f"HmacSlot{slot}".encode(),
+            secret,
+            kind=Kind.Hmac,
+        )
+
     def register(
         self,
         credid: bytes,
@@ -514,9 +533,9 @@ class SecretsApp:
         :param initial_counter_value: The counter's initial value for the HOTP Credential (HOTP only)
         :param touch_button_required: User Presence confirmation is required to use this Credential
         :param pin_based_encryption: User preference for additional PIN-based encryption
-        :param login:
-        :param password:
-        :param metadata:
+        :param login: Login field for Password Safe
+        :param password: Password field for Password Safe
+        :param metadata: Metadata field for Password Safe
         :return: None
         """
         if initial_counter_value > 0xFFFFFFFF:
@@ -746,15 +765,23 @@ class SecretsApp:
             return True
         return False
 
+    def feature_pws_support(self) -> bool:
+        return self._semver_equal_or_newer("4.11.0")
+
     def protocol_v2_confirm_all_requests_with_pin(self) -> bool:
         # 4.7.0 version requires providing PIN each request
-        return self.select().version_str() == "4.7.0"
+        return self.get_feature_status_cached().version_str() == "4.7.0"
 
     def protocol_v3_separate_pin_and_no_pin_space(self) -> bool:
         # 4.10.0 makes logical separation between the PIN-encrypted and non-PIN encrypted spaces, except
         # for overwriting the credentials
-        return self.select().version_str() == "4.10.0"
+        return self._semver_equal_or_newer("4.10.0")
 
     def is_pin_healthy(self) -> bool:
         counter = self.select().pin_attempt_counter
         return not (counter is None or counter == 0)
+
+    def _semver_equal_or_newer(self, required_version: str) -> bool:
+        current = semver.Version.parse(self.get_feature_status_cached().version_str())
+        semver_req_version = semver.Version.parse(required_version)
+        return current >= semver_req_version

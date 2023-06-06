@@ -55,7 +55,6 @@ def generate_corpus_args(request: FixtureRequest):
     ), request.config.getoption("--fuzzing-corpus-path")
 
 
-# @pytest.fixture(scope="function")
 @pytest.fixture(scope="function")
 def corpus_func(request: FixtureRequest, generate_corpus_args):
     """
@@ -63,9 +62,7 @@ def corpus_func(request: FixtureRequest, generate_corpus_args):
     """
     generate_corpus, corpus_path = generate_corpus_args
     if generate_corpus:
-        print(
-            f"\n*** Generating corpus for oath-authenticator fuzzing at {corpus_path}"
-        )
+        print(f"\n*** Generating corpus for Secrets App fuzzing at {corpus_path}")
         pathlib.Path(corpus_path).mkdir(exist_ok=True)
         # Add some random suffix to have separate outputs for parametrized test cases
         pre = secrets.token_bytes(4).hex()

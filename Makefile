@@ -164,3 +164,8 @@ secrets-test-report:
 	./venv/bin/pytest  -v pynitrokey/test_secrets_app.py --durations=0 -o log_cli=false -o log_cli_level=debug -W ignore::DeprecationWarning --template=html1/index.html --report $(REPORT)
 	@echo "Report written to $(REPORT)"
 	xdg-open $(REPORT)
+
+CORPUS_PATH=$(shell mktemp -d)
+secrets-test-generate-corpus:
+	./venv/bin/pytest  -v pynitrokey/test_secrets_app.py --durations=0 $(TESTPARAM) --generate-fuzzing-corpus --fuzzing-corpus-path=$(CORPUS_PATH)
+	@echo "Corpus written to $(CORPUS_PATH)"
