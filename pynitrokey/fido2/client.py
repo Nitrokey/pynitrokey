@@ -419,30 +419,13 @@ class NKFido2Client:
         this command will tell the token to boot directly to the st DFU
         so it can be reprogrammed.  Warning, you could brick your device.
         """
-        soloboot = self.is_bootloader()
+        boot = self.is_bootloader()
 
-        if soloboot or self.exchange == self.exchange_u2f:
+        if boot or self.exchange == self.exchange_u2f:
             req = NKFido2Client.format_request(SoloBootloader.st_dfu)
             self.send_only_hid(SoloBootloader.HIDCommandBoot, req)
         else:
             self.send_only_hid(SoloBootloader.HIDCommandEnterSTBoot, b"")
-
-    # @todo: remove, is this used somewhere, is this working?
-    def disable_solo_bootloader(self) -> bool:
-        """
-        Disables the Nitrokey bootloader.  Only do this if you want to void the possibility
-        of any updates.
-        If you've started from a Nitrokey hacker, make you you've programmed a final/production build!
-        """
-        ret = self.exchange(
-            SoloBootloader.disable, 0, b"\xcd\xde\xba\xaa"
-        )  # magic number
-        if ret[0] != CtapError.ERR.SUCCESS:
-            print("Failed to disable bootloader")
-            return False
-        time.sleep(0.1)
-        self.exchange(SoloBootloader.do_reboot)  # type: ignore
-        return True
 
     def program_file(self, name: str) -> bytes:
         def parseField(f: str) -> bytes:
