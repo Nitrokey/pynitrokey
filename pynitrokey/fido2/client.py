@@ -301,7 +301,6 @@ class NKFido2Client:
         host: str = "nitrokeys.dev",
         user_id: str = "they",
         serial: Optional[str] = None,
-        pin: Optional[str] = None,
         prompt: Optional[str] = "Touch your authenticator to generate a response...",
         output: bool = True,
         udp: bool = False,
@@ -338,7 +337,6 @@ class NKFido2Client:
                 "allowCredentials": allow_list,
                 "extensions": {"hmacGetSecret": {"salt1": salt}},
             },  # type: ignore
-            pin=pin,
         ).get_response(0)
 
         # @todo: rewrite with typing
