@@ -374,7 +374,7 @@ class NKFido2Client:
 
         return CredentialManagement(device.ctap2, client_pin.protocol, client_token)
 
-    def enter_solo_bootloader(self) -> None:
+    def enter_bootloader(self) -> None:
         """
         If Nitrokey is configured as Nitrokey hacker or something similar,
         this command will tell the token to boot directly to the bootloader
@@ -386,7 +386,7 @@ class NKFido2Client:
 
     def enter_bootloader_or_die(self) -> None:
         try:
-            self.enter_solo_bootloader()
+            self.enter_bootloader()
         # except OSError:
         #     pass
         except CtapError as e:
@@ -398,7 +398,7 @@ class NKFido2Client:
             else:
                 raise (e)
 
-    def is_solo_bootloader(self) -> bool:
+    def is_bootloader(self) -> bool:
         try:
             self.bootloader_version()
             return True
@@ -419,7 +419,7 @@ class NKFido2Client:
         this command will tell the token to boot directly to the st DFU
         so it can be reprogrammed.  Warning, you could brick your device.
         """
-        soloboot = self.is_solo_bootloader()
+        soloboot = self.is_bootloader()
 
         if soloboot or self.exchange == self.exchange_u2f:
             req = NKFido2Client.format_request(SoloBootloader.st_dfu)

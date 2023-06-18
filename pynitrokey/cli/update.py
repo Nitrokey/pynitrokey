@@ -166,7 +166,7 @@ def update(serial, yes, force):
             local_critical("exiting due to user input...", support_hint=False)
 
     # Ensure we are in bootloader mode
-    if client.is_solo_bootloader():
+    if client.is_bootloader():
         local_print("Key already in bootloader mode, continuing...")
     else:
         try:

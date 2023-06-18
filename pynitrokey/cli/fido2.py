@@ -185,7 +185,7 @@ def list() -> None:
 
         if hasattr(descr, "product_name"):
             name = descr.product_name
-        elif c.is_solo_bootloader():
+        elif c.is_bootloader():
             name = "FIDO2 Bootloader device"
         else:
             name = "FIDO2 device"
