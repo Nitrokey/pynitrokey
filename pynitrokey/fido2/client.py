@@ -347,6 +347,10 @@ class NKFido2Client:
 
         return output
 
+    def has_pin(self) -> bool:
+        assert self.client is not None
+        return self.client.info.options["clientPin"]
+
     def cred_mgmt(self, serial: str, pin: str) -> CredentialManagement:
         device = nkfido2.find(serial)
         assert isinstance(device.ctap2, Ctap2)
