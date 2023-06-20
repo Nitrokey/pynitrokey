@@ -452,7 +452,10 @@ class SecretsApp:
         res = []
         for e in resd:
             # e: tlv8.Entry
-            attribute_byte, label, properties = e.data[0], e.data[1:-1], e.data[-1]
+            if self.feature_extended_list():
+                attribute_byte, label, properties = e.data[0], e.data[1:-1], e.data[-1]
+            else:
+                attribute_byte, label, properties = e.data[0], e.data[1:], 0
             res.append(
                 ListItem(
                     kind=Kind.from_attribute_byte_type(attribute_byte),
@@ -766,6 +769,9 @@ class SecretsApp:
         return False
 
     def feature_pws_support(self) -> bool:
+        return self._semver_equal_or_newer("4.11.0")
+
+    def feature_extended_list(self) -> bool:
         return self._semver_equal_or_newer("4.11.0")
 
     def protocol_v2_confirm_all_requests_with_pin(self) -> bool:
