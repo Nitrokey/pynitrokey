@@ -41,6 +41,29 @@ LOG_FN = tempfile.NamedTemporaryFile(prefix="nitropy.log.").name
 LOG_FORMAT_STDOUT = "%(asctime)-15s %(levelname)6s %(name)10s %(message)s"
 LOG_FORMAT = "%(relativeCreated)-8d %(levelname)6s %(name)10s %(message)s"
 
+CLI_LOG_BLACKLIST: dict[str, int] = {
+    # dict of {name: lenght} mapping to exclude from cli parameter logging
+    # name: name of the parameter
+    # length: number of arguments the parameter has
+    # nitropy start kdf-details
+    "--passwd": 1,
+    # nitropy start update
+    # nitropy pro enable-update
+    # nitropy nethsm
+    "-p": 1,
+    # nitropy pro enable-update
+    # nitropy nk3 secrets set-pin
+    # nitropy nethsm
+    "--password": 1,
+    # nitropy nk3 test
+    # nitropy fido2 verify
+    # nitropy fido2 make-credential
+    # nitropy fido2 list-credentials
+    # nitropy fido2 delete-credential
+    # nitropy fido2 challenge-response
+    "--pin": 1,
+}
+
 GH_ISSUES_URL = "https://github.com/Nitrokey/pynitrokey/issues/"
 SUPPORT_URL = "https://support.nitrokey.com/"
 SUPPORT_EMAIL = "support@nitrokey.com"

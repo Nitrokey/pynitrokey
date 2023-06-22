@@ -15,6 +15,7 @@ import platform
 import sys
 import time
 from getpass import getpass
+from itertools import chain
 from numbers import Number
 from threading import Event, Timer
 from typing import List, Optional
@@ -23,6 +24,7 @@ import click
 from tqdm import tqdm
 
 from pynitrokey.confconsts import (
+    CLI_LOG_BLACKLIST,
     LOG_FN,
     SUPPORT_EMAIL,
     SUPPORT_URL,
@@ -32,6 +34,45 @@ from pynitrokey.confconsts import (
 )
 
 STDOUT_PRINT = True
+
+
+def normalize_parameters(s: str) -> list[str]:
+    """Helper function to normalize different writing of parameters
+
+    `s`: `str` parameter to normalize
+
+    Returns:
+        `list of str`: normalized form of `parameter`
+    """
+    if s.startswith("--"):
+        return s.split("=", maxsplit=1)
+    else:
+        return [s]
+
+
+def filter_sensitive_parameters(parameters: list[str]) -> list[str]:
+    """Helper function to remove sensitive parameters
+
+    `parameters`: `list of str`
+
+    Returns:
+        `list of str`: `parameters` without sensitive values listed
+                       in `pynitrokey.confconsts.CLI_LOG_BLACKLIST`
+    """
+    parameters = list(
+        chain.from_iterable(
+            [normalize_parameters(parameter) for parameter in parameters]
+        )
+    )
+
+    redact_count = 0
+    for i in range(len(parameters)):
+        if redact_count > 0:
+            parameters[i] = "[redacted]"
+            redact_count -= 1
+        elif parameters[i] in CLI_LOG_BLACKLIST:
+            redact_count = CLI_LOG_BLACKLIST[parameters[i]]
+    return parameters
 
 
 def to_websafe(data):
