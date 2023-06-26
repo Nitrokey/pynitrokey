@@ -350,7 +350,7 @@ class AskUser:
             return getpass(pre_input_string)
         else:
             print(pre_input_string, end="", file=sys.stderr)
-            return input(pre_input_string).strip()
+            return input().strip()
 
     def ask(self) -> str:
         answer = None
