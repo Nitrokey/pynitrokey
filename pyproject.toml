@@ -88,6 +88,8 @@ module = [
     "pynitrokey.cli.nk3.*",
     "pynitrokey.nk3.*",
     "pynitrokey.updates.*",
+    "pynitrokey.fido2.*",
+    "pynitrokey.cli.fido2.*",
 ]
 disallow_untyped_defs = true
 

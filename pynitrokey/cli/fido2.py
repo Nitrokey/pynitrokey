@@ -13,6 +13,7 @@ import platform
 import struct
 import sys
 from time import sleep, time
+from typing import List, Literal, Optional
 
 import click
 
@@ -26,6 +27,7 @@ from fido2.ctap import CtapError
 from fido2.ctap1 import ApduError
 from fido2.ctap2 import CredentialManagement, Ctap2
 from fido2.ctap2.pin import ClientPin, PinProtocol
+from fido2.hid import CtapHidDevice
 
 import pynitrokey
 import pynitrokey.fido2 as nkfido2
@@ -51,13 +53,13 @@ from pynitrokey.helpers import (
 
 
 @click.group()
-def fido2():
+def fido2() -> None:
     """Interact with Nitrokey FIDO2 devices, see subcommands."""
     require_windows_admin()
 
 
 @click.group()
-def util():
+def util() -> None:
     """Additional utilities, see subcommands."""
     pass
 
@@ -66,7 +68,7 @@ def util():
 @click.command()
 @click.option("--input-seed-file")
 @click.argument("output_pem_file")
-def genkey(input_seed_file, output_pem_file):
+def genkey(input_seed_file: Optional[str], output_pem_file: str) -> None:
     """Generates key pair that can be used for Solo signed firmware updates.
 
     \b
@@ -104,7 +106,9 @@ def genkey(input_seed_file, output_pem_file):
     default=20,
     type=int,
 )
-def sign(verifying_key, app_hex, output_json, end_page, pages):
+def sign(
+    verifying_key: str, app_hex: str, output_json: str, end_page: int, pages: int
+) -> None:
     """Signs a fw-hex file, outputs a .json file that can be used for signed update."""
 
     msg = pynitrokey.fido2.operations.sign_firmware(
@@ -139,14 +143,14 @@ def sign(verifying_key, app_hex, output_json, end_page, pages):
     type=int,
 )
 def mergehex(
-    attestation_key,
-    attestation_cert,
-    lock,
-    input_hex_files,
-    output_hex_file,
-    end_page,
-    pages,
-):
+    attestation_key: Optional[bytes],
+    attestation_cert: Optional[bytes],
+    lock: bool,
+    input_hex_files: List[str],
+    output_hex_file: str,
+    end_page: int,
+    pages: int,
+) -> None:
     """Merges hex files, and patches in the attestation key.
 
     \b
@@ -165,17 +169,18 @@ def mergehex(
 
 
 @click.group()
-def rng():
+def rng() -> None:
     """Access TRNG on device, see subcommands."""
     pass
 
 
 @click.command()
-def list():
+def list() -> None:
     """List all 'Nitrokey FIDO2' devices"""
     devs = nkfido2.find_all()
     local_print(":: 'Nitrokey FIDO2' keys")
     for c in devs:
+        assert isinstance(c.dev, CtapHidDevice)
         descr = c.dev.descriptor
 
         if hasattr(descr, "product_name"):
@@ -188,6 +193,7 @@ def list():
         if hasattr(descr, "serial_number"):
             id_ = descr.serial_number
         else:
+            assert isinstance(descr.path, str)
             id_ = descr.path
 
         local_print(f"{id_}: {name}")
@@ -200,7 +206,7 @@ def list():
     help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
 )
 @click.option("--pin", help="provide PIN instead of asking the user", default=None)
-def list_credentials(serial, pin):
+def list_credentials(serial: str, pin: str) -> None:
     """List all credentials saved on the key as well as the amount of remaining slots."""
 
     # Makes sure pin exists
@@ -235,13 +241,17 @@ def list_credentials(serial, pin):
         reliable_party_hash = reliable_party_result.get(
             CredentialManagement.RESULT.RP_ID_HASH
         )
+        assert isinstance(reliable_party, dict)
         local_print("-----------------------------------")
         name_or_id = reliable_party.get("name", reliable_party.get("id", "(no id)"))
         local_print(f"{name_or_id}: ")
         for cred in cred_manager.enumerate_creds(reliable_party_hash):
-            cred_id = cred.get(CredentialManagement.RESULT.CREDENTIAL_ID)["id"]
+            _cred_id = cred.get(CredentialManagement.RESULT.CREDENTIAL_ID)
+            assert isinstance(_cred_id, dict)
+            cred_id = _cred_id["id"]
             local_print(f"- id: {cred_id.hex()}")
             cred_user = cred.get(CredentialManagement.RESULT.USER)
+            assert isinstance(cred_user, dict)
             display_name = cred_user.get("displayName")
             user_name = cred_user.get("name", "(no name)")
             if display_name is None or user_name == display_name:
@@ -265,7 +275,7 @@ def list_credentials(serial, pin):
 @click.option(
     "-cid", "--cred-id", help="Credential id of there Credential to be deleted"
 )
-def delete_credential(serial, pin, cred_id):
+def delete_credential(serial: str, pin: str, cred_id: str) -> None:
     """Delete a specific credential from the key"""
 
     if not cred_id:
@@ -279,8 +289,9 @@ def delete_credential(serial, pin, cred_id):
 
     tmp_cred_id = {"id": bytes.fromhex(cred_id), "type": "public-key"}
 
+    # @todo: proper typing
     try:
-        cred_manager.delete_cred(tmp_cred_id)
+        cred_manager.delete_cred(tmp_cred_id)  # type: ignore
     except Exception as e:
         local_critical("Failed to delete credential, was the right cred_id given?")
         return
@@ -294,7 +305,7 @@ def delete_credential(serial, pin, cred_id):
     "--serial",
     help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
 )
-def hexbytes(count, serial):
+def hexbytes(count: int, serial: Optional[str]) -> None:
     """Output COUNT number of random bytes, hex-encoded."""
 
     if not 0 <= count <= 255:
@@ -309,7 +320,7 @@ def hexbytes(count, serial):
     "--serial",
     help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
 )
-def raw(serial):
+def raw(serial: Optional[str]) -> None:
     """Output raw entropy endlessly."""
     p = nkfido2.find(serial)
     while True:
@@ -325,7 +336,7 @@ def raw(serial):
     help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
 )
 @click.option("-b", "--blink", is_flag=True, help="Blink in the meantime")
-def status(serial, blink: bool):
+def status(serial: Optional[str], blink: bool) -> None:
     """Print device's status"""
     p = nkfido2.find(serial)
     t0 = time()
@@ -346,7 +357,7 @@ def status(serial, blink: bool):
     "--serial",
     help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
 )
-def feedkernel(count, serial):
+def feedkernel(count: int, serial: Optional[str]) -> None:
     """Feed random bytes to /dev/random."""
 
     if os.name != "posix":
@@ -420,7 +431,9 @@ def feedkernel(count, serial):
     default="Touch your authenticator to generate a credential...",
     show_default=True,
 )
-def make_credential(serial, host, user, udp, prompt):
+def make_credential(
+    serial: Optional[str], host: str, user: str, udp: bool, prompt: str, pin: str
+) -> None:
     """Generate a credential.
 
     Pass `--prompt ""` to output only the `credential_id` as hex.
@@ -458,7 +471,16 @@ def make_credential(serial, host, user, udp, prompt):
 )
 @click.argument("credential-id")
 @click.argument("challenge")
-def challenge_response(serial, host, user, prompt, credential_id, challenge, udp, pin):
+def challenge_response(
+    serial: Optional[str],
+    host: str,
+    user: str,
+    prompt: str,
+    credential_id: str,
+    challenge: str,
+    udp: bool,
+    pin: Optional[str],
+) -> None:
     """Uses `hmac-secret` to implement a challenge-response mechanism.
 
     We abuse hmac-secret, which gives us `HMAC(K, hash(challenge))`, where `K`
@@ -504,7 +526,12 @@ def challenge_response(serial, host, user, prompt, credential_id, challenge, udp
 )
 @click.argument("hash-type")
 @click.argument("filename")
-def probe(serial, udp, hash_type, filename):
+def probe(
+    serial: Optional[str],
+    udp: bool,
+    hash_type: str,
+    filename: str,
+) -> None:
     """Calculate HASH"""
 
     # @todo: move to constsconf.py
@@ -544,9 +571,9 @@ def probe(serial, udp, hash_type, filename):
 
         # print(f"content from hex: {bytes.fromhex(result_hex[128:]).decode()}")
         local_print(
-            f"content: {result[64:]}",
-            f"content from hex: {bytes.fromhex(result_hex[128:])}",
-            f"signature: {result[:128]}",
+            f"content: {result[64:]!r}",
+            f"content from hex: {bytes.fromhex(result_hex[128:])!r}",
+            f"signature: {result[:128]!r}",
         )
 
         # verify_key = nacl.signing.VerifyKey(bytes.fromhex("c69995185efa20bf7a88139f5920335aa3d3e7f20464345a2c095c766dfa157a"))
@@ -572,7 +599,7 @@ def probe(serial, udp, hash_type, filename):
     help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
 )
 @click.option("-y", "--yes", help="Agree to all questions", is_flag=True)
-def reset(serial, yes):
+def reset(serial: Optional[str], yes: bool) -> None:
     """Reset device - wipes all credentials!!!"""
     local_print(
         "Reset is only possible 10secs after plugging in the device.",
@@ -598,8 +625,7 @@ def reset(serial, yes):
     "--serial",
     help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
 )
-# @click.option("--new-pin", help="change current pin")
-def change_pin(serial):
+def change_pin(serial: Optional[str]) -> None:
     """Change pin of current device"""
 
     old_pin = AskUser.hidden("Please enter old pin: ")
@@ -616,6 +642,7 @@ def change_pin(serial):
         # @fixme: move this (function) into own fido2-client-class
         dev = nkfido2.find(serial)
         client = dev.client
+        assert isinstance(dev.ctap2, Ctap2)
         client_pin = ClientPin(dev.ctap2)
         client_pin.change_pin(old_pin, new_pin)
         local_print("done - please use new pin to verify key")
@@ -632,9 +659,11 @@ def change_pin(serial):
     "--serial",
     help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
 )
-# @click.option("--new-pin", help="change current pin")
-def set_pin(serial):
-    """Set pin of current device"""
+# @click.option("--new-pin", help="set current pin to this value", default=None)
+def set_pin(serial: Optional[str]) -> None:
+    """Set pin of current device."""
+
+    # ask for new pin
     new_pin = AskUser.hidden("Please enter new pin: ")
     confirm_pin = AskUser.hidden("Please confirm new pin: ")
     if new_pin != confirm_pin:
@@ -643,10 +672,15 @@ def set_pin(serial):
             "please try again!",
             support_hint=False,
         )
+    # use provided --pin arg
+    else:
+        confirm_pin = new_pin
+
     try:
         # @fixme: move this (function) into own fido2-client-class
         dev = nkfido2.find(serial)
         client = dev.client
+        assert isinstance(dev.ctap2, Ctap2)
         client_pin = ClientPin(dev.ctap2)
         client_pin.set_pin(new_pin)
         local_print("done - please use new pin to verify key")
@@ -670,7 +704,7 @@ def set_pin(serial):
     "--udp", is_flag=True, default=False, help="Communicate over UDP with software key"
 )
 @click.option("--pin", help="PIN for device access", default=None)
-def verify(serial, udp, pin):
+def verify(serial: Optional[str], udp: bool, pin: Optional[str]) -> None:
     """Verify if connected Nitrokey FIDO2 device is genuine."""
 
     cert = None
@@ -749,15 +783,16 @@ def verify(serial, udp, pin):
 @click.option(
     "--udp", is_flag=True, default=False, help="Communicate over UDP with software key"
 )
-def version(serial, udp):
+def version(serial: Optional[str], udp: bool) -> None:
     """Version of firmware on device."""
 
     try:
         res = nkfido2.find(serial, udp=udp).solo_version()
         major, minor, patch = res[:3]
         locked = ""
+        # @todo:
         if len(res) > 3:
-            if res[3]:
+            if res[3]:  # type: ignore
                 locked = "locked"
             else:
                 locked = "unlocked"
@@ -784,7 +819,7 @@ def version(serial, udp):
 @click.option(
     "--udp", is_flag=True, default=False, help="Communicate over UDP with software key"
 )
-def wink(serial, udp):
+def wink(serial: Optional[str], udp: bool) -> None:
     """Send wink command to device (blinks LED a few times)."""
 
     nkfido2.find(serial, udp=udp).wink()
@@ -799,13 +834,14 @@ def wink(serial, udp):
 @click.option(
     "--udp", is_flag=True, default=False, help="Communicate over UDP with software key"
 )
-def reboot(serial, udp):
+def reboot(serial: Optional[str], udp: bool) -> None:
     """Send reboot command to device (development command)"""
     local_print("Reboot", "Press key to confirm!")
 
     CTAP_REBOOT = 0x53
     dev = nkfido2.find(serial, udp=udp).dev
     try:
+        assert isinstance(dev, CtapHidDevice)
         dev.call(CTAP_REBOOT ^ 0x80, b"")
 
     except OSError:

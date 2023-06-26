@@ -1,7 +1,8 @@
 import time
-from typing import Union
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import usb
+from fido2.hid import CtapHidDevice
 
 from pynitrokey.exceptions import NoSoloFoundError
 
@@ -9,11 +10,11 @@ from pynitrokey.exceptions import NoSoloFoundError
 from pynitrokey.fido2.client import NKFido2Client
 
 
-def hot_patch_windows_libusb():
+def hot_patch_windows_libusb() -> None:
     # hot patch for windows libusb backend
     olddel = usb._objfinalizer._AutoFinalizedObjectBase.__del__
 
-    def newdel(self):
+    def newdel(self):  # type: ignore
         try:
             olddel(self)
         except OSError:
@@ -22,15 +23,26 @@ def hot_patch_windows_libusb():
     usb._objfinalizer._AutoFinalizedObjectBase.__del__ = newdel
 
 
-def _UDP_InternalPlatformSwitch(funcname, *args, **kwargs):
+# @todo: remove this, HidOverUDP is not available anymore!
+def _UDP_InternalPlatformSwitch(
+    funcname: Callable, *args: Tuple, **kwargs: Dict
+) -> None:
     if funcname == "__init__":
-        return HidOverUDP(*args, **kwargs)
-    return getattr(HidOverUDP, funcname)(*args, **kwargs)
+        return HidOverUDP(*args, **kwargs)  # type: ignore
+    return getattr(HidOverUDP, funcname)(*args, **kwargs)  # type: ignore
 
 
-def find(solo_serial=None, retries=5, raw_device=None, udp=False, pin=None):
+def find(
+    solo_serial: Optional[str] = None,
+    retries: int = 5,
+    raw_device: Optional[CtapHidDevice] = None,
+    udp: bool = False,
+    pin: Optional[str] = None,
+) -> NKFido2Client:
+
+    # @todo: remove this, force_udp_backend is not available anymore!
     if udp:
-        force_udp_backend()
+        force_udp_backend()  # type: ignore
 
     p = NKFido2Client()
 
@@ -48,8 +60,7 @@ def find(solo_serial=None, retries=5, raw_device=None, udp=False, pin=None):
     raise NoSoloFoundError("no Nitrokey FIDO2 found")
 
 
-def find_all():
-    from fido2.hid import CtapHidDevice
+def find_all() -> List[NKFido2Client]:
 
     hid_devices = list(CtapHidDevice.list_devices())
     solo_devices = [
@@ -57,10 +68,11 @@ def find_all():
         for d in hid_devices
         if (d.descriptor.vid, d.descriptor.pid)
         in [
-            ## @FIXME: move magic numbers
-            (1155, 41674),
-            (0x20A0, 0x42B3),
-            (0x20A0, 0x42B1),
+            # (  1155,  41674),     <- replacing with 0x-notation
+            (0x0483, 0xA2CA),  #
+            (0x20A0, 0x42B3),  # ...
+            (0x20A0, 0x42B1),  # NK FIDO2
+            # (0x20A0, 0x42B2),     # NK3
         ]
     ]
     return [find(raw_device=device) for device in solo_devices]

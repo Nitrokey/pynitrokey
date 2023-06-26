@@ -68,7 +68,7 @@ class DFU:
         ERROR = 0x0A
 
     class status:
-        def __init__(self, s):
+        def __init__(self, s: bytes):
             self.status = s[0]
             self.timeout = s[1] + (s[2] << 8) + (s[3] << 16)
             self.state = s[4]
