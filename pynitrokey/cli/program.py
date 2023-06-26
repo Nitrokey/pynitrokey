@@ -169,7 +169,7 @@ def bootloader_version(serial, pubkey):
 
     p = find(serial)
 
-    if not p.is_solo_bootloader():
+    if not p.is_bootloader():
         local_print("Not in Bootloader Mode!")
         return
     else:

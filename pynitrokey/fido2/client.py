@@ -301,7 +301,6 @@ class NKFido2Client:
         host: str = "nitrokeys.dev",
         user_id: str = "they",
         serial: Optional[str] = None,
-        pin: Optional[str] = None,
         prompt: Optional[str] = "Touch your authenticator to generate a response...",
         output: bool = True,
         udp: bool = False,
@@ -338,7 +337,6 @@ class NKFido2Client:
                 "allowCredentials": allow_list,
                 "extensions": {"hmacGetSecret": {"salt1": salt}},
             },  # type: ignore
-            pin=pin,
         ).get_response(0)
 
         # @todo: rewrite with typing
@@ -348,6 +346,10 @@ class NKFido2Client:
             print(output.hex())
 
         return output
+
+    def has_pin(self) -> bool:
+        assert self.client is not None
+        return self.client.info.options["clientPin"]
 
     def cred_mgmt(self, serial: str, pin: str) -> CredentialManagement:
         device = nkfido2.find(serial)
@@ -372,7 +374,7 @@ class NKFido2Client:
 
         return CredentialManagement(device.ctap2, client_pin.protocol, client_token)
 
-    def enter_solo_bootloader(self) -> None:
+    def enter_bootloader(self) -> None:
         """
         If Nitrokey is configured as Nitrokey hacker or something similar,
         this command will tell the token to boot directly to the bootloader
@@ -384,7 +386,7 @@ class NKFido2Client:
 
     def enter_bootloader_or_die(self) -> None:
         try:
-            self.enter_solo_bootloader()
+            self.enter_bootloader()
         # except OSError:
         #     pass
         except CtapError as e:
@@ -396,7 +398,7 @@ class NKFido2Client:
             else:
                 raise (e)
 
-    def is_solo_bootloader(self) -> bool:
+    def is_bootloader(self) -> bool:
         try:
             self.bootloader_version()
             return True
@@ -417,30 +419,13 @@ class NKFido2Client:
         this command will tell the token to boot directly to the st DFU
         so it can be reprogrammed.  Warning, you could brick your device.
         """
-        soloboot = self.is_solo_bootloader()
+        boot = self.is_bootloader()
 
-        if soloboot or self.exchange == self.exchange_u2f:
+        if boot or self.exchange == self.exchange_u2f:
             req = NKFido2Client.format_request(SoloBootloader.st_dfu)
             self.send_only_hid(SoloBootloader.HIDCommandBoot, req)
         else:
             self.send_only_hid(SoloBootloader.HIDCommandEnterSTBoot, b"")
-
-    # @todo: remove, is this used somewhere, is this working?
-    def disable_solo_bootloader(self) -> bool:
-        """
-        Disables the Nitrokey bootloader.  Only do this if you want to void the possibility
-        of any updates.
-        If you've started from a Nitrokey hacker, make you you've programmed a final/production build!
-        """
-        ret = self.exchange(
-            SoloBootloader.disable, 0, b"\xcd\xde\xba\xaa"
-        )  # magic number
-        if ret[0] != CtapError.ERR.SUCCESS:
-            print("Failed to disable bootloader")
-            return False
-        time.sleep(0.1)
-        self.exchange(SoloBootloader.do_reboot)  # type: ignore
-        return True
 
     def program_file(self, name: str) -> bytes:
         def parseField(f: str) -> bytes:

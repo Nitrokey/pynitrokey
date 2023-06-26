@@ -185,7 +185,7 @@ def list() -> None:
 
         if hasattr(descr, "product_name"):
             name = descr.product_name
-        elif c.is_solo_bootloader():
+        elif c.is_bootloader():
             name = "FIDO2 Bootloader device"
         else:
             name = "FIDO2 device"
@@ -457,7 +457,6 @@ def make_credential(
     "--serial",
     help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
 )
-@click.option("--pin", help="provide PIN instead of asking the user", default=None)
 @click.option("--host", help="Relying party's host", default="nitrokeys.dev")
 @click.option("--user", help="User ID", default="they")
 @click.option(
@@ -479,7 +478,6 @@ def challenge_response(
     credential_id: str,
     challenge: str,
     udp: bool,
-    pin: Optional[str],
 ) -> None:
     """Uses `hmac-secret` to implement a challenge-response mechanism.
 
@@ -495,9 +493,6 @@ def challenge_response(
     The prompt can be suppressed using `--prompt ""`.
     """
 
-    if not pin:
-        pin = AskUser.hidden("Please provide pin: ")
-
     nkfido2.find().simple_secret(
         credential_id,
         challenge,
@@ -507,7 +502,6 @@ def challenge_response(
         prompt=prompt,
         output=True,
         udp=udp,
-        pin=pin,
     )
 
 
