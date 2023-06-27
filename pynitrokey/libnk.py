@@ -129,7 +129,14 @@ def _get_c_library():
 
     assert cnt > 60
 
-    return ffi.dlopen(load_lib)
+    lib = ffi.dlopen(load_lib)
+    log_level = os.getenv("LIBNK_DEV")
+    if log_level:
+        log_level = int(log_level)
+        assert 0 <= log_level <= 5
+        print(f"Setting log level {log_level}")
+        lib.NK_set_debug_level(log_level)
+    return lib
 
 
 def to_hex(ss):
