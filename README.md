@@ -54,6 +54,12 @@ Tip: alternative `gpg-connect-agent reloadagent /bye` is not sufficient.
 
 Information for developers and contributors can be found in the [Developer Guide](./docs/developer-guide.rst).
 
+## Contributors
+
+`pynitrokey` development has been supported by these contributors:
+- [@Laborratte5](https://github.com/Laborratte5)
+- [@runcom](https://github.com/runcom)
+
 ## Maintainers
 
 Current maintainers can be found in [MAINTAINERS.md](MAINTAINERS.md) file.
