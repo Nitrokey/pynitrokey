@@ -15,12 +15,14 @@ import platform
 import sys
 import time
 from getpass import getpass
+from importlib.metadata import version
 from itertools import chain
 from numbers import Number
 from threading import Event, Timer
 from typing import Any, Callable, Dict, List, NoReturn, Optional, Tuple, TypeVar, Union
 
 import click
+import semver
 from tqdm import tqdm
 
 from pynitrokey.confconsts import (
@@ -32,6 +34,7 @@ from pynitrokey.confconsts import (
     VERBOSE,
     Verbosity,
 )
+from pynitrokey.updates import Repository
 
 STDOUT_PRINT = True
 
@@ -404,3 +407,22 @@ def require_windows_admin() -> None:
                 "Warning: It is recommended to execute nitropy with admin privileges "
                 "to be able to access Nitrokey 3 and Nitrokey FIDO 2 devices."
             )
+
+
+def check_pynitrokey_version() -> None:
+    """Checks wether the used pynitrokey version is the latest available version and warns the user if the used version is outdated"""
+
+    latest_release = Repository("Nitrokey", "pynitrokey").get_latest_release()
+    latest_version = semver.Version.parse(latest_release.tag[1:])
+
+    current_version = semver.Version.parse(version("pynitrokey"))
+
+    if current_version < latest_version:
+        local_print(
+            f"You are using an outdated version ({current_version}) of pynitrokey."
+        )
+        local_print(f"Latest pynitrokey version is {latest_version}")
+        local_print("Updating with an outdated version is discouraged.")
+
+        if not confirm("Do you still want to continue?", default=False):
+            raise click.Abort()
