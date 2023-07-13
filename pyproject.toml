@@ -22,7 +22,7 @@ classifiers = [
 dependencies = [
   "certifi >= 14.5.14",
   "cffi",
-  "click >=8.0.0,<9",
+  "click >=8.0, <=8.1.3",
   "cryptography >=39.0.1,<39.1",
   "ecdsa",
   "frozendict ~= 2.3.4",
