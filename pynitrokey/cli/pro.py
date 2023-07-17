@@ -5,7 +5,12 @@ import click
 import intelhex as ih
 import nkdfu
 
-from pynitrokey.helpers import local_critical, local_print, prompt
+from pynitrokey.helpers import (
+    check_pynitrokey_version,
+    local_critical,
+    local_print,
+    prompt,
+)
 from pynitrokey.libnk import DeviceNotFound, NitrokeyPro, RetCode
 
 print = local_print
@@ -118,6 +123,8 @@ def update(firmware_path: str):
     """
     import nkdfu.dfu as dfu
     import usb1
+
+    check_pynitrokey_version()
 
     print = local_print
     # TODO(szszsz): extract logic to nkdfu, leaving only end-user error handling

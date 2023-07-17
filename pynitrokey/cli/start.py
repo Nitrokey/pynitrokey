@@ -16,7 +16,7 @@ import click
 from tqdm import tqdm
 from usb.core import USBError
 
-from pynitrokey.helpers import local_critical, local_print
+from pynitrokey.helpers import check_pynitrokey_version, local_critical, local_print
 from pynitrokey.start.gnuk_token import OnlyBusyICCError, get_gnuk_device
 from pynitrokey.start.threaded_log import ThreadLog
 from pynitrokey.start.upgrade_by_passwd import (
@@ -210,6 +210,8 @@ def update(
         skip_bootloader,
         green_led,
     )
+
+    check_pynitrokey_version()
 
     if green_led and (regnual is None or gnuk is None):
         local_critical(

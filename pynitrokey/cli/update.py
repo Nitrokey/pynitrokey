@@ -19,7 +19,12 @@ import requests
 
 import pynitrokey
 from pynitrokey.confconsts import LOG_FN
-from pynitrokey.helpers import AskUser, local_critical, local_print
+from pynitrokey.helpers import (
+    AskUser,
+    check_pynitrokey_version,
+    local_critical,
+    local_print,
+)
 
 logger = logging.getLogger()
 
@@ -40,6 +45,8 @@ def update(serial, yes, force):
     # update_url = 'https://update.nitrokey.com/'
     # print('Please use {} to run the firmware update'.format(update_url))
     # return
+
+    check_pynitrokey_version()
 
     IS_LINUX = platform.system() == "Linux"
 

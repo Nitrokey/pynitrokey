@@ -20,7 +20,14 @@ from intelhex import IntelHex
 from tqdm import tqdm
 
 from pynitrokey.cli.exceptions import CliException
-from pynitrokey.helpers import AskUser, confirm, local_critical, local_print, prompt
+from pynitrokey.helpers import (
+    AskUser,
+    check_pynitrokey_version,
+    confirm,
+    local_critical,
+    local_print,
+    prompt,
+)
 from pynitrokey.libnk import DeviceNotFound, NitrokeyStorage, RetCode
 
 
@@ -144,6 +151,8 @@ def is_connected() -> ConnectedDevices:
 )
 def update(firmware: str, experimental):
     """experimental: run assisted update through dfu-programmer tool"""
+    check_pynitrokey_version()
+
     if platform.system() != "Linux" or not experimental:
         local_print(
             "This feature is Linux only and experimental, which means it was not tested thoroughly.\n"
