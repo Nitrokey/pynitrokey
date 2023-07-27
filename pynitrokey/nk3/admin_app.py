@@ -14,6 +14,7 @@ from .utils import Version
 @enum.unique
 class AdminCommand(Enum):
     STATUS = 0x80
+    TEST_SE050 = 0x81
 
 
 @enum.unique
@@ -98,3 +99,6 @@ class AdminApp:
             return Version.from_int(version)
         else:
             return Version.from_str(reply.decode("utf-8"))
+
+    def se050_tests(self) -> bytes:
+        return self._call(AdminCommand.TEST_SE050)

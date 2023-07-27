@@ -234,6 +234,35 @@ def test_firmware_mode(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
         return TestResult(TestStatus.SUCCESS)
 
 
+@test_case("se050", "SE050")
+def test_se050(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
+    if not isinstance(device, Nitrokey3Device):
+        return TestResult(TestStatus.SKIPPED)
+    firmware_version = ctx.firmware_version or device.version()
+    if firmware_version.core() < Version(1, 5, 0):
+        return TestResult(TestStatus.SKIPPED)
+    result = AdminApp(device).se050_tests()
+    if len(result) < 5:
+        return TestResult(TestStatus.FAILURE, "Did not get test run data")
+    major = result[0]
+    minor = result[1]
+    patch = result[2]
+    sb_major = result[3]
+    sb_minor = result[4]
+
+    success_message = f'SE050 firmware version: {major}.{minor}.{patch} - {sb_major}.{sb_minor}'
+
+    i = 0
+    max = 87
+    for b in result[5:]:
+        i += 1
+        if i != b:
+            return TestResult(TestStatus.FAILURE, f'Failed at {hex(i)}, got {result[4+i:].hex()} of {result.hex()}')
+    if i != max:
+            return TestResult(TestStatus.FAILURE, f'Got to {i}, expected {max}')
+        
+    return TestResult(TestStatus.SUCCESS, success_message)
+
 @test_case("fido2", "FIDO2")
 def test_fido2(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
     if not isinstance(device, Nitrokey3Device):
