@@ -100,5 +100,5 @@ class AdminApp:
         else:
             return Version.from_str(reply.decode("utf-8"))
 
-    def se050_tests(self) -> bytes:
+    def se050_tests(self) -> Optional[bytes]:
         return self._call(AdminCommand.TEST_SE050)

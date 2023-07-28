@@ -14,9 +14,9 @@ import sys
 from dataclasses import dataclass
 from enum import Enum, auto, unique
 from hashlib import sha256
+from struct import unpack
 from types import TracebackType
 from typing import Any, Callable, Iterable, Optional, Tuple, Type, Union
-from struct import unpack
 
 from pynitrokey.cli.exceptions import CliException
 from pynitrokey.fido2 import device_path_to_str
@@ -243,7 +243,7 @@ def test_se050(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
     if firmware_version.core() < Version(1, 5, 0):
         return TestResult(TestStatus.SKIPPED)
     result = AdminApp(device).se050_tests()
-    if len(result) < 11:
+    if result is None or len(result) < 11:
         return TestResult(TestStatus.FAILURE, "Did not get test run data")
     major = result[0]
     minor = result[1]
@@ -254,18 +254,22 @@ def test_se050(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
     transient_deselect = unpack(">H", result[7:9])
     transient_reset = unpack(">H", result[9:11])
 
-    success_message = f'SE050 firmware version: {major}.{minor}.{patch} - {sb_major}.{sb_minor}, (persistent: {persistent}, transient_deselect: {transient_deselect}, transient_reset: {transient_reset})'
+    success_message = f"SE050 firmware version: {major}.{minor}.{patch} - {sb_major}.{sb_minor}, (persistent: {persistent}, transient_deselect: {transient_deselect}, transient_reset: {transient_reset})"
 
     i = 0
     max = 87
     for b in result[11:]:
         i += 1
         if i != b:
-            return TestResult(TestStatus.FAILURE, f'Failed at {hex(i)}, got {result[10+i:].hex()} of {result.hex()}')
+            return TestResult(
+                TestStatus.FAILURE,
+                f"Failed at {hex(i)}, got {result[10+i:].hex()} of {result.hex()}",
+            )
     if i != max:
-            return TestResult(TestStatus.FAILURE, f'Got to {i}, expected {max}')
-        
+        return TestResult(TestStatus.FAILURE, f"Got to {i}, expected {max}")
+
     return TestResult(TestStatus.SUCCESS, success_message)
+
 
 @test_case("fido2", "FIDO2")
 def test_fido2(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
