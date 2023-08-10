@@ -489,9 +489,7 @@ class SecretsApp:
         p.properties = p.properties.hex().encode() if p.properties else None
         return p
 
-    def rename_credential(
-        self, cred_id: bytes, cred_new_id: bytes
-    ) -> PasswordSafeEntry:
+    def rename_credential(self, cred_id: bytes, cred_new_id: bytes) -> None:
         structure = [
             tlv8.Entry(Tag.CredentialId.value, cred_id),
             tlv8.Entry(Tag.CredentialId.value, cred_new_id),
