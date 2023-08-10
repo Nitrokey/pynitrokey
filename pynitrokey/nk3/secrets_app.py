@@ -216,6 +216,7 @@ class Instruction(Enum):
     ChangePIN = 0xB3
     SetPIN = 0xB4
     GetCredential = 0xB5
+    RenameCredential = 0xB6
 
 
 class Tag(Enum):
@@ -487,6 +488,15 @@ class SecretsApp:
         )
         p.properties = p.properties.hex().encode() if p.properties else None
         return p
+
+    def rename_credential(
+        self, cred_id: bytes, cred_new_id: bytes
+    ) -> PasswordSafeEntry:
+        structure = [
+            tlv8.Entry(Tag.CredentialId.value, cred_id),
+            tlv8.Entry(Tag.CredentialId.value, cred_new_id),
+        ]
+        self._send_receive(Instruction.RenameCredential, structure=structure)
 
     def delete(self, cred_id: bytes) -> None:
         """
