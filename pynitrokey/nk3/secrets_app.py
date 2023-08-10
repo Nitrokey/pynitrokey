@@ -217,6 +217,7 @@ class Instruction(Enum):
     SetPIN = 0xB4
     GetCredential = 0xB5
     RenameCredential = 0xB6
+    UpdateCredential = 0xB7
 
 
 class Tag(Enum):
@@ -489,12 +490,51 @@ class SecretsApp:
         p.properties = p.properties.hex().encode() if p.properties else None
         return p
 
-    def rename_credential(self, cred_id: bytes, cred_new_id: bytes) -> None:
+    def rename_credential(self, cred_id: bytes, new_name: bytes) -> None:
+        """
+        Rename credential.
+        An alias for the update_credential() call.
+        @param cred_id: The credential ID to modify
+        @param new_name: New ID for the credential
+        """
+        return self.update_credential(cred_id, new_name)
+
+    def update_credential(
+        self,
+        cred_id: bytes,
+        new_name: Optional[bytes] = None,
+        login: Optional[bytes] = None,
+        password: Optional[bytes] = None,
+        metadata: Optional[bytes] = None,
+        touch_button: Optional[bool] = None,
+    ) -> None:
+        """
+        Update credential fields - name, attributes, and PWS fields.
+        Unpopulated fields will not be encoded and used during the update process
+        (won't change the current value).
+        @param cred_id: The credential ID to modify
+        @param new_name: New ID for the credential
+        @param login: New login field content
+        @param password: New password field content
+        @param metadata: New metadata field content
+        @param touch_button: Set if the touch button use should be required
+        """
         structure = [
             tlv8.Entry(Tag.CredentialId.value, cred_id),
-            tlv8.Entry(Tag.CredentialId.value, cred_new_id),
+            tlv8.Entry(Tag.CredentialId.value, new_name) if new_name else None,
+            self.encode_properties_to_send(touch_button, False, tlv=True)
+            if touch_button is not None
+            else None,
+            tlv8.Entry(Tag.PwsLogin.value, login) if login is not None else None,
+            tlv8.Entry(Tag.PwsPassword.value, password)
+            if password is not None
+            else None,
+            tlv8.Entry(Tag.PwsMetadata.value, metadata)
+            if metadata is not None
+            else None,
         ]
-        self._send_receive(Instruction.RenameCredential, structure=structure)
+        structure = list(filter(lambda x: x is not None, structure))
+        self._send_receive(Instruction.UpdateCredential, structure=structure)
 
     def delete(self, cred_id: bytes) -> None:
         """
@@ -566,13 +606,7 @@ class SecretsApp:
             tlv8.Entry(
                 Tag.Key.value, bytes([kind.value | algo.value, digits]) + secret
             ),
-            RawBytes(
-                [
-                    Tag.Properties.value,
-                    (0x02 if touch_button_required else 0x00)
-                    | (0x04 if pin_based_encryption else 0x00),
-                ]
-            ),
+            self.encode_properties_to_send(touch_button_required, pin_based_encryption),
             tlv8.Entry(
                 Tag.InitialCounter.value, initial_counter_value.to_bytes(4, "big")
             )
@@ -584,6 +618,25 @@ class SecretsApp:
         ]
         structure = list(filter(lambda x: x is not None, structure))
         self._send_receive(Instruction.Put, structure)
+
+    @classmethod
+    def encode_properties_to_send(
+        cls, touch_button_required: bool, pin_based_encryption: bool, tlv: bool = False
+    ) -> RawBytes:
+        """
+        Encode properties structure into a single byte
+        @param touch_button_required: whether the touch button use is required
+        @param pin_based_encryption: whether the PIN-encryption is requested (only during registration)
+        @param tlv: set True, if this should be encoded as TLV, as opposed to the default "TV", w/o L
+        """
+        structure = [
+            Tag.Properties.value,
+            1 if tlv else None,
+            (0x02 if touch_button_required else 0x00)
+            | (0x04 if pin_based_encryption else 0x00),
+        ]
+        structure = list(filter(lambda x: x is not None, structure))
+        return RawBytes(structure)
 
     def calculate(self, cred_id: bytes, challenge: Optional[int] = None) -> bytes:
         """

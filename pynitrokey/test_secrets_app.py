@@ -1703,6 +1703,11 @@ def test_rename_credential(secretsAppResetLogin):
     assert len(l) == 1
     assert l[0].decode() == CREDID2
 
+    # Old name should not be accessible
+    app.verify_pin_raw(PIN)
+    with pytest.raises(SecretsAppException, match="NotFound"):
+        app.get_credential(CREDID)
+
 
 @pytest.mark.parametrize(
     "cred1_encryption", [True, False], ids=lambda x: "cred1" + ("_enc" if x else "")
@@ -1743,3 +1748,69 @@ def test_rename_credential_to_existing(
     app.verify_pin_raw(PIN)
     # There should be still 2 credentials left
     assert set([CREDID.encode(), CREDID2.encode()]) == set(app.list())
+
+
+def test_update_credential(secretsAppResetLogin):
+    """
+    Credential should change its properties. Test both PIN- and HW-encrypted credentials.
+    """
+    app = secretsAppResetLogin
+    app.register(CREDID, SECRET, DIGITS, kind=Kind.Hotp)
+    app.verify_pin_raw(PIN)
+    l = app.list_with_properties()
+    assert len(l) == 1
+    assert l[0].label.decode() == CREDID
+    assert not l[0].properties.touch_required
+    app.verify_pin_raw(PIN)
+    app.update_credential(CREDID, touch_button=True)
+    # There should be only one credential left, with the same name
+    app.verify_pin_raw(PIN)
+    l = app.list_with_properties()
+    assert len(l) == 1
+    assert l[0].label.decode() == CREDID
+    # This credential should be listed now as requiring a touch button for use
+    assert l[0].properties.touch_required
+
+    # Now add some PWS fields, and rename it too
+    app.verify_pin_raw(PIN)
+    c = app.get_credential(CREDID)
+    assert not c.login
+    assert not c.password
+    assert not c.metadata
+    app.verify_pin_raw(PIN)
+    app.update_credential(
+        CREDID,
+        new_name=CREDID2,
+        login=b"login",
+        password=b"password",
+        metadata=b"metadata",
+    )
+
+    # Check if PWS fields are there, and the "touch button required" flag is still present
+    app.verify_pin_raw(PIN)
+    c = app.get_credential(CREDID2)
+    assert c.login == b"login"
+    assert c.password == b"password"
+    assert c.metadata == b"metadata"
+    app.verify_pin_raw(PIN)
+    l = app.list_with_properties()
+    assert len(l) == 1
+    assert l[0].properties.touch_required
+
+    # Old name should not be accessible
+    app.verify_pin_raw(PIN)
+    with pytest.raises(SecretsAppException, match="NotFound"):
+        app.get_credential(CREDID)
+
+    # Try to remove the PWS data, and rename again
+    # It's not possible currently to remove the PWS fields; hence we need to overwrite them
+    # with a single blank character.
+    app.verify_pin_raw(PIN)
+    app.update_credential(
+        CREDID2, new_name=CREDID, login=b" ", password=b" ", metadata=b" "
+    )
+    app.verify_pin_raw(PIN)
+    c = app.get_credential(CREDID)
+    assert c.login == b" "
+    assert c.password == b" "
+    assert c.metadata == b" "
