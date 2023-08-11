@@ -235,6 +235,109 @@ def test_firmware_mode(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
         return TestResult(TestStatus.SUCCESS)
 
 
+SE050_STEPS = [
+    "Enable",
+    "Random1",
+    "Random2",
+    "Random3",
+    "WriteUserId",
+    "CreateSession",
+    "VerifySessionUserId",
+    "DeleteAll",
+    "List",
+    "WriteBinary1",
+    "ReadBinary1",
+    "DeleteBinary1",
+    "WriteBinary2",
+    "ReadBinary2",
+    "DeleteBinary2",
+    "WriteBinary3",
+    "ReadBinary3",
+    "DeleteBinary3",
+    "CreateP256",
+    "ListP256",
+    "GenerateP256",
+    "EcDsaP256",
+    "VerifyP256",
+    "DeleteP256",
+    "CreateP521",
+    "GenerateP521",
+    "EcDsaP521",
+    "VerifyP521",
+    "DeleteP521",
+    "RecreationWriteUserId",
+    "RecreationWriteBinary",
+    "RecreationDeleteAttempt",
+    "RecreationDeleteUserId",
+    "RecreationRecreateUserId",
+    "RecreationCreateSession",
+    "RecreationAuthSession",
+    "RecreationDeleteAttack",
+    "Rsa2048Gen",
+    "Rsa2048Sign",
+    "Rsa2048Verify",
+    "Rsa2048Encrypt",
+    "Rsa2048Decrypt",
+    "Rsa2048Delete",
+    "Rsa3072Gen",
+    "Rsa3072Sign",
+    "Rsa3072Verify",
+    "Rsa3072Encrypt",
+    "Rsa3072Decrypt",
+    "Rsa3072Delete",
+    "Rsa4096Gen",
+    "Rsa4096Sign",
+    "Rsa4096Verify",
+    "Rsa4096Encrypt",
+    "Rsa4096Decrypt",
+    "Rsa4096Delete",
+    "SymmWrite",
+    "SymmEncryptOneShot",
+    "SymmDecryptOneShot",
+    "SymmEncryptCreate",
+    "SymmEncryptInit",
+    "SymmEncryptUpdate1",
+    "SymmEncryptUpdate2",
+    "SymmEncryptFinal",
+    "SymmEncryptDelete",
+    "SymmDecryptCreate",
+    "SymmDecryptInit",
+    "SymmDecryptUpdate1",
+    "SymmDecryptUpdate2",
+    "SymmDecryptFinal",
+    "SymmDecryptDelete",
+    "SymmDelete",
+    "MacWrite",
+    "MacSignOneShot",
+    "MacVerifyOneShot",
+    "MacSignCreate",
+    "MacSignInit",
+    "MacSignUpdate1",
+    "MacSignUpdate2",
+    "MacSignFinal",
+    "MacSignDelete",
+    "MacVerifyCreate",
+    "MacVerifyInit",
+    "MacVerifyUpdate1",
+    "MacVerifyUpdate2",
+    "MacVerifyFinal",
+    "MacVerifyDelete",
+    "MacDelete",
+    "AesSessionCreateKey",
+    "AesSessionCreateBinary",
+    "AesSessionCreateSession",
+    "AesSessionAuthenticate",
+    "AesSessionReadBinary",
+    "AesSessionUpdateKey",
+    "AesSessionCloseSession",
+    "AesSessionRecreateSession",
+    "AesSessionReAuthenticate",
+    "AesSessionReadBinary2",
+    "AesSessionDeleteBinary",
+    "AesSessionDeleteKey",
+]
+
+
 @test_case("se050", "SE050")
 def test_se050(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
     if not isinstance(device, Nitrokey3Device):
@@ -257,13 +360,14 @@ def test_se050(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
     success_message = f"SE050 firmware version: {major}.{minor}.{patch} - {sb_major}.{sb_minor}, (persistent: {persistent}, transient_deselect: {transient_deselect}, transient_reset: {transient_reset})"
 
     i = 0
-    max = 87
+    max = len(SE050_STEPS)
     for b in result[11:]:
         i += 1
         if i != b:
-            return TestResult(
+            index = SE050_STEPS[i-1] if i < max else hex(i)
+            return TestResult( 
                 TestStatus.FAILURE,
-                f"Failed at {hex(i)}, got {result[10+i:].hex()} of {result.hex()}",
+                f"Failed at {index}, got {result[10+i:].hex()} of {result.hex()}",
             )
     if i != max:
         return TestResult(TestStatus.FAILURE, f"Got to {i}, expected {max}")
