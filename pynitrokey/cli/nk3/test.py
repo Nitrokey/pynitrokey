@@ -17,6 +17,8 @@ from hashlib import sha256
 from struct import unpack
 from types import TracebackType
 from typing import Any, Callable, Iterable, Optional, Tuple, Type, Union
+from threading import Thread
+from tqdm import tqdm
 
 from pynitrokey.cli.exceptions import CliException
 from pynitrokey.fido2 import device_path_to_str
@@ -335,6 +337,19 @@ SE050_STEPS = [
     "AesSessionReadBinary2",
     "AesSessionDeleteBinary",
     "AesSessionDeleteKey",
+    "Pbkdf2WritePin",
+    "Pbkdf2Calculate",
+    "Pbkdf2Compare",
+    "Pbkdf2DeletePin",
+    "ImportWrite",
+    "ImportCipher",
+    "ImportExport",
+    "ImportDelete",
+    "ImportDeletionWorked",
+    "ImportImport",
+    "ImportCipher2",
+    "ImportComp",
+    "ImportDeleteFinal",
 ]
 
 
@@ -345,7 +360,30 @@ def test_se050(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
     firmware_version = ctx.firmware_version or device.version()
     if firmware_version.core() < Version(1, 5, 0):
         return TestResult(TestStatus.SKIPPED)
-    result = AdminApp(device).se050_tests()
+
+    result = None
+    def internal_se050_run():
+        result = AdminApp(device).se050_tests()
+        print(result)
+
+    t = Thread(target = internal_se050_run)
+    t.start()
+    bar = tqdm(desc="Running SE050 test", unit="%", bar_format="{l_bar}{bar}", total=900)
+    # 1m30 in increments of 0.1 second
+    for i in range(900):
+        t.join(0.1)
+        bar.update(1)
+        if not t.is_alive():
+            break
+        if i == 900-1:
+            bar.close()
+            return TestResult( 
+                TestStatus.FAILURE,
+                f"Test timed out after 1m30",
+            )
+    
+    bar.close()
+
     if result is None or len(result) < 11:
         return TestResult(TestStatus.FAILURE, "Did not get test run data")
     major = result[0]
