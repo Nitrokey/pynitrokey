@@ -356,19 +356,20 @@ SE050_STEPS = [
 
 @test_case("se050", "SE050")
 def test_se050(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
+    from queue import Queue
+
     if not isinstance(device, Nitrokey3Device):
         return TestResult(TestStatus.SKIPPED)
     firmware_version = ctx.firmware_version or device.version()
     if firmware_version.core() < Version(1, 5, 0):
         return TestResult(TestStatus.SKIPPED)
 
-    result = None
+    que: Queue[Optional[bytes]] = Queue()
 
-    def internal_se050_run():
-        result = AdminApp(device).se050_tests()
-        print(result)
+    def internal_se050_run(q: Queue[Optional[bytes]]) -> None:
+        q.put(AdminApp(device).se050_tests())
 
-    t = Thread(target=internal_se050_run)
+    t = Thread(target=internal_se050_run, args=[que])
     t.start()
     bar = tqdm(
         desc="Running SE050 test", unit="%", bar_format="{l_bar}{bar}", total=900
@@ -383,10 +384,11 @@ def test_se050(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
             bar.close()
             return TestResult(
                 TestStatus.FAILURE,
-                f"Test timed out after 1m30",
+                "Test timed out after 1m30",
             )
 
     bar.close()
+    result = que.get()
 
     if result is None or len(result) < 11:
         return TestResult(TestStatus.FAILURE, "Did not get test run data")
