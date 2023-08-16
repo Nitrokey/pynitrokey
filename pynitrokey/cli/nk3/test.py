@@ -15,9 +15,10 @@ from dataclasses import dataclass
 from enum import Enum, auto, unique
 from hashlib import sha256
 from struct import unpack
+from threading import Thread
 from types import TracebackType
 from typing import Any, Callable, Iterable, Optional, Tuple, Type, Union
-from threading import Thread
+
 from tqdm import tqdm
 
 from pynitrokey.cli.exceptions import CliException
@@ -362,26 +363,29 @@ def test_se050(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
         return TestResult(TestStatus.SKIPPED)
 
     result = None
+
     def internal_se050_run():
         result = AdminApp(device).se050_tests()
         print(result)
 
-    t = Thread(target = internal_se050_run)
+    t = Thread(target=internal_se050_run)
     t.start()
-    bar = tqdm(desc="Running SE050 test", unit="%", bar_format="{l_bar}{bar}", total=900)
+    bar = tqdm(
+        desc="Running SE050 test", unit="%", bar_format="{l_bar}{bar}", total=900
+    )
     # 1m30 in increments of 0.1 second
     for i in range(900):
         t.join(0.1)
         bar.update(1)
         if not t.is_alive():
             break
-        if i == 900-1:
+        if i == 900 - 1:
             bar.close()
-            return TestResult( 
+            return TestResult(
                 TestStatus.FAILURE,
                 f"Test timed out after 1m30",
             )
-    
+
     bar.close()
 
     if result is None or len(result) < 11:
@@ -402,8 +406,8 @@ def test_se050(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
     for b in result[11:]:
         i += 1
         if i != b:
-            index = SE050_STEPS[i-1] if i < max else hex(i)
-            return TestResult( 
+            index = SE050_STEPS[i - 1] if i < max else hex(i)
+            return TestResult(
                 TestStatus.FAILURE,
                 f"Failed at {index}, got {result[10+i:].hex()} of {result.hex()}",
             )
