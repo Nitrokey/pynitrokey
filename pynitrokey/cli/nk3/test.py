@@ -361,7 +361,11 @@ def test_se050(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
     if not isinstance(device, Nitrokey3Device):
         return TestResult(TestStatus.SKIPPED)
     firmware_version = ctx.firmware_version or device.version()
-    if firmware_version.core() < Version(1, 5, 0):
+    if (
+        firmware_version.core() < Version(1, 5, 0)
+        or firmware_version.core() >= Version(1, 6, 0)
+        or firmware_version.pre is None
+    ):
         return TestResult(TestStatus.SKIPPED)
 
     que: Queue[Optional[bytes]] = Queue()
