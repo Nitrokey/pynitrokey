@@ -1802,15 +1802,30 @@ def test_update_credential(secretsAppResetLogin):
     with pytest.raises(SecretsAppException, match="NotFound"):
         app.get_credential(CREDID)
 
-    # Try to remove the PWS data, and rename again
-    # It's not possible currently to remove the PWS fields; hence we need to overwrite them
-    # with a single blank character.
+    # Try to remove the PWS data with empty strings, and rename again
     app.verify_pin_raw(PIN)
     app.update_credential(
-        CREDID2, new_name=CREDID, login=b" ", password=b" ", metadata=b" "
+        CREDID2, new_name=CREDID, login=b"", password=b"", metadata=b""
     )
     app.verify_pin_raw(PIN)
     c = app.get_credential(CREDID)
-    assert c.login == b" "
-    assert c.password == b" "
-    assert c.metadata == b" "
+    assert c.login is None
+    assert c.password is None
+    assert c.metadata is None
+
+    # Disallow to register a PWS credential with any 0-length strings field
+    app.verify_pin_raw(PIN)
+    with pytest.raises(SecretsAppException, match="IncorrectDataParameter"):
+        app.register(
+            CREDID2,
+            SECRET,
+            DIGITS,
+            kind=Kind.Hotp,
+            login=b"",
+            password=b"",
+            metadata=b"",
+        )
+    for i in ["login", "password", "metadata"]:
+        fields = {i: b""}
+        with pytest.raises(SecretsAppException, match="IncorrectDataParameter"):
+            app.register(CREDID2, SECRET, DIGITS, kind=Kind.Hotp, **fields)
