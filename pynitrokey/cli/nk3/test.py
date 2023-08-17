@@ -375,21 +375,22 @@ def test_se050(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
 
     t = Thread(target=internal_se050_run, args=[que])
     t.start()
+    total = 900
     bar = tqdm(
-        desc="Running SE050 test", unit="%", bar_format="{l_bar}{bar}", total=900
+        desc="Running SE050 test", unit="%", bar_format="{l_bar}{bar}", total=total
     )
     # 1m30 in increments of 0.1 second
-    for i in range(900):
+    for i in range(total):
         t.join(0.1)
         bar.update(1)
         if not t.is_alive():
             break
-        if i == 900 - 1:
-            bar.close()
-            return TestResult(
-                TestStatus.FAILURE,
-                "Test timed out after 1m30",
-            )
+    else:
+        bar.close()
+        return TestResult(
+            TestStatus.FAILURE,
+            "Test timed out after 1m30",
+        )
 
     bar.close()
     result = que.get()
