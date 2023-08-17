@@ -74,6 +74,39 @@ def repeat_if_pin_needed(func) -> Callable:  # type: ignore[no-untyped-def]
     return wrapper
 
 
+@secrets.command()
+@click.pass_obj
+@click.argument(
+    "name",
+    type=click.STRING,
+)
+@click.argument(
+    "new_name",
+    type=click.STRING,
+)
+def rename(
+    ctx: Context,
+    name: str,
+    new_name: str,
+) -> None:
+    """
+    Rename credential.
+    """
+    with ctx.connect_device() as device:
+        app = SecretsApp(device)
+        ask_to_touch_if_needed()
+
+        @repeat_if_pin_needed
+        def call(app: SecretsApp) -> None:
+            app.rename_credential(
+                name.encode(),
+                new_name.encode(),
+            )
+
+        call(app)
+        local_print("Done")
+
+
 @secrets.command(aliases=["register"])
 @click.pass_obj
 @click.argument(
@@ -137,9 +170,9 @@ def add_otp(
     touch_button: bool,
     pin_protection: bool,
 ) -> None:
-    """Register OTP Credential.
+    """Register OTP credential.
 
-    Write Credential under the NAME.
+    Write credential under the NAME.
     Secret should be base32 encoded.
     """
     otp_kind = STRING_TO_KIND[kind.upper()]
@@ -221,9 +254,9 @@ def add_password(
     password: Optional[bytes] = None,
     metadata: Optional[bytes] = None,
 ) -> None:
-    """Register Password Safe Credential.
+    """Register Password Safe credential.
 
-    Write Credential under the NAME.
+    Write credential under the NAME.
 
     """
 
@@ -258,7 +291,7 @@ def add_password(
     type=click.STRING,
 )
 def add_challenge_response(ctx: Context, slot: str, secret: str) -> None:
-    """Register Challenge-Response Credential."""
+    """Register Challenge-Response credential."""
 
     secret_bytes = b32decode(secret)
     sl = len(secret_bytes)

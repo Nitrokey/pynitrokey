@@ -23,6 +23,7 @@ from pynitrokey.conftest import (
     CHALLENGE,
     CHALLENGE_RESPONSE_COMMANDS,
     CREDID,
+    CREDID2,
     DELAY_AFTER_FAILED_REQUEST_SECONDS,
     DIGITS,
     FEATURE_BRUTEFORCE_PROTECTION_ENABLED,
@@ -1651,3 +1652,94 @@ def test_light_load(secretsAppRaw):
         password=b"password",
         metadata=b"metadata",
     )
+
+
+@pytest.mark.parametrize(
+    "cred1_encryption", [True, False], ids=lambda x: "cred1" + ("_enc" if x else "")
+)
+@pytest.mark.parametrize(
+    "cred2_encryption", [True, False], ids=lambda x: "cred2" + ("_enc" if x else "")
+)
+def test_register_overwrite_attempt(secretsAppRaw, cred1_encryption, cred2_encryption):
+    """
+    Credential should not be overwritten with another one, regardless whether it is PIN-encrypted or not
+    """
+    app = secretsAppRaw
+    app.reset()
+    app.set_pin_raw(PIN)
+
+    if cred1_encryption:
+        app.verify_pin_raw(PIN)
+    app.register(
+        CREDID, SECRET, DIGITS, pin_based_encryption=cred1_encryption, kind=Kind.Hotp
+    )
+    if cred2_encryption:
+        app.verify_pin_raw(PIN)
+    with pytest.raises(SecretsAppException, match="OperationBlocked"):
+        app.register(
+            CREDID,
+            SECRET,
+            DIGITS,
+            pin_based_encryption=cred2_encryption,
+            kind=Kind.Hotp,
+        )
+
+
+def test_rename_credential(secretsAppResetLogin):
+    """
+    Credential should change its name. Test both PIN- and HW-encrypted credentials.
+    """
+    app = secretsAppResetLogin
+    app.register(CREDID, SECRET, DIGITS, kind=Kind.Hotp)
+    app.verify_pin_raw(PIN)
+    l = app.list()
+    assert len(l) == 1
+    assert l[0].decode() == CREDID
+    app.verify_pin_raw(PIN)
+    app.rename_credential(CREDID, CREDID2)
+    app.verify_pin_raw(PIN)
+    # There should be only 1 credential left, with a new name
+    l = app.list()
+    assert len(l) == 1
+    assert l[0].decode() == CREDID2
+
+
+@pytest.mark.parametrize(
+    "cred1_encryption", [True, False], ids=lambda x: "cred1" + ("_enc" if x else "")
+)
+@pytest.mark.parametrize(
+    "cred2_encryption", [True, False], ids=lambda x: "cred2" + ("_enc" if x else "")
+)
+def test_rename_credential_to_existing(
+    secretsAppRaw, cred2_encryption, cred1_encryption
+):
+    """
+    Credential should not change its name to an existing one, regardless if the other is PIN-encrypted or not
+    """
+    app = secretsAppRaw
+    app.reset()
+    app.set_pin_raw(PIN)
+
+    if cred2_encryption:
+        app.verify_pin_raw(PIN)
+    app.register(
+        CREDID2, SECRET, DIGITS, kind=Kind.Hotp, pin_based_encryption=cred2_encryption
+    )
+    app.verify_pin_raw(PIN)
+    assert app.list()[0].decode() == CREDID2
+
+    if cred1_encryption:
+        app.verify_pin_raw(PIN)
+    app.register(
+        CREDID, SECRET, DIGITS, kind=Kind.Hotp, pin_based_encryption=cred1_encryption
+    )
+    app.verify_pin_raw(PIN)
+    # Once set up, there should be 2 credentials
+    assert set([CREDID.encode(), CREDID2.encode()]) == set(app.list())
+    app.verify_pin_raw(PIN)
+    # The rename operation should fail
+    with pytest.raises(SecretsAppException, match="OperationBlocked"):
+        app.rename_credential(CREDID, CREDID2)
+    app.verify_pin_raw(PIN)
+    # There should be still 2 credentials left
+    assert set([CREDID.encode(), CREDID2.encode()]) == set(app.list())
