@@ -107,6 +107,71 @@ def rename(
         local_print("Done")
 
 
+@secrets.command()
+@click.pass_obj
+@click.argument(
+    "name",
+    type=click.STRING,
+)
+@click.option(
+    "--login",
+    "login",
+    type=click.STRING,
+    help="Password Safe Login",
+    default=None,
+)
+@click.option(
+    "--password",
+    "password",
+    type=click.STRING,
+    help="Password Safe Password",
+    default=None,
+)
+@click.option(
+    "--metadata",
+    "metadata",
+    type=click.STRING,
+    help="Password Safe Metadata - additional field, to which extra information can be encoded",
+    default=None,
+)
+@click.option(
+    "--touch-button",
+    "touch_button",
+    type=click.BOOL,
+    help="Activate/deactivate touch button requirement",
+    default=None,
+)
+def update(
+    ctx: Context,
+    name: str,
+    new_name: Optional[bytes] = None,
+    login: Optional[bytes] = None,
+    password: Optional[bytes] = None,
+    metadata: Optional[bytes] = None,
+    touch_button: Optional[bool] = None,
+) -> None:
+    """
+    Update credential. Change Static Password fields, or touch button requirement attribute.
+    """
+    with ctx.connect_device() as device:
+        app = SecretsApp(device)
+        ask_to_touch_if_needed()
+
+        @repeat_if_pin_needed
+        def call(app: SecretsApp) -> None:
+            app.update_credential(
+                name.encode(),
+                new_name=new_name,
+                login=login,
+                password=password,
+                metadata=metadata,
+                touch_button=touch_button,
+            )
+
+        call(app)
+        local_print("Done")
+
+
 @secrets.command(aliases=["register"])
 @click.pass_obj
 @click.argument(
@@ -242,7 +307,7 @@ def add_otp(
     "--metadata",
     "metadata",
     type=click.STRING,
-    help="Password Safe Metadata - additional field, to which extra information can be encoded in the future",
+    help="Password Safe Metadata - additional field, to which extra information can be encoded",
     default=None,
 )
 def add_password(
