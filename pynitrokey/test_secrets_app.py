@@ -1099,7 +1099,7 @@ def test_check_commands_access(secretsAppRaw):
             ):
                 secretsAppRaw._send_receive(ins, structure)
         else:
-            # These commands do not accept arguments, so there is no parsing error
+            # These commands do not expect arguments, so there is no parsing error
             secretsAppRaw._send_receive(ins, structure)
 
 
