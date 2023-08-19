@@ -9,6 +9,7 @@ import hashlib
 import hmac
 import logging
 import time
+from contextlib import suppress
 from datetime import timedelta
 from os import environ, wait
 from sys import stderr
@@ -287,11 +288,13 @@ def test_reverse_hotp_failure(secretsAppRaw):
         assert not secretsApp.verify_code(CREDID, 10**5)
     helper_wait_after_failed_hotp_verification_request()
 
+    secretsApp.delete(CREDID)
     secretsApp.register(CREDID, secretb, digits=7, kind=Kind.Hotp, algo=Algorithm.Sha1)
     with pytest.raises(SecretsAppException, match="ConditionsOfUseNotSatisfied"):
         assert not secretsApp.verify_code(CREDID, 10**6)
     helper_wait_after_failed_hotp_verification_request()
 
+    secretsApp.delete(CREDID)
     secretsApp.register(CREDID, secretb, digits=8, kind=Kind.Hotp, algo=Algorithm.Sha1)
     with pytest.raises(SecretsAppException, match="ConditionsOfUseNotSatisfied"):
         assert not secretsApp.verify_code(CREDID, 10**7)
@@ -641,8 +644,10 @@ def test_too_long_message2(secretsAppRaw):
     for i in range(1, 255, 5):
         secretsApp.logfn(f"Testing secret length {i} bytes")
         try:
-            secretsApp.register("C", too_long_name[:i], DIGITS, kind=Kind.Hotp)
-            codes.append(secretsApp.calculate("C"))
+            with suppress(SecretsAppException):
+                secretsAppRaw.delete(CREDID)
+            secretsApp.register(CREDID, too_long_name[:i], DIGITS, kind=Kind.Hotp)
+            codes.append(secretsApp.calculate(CREDID))
         except Exception:
             break
     assert i >= 40, "Maximum secret length should be at least 320 bits"
@@ -1495,11 +1500,16 @@ def test_hmac_low_level(secretsAppRaw):
         "1c e3 0f d7 8d 20 dc fa 40 b5 0c 18 77 9a fb 0f 02 28 8d b7".replace(" ", "")
     )
     for slot_name in [b"HmacSlot2", b"HmacSlot1"]:
+        with suppress(SecretsAppException):
+            secretsAppRaw.delete(slot_name)
         secretsAppRaw.register(
             slot_name,
             secret=secret,
             kind=Kind.Hmac,
         )
+
+    with suppress(SecretsAppException):
+        secretsAppRaw.delete(slot_name)
 
     # Do not allow to register secret with different lengths than expected 20 bytes
     for secret_len in [18, 21, 200]:
@@ -1535,13 +1545,27 @@ def test_hmac_low_level(secretsAppRaw):
      */
     """
 
-    # The length of "1" is used by KeepassXC for test purposes. "63" is the maximum.
+    # Prepare HmacSlot2 again
+    slot_name = b"HmacSlot2"
+    with suppress(SecretsAppException):
+        secretsAppRaw.delete(slot_name)
+    secretsAppRaw.register(
+        slot_name,
+        secret=secret,
+        kind=Kind.Hmac,
+    )
+
+    # The length of "1" is used by KeepassXC for the purposes. "63" is the maximum.
     # "64" should not work, as the last byte is always treated as the padding byte value.
     for challenge_len in [1, 32, 63]:
         challenge = b"c" * challenge_len
         challenge_padded = helper_get_padded(challenge)
         status, response_device = helper_send_receive_ins(
-            secretsAppRaw, YK_API_REQ, p1=slot, le=20, data_raw=challenge_padded
+            secretsAppRaw,
+            YK_API_REQ,
+            p1=YK_P1_CMD_HMAC_2,
+            le=20,
+            data_raw=challenge_padded,
         )
         response_lib = secretsAppRaw.get_response_for_secret(challenge, secret)
         assert response_lib == response_device
