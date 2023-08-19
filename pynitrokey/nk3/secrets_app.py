@@ -216,7 +216,6 @@ class Instruction(Enum):
     ChangePIN = 0xB3
     SetPIN = 0xB4
     GetCredential = 0xB5
-    RenameCredential = 0xB6
     UpdateCredential = 0xB7
 
 
