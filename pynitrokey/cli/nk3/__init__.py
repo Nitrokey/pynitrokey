@@ -505,6 +505,14 @@ def version(ctx: Context) -> None:
 
 @nk3.command()
 @click.pass_obj
+def factory_reset(ctx: Context) -> None:
+    """Factory reset all functionality of the device"""
+    with ctx.connect_device() as device:
+        device.factory_reset()
+
+
+@nk3.command()
+@click.pass_obj
 def wink(ctx: Context) -> None:
     """Send wink command to the device (blinks LED a few times)."""
     with ctx.connect_device() as device:

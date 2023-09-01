@@ -114,6 +114,9 @@ class Nitrokey3Device(Nitrokey3Base):
     def version(self) -> Version:
         return self.admin.version()
 
+    def factory_reset(self) -> None:
+        self.admin.factory_reset()
+
     def wink(self) -> None:
         self.device.wink()
 
