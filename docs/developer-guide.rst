@@ -82,3 +82,20 @@ Password Input
 ~~~~~~~~~~~~~~
 
 Commands that require a password should first try to read the password from an environment variable.  If the environment variable is not set, they should prompt the user to enter the password.  Passwords must not be passed as a command-line argument.
+
+Updating the NetHSM client
+--------------------------
+
+To update the NetHSM HTTP client, you need to download the updated ``nethsm-api.yml`` OpenAPI specification. The easiest is to download it from the NetHSM demo server (``curl`` required):
+
+.. code:: bash
+
+    make nethsm-api.yaml --always-make
+
+Then, run the generation script, docker is required:
+
+.. code:: bash
+
+    make nethsm-client
+
+Be sure to run the linter, tests and check that everything is working as expected after the update.
