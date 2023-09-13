@@ -316,7 +316,7 @@ class NetHSM:
     def list_users(self):
         try:
             response = self.get_api().users_get()
-            return [item["user"] for item in response.body]
+            return [item.user for item in response]
         except ApiException as e:
             _handle_api_exception(
                 e,
@@ -358,8 +358,8 @@ class NetHSM:
                 self.get_api().users_user_id_put(user_id, body)
                 return user_id
             else:
-                response = self.get_api().users_post(body)
-                return self.get_user_id_from_location(response.response.getheaders())
+                response = self.get_api().users_post_with_http_info(body)
+                return self.get_user_id_from_location(response.headers)
         except ApiException as e:
             _handle_api_exception(
                 e,
@@ -488,7 +488,7 @@ class NetHSM:
     def get_state(self):
         try:
             response = self.get_api().health_state_get()
-            return State.from_string(response.body["state"])
+            return State.from_string(response.state)
         except ApiException as e:
             _handle_api_exception(e)
 
@@ -505,7 +505,7 @@ class NetHSM:
     def get_metrics(self):
         try:
             response = self.get_api().metrics_get()
-            return response.body
+            return response
         except ApiException as e:
             _handle_api_exception(e, state=State.OPERATIONAL, roles=[Role.METRICS])
 
@@ -1027,9 +1027,8 @@ class NetHSM:
 
     def update(self, image):
         try:
-
-            response = self.get_api().system_update_post(image)
-            return response.release_notes
+            response = self.request("POST", "system/update", data=image)
+            return response.json().get("releaseNotes")
         except ApiException as e:
             _handle_api_exception(
                 e,
