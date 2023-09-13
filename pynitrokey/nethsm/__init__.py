@@ -17,7 +17,6 @@ import requests
 
 from . import client
 from .client import ApiException
-from .client.model.passphrase import Passphrase
 
 
 class Role(enum.Enum):
@@ -247,7 +246,7 @@ class NetHSM:
         return response
 
     def get_api(self):
-        from .client.apis.tags.default_api import DefaultApi
+        from .client.api.default_api import DefaultApi
 
         return DefaultApi(self.client)
 
@@ -269,10 +268,10 @@ class NetHSM:
         return user_id_match[1]
 
     def unlock(self, passphrase):
-        from .client.model.unlock_request_data import UnlockRequestData
+        from .client.models.unlock_request_data import UnlockRequestData
 
         request_body = UnlockRequestData(
-            passphrase=Passphrase(passphrase),
+            passphrase=passphrase,
         )
         try:
             self.get_api().unlock_post(request_body)
@@ -296,11 +295,11 @@ class NetHSM:
             )
 
     def provision(self, unlock_passphrase, admin_passphrase, system_time):
-        from .client.model.provision_request_data import ProvisionRequestData
+        from .client.models.provision_request_data import ProvisionRequestData
 
         request_body = ProvisionRequestData(
-            unlockPassphrase=Passphrase(unlock_passphrase),
-            adminPassphrase=Passphrase(admin_passphrase),
+            unlockPassphrase=unlock_passphrase,
+            adminPassphrase=admin_passphrase,
             systemTime=system_time,
         )
         try:
@@ -326,15 +325,14 @@ class NetHSM:
             )
 
     def get_user(self, user_id):
-        from .client.paths.users_user_id.get import RequestPathParams
-
-        path_params = RequestPathParams({"UserID": user_id})
         try:
-            response = self.get_api().users_user_id_get(path_params=path_params)
+            # Validation is broken for this endpoint, we parse the response manually
+            response = self.get_api().users_user_id_get_with_http_info(user_id,_preload_content=False)
+            user = json.loads(response.raw_data)
             return User(
                 user_id=user_id,
-                real_name=response.body.realName,
-                role=Role.from_string(response.body.role),
+                real_name=user["realName"],
+                role=Role.from_string(user["role"]),
             )
         except ApiException as e:
             _handle_api_exception(
@@ -347,22 +345,20 @@ class NetHSM:
             )
 
     def add_user(self, real_name, role, passphrase, user_id=None):
-        from .client.model.user_post_data import UserPostData
-        from .client.model.user_role import UserRole
-        from .client.paths.users_user_id.put import RequestPathParams
+        from .client.models.user_post_data import UserPostData
+        from .client.models.user_role import UserRole
 
         body = UserPostData(
             realName=real_name,
             role=UserRole(role),
-            passphrase=Passphrase(passphrase),
+            passphrase=passphrase,
         )
         try:
             if user_id:
-                path_params = RequestPathParams({"UserID": user_id})
-                self.get_api().users_user_id_put(path_params=path_params, body=body)
+                self.get_api().users_user_id_put(user_id, body)
                 return user_id
             else:
-                response = self.get_api().users_post(body=body)
+                response = self.get_api().users_post(body)
                 return self.get_user_id_from_location(response.response.getheaders())
         except ApiException as e:
             _handle_api_exception(
@@ -376,11 +372,9 @@ class NetHSM:
             )
 
     def delete_user(self, user_id):
-        from .client.paths.users_user_id.delete import RequestPathParams
 
         try:
-            path_params = RequestPathParams({"UserID": user_id})
-            self.get_api().users_user_id_delete(path_params=path_params)
+            self.get_api().users_user_id_delete(user_id=user_id)
         except ApiException as e:
             _handle_api_exception(
                 e,
@@ -392,15 +386,11 @@ class NetHSM:
             )
 
     def set_passphrase(self, user_id, passphrase):
-        from .client.model.user_passphrase_post_data import UserPassphrasePostData
-        from .client.paths.users_user_id_passphrase.post import RequestPathParams
+        from .client.models.user_passphrase_post_data import UserPassphrasePostData
 
-        path_params = RequestPathParams({"UserID": user_id})
-        body = UserPassphrasePostData(passphrase=Passphrase(passphrase))
+        body = UserPassphrasePostData(passphrase=passphrase)
         try:
-            self.get_api().users_user_id_passphrase_post(
-                path_params=path_params, body=body
-            )
+            self.get_api().users_user_id_passphrase_post(user_id, body)
         except ApiException as e:
             _handle_api_exception(
                 e,
@@ -413,11 +403,9 @@ class NetHSM:
             )
 
     def list_operator_tags(self, user_id):
-        from .client.paths.users_user_id_tags.get import RequestPathParams
 
-        path_params = RequestPathParams({"UserID": user_id})
         try:
-            response = self.get_api().users_user_id_tags_get(path_params=path_params)
+            response = self.get_api().users_user_id_tags_get(user_id)
             return response.body
         except ApiException as e:
             _handle_api_exception(
@@ -430,11 +418,8 @@ class NetHSM:
             )
 
     def add_operator_tag(self, user_id, tag):
-        from .client.paths.users_user_id_tags_tag.put import RequestPathParams
-
-        path_params = RequestPathParams({"UserID": user_id, "Tag": tag})
         try:
-            return self.get_api().users_user_id_tags_tag_put(path_params=path_params)
+            return self.get_api().users_user_id_tags_tag_put(user_id, tag)
         except ApiException as e:
             _handle_api_exception(
                 e,
@@ -447,11 +432,10 @@ class NetHSM:
             )
 
     def delete_operator_tag(self, user_id, tag):
-        from .client.paths.users_user_id_tags_tag.delete import RequestPathParams
-
-        path_params = RequestPathParams({"UserID": user_id, "Tag": tag})
         try:
-            return self.get_api().users_user_id_tags_tag_delete(path_params=path_params)
+            return self.get_api().users_user_id_tags_tag_delete(
+                user_id=user_id, tag=tag
+            )
         except ApiException as e:
             _handle_api_exception(
                 e,
@@ -463,14 +447,9 @@ class NetHSM:
             )
 
     def add_key_tag(self, key_id, tag):
-        from .client.paths.keys_key_id_restrictions_tags_tag.put import (
-            RequestPathParams,
-        )
-
-        path_params = RequestPathParams({"KeyID": key_id, "Tag": tag})
         try:
             return self.get_api().keys_key_id_restrictions_tags_tag_put(
-                path_params=path_params
+                key_id=key_id, tag=tag
             )
         except ApiException as e:
             _handle_api_exception(
@@ -485,14 +464,9 @@ class NetHSM:
             )
 
     def delete_key_tag(self, key_id, tag):
-        from .client.paths.keys_key_id_restrictions_tags_tag.delete import (
-            RequestPathParams,
-        )
-
-        path_params = RequestPathParams({"KeyID": key_id, "Tag": tag})
         try:
             return self.get_api().keys_key_id_restrictions_tags_tag_delete(
-                path_params=path_params
+                key_id=key_id, tag=tag
             )
         except ApiException as e:
             _handle_api_exception(
@@ -507,7 +481,7 @@ class NetHSM:
     def get_info(self):
         try:
             response = self.get_api().info_get()
-            return (response.body["vendor"], response.body["product"])
+            return (response.vendor,response.product)
         except ApiException as e:
             _handle_api_exception(e)
 
@@ -519,11 +493,11 @@ class NetHSM:
             _handle_api_exception(e)
 
     def get_random_data(self, n):
-        from .client.model.random_request_data import RandomRequestData
+        from .client.models.random_request_data import RandomRequestData
 
         body = RandomRequestData(length=n)
         try:
-            response = self.get_api().random_post(body=body)
+            response = self.get_api().random_post(body)
             return response.body["random"]
         except ApiException as e:
             _handle_api_exception(e, state=State.OPERATIONAL, roles=[Role.OPERATOR])
@@ -536,15 +510,12 @@ class NetHSM:
             _handle_api_exception(e, state=State.OPERATIONAL, roles=[Role.METRICS])
 
     def list_keys(self, filter):
-        from .client.paths.keys.get import RequestQueryParams
-
         try:
             if filter:
-                query_params = RequestQueryParams({"filter": filter})
-                response = self.get_api().keys_get(query_params=query_params)
+                response = self.get_api().keys_get(filter=filter)
             else:
                 response = self.get_api().keys_get()
-            return [item["key"] for item in response.body]
+            return [item.key for item in response]
         except ApiException as e:
             _handle_api_exception(
                 e,
@@ -553,19 +524,15 @@ class NetHSM:
             )
 
     def get_key(self, key_id):
-        from .client.paths.keys_key_id.get import RequestPathParams
-
-        path_params = RequestPathParams({"KeyID": key_id})
         try:
-            response = self.get_api().keys_key_id_get(path_params=path_params)
-            key = response.body
+            key = self.get_api().keys_key_id_get(key_id)
             return Key(
                 key_id=key_id,
                 mechanisms=[mechanism for mechanism in key.mechanisms],
                 type=key.type,
                 operations=key.operations,
-                tags=[tag for tag in key.restrictions["tags"]]
-                if "tags" in key.restrictions.keys()
+                tags=[tag for tag in key.restrictions.tags]
+                if key.restrictions.tags is not None
                 else None,
                 modulus=getattr(key.key, "modulus", None),
                 public_exponent=getattr(key.key, "public_exponent", None),
@@ -582,12 +549,9 @@ class NetHSM:
             )
 
     def get_key_public_key(self, key_id):
-        from .client.paths.keys_key_id_public_pem.get import RequestPathParams
-
-        path_params = RequestPathParams({"KeyID": key_id})
         try:
             response = self.get_api().keys_key_id_public_pem_get(
-                path_params=path_params, skip_deserialization=True
+                key_id=key_id, skip_deserialization=True
             )
             return response.response.data.decode("utf-8")
         except ApiException as e:
@@ -603,16 +567,12 @@ class NetHSM:
     def add_key(
         self, key_id, type, mechanisms, tags, prime_p, prime_q, public_exponent, data
     ):
-        from .client.model.key_mechanism import KeyMechanism
-        from .client.model.key_mechanisms import KeyMechanisms
-        from .client.model.key_private_data import KeyPrivateData
-        from .client.model.key_restrictions import KeyRestrictions
-        from .client.model.key_type import KeyType
-        from .client.model.private_key import PrivateKey
-        from .client.model.tag_list import TagList
-        from .client.paths.keys_key_id.put import RequestPathParams
+        from .client.models.key_mechanism import KeyMechanism
+        from .client.models.key_private_data import KeyPrivateData
+        from .client.models.key_restrictions import KeyRestrictions
+        from .client.models.key_type import KeyType
+        from .client.models.private_key import PrivateKey
 
-        path_params = RequestPathParams({"KeyID": key_id})
         if type == "RSA":
             key_data = KeyPrivateData(
                 prime_p=prime_p,
@@ -625,32 +585,28 @@ class NetHSM:
         if tags:
             body = PrivateKey(
                 type=KeyType(type),
-                mechanisms=KeyMechanisms(
-                    [KeyMechanism(mechanism) for mechanism in mechanisms]
-                ),
+                mechanisms=[KeyMechanism(mechanism) for mechanism in mechanisms],
                 key=key_data,
-                restrictions=KeyRestrictions(tags=TagList([tag for tag in tags])),
+                restrictions=KeyRestrictions(tags=[tag for tag in tags]),
             )
         else:
             body = PrivateKey(
                 type=KeyType(type),
-                mechanisms=KeyMechanisms(
-                    [KeyMechanism(mechanism) for mechanism in mechanisms]
-                ),
+                mechanisms=[KeyMechanism(mechanism) for mechanism in mechanisms],
                 key=key_data,
             )
 
         try:
             if key_id:
                 self.get_api().keys_key_id_put(
-                    path_params=path_params, body=body, content_type="application/json"
+                    key_id=key_id, private_key=body, _content_type="application/json"
                 )
                 return key_id
             else:
-                response = self.get_api().keys_post(
-                    body=body, content_type="application/json"
+                response = self.get_api().keys_post_with_http_info(
+                    body, _content_type="application/json"
                 )
-                return self.get_key_id_from_location(response.response.getheaders())
+                return self.get_key_id_from_location(response.headers)
         except ApiException as e:
             _handle_api_exception(
                 e,
@@ -663,11 +619,8 @@ class NetHSM:
             )
 
     def delete_key(self, key_id):
-        from .client.paths.keys_key_id.delete import RequestPathParams
-
-        path_params = RequestPathParams({"KeyID": key_id})
         try:
-            self.get_api().keys_key_id_delete(path_params=path_params)
+            self.get_api().keys_key_id_delete(key_id=key_id)
         except ApiException as e:
             _handle_api_exception(
                 e,
@@ -679,33 +632,26 @@ class NetHSM:
             )
 
     def generate_key(self, type, mechanisms, length, key_id):
-        from .client.model.key_generate_request_data import KeyGenerateRequestData
-        from .client.model.key_mechanism import KeyMechanism
-        from .client.model.key_mechanisms import KeyMechanisms
-        from .client.model.key_type import KeyType
+        from .client.models.key_generate_request_data import KeyGenerateRequestData
+        from .client.models.key_mechanism import KeyMechanism
+        from .client.models.key_type import KeyType
 
         if key_id:
             body = KeyGenerateRequestData(
                 type=KeyType(type),
-                mechanisms=KeyMechanisms(
-                    [KeyMechanism(mechanism) for mechanism in mechanisms]
-                ),
+                mechanisms=[KeyMechanism(mechanism) for mechanism in mechanisms],
                 length=length,
                 id=key_id,
             )
         else:
             body = KeyGenerateRequestData(
                 type=KeyType(type),
-                mechanisms=KeyMechanisms(
-                    [KeyMechanism(mechanism) for mechanism in mechanisms]
-                ),
+                mechanisms=[KeyMechanism(mechanism) for mechanism in mechanisms],
                 length=length,
             )
         try:
-            response = self.get_api().keys_generate_post(body=body)
-            return key_id or self.get_key_id_from_location(
-                response.response.getheaders()
-            )
+            response = self.get_api().keys_generate_post_with_http_info(body)
+            return key_id or self.get_key_id_from_location(response.headers)
         except ApiException as e:
             _handle_api_exception(
                 e,
@@ -787,12 +733,15 @@ class NetHSM:
 
     def set_certificate(self, cert):
         try:
-            self.request(
-                "PUT",
-                "config/tls/cert.pem",
-                data=cert,
-                mime_type="application/x-pem-file",
+            self.get_api().config_tls_cert_pem_put(
+                cert, _content_type="application/x-pem-file"
             )
+            # self.request(
+            #     "PUT",
+            #     "config/tls/cert.pem",
+            #     data=cert,
+            #     mime_type="application/x-pem-file",
+            # )
         except ApiException as e:
             _handle_api_exception(
                 e,
@@ -805,7 +754,9 @@ class NetHSM:
 
     def set_key_certificate(self, key_id, cert, mime_type):
         try:
-            self.request("PUT", f"keys/{key_id}/cert", data=cert, mime_type=mime_type)
+            self.get_api().keys_key_id_cert_put(
+                key_id=key_id, cert=cert, _content_type=mime_type
+            )
         except ApiException as e:
             _handle_api_exception(
                 e,
@@ -819,11 +770,8 @@ class NetHSM:
             )
 
     def delete_key_certificate(self, key_id):
-        from .client.paths.keys_key_id_cert.delete import RequestPathParams
-
-        path_params = RequestPathParams({"KeyID": key_id})
         try:
-            return self.get_api().keys_key_id_cert_delete(path_params=path_params)
+            return self.get_api().keys_key_id_cert_delete(key_id=key_id)
         except ApiException as e:
             _handle_api_exception(
                 e,
@@ -845,18 +793,20 @@ class NetHSM:
         common_name,
         email_address,
     ):
-        body = {
-            "countryName": country,
-            "stateOrProvinceName": state_or_province,
-            "localityName": locality,
-            "organizationName": organization,
-            "organizationalUnitName": organizational_unit,
-            "commonName": common_name,
-            "emailAddress": email_address,
-        }
+        from .client.models.distinguished_name import DistinguishedName
+
+        body = DistinguishedName(
+            countryName=country,
+            stateOrProvinceName=state_or_province,
+            localityName=locality,
+            organizationName=organization,
+            organizationalUnitName=organizational_unit,
+            commonName=common_name,
+            emailAddress=email_address,
+        )
         try:
             response = self.get_api().config_tls_csr_pem_post(
-                body=body, skip_deserialization=True
+                body, skip_deserialization=True
             )
             return response.response.data.decode("utf-8")
         except ApiException as e:
@@ -869,10 +819,10 @@ class NetHSM:
         type,
         length,
     ):
-        from .client.model.tls_key_generate_request_data import (
+        from .client.models.tls_key_generate_request_data import (
             TlsKeyGenerateRequestData,
         )
-        from .client.model.tls_key_type import TlsKeyType
+        from .client.models.tls_key_type import TlsKeyType
 
         if type == "RSA":
             body = TlsKeyGenerateRequestData(
@@ -885,7 +835,7 @@ class NetHSM:
             )
 
         try:
-            return self.get_api().config_tls_generate_post(body=body)
+            return self.get_api().config_tls_generate_post(body)
         except ApiException as e:
             _handle_api_exception(
                 e, state=State.OPERATIONAL, roles=[Role.ADMINISTRATOR]
@@ -902,21 +852,21 @@ class NetHSM:
         common_name,
         email_address,
     ):
-        from .client.paths.keys_key_id_csr_pem.post import RequestPathParams
+        from .client.models.distinguished_name import DistinguishedName
 
-        path_params = RequestPathParams({"KeyID": key_id})
-        body = {
-            "countryName": country,
-            "stateOrProvinceName": state_or_province,
-            "localityName": locality,
-            "organizationName": organization,
-            "organizationalUnitName": organizational_unit,
-            "commonName": common_name,
-            "emailAddress": email_address,
-        }
+        body = DistinguishedName(
+            countryName=country,
+            stateOrProvinceName=state_or_province,
+            localityName=locality,
+            organizationName=organization,
+            organizationalUnitName=organizational_unit,
+            commonName=common_name,
+            emailAddress=email_address,
+        )
+
         try:
             response = self.get_api().keys_key_id_csr_pem_post(
-                path_params=path_params, body=body, skip_deserialization=True
+                key_id=key_id, distinguished_name=body, skip_deserialization=True
             )
             return response.response.data.decode("utf-8")
         except ApiException as e:
@@ -930,11 +880,11 @@ class NetHSM:
             )
 
     def set_backup_passphrase(self, passphrase):
-        from .client.model.backup_passphrase_config import BackupPassphraseConfig
+        from .client.models.backup_passphrase_config import BackupPassphraseConfig
 
-        body = BackupPassphraseConfig(passphrase=Passphrase(passphrase))
+        body = BackupPassphraseConfig(passphrase=passphrase)
         try:
-            self.get_api().config_backup_passphrase_put(body=body)
+            self.get_api().config_backup_passphrase_put(body)
         except ApiException as e:
             _handle_api_exception(
                 e,
@@ -946,11 +896,11 @@ class NetHSM:
             )
 
     def set_unlock_passphrase(self, passphrase):
-        from .client.model.unlock_passphrase_config import UnlockPassphraseConfig
+        from .client.models.unlock_passphrase_config import UnlockPassphraseConfig
 
-        body = UnlockPassphraseConfig(passphrase=Passphrase(passphrase))
+        body = UnlockPassphraseConfig(passphrase=passphrase)
         try:
-            self.get_api().config_unlock_passphrase_put(body=body)
+            self.get_api().config_unlock_passphrase_put(body)
         except ApiException as e:
             _handle_api_exception(
                 e,
@@ -962,14 +912,14 @@ class NetHSM:
             )
 
     def set_logging_config(self, ip_address, port, log_level):
-        from .client.model.log_level import LogLevel
-        from .client.model.logging_config import LoggingConfig
+        from .client.models.log_level import LogLevel
+        from .client.models.logging_config import LoggingConfig
 
         body = LoggingConfig(
             ipAddress=ip_address, port=port, logLevel=LogLevel(log_level)
         )
         try:
-            self.get_api().config_logging_put(body=body)
+            self.get_api().config_logging_put(body)
         except ApiException as e:
             _handle_api_exception(
                 e,
@@ -981,11 +931,11 @@ class NetHSM:
             )
 
     def set_network_config(self, ip_address, netmask, gateway):
-        from .client.model.network_config import NetworkConfig
+        from .client.models.network_config import NetworkConfig
 
         body = NetworkConfig(ipAddress=ip_address, netmask=netmask, gateway=gateway)
         try:
-            self.get_api().config_network_put(body=body)
+            self.get_api().config_network_put(body)
         except ApiException as e:
             _handle_api_exception(
                 e,
@@ -997,11 +947,11 @@ class NetHSM:
             )
 
     def set_time(self, time):
-        from .client.model.time_config import TimeConfig
+        from .client.models.time_config import TimeConfig
 
         body = TimeConfig(time=time)
         try:
-            self.get_api().config_time_put(body=body)
+            self.get_api().config_time_put(body)
         except ApiException as e:
             _handle_api_exception(
                 e,
@@ -1013,12 +963,12 @@ class NetHSM:
             )
 
     def set_unattended_boot(self, status):
-        from .client.model.switch import Switch
-        from .client.model.unattended_boot_config import UnattendedBootConfig
+        from .client.models.switch import Switch
+        from .client.models.unattended_boot_config import UnattendedBootConfig
 
         body = UnattendedBootConfig(status=Switch(status))
         try:
-            self.get_api().config_unattended_boot_put(body=body)
+            self.get_api().config_unattended_boot_put(body)
         except ApiException as e:
             _handle_api_exception(
                 e,
@@ -1031,12 +981,15 @@ class NetHSM:
 
     def get_system_info(self):
         try:
-            response = self.get_api().system_info_get()
+            # validation is broken for this endpoint, we parse the response manually
+            response = self.get_api().system_info_get_with_http_info(_preload_content=False)
+            body = json.loads(response.raw_data)
+            print(body)
             return SystemInfo(
-                firmware_version=response.body["firmwareVersion"],
-                software_version=response.body["softwareVersion"],
-                hardware_version=response.body["hardwareVersion"],
-                build_tag=response.body["buildTag"],
+                firmware_version=body["firmwareVersion"],
+                software_version=body["softwareVersion"],
+                hardware_version=body["hardwareVersion"],
+                build_tag=body["softwareBuild"],
             )
         except ApiException as e:
             _handle_api_exception(
@@ -1074,8 +1027,9 @@ class NetHSM:
 
     def update(self, image):
         try:
-            response = self.request("POST", "system/update", data=image)
-            return response.json().get("releaseNotes")
+
+            response = self.get_api().system_update_post(image)
+            return response.release_notes
         except ApiException as e:
             _handle_api_exception(
                 e,
@@ -1138,19 +1092,12 @@ class NetHSM:
             )
 
     def encrypt(self, key_id, data, mode, iv):
-        from .client.model.base64 import Base64
-        from .client.model.encrypt_mode import EncryptMode
-        from .client.model.encrypt_request_data import EncryptRequestData
-        from .client.paths.keys_key_id_encrypt.post import RequestPathParams
+        from .client.models.encrypt_mode import EncryptMode
+        from .client.models.encrypt_request_data import EncryptRequestData
 
-        path_params = RequestPathParams({"KeyID": key_id})
-        body = EncryptRequestData(
-            message=Base64(data), mode=EncryptMode(mode), iv=Base64(iv)
-        )
+        body = EncryptRequestData(message=data, mode=EncryptMode(mode), iv=iv)
         try:
-            response = self.get_api().keys_key_id_encrypt_post(
-                path_params=path_params, body=body
-            )
+            response = self.get_api().keys_key_id_encrypt_post(key_id, body)
             return (response.body.encrypted, response.body.iv)
         except ApiException as e:
             _handle_api_exception(
@@ -1164,17 +1111,12 @@ class NetHSM:
             )
 
     def decrypt(self, key_id, data, mode, iv):
-        from .client.model.base64 import Base64
-        from .client.model.decrypt_mode import DecryptMode
-        from .client.model.decrypt_request_data import DecryptRequestData
-        from .client.paths.keys_key_id_decrypt.post import RequestPathParams
+        from .client.models.decrypt_mode import DecryptMode
+        from .client.models.decrypt_request_data import DecryptRequestData
 
-        path_params = RequestPathParams({"KeyID": key_id})
-        body = DecryptRequestData(encrypted=Base64(data), mode=DecryptMode(mode))
+        body = DecryptRequestData(encrypted=data, mode=DecryptMode(mode), iv=iv)
         try:
-            response = self.get_api().keys_key_id_decrypt_post(
-                path_params=path_params, body=body
-            )
+            response = self.get_api().keys_key_id_decrypt_post(key_id, body)
             return response.body.decrypted
         except ApiException as e:
             _handle_api_exception(
@@ -1188,17 +1130,12 @@ class NetHSM:
             )
 
     def sign(self, key_id, data, mode):
-        from .client.model.base64 import Base64
-        from .client.model.sign_mode import SignMode
-        from .client.model.sign_request_data import SignRequestData
-        from .client.paths.keys_key_id_sign.post import RequestPathParams
+        from .client.models.sign_mode import SignMode
+        from .client.models.sign_request_data import SignRequestData
 
-        path_params = RequestPathParams({"KeyID": key_id})
-        body = SignRequestData(message=Base64(data), mode=SignMode(mode))
+        body = SignRequestData(message=data, mode=SignMode(mode))
         try:
-            response = self.get_api().keys_key_id_sign_post(
-                path_params=path_params, body=body
-            )
+            response = self.get_api().keys_key_id_sign_post(key_id, body)
             return response.body.signature
         except ApiException as e:
             _handle_api_exception(
