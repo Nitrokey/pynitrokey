@@ -406,7 +406,7 @@ class NetHSM:
 
         try:
             response = self.get_api().users_user_id_tags_get(user_id)
-            return response.body
+            return response
         except ApiException as e:
             _handle_api_exception(
                 e,
