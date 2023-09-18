@@ -17,7 +17,6 @@ import requests
 
 from . import client
 from .client import ApiException
-from .client.model.passphrase import Passphrase
 
 
 class Role(enum.Enum):
@@ -191,9 +190,9 @@ def _handle_api_exception(e, messages={}, roles=[], state=None):
     else:
         message = f"Unexpected API error {e.status}: {e.reason}"
 
-    if e.body:
+    if e.api_response:
         try:
-            body = json.loads(e.body)
+            body = json.loads(e.api_response.response.data)
             if "message" in body:
                 message += "\n" + body["message"]
         except json.JSONDecodeError:
@@ -209,14 +208,29 @@ class NetHSMError(Exception):
 
 class NetHSM:
     def __init__(self, host, version, username, password, verify_tls=True):
+        from .client.components.security_schemes import security_scheme_basic
+        from .client.configurations.api_configuration import SecuritySchemeInfo
+        from .client.servers.server_0 import Server0, VariablesDict
+
         self.host = host
         self.version = version
         self.username = username
         self.password = password
 
-        base_url = f"https://{host}/api/{version}"
-        config = client.Configuration(
-            host=base_url, username=username, password=password
+        security_info = SecuritySchemeInfo(
+            {
+                "basic": security_scheme_basic.Basic(
+                    user_id=username,
+                    password=password,
+                )
+            }
+        )
+
+        server_config = {
+            "servers/0": Server0(variables=VariablesDict(host=host, version=version))
+        }
+        config = client.ApiConfiguration(
+            server_info=server_config, security_scheme_info=security_info
         )
         config.verify_ssl = verify_tls
         self.client = client.ApiClient(configuration=config)
@@ -269,10 +283,10 @@ class NetHSM:
         return user_id_match[1]
 
     def unlock(self, passphrase):
-        from .client.model.unlock_request_data import UnlockRequestData
+        from .client.components.schema.unlock_request_data import UnlockRequestDataDict
 
-        request_body = UnlockRequestData(
-            passphrase=Passphrase(passphrase),
+        request_body = UnlockRequestDataDict(
+            passphrase=passphrase,
         )
         try:
             self.get_api().unlock_post(request_body)
@@ -296,11 +310,13 @@ class NetHSM:
             )
 
     def provision(self, unlock_passphrase, admin_passphrase, system_time):
-        from .client.model.provision_request_data import ProvisionRequestData
+        from .client.components.schema.provision_request_data import (
+            ProvisionRequestDataDict,
+        )
 
-        request_body = ProvisionRequestData(
-            unlockPassphrase=Passphrase(unlock_passphrase),
-            adminPassphrase=Passphrase(admin_passphrase),
+        request_body = ProvisionRequestDataDict(
+            unlockPassphrase=unlock_passphrase,
+            adminPassphrase=admin_passphrase,
             systemTime=system_time,
         )
         try:
@@ -326,9 +342,9 @@ class NetHSM:
             )
 
     def get_user(self, user_id):
-        from .client.paths.users_user_id.get import RequestPathParams
+        from .client.paths.users_user_id.get.path_parameters import PathParametersDict
 
-        path_params = RequestPathParams({"UserID": user_id})
+        path_params = PathParametersDict(UserID=user_id)
         try:
             response = self.get_api().users_user_id_get(path_params=path_params)
             return User(
@@ -347,18 +363,17 @@ class NetHSM:
             )
 
     def add_user(self, real_name, role, passphrase, user_id=None):
-        from .client.model.user_post_data import UserPostData
-        from .client.model.user_role import UserRole
-        from .client.paths.users_user_id.put import RequestPathParams
+        from .client.components.schema.user_post_data import UserPostDataDict
+        from .client.paths.users_user_id.put.path_parameters import PathParametersDict
 
-        body = UserPostData(
+        body = UserPostDataDict(
             realName=real_name,
-            role=UserRole(role),
-            passphrase=Passphrase(passphrase),
+            role=role,
+            passphrase=passphrase,
         )
         try:
             if user_id:
-                path_params = RequestPathParams({"UserID": user_id})
+                path_params = PathParametersDict(UserID=user_id)
                 self.get_api().users_user_id_put(path_params=path_params, body=body)
                 return user_id
             else:
@@ -376,10 +391,12 @@ class NetHSM:
             )
 
     def delete_user(self, user_id):
-        from .client.paths.users_user_id.delete import RequestPathParams
+        from .client.paths.users_user_id.delete.path_parameters import (
+            PathParametersDict,
+        )
 
         try:
-            path_params = RequestPathParams({"UserID": user_id})
+            path_params = PathParametersDict(UserID=user_id)
             self.get_api().users_user_id_delete(path_params=path_params)
         except ApiException as e:
             _handle_api_exception(
@@ -392,11 +409,15 @@ class NetHSM:
             )
 
     def set_passphrase(self, user_id, passphrase):
-        from .client.model.user_passphrase_post_data import UserPassphrasePostData
-        from .client.paths.users_user_id_passphrase.post import RequestPathParams
+        from .client.components.schema.user_passphrase_post_data import (
+            UserPassphrasePostDataDict,
+        )
+        from .client.paths.users_user_id_passphrase.post.path_parameters import (
+            PathParametersDict,
+        )
 
-        path_params = RequestPathParams({"UserID": user_id})
-        body = UserPassphrasePostData(passphrase=Passphrase(passphrase))
+        path_params = PathParametersDict(UserID=user_id)
+        body = UserPassphrasePostDataDict(passphrase=passphrase)
         try:
             self.get_api().users_user_id_passphrase_post(
                 path_params=path_params, body=body
@@ -413,9 +434,11 @@ class NetHSM:
             )
 
     def list_operator_tags(self, user_id):
-        from .client.paths.users_user_id_tags.get import RequestPathParams
+        from .client.paths.users_user_id_tags.get.path_parameters import (
+            PathParametersDict,
+        )
 
-        path_params = RequestPathParams({"UserID": user_id})
+        path_params = PathParametersDict(UserID=user_id)
         try:
             response = self.get_api().users_user_id_tags_get(path_params=path_params)
             return response.body
@@ -430,9 +453,11 @@ class NetHSM:
             )
 
     def add_operator_tag(self, user_id, tag):
-        from .client.paths.users_user_id_tags_tag.put import RequestPathParams
+        from .client.paths.users_user_id_tags_tag.put.path_parameters import (
+            PathParametersDict,
+        )
 
-        path_params = RequestPathParams({"UserID": user_id, "Tag": tag})
+        path_params = PathParametersDict(UserID=user_id, Tag=tag)
         try:
             return self.get_api().users_user_id_tags_tag_put(path_params=path_params)
         except ApiException as e:
@@ -447,9 +472,11 @@ class NetHSM:
             )
 
     def delete_operator_tag(self, user_id, tag):
-        from .client.paths.users_user_id_tags_tag.delete import RequestPathParams
+        from .client.paths.users_user_id_tags_tag.delete.path_parameters import (
+            PathParametersDict,
+        )
 
-        path_params = RequestPathParams({"UserID": user_id, "Tag": tag})
+        path_params = PathParametersDict(UserID=user_id, Tag=tag)
         try:
             return self.get_api().users_user_id_tags_tag_delete(path_params=path_params)
         except ApiException as e:
@@ -463,11 +490,11 @@ class NetHSM:
             )
 
     def add_key_tag(self, key_id, tag):
-        from .client.paths.keys_key_id_restrictions_tags_tag.put import (
-            RequestPathParams,
+        from .client.paths.keys_key_id_restrictions_tags_tag.put.path_parameters import (
+            PathParametersDict,
         )
 
-        path_params = RequestPathParams({"KeyID": key_id, "Tag": tag})
+        path_params = PathParametersDict(KeyID=key_id, Tag=tag)
         try:
             return self.get_api().keys_key_id_restrictions_tags_tag_put(
                 path_params=path_params
@@ -485,11 +512,11 @@ class NetHSM:
             )
 
     def delete_key_tag(self, key_id, tag):
-        from .client.paths.keys_key_id_restrictions_tags_tag.delete import (
-            RequestPathParams,
+        from .client.paths.keys_key_id_restrictions_tags_tag.delete.path_parameters import (
+            PathParametersDict,
         )
 
-        path_params = RequestPathParams({"KeyID": key_id, "Tag": tag})
+        path_params = PathParametersDict(KeyID=key_id, Tag=tag)
         try:
             return self.get_api().keys_key_id_restrictions_tags_tag_delete(
                 path_params=path_params
@@ -519,9 +546,9 @@ class NetHSM:
             _handle_api_exception(e)
 
     def get_random_data(self, n):
-        from .client.model.random_request_data import RandomRequestData
+        from .client.components.schema.random_request_data import RandomRequestDataDict
 
-        body = RandomRequestData(length=n)
+        body = RandomRequestDataDict(length=n)
         try:
             response = self.get_api().random_post(body=body)
             return response.body["random"]
@@ -536,11 +563,11 @@ class NetHSM:
             _handle_api_exception(e, state=State.OPERATIONAL, roles=[Role.METRICS])
 
     def list_keys(self, filter):
-        from .client.paths.keys.get import RequestQueryParams
+        from .client.paths.keys.get.query_parameters import QueryParametersDict
 
         try:
             if filter:
-                query_params = RequestQueryParams({"filter": filter})
+                query_params = QueryParametersDict(filter=filter)
                 response = self.get_api().keys_get(query_params=query_params)
             else:
                 response = self.get_api().keys_get()
@@ -553,9 +580,9 @@ class NetHSM:
             )
 
     def get_key(self, key_id):
-        from .client.paths.keys_key_id.get import RequestPathParams
+        from .client.paths.keys_key_id.get.path_parameters import PathParametersDict
 
-        path_params = RequestPathParams({"KeyID": key_id})
+        path_params = PathParametersDict(KeyID=key_id)
         try:
             response = self.get_api().keys_key_id_get(path_params=path_params)
             key = response.body
@@ -582,9 +609,11 @@ class NetHSM:
             )
 
     def get_key_public_key(self, key_id):
-        from .client.paths.keys_key_id_public_pem.get import RequestPathParams
+        from .client.paths.keys_key_id_public_pem.get.path_parameters import (
+            PathParametersDict,
+        )
 
-        path_params = RequestPathParams({"KeyID": key_id})
+        path_params = PathParametersDict(KeyID=key_id)
         try:
             response = self.get_api().keys_key_id_public_pem_get(
                 path_params=path_params, skip_deserialization=True
@@ -603,52 +632,54 @@ class NetHSM:
     def add_key(
         self, key_id, type, mechanisms, tags, prime_p, prime_q, public_exponent, data
     ):
-        from .client.model.key_mechanism import KeyMechanism
-        from .client.model.key_mechanisms import KeyMechanisms
-        from .client.model.key_private_data import KeyPrivateData
-        from .client.model.key_restrictions import KeyRestrictions
-        from .client.model.key_type import KeyType
-        from .client.model.private_key import PrivateKey
-        from .client.model.tag_list import TagList
-        from .client.paths.keys_key_id.put import RequestPathParams
+        from .client.components.schema.key_private_data import KeyPrivateDataDict
+        from .client.components.schema.key_restrictions import KeyRestrictionsDict
+        from .client.components.schema.private_key import PrivateKeyDict
+        from .client.components.schema.tag_list import TagListTuple
 
-        path_params = RequestPathParams({"KeyID": key_id})
         if type == "RSA":
-            key_data = KeyPrivateData(
-                prime_p=prime_p,
-                prime_q=prime_q,
-                public_exponent=public_exponent,
+            key_data = KeyPrivateDataDict(
+                primeP=prime_p,
+                primeQ=prime_q,
+                publicExponent=public_exponent,
             )
         else:
-            key_data = KeyPrivateData(data=data)
+            key_data = KeyPrivateDataDict(data=data)
 
         if tags:
-            body = PrivateKey(
-                type=KeyType(type),
-                mechanisms=KeyMechanisms(
-                    [KeyMechanism(mechanism) for mechanism in mechanisms]
-                ),
+            body = PrivateKeyDict(
+                type=type,
+                mechanisms=mechanisms,
                 key=key_data,
-                restrictions=KeyRestrictions(tags=TagList([tag for tag in tags])),
+                restrictions=KeyRestrictionsDict(
+                    tags=TagListTuple([tag for tag in tags])
+                ),
             )
         else:
-            body = PrivateKey(
-                type=KeyType(type),
-                mechanisms=KeyMechanisms(
-                    [KeyMechanism(mechanism) for mechanism in mechanisms]
-                ),
+            body = PrivateKeyDict(
+                type=type,
+                mechanisms=mechanisms,
                 key=key_data,
             )
 
         try:
             if key_id:
+                from .client.paths.keys_key_id.put.path_parameters import (
+                    PathParametersDict,
+                )
+
+                path_params = PathParametersDict(KeyID=key_id)
                 self.get_api().keys_key_id_put(
-                    path_params=path_params, body=body, content_type="application/json"
+                    path_params=path_params,
+                    body=body,
+                    content_type="application/json",
                 )
                 return key_id
             else:
                 response = self.get_api().keys_post(
-                    body=body, content_type="application/json"
+                    body=body,
+                    content_type="application/json",
+                    skip_deserialization=True,
                 )
                 return self.get_key_id_from_location(response.response.getheaders())
         except ApiException as e:
@@ -663,9 +694,9 @@ class NetHSM:
             )
 
     def delete_key(self, key_id):
-        from .client.paths.keys_key_id.delete import RequestPathParams
+        from .client.paths.keys_key_id.delete.path_parameters import PathParametersDict
 
-        path_params = RequestPathParams({"KeyID": key_id})
+        path_params = PathParametersDict(KeyID=key_id)
         try:
             self.get_api().keys_key_id_delete(path_params=path_params)
         except ApiException as e:
@@ -679,30 +710,28 @@ class NetHSM:
             )
 
     def generate_key(self, type, mechanisms, length, key_id):
-        from .client.model.key_generate_request_data import KeyGenerateRequestData
-        from .client.model.key_mechanism import KeyMechanism
-        from .client.model.key_mechanisms import KeyMechanisms
-        from .client.model.key_type import KeyType
+        from .client.components.schema.key_generate_request_data import (
+            KeyGenerateRequestDataDict,
+        )
+        from .client.components.schema.key_mechanisms import KeyMechanismsTuple
 
         if key_id:
-            body = KeyGenerateRequestData(
-                type=KeyType(type),
-                mechanisms=KeyMechanisms(
-                    [KeyMechanism(mechanism) for mechanism in mechanisms]
-                ),
+            body = KeyGenerateRequestDataDict(
+                type=type,
+                mechanisms=KeyMechanismsTuple(mechanisms),
                 length=length,
                 id=key_id,
             )
         else:
-            body = KeyGenerateRequestData(
-                type=KeyType(type),
-                mechanisms=KeyMechanisms(
-                    [KeyMechanism(mechanism) for mechanism in mechanisms]
-                ),
+            body = KeyGenerateRequestDataDict(
+                type=type,
+                mechanisms=KeyMechanismsTuple(mechanisms),
                 length=length,
             )
         try:
-            response = self.get_api().keys_generate_post(body=body)
+            response = self.get_api().keys_generate_post(
+                body=body, skip_deserialization=True
+            )
             return key_id or self.get_key_id_from_location(
                 response.response.getheaders()
             )
@@ -773,8 +802,16 @@ class NetHSM:
 
     def get_key_certificate(self, key_id):
         try:
-            response = self.request("GET", f"keys/{key_id}/cert")
-            return response.content.decode("utf-8")
+            from .client.paths.keys_key_id_cert.get.path_parameters import (
+                PathParametersDict,
+            )
+
+            path_params = PathParametersDict(KeyID=key_id)
+
+            response = self.get_api().keys_key_id_cert_get(
+                path_params=path_params, skip_deserialization=True
+            )
+            return response.response.data.decode("utf-8")
         except ApiException as e:
             _handle_api_exception(
                 e,
@@ -819,9 +856,11 @@ class NetHSM:
             )
 
     def delete_key_certificate(self, key_id):
-        from .client.paths.keys_key_id_cert.delete import RequestPathParams
+        from .client.paths.keys_key_id_cert.delete.path_parameters import (
+            PathParametersDict,
+        )
 
-        path_params = RequestPathParams({"KeyID": key_id})
+        path_params = PathParametersDict(KeyID=key_id)
         try:
             return self.get_api().keys_key_id_cert_delete(path_params=path_params)
         except ApiException as e:
@@ -869,19 +908,18 @@ class NetHSM:
         type,
         length,
     ):
-        from .client.model.tls_key_generate_request_data import (
-            TlsKeyGenerateRequestData,
+        from .client.components.schema.tls_key_generate_request_data import (
+            TlsKeyGenerateRequestDataDict,
         )
-        from .client.model.tls_key_type import TlsKeyType
 
         if type == "RSA":
-            body = TlsKeyGenerateRequestData(
-                type=TlsKeyType(type),
+            body = TlsKeyGenerateRequestDataDict(
+                type=type,
                 length=length,
             )
         else:
-            body = TlsKeyGenerateRequestData(
-                type=TlsKeyType(type),
+            body = TlsKeyGenerateRequestDataDict(
+                type=type,
             )
 
         try:
@@ -902,9 +940,11 @@ class NetHSM:
         common_name,
         email_address,
     ):
-        from .client.paths.keys_key_id_csr_pem.post import RequestPathParams
+        from .client.paths.keys_key_id_csr_pem.post.path_parameters import (
+            PathParametersDict,
+        )
 
-        path_params = RequestPathParams({"KeyID": key_id})
+        path_params = PathParametersDict(KeyID=key_id)
         body = {
             "countryName": country,
             "stateOrProvinceName": state_or_province,
@@ -930,9 +970,11 @@ class NetHSM:
             )
 
     def set_backup_passphrase(self, passphrase):
-        from .client.model.backup_passphrase_config import BackupPassphraseConfig
+        from .client.components.schema.backup_passphrase_config import (
+            BackupPassphraseConfigDict,
+        )
 
-        body = BackupPassphraseConfig(passphrase=Passphrase(passphrase))
+        body = BackupPassphraseConfigDict(passphrase=passphrase)
         try:
             self.get_api().config_backup_passphrase_put(body=body)
         except ApiException as e:
@@ -946,9 +988,11 @@ class NetHSM:
             )
 
     def set_unlock_passphrase(self, passphrase):
-        from .client.model.unlock_passphrase_config import UnlockPassphraseConfig
+        from .client.components.schema.unlock_passphrase_config import (
+            UnlockPassphraseConfigDict,
+        )
 
-        body = UnlockPassphraseConfig(passphrase=Passphrase(passphrase))
+        body = UnlockPassphraseConfigDict(passphrase=passphrase)
         try:
             self.get_api().config_unlock_passphrase_put(body=body)
         except ApiException as e:
@@ -962,12 +1006,9 @@ class NetHSM:
             )
 
     def set_logging_config(self, ip_address, port, log_level):
-        from .client.model.log_level import LogLevel
-        from .client.model.logging_config import LoggingConfig
+        from .client.components.schema.logging_config import LoggingConfigDict
 
-        body = LoggingConfig(
-            ipAddress=ip_address, port=port, logLevel=LogLevel(log_level)
-        )
+        body = LoggingConfigDict(ipAddress=ip_address, port=port, logLevel=log_level)
         try:
             self.get_api().config_logging_put(body=body)
         except ApiException as e:
@@ -981,9 +1022,9 @@ class NetHSM:
             )
 
     def set_network_config(self, ip_address, netmask, gateway):
-        from .client.model.network_config import NetworkConfig
+        from .client.components.schema.network_config import NetworkConfigDict
 
-        body = NetworkConfig(ipAddress=ip_address, netmask=netmask, gateway=gateway)
+        body = NetworkConfigDict(ipAddress=ip_address, netmask=netmask, gateway=gateway)
         try:
             self.get_api().config_network_put(body=body)
         except ApiException as e:
@@ -997,9 +1038,9 @@ class NetHSM:
             )
 
     def set_time(self, time):
-        from .client.model.time_config import TimeConfig
+        from .client.components.schema.time_config import TimeConfigDict
 
-        body = TimeConfig(time=time)
+        body = TimeConfigDict(time=time)
         try:
             self.get_api().config_time_put(body=body)
         except ApiException as e:
@@ -1013,10 +1054,11 @@ class NetHSM:
             )
 
     def set_unattended_boot(self, status):
-        from .client.model.switch import Switch
-        from .client.model.unattended_boot_config import UnattendedBootConfig
+        from .client.components.schema.unattended_boot_config import (
+            UnattendedBootConfigDict,
+        )
 
-        body = UnattendedBootConfig(status=Switch(status))
+        body = UnattendedBootConfigDict(status=status)
         try:
             self.get_api().config_unattended_boot_put(body=body)
         except ApiException as e:
@@ -1036,7 +1078,7 @@ class NetHSM:
                 firmware_version=response.body["firmwareVersion"],
                 software_version=response.body["softwareVersion"],
                 hardware_version=response.body["hardwareVersion"],
-                build_tag=response.body["buildTag"],
+                build_tag=response.body["softwareBuild"],
             )
         except ApiException as e:
             _handle_api_exception(
@@ -1047,8 +1089,8 @@ class NetHSM:
 
     def backup(self):
         try:
-            response = self.request("POST", "system/backup")
-            return response.content
+            response = self.get_api().system_backup_post()
+            return response.response.data
         except ApiException as e:
             _handle_api_exception(
                 e,
@@ -1138,15 +1180,15 @@ class NetHSM:
             )
 
     def encrypt(self, key_id, data, mode, iv):
-        from .client.model.base64 import Base64
-        from .client.model.encrypt_mode import EncryptMode
-        from .client.model.encrypt_request_data import EncryptRequestData
-        from .client.paths.keys_key_id_encrypt.post import RequestPathParams
-
-        path_params = RequestPathParams({"KeyID": key_id})
-        body = EncryptRequestData(
-            message=Base64(data), mode=EncryptMode(mode), iv=Base64(iv)
+        from .client.components.schema.encrypt_request_data import (
+            EncryptRequestDataDict,
         )
+        from .client.paths.keys_key_id_encrypt.post.path_parameters import (
+            PathParametersDict,
+        )
+
+        path_params = PathParametersDict(KeyID=key_id)
+        body = EncryptRequestDataDict(message=data, mode=mode, iv=iv)
         try:
             response = self.get_api().keys_key_id_encrypt_post(
                 path_params=path_params, body=body
@@ -1164,18 +1206,19 @@ class NetHSM:
             )
 
     def decrypt(self, key_id, data, mode, iv):
-        from .client.model.base64 import Base64
-        from .client.model.decrypt_mode import DecryptMode
-        from .client.model.decrypt_request_data import DecryptRequestData
-        from .client.paths.keys_key_id_decrypt.post import RequestPathParams
-
-        path_params = RequestPathParams({"KeyID": key_id})
-
-        body = DecryptRequestData(
-            encrypted=Base64(data), mode=DecryptMode(mode), iv=Base64(iv)
+        from .client.components.schema.decrypt_request_data import (
+            DecryptRequestDataDict,
         )
+        from .client.paths.keys_key_id_decrypt.post.path_parameters import (
+            PathParametersDict,
+        )
+
+        body = DecryptRequestDataDict(encrypted=data, mode=mode, iv=iv)
+
         if len(iv) == 0:
-            body = DecryptRequestData(encrypted=Base64(data), mode=DecryptMode(mode))
+            body = DecryptRequestDataDict(encrypted=data, mode=mode)
+
+        path_params = PathParametersDict(KeyID=key_id)
         try:
             response = self.get_api().keys_key_id_decrypt_post(
                 path_params=path_params, body=body
@@ -1193,13 +1236,13 @@ class NetHSM:
             )
 
     def sign(self, key_id, data, mode):
-        from .client.model.base64 import Base64
-        from .client.model.sign_mode import SignMode
-        from .client.model.sign_request_data import SignRequestData
-        from .client.paths.keys_key_id_sign.post import RequestPathParams
+        from .client.components.schema.sign_request_data import SignRequestDataDict
+        from .client.paths.keys_key_id_sign.post.path_parameters import (
+            PathParametersDict,
+        )
 
-        path_params = RequestPathParams({"KeyID": key_id})
-        body = SignRequestData(message=Base64(data), mode=SignMode(mode))
+        path_params = PathParametersDict(KeyID=key_id)
+        body = SignRequestDataDict(message=data, mode=mode)
         try:
             response = self.get_api().keys_key_id_sign_post(
                 path_params=path_params, body=body
