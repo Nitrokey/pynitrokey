@@ -141,12 +141,12 @@ nethsm-api.yaml:
 .PHONY: nethsm-client
 nethsm-client: nethsm-api.yaml
 	mkdir -p "${OPENAPI_OUTPUT_DIR}"
-	cp nethsm-api.yaml "${OPENAPI_OUTPUT_DIR}/nethsm-api.yaml"
+	python tools/transform_nethsm_api_spec.py nethsm-api.yaml "${OPENAPI_OUTPUT_DIR}/nethsm-api.json"
 	docker run --rm -ti -v "${OPENAPI_OUTPUT_DIR}:/out" \
-		openapitools/openapi-generator-cli:latest-release generate \
-		-i=/out/nethsm-api.yaml \
+		openapijsonschematools/openapi-json-schema-generator-cli:3.0.0 generate \
+		-i=/out/nethsm-api.json \
 		-g=python -o=/out/python --package-name=pynitrokey.nethsm.client
-	cp -r "${OPENAPI_OUTPUT_DIR}/python/pynitrokey/nethsm/client" pynitrokey/nethsm
+	cp -r "${OPENAPI_OUTPUT_DIR}/python/src/pynitrokey/nethsm/client" pynitrokey/nethsm
 
 .PHONY: secrets-test-all secrets-test secrets-test-report
 LOG=info
