@@ -22,7 +22,7 @@ class InitStatus(IntFlag):
     INTERNAL_FLASH_ERROR = 0b0010
     EXTERNAL_FLASH_ERROR = 0b0100
     MIGRATION_ERROR = 0b1000
-    SE050_RAND_ERROR = 0b00010000
+    SE050_ERROR = 0b00010000
 
     def is_error(self) -> bool:
         return self.value != 0
