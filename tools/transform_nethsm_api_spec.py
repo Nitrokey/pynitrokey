@@ -4,7 +4,7 @@ import argparse
 
 # This script transforms the NetHSM API specification by adding the path parameters to each of the methods.
 # This is to fix an issue with openapijsonschematools/openapi-json-schema-generator-cli that doesn't support
-# common path parameters.
+# common path parameters. See https://github.com/openapi-json-schema-tools/openapi-json-schema-generator/issues/237
 
 
 
