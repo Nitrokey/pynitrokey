@@ -1341,13 +1341,21 @@ def encrypt(ctx, key_id, data, mode, iv):
     prompt=True,
     help="The decrypt mode",
 )
+@click.option(
+    "-iv",
+    "--initialization-vector",
+    "iv",
+    type=str,
+    default="",
+    help="The initialization vector",
+)
 @click.pass_context
-def decrypt(ctx, key_id, data, mode):
+def decrypt(ctx, key_id, data, mode, iv):
     """Decrypt data with a secret key on the NetHSM and print the decrypted message.
 
     This command requires authentication as a user with the Operator role."""
     with connect(ctx) as nethsm:
-        print(nethsm.decrypt(key_id, data, mode))
+        print(nethsm.decrypt(key_id, data, mode, iv))
 
 
 @nethsm.command()

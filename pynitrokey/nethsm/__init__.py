@@ -1170,7 +1170,12 @@ class NetHSM:
         from .client.paths.keys_key_id_decrypt.post import RequestPathParams
 
         path_params = RequestPathParams({"KeyID": key_id})
-        body = DecryptRequestData(encrypted=Base64(data), mode=DecryptMode(mode))
+
+        body = DecryptRequestData(
+            encrypted=Base64(data), mode=DecryptMode(mode), iv=Base64(iv)
+        )
+        if len(iv) == 0:
+            body = DecryptRequestData(encrypted=Base64(data), mode=DecryptMode(mode))
         try:
             response = self.get_api().keys_key_id_decrypt_post(
                 path_params=path_params, body=body
