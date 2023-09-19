@@ -473,6 +473,29 @@ def status(ctx: Context) -> None:
 
 @nk3.command()
 @click.pass_obj
+@click.argument("key")
+def get_config(ctx: Context, key: str) -> None:
+    """Query a config value."""
+    with ctx.connect_device() as device:
+        admin = AdminApp(device)
+        value = admin.get_config(key)
+        print(value)
+
+
+@nk3.command()
+@click.pass_obj
+@click.argument("key")
+@click.argument("value")
+def set_config(ctx: Context, key: str, value: str) -> None:
+    """Query a config value."""
+    with ctx.connect_device() as device:
+        admin = AdminApp(device)
+        admin.set_config(key, value)
+        print(f"Updated configuration {key}.")
+
+
+@nk3.command()
+@click.pass_obj
 def version(ctx: Context) -> None:
     """Query the firmware version of the device."""
     with ctx.connect_device() as device:

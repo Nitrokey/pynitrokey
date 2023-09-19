@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from enum import Enum, IntFlag
 from typing import Optional
 
+from fido2 import cbor
 from fido2.ctap import CtapError
 
 from pynitrokey.nk3.device import Command, Nitrokey3Device
@@ -15,6 +16,8 @@ from .utils import Version
 class AdminCommand(Enum):
     STATUS = 0x80
     TEST_SE050 = 0x81
+    GET_CONFIG = 0x82
+    SET_CONFIG = 0x83
 
 
 @enum.unique
@@ -52,6 +55,35 @@ class Status:
     ifs_blocks: Optional[int] = None
     efs_blocks: Optional[int] = None
     variant: Optional[Variant] = None
+
+
+@enum.unique
+class ConfigStatus(Enum):
+    SUCCESS = 0
+    READ_FAILED = 1
+    WRITE_FAILED = 2
+    DESERIALIZATION_FAILED = 3
+    SERIALIZATION_FAILED = 4
+    INVALID_KEY = 5
+    INVALID_VALUE = 6
+    DATA_TOO_LONG = 7
+
+    @classmethod
+    def from_int(cls, i: int) -> Optional["ConfigStatus"]:
+        for status in ConfigStatus:
+            if status.value == i:
+                return status
+        return None
+
+    @classmethod
+    def check(cls, i: int, msg: str) -> None:
+        status = ConfigStatus.from_int(i)
+        if status != ConfigStatus.SUCCESS:
+            if status:
+                error = str(status)
+            else:
+                error = f"unknown error {i:x}"
+            raise Exception(f"{msg}: {error}")
 
 
 class AdminApp:
@@ -103,3 +135,16 @@ class AdminApp:
 
     def se050_tests(self) -> Optional[bytes]:
         return self._call(AdminCommand.TEST_SE050)
+
+    def get_config(self, key: str) -> str:
+        reply = self._call(AdminCommand.GET_CONFIG, data=key.encode())
+        if not reply or len(reply) < 1:
+            raise ValueError("The device returned an empty response")
+        ConfigStatus.check(reply[0], "Failed to get config value")
+        return reply[1:].decode()
+
+    def set_config(self, key: str, value: str) -> None:
+        request = cbor.encode({"key": key, "value": value})
+        reply = self._call(AdminCommand.SET_CONFIG, data=request, response_len=1)
+        assert reply
+        ConfigStatus.check(reply[0], "Failed to set config value")
