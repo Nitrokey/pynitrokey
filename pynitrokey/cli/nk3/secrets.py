@@ -29,7 +29,7 @@ def secrets(ctx: click.Context) -> None:
     pass
 
 
-def repeat_if_pin_needed(func) -> Callable:  # type: ignore[no-untyped-def]
+def repeat_if_pin_needed(func) -> Callable:  # type: ignore[no-untyped-def, type-arg]
     """
     Repeat the call of the decorated function, if PIN is required.
     Decorated function should have at least one argument,

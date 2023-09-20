@@ -77,7 +77,7 @@ class DFUDevice:
         altsetting: int = 0,
         ser: Optional[str] = None,
         dev: Optional[usb.core.Device] = None,
-    ) -> None:
+    ) -> usb.core.Device:
 
         if dev is not None:
             self.dev = dev
@@ -156,7 +156,7 @@ class DFUDevice:
         address is  ((block – 2) × size) + 0x08000000
         """
         # bmReqType, bmReq, wValue, wIndex, data/size
-        return self.dev.ctrl_transfer(
+        return self.dev.ctrl_transfer(  # type: ignore[no-any-return]
             DFU.type.RECEIVE, DFU.bmReq.UPLOAD, block, self.intNum, size
         )
 
@@ -166,7 +166,7 @@ class DFUDevice:
 
     def dnload(self, block: int, data: List[int]) -> int:
         # bmReqType, bmReq, wValue, wIndex, data/size
-        return self.dev.ctrl_transfer(
+        return self.dev.ctrl_transfer(  # type: ignore[no-any-return]
             DFU.type.SEND, DFU.bmReq.DNLOAD, block, self.intNum, data
         )
 

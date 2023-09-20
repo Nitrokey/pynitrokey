@@ -9,7 +9,7 @@
 
 import binascii
 import struct
-from typing import Dict, List, Optional
+from typing import Any, List, Optional
 
 import ecdsa
 from intelhex import IntelHex
@@ -185,7 +185,7 @@ def mergehex(
 
 def sign_firmware(
     sk_name: str, hex_file: str, APPLICATION_END_PAGE: int = 20, PAGES: int = 128
-) -> Dict:
+) -> dict[str, Any]:
     v1 = sign_firmware_for_version(sk_name, hex_file, 19)
     v2 = sign_firmware_for_version(sk_name, hex_file, 20, PAGES=PAGES)
 
@@ -206,7 +206,7 @@ def sign_firmware(
 
 def sign_firmware_for_version(
     sk_name: str, hex_file: str, APPLICATION_END_PAGE: int, PAGES: int = 128
-) -> Dict:
+) -> dict[str, Any]:
     # Maybe this is not the optimal module...
 
     import base64

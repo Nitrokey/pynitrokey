@@ -20,7 +20,7 @@ from spsdk.mboot.exceptions import McuBootConnectionError
 
 import pynitrokey
 from pynitrokey.helpers import Retries
-from pynitrokey.nk3 import Nitrokey3Base
+from pynitrokey.nk3.base import Nitrokey3Base
 from pynitrokey.nk3.bootloader import (
     FirmwareContainer,
     Nitrokey3Bootloader,

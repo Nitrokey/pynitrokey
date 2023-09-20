@@ -261,7 +261,7 @@ def test_fido2(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
             if self.pin:
                 return self.pin
             else:
-                raise PinRequiredError()
+                raise PinRequiredError()  # type: ignore[no-untyped-call]
 
         def request_uv(self, permissions: Any, rd_id: Any) -> bool:
             return True

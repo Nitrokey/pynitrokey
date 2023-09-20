@@ -451,7 +451,7 @@ class NKFido2Client:
                 | (target_num_toks[2] << 0)
             )
             current_num = (current[0] << 16) | (current[1] << 8) | (current[2] << 0)
-            return eval(str(current_num) + comp + str(target_num))
+            return eval(str(current_num) + comp + str(target_num))  # type: ignore [no-any-return]
 
         firmware_file_data = None
         if name.lower().endswith(".json"):

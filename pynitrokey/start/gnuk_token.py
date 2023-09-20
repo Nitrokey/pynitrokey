@@ -59,7 +59,14 @@ def icc_compose(msg_type, data_len, slot, seq, param, data):
     return pack("<BiBBBH", msg_type, data_len, slot, seq, 0, param) + data
 
 
-def iso7816_compose(ins, p1, p2, data, cls=0x00, le=None):
+def iso7816_compose(
+    ins: int,
+    p1: int,
+    p2: int,
+    data: bytes = b"",
+    cls: int = 0x00,
+    le: Optional[int] = None,
+) -> bytes:
     data_len = len(data)
     if data_len == 0:
         if not le:

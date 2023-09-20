@@ -12,13 +12,16 @@ from enum import Enum, IntEnum
 from hashlib import pbkdf2_hmac
 from secrets import token_bytes
 from struct import pack
-from typing import List, Optional
+from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
 
 import semver
 import tlv8
 
-from pynitrokey.nk3 import Nitrokey3Device
+from pynitrokey.nk3.device import Nitrokey3Device
 from pynitrokey.start.gnuk_token import iso7816_compose
+
+LogFn = Callable[[str], Any]
+WriteCorpusFn = Callable[[typing.Union["Instruction", "CCIDInstruction"], bytes], Any]
 
 
 @dataclasses.dataclass
@@ -75,7 +78,7 @@ class PasswordSafeEntry:
     properties: Optional[bytes] = None
     name: Optional[bytes] = None
 
-    def tlv_encode(self) -> List[tlv8.Entry]:
+    def tlv_encode(self) -> list[tlv8.Entry]:
         entries = [
             tlv8.Entry(Tag.PwsLogin.value, self.login)
             if self.login is not None
@@ -94,7 +97,7 @@ class PasswordSafeEntry:
 
 @dataclasses.dataclass
 class RawBytes:
-    data: List
+    data: list[int]
 
 
 @dataclasses.dataclass
@@ -292,28 +295,30 @@ class SecretsApp:
     """
 
     log: logging.Logger
-    logfn: typing.Callable
+    logfn: LogFn
     dev: Nitrokey3Device
-    write_corpus_fn: Optional[typing.Callable]
+    write_corpus_fn: Optional[WriteCorpusFn]
     _cache_status: Optional[SelectResponse]
-    _metadata: dict
+    _metadata: dict[Any, Any]
 
-    def __init__(self, dev: Nitrokey3Device, logfn: Optional[typing.Callable] = None):
+    def __init__(self, dev: Nitrokey3Device, logfn: Optional[LogFn] = None):
         self._cache_status = None
         self.write_corpus_fn = None
         self.log = logging.getLogger("otpapp")
         if logfn is not None:
-            self.logfn = logfn  # type: ignore [assignment]
+            self.logfn = logfn
         else:
-            self.logfn = self.log.info  # type: ignore [assignment]
+            self.logfn = self.log.info
         self.dev = dev
         self._metadata = {}
 
-    def _custom_encode(self, structure: Optional[List] = None) -> bytes:
+    def _custom_encode(
+        self, structure: Optional[Sequence[Union[tlv8.Entry, RawBytes, None]]] = None
+    ) -> bytes:
         if not structure:
             return b""
 
-        def transform(d: typing.Union[tlv8.Entry, RawBytes, None]) -> bytes:
+        def transform(d: Union[tlv8.Entry, RawBytes, None]) -> bytes:
             if not d:
                 return b""
             if isinstance(d, RawBytes):
@@ -332,7 +337,7 @@ class SecretsApp:
     def _send_receive(
         self,
         ins: typing.Union[Instruction, CCIDInstruction],
-        structure: Optional[List] = None,
+        structure: Optional[Sequence[Union[tlv8.Entry, RawBytes, None]]] = None,
     ) -> bytes:
         encoded_structure = self._custom_encode(structure)
         ins_b, p1, p2 = self._encode_command(ins)
@@ -367,7 +372,7 @@ class SecretsApp:
                 )
             log_multipacket = True
             ins_b, p1, p2 = self._encode_command(Instruction.SendRemaining)
-            bytes_data = iso7816_compose(ins_b, p1, p2, data=[])
+            bytes_data = iso7816_compose(ins_b, p1, p2)
             try:
                 result = self.dev.otp(data=bytes_data)
             except Exception as e:
@@ -423,9 +428,7 @@ class SecretsApp:
         self.logfn("Executing reset")
         self._send_receive(Instruction.Reset)
 
-    def list(
-        self, extended: bool = False
-    ) -> typing.List[typing.Union[typing.Tuple[bytes, bytes], bytes]]:
+    def list(self, extended: bool = False) -> list[Union[Tuple[bytes, bytes], bytes]]:
         """
         Return a list of the registered credentials
         :return: List of bytestrings, or tuple of bytestrings, if "extended" switch is provided
@@ -433,7 +436,7 @@ class SecretsApp:
         """
         raw_res = self._send_receive(Instruction.List)
         resd: tlv8.EntryList = tlv8.decode(raw_res)
-        res: List[typing.Union[typing.Tuple[bytes, bytes], bytes]] = []
+        res: list[Union[Tuple[bytes, bytes], bytes]] = []
         for e in resd:
             # e: tlv8.Entry
             if extended:
@@ -635,7 +638,7 @@ class SecretsApp:
             | (0x04 if pin_based_encryption else 0x00),
         ]
         structure = list(filter(lambda x: x is not None, structure))
-        return RawBytes(structure)
+        return RawBytes(structure)  # type: ignore[arg-type]
 
     def calculate(self, cred_id: bytes, challenge: Optional[int] = None) -> bytes:
         """
@@ -759,7 +762,7 @@ class SecretsApp:
         ]
         raw_res = self._send_receive(Instruction.Validate, structure=structure)
         resd: tlv8.EntryList = tlv8.decode(raw_res)
-        return resd.data
+        return resd.data  # type: ignore[no-any-return]
 
     def select(self) -> SelectResponse:
         """

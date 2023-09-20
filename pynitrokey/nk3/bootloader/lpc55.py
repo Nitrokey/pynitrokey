@@ -82,7 +82,7 @@ class Nitrokey3BootloaderLpc55(Nitrokey3Bootloader):
         return True
 
     def uuid(self) -> Optional[Uuid]:
-        uuid = self.device.get_property(PropertyTag.UNIQUE_DEVICE_IDENT)  # type: ignore[arg-type]
+        uuid = self.device.get_property(PropertyTag.UNIQUE_DEVICE_IDENT)
         if not uuid:
             raise ValueError("Missing response for UUID property query")
         if len(uuid) != UUID_LEN:

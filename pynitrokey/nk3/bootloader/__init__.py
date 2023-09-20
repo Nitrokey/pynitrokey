@@ -135,7 +135,7 @@ def open(path: str) -> Optional[Nitrokey3Bootloader]:
     return None
 
 
-def get_firmware_filename_pattern(variant: Variant) -> Pattern:
+def get_firmware_filename_pattern(variant: Variant) -> Pattern[str]:
     from .lpc55 import FILENAME_PATTERN as FILENAME_PATTERN_LPC55
     from .nrf52 import FILENAME_PATTERN as FILENAME_PATTERN_NRF52
 

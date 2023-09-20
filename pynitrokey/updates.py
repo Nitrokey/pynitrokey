@@ -10,7 +10,7 @@
 import os.path
 import urllib.parse
 from dataclasses import dataclass
-from typing import BinaryIO, Callable, Dict, Generator, Optional, Pattern
+from typing import Any, BinaryIO, Callable, Dict, Generator, Optional, Pattern
 
 import requests
 
@@ -97,7 +97,7 @@ class Release:
     def __str__(self) -> str:
         return self.tag
 
-    def find_asset(self, url_pattern: Pattern) -> Optional[Asset]:
+    def find_asset(self, url_pattern: Pattern[str]) -> Optional[Asset]:
         urls = []
         for asset in self.assets:
             if url_pattern.search(asset):
@@ -112,7 +112,7 @@ class Release:
         else:
             return None
 
-    def require_asset(self, url_pattern: Pattern) -> Asset:
+    def require_asset(self, url_pattern: Pattern[str]) -> Asset:
         update = self.find_asset(url_pattern)
         if not update:
             raise ValueError(
@@ -121,7 +121,7 @@ class Release:
         return update
 
     @classmethod
-    def _from_api_response(cls, release: dict) -> "Release":
+    def _from_api_response(cls, release: dict[Any, Any]) -> "Release":
         tag = release["tag_name"]
         assets = [asset["browser_download_url"] for asset in release["assets"]]
         if not assets:
@@ -150,14 +150,16 @@ class Repository:
             return self.get_release(tag)
         return self.get_latest_release()
 
-    def _call(self, path: str, errors: Dict[int, str] = dict()) -> dict:
+    def _call(self, path: str, errors: Dict[int, str] = dict()) -> dict[Any, Any]:
         url = self._get_url(path)
         response = requests.get(url)
         for code in errors:
             if response.status_code == code:
                 raise ValueError(errors[code])
         response.raise_for_status()
-        return response.json()
+        data = response.json()
+        assert isinstance(data, dict)
+        return data
 
     def _get_url(self, path: str) -> str:
         return API_BASE_URL + path

@@ -1,5 +1,5 @@
 import time
-from typing import Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, List, Optional, Union
 
 import usb
 from fido2.hid import CtapHidDevice
@@ -25,7 +25,7 @@ def hot_patch_windows_libusb() -> None:
 
 # @todo: remove this, HidOverUDP is not available anymore!
 def _UDP_InternalPlatformSwitch(
-    funcname: Callable, *args: Tuple, **kwargs: Dict
+    funcname: str, *args: tuple[Any, Any], **kwargs: dict[Any, Any]
 ) -> None:
     if funcname == "__init__":
         return HidOverUDP(*args, **kwargs)  # type: ignore

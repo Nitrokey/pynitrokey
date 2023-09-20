@@ -81,17 +81,32 @@ extend_skip = ["pynitrokey/nethsm/client"]
 mypy_path = "stubs"
 show_error_codes = true
 python_version = "3.9"
+warn_unused_configs = true
+warn_redundant_casts = true
 
-# enable strict checks for new code
+# enable strict checks for new code, see
+# - https://github.com/python/mypy/issues/11401
+# - https://mypy.readthedocs.io/en/stable/existing_code.html#introduce-stricter-options
 [[tool.mypy.overrides]]
 module = [
+    "pynitrokey.cli.fido2.*",
     "pynitrokey.cli.nk3.*",
+    "pynitrokey.fido2.*",
     "pynitrokey.nk3.*",
     "pynitrokey.updates.*",
-    "pynitrokey.fido2.*",
-    "pynitrokey.cli.fido2.*",
 ]
+check_untyped_defs = true
+disallow_any_generics = true
+disallow_incomplete_defs = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_untyped_decorators = true
 disallow_untyped_defs = true
+no_implicit_reexport = true
+strict_concatenate = true
+strict_equality = true
+warn_unused_ignores = true
+warn_return_any = true
 
 # pynitrokey.nethsm.client is auto-generated
 [[tool.mypy.overrides]]
@@ -102,6 +117,11 @@ ignore_errors = true
 [[tool.mypy.overrides]]
 module = "pynitrokey.nk3.bootloader.nrf52_upload.*"
 ignore_errors = true
+
+# nrf52 has to use the untyped nrf52_upload module
+[[tool.mypy.overrides]]
+module = "pynitrokey.nk3.bootloader.nrf52"
+disallow_untyped_calls = false
 
 # libraries without annotations
 [[tool.mypy.overrides]]
