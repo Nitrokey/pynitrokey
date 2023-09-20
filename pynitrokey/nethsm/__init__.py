@@ -176,24 +176,49 @@ class Key:
 
 
 def _handle_api_exception(e, messages={}, roles=[], state=None):
+    # give priority to custom messages
     if e.status in messages:
         message = messages[e.status]
+        raise NetHSMError(message)
+
+    if e.status == 401 and roles:
+        message = "Unauthorized -- invalid username or password"
     elif e.status == 403 and roles:
         roles = [role.value for role in roles]
         message = "Access denied -- this operation requires the role " + " or ".join(
             roles
         )
-    elif e.status == 401 and roles:
-        message = "Unauthorized -- invalid username or password"
+    elif e.status == 405:
+        # 405 "Method Not Allowed" mostly happens when the UserID or KeyID contains a character
+        # - that ends the path of the URL like a question mark '?' :
+        #   /api/v1/keys/?/cert will hit the keys listing endpoint instead of the key/{KeyID}/cert endpoint
+        # - that doesn't count as a path parameter like a slash '/' :
+        #   /api/v1/keys///cert will be interpreted as /api/v1/keys/cert with cert as the KeyID
+        message = "The ID you provided contains invalid characters"
+    elif e.status == 406:
+        message = "Invalid content type requested"
     elif e.status == 412 and state:
         message = f"Precondition failed -- this operation can only be used on a NetHSM in the state {state.value}"
+    elif e.status == 429:
+        message = (
+            "Too many requests -- you may have tried the wrong credentials too often"
+        )
     else:
         message = f"Unexpected API error {e.status}: {e.reason}"
 
     if e.api_response:
         try:
-            body = json.loads(e.api_response.response.data)
-            if "message" in body:
+            body = None
+            # "custom" requests
+            if hasattr(e.api_response, "text") and e.api_response.text != "":
+                body = json.loads(e.api_response.text)
+            # generated code
+            elif (
+                hasattr(e.api_response, "response")
+                and e.api_response.response.data != ""
+            ):
+                body = json.loads(e.api_response.response.data)
+            if body is not None and "message" in body:
                 message += "\n" + body["message"]
         except json.JSONDecodeError:
             pass
@@ -254,10 +279,11 @@ class NetHSM:
             method, url, params=params, data=data, headers=headers, json=json
         )
         if not response.ok:
-            e = ApiException(status=response.status_code, reason=response.reason)
-            e.body = response.text
-            e.headers = response.headers
-            raise e
+            raise ApiException(
+                status=response.status_code,
+                reason=response.reason,
+                api_response=response,
+            )
         return response
 
     def get_api(self):
@@ -295,6 +321,8 @@ class NetHSM:
                 e,
                 state=State.LOCKED,
                 messages={
+                    # Doc says 400 could happen when the passphrase is invalid?
+                    400: "Access denied -- wrong unlock passphrase",
                     403: "Access denied -- wrong unlock passphrase",
                 },
             )
@@ -326,7 +354,7 @@ class NetHSM:
                 e,
                 state=State.UNPROVISIONED,
                 messages={
-                    400: "Malformed request data -- e. g. weak passphrase",
+                    400: "Malformed request data -- e. g. weak passphrase or invalid time",
                 },
             )
 
@@ -466,8 +494,9 @@ class NetHSM:
                 state=State.OPERATIONAL,
                 roles=[Role.ADMINISTRATOR],
                 messages={
-                    404: f"User {user_id} not found",
                     304: f"Tag is already present for {user_id}",
+                    400: "Invalid tag format or user is not an operator",
+                    404: f"User {user_id} not found",
                 },
             )
 
@@ -553,7 +582,14 @@ class NetHSM:
             response = self.get_api().random_post(body=body)
             return response.body["random"]
         except ApiException as e:
-            _handle_api_exception(e, state=State.OPERATIONAL, roles=[Role.OPERATOR])
+            _handle_api_exception(
+                e,
+                state=State.OPERATIONAL,
+                roles=[Role.OPERATOR],
+                messages={
+                    400: "Invalid length. Must be between 1 and 1024",
+                },
+            )
 
     def get_metrics(self):
         try:
@@ -742,6 +778,7 @@ class NetHSM:
                 roles=[Role.ADMINISTRATOR],
                 messages={
                     400: "Bad request -- invalid input data",
+                    409: f"Conflict -- a key with the ID {key_id} already exists",
                 },
             )
 
@@ -819,6 +856,8 @@ class NetHSM:
                 roles=[Role.ADMINISTRATOR, Role.OPERATOR],
                 messages={
                     404: f"Certificate for key {key_id} not found",
+                    # The API returns a 406 if there is no certificate or if the key does not exist
+                    406: f"Certificate for key {key_id} not found",
                 },
             )
 
@@ -852,6 +891,7 @@ class NetHSM:
                     400: "Bad Request -- invalid certificate",
                     404: f"Key {key_id} not found",
                     409: f"Conflict -- key {key_id} already has a certificate",
+                    415: "Invalid mime type",
                 },
             )
 
@@ -1049,7 +1089,7 @@ class NetHSM:
                 state=State.OPERATIONAL,
                 roles=[Role.ADMINISTRATOR],
                 messages={
-                    400: "Bad request -- invalid input data",
+                    400: "Bad request -- invalid time format",
                 },
             )
 
@@ -1096,6 +1136,9 @@ class NetHSM:
                 e,
                 state=State.OPERATIONAL,
                 roles=[Role.BACKUP],
+                messages={
+                    412: "NetHSM is not Operational or the backup passphrase is not set",
+                },
             )
 
     def restore(self, backup, passphrase, time):
