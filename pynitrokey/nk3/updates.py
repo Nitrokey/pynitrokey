@@ -11,6 +11,7 @@ import enum
 import logging
 import platform
 import re
+import time
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from io import BytesIO
@@ -323,6 +324,9 @@ class Updater:
                 raise self.ui.abort(
                     "The reboot was not confirmed with the touch button"
                 )
+
+            # needed for udev to properly handle new device
+            time.sleep(1)
 
             if platform.system() == "Darwin":
                 # Currently there is an issue with device enumeration after reboot on macOS, see
