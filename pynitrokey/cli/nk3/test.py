@@ -19,6 +19,7 @@ from typing import Any, Callable, Iterable, Optional, Tuple, Type, Union
 
 from pynitrokey.cli.exceptions import CliException
 from pynitrokey.fido2 import device_path_to_str
+from pynitrokey.fido2.client import NKFido2Client
 from pynitrokey.helpers import local_print
 from pynitrokey.nk3.admin_app import AdminApp
 from pynitrokey.nk3.base import Nitrokey3Base
@@ -237,6 +238,16 @@ def test_firmware_mode(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
 def test_fido2(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
     if not isinstance(device, Nitrokey3Device):
         return TestResult(TestStatus.SKIPPED)
+
+    # drop out early, if pin is needed, but not provided
+    nk_client = NKFido2Client()
+    nk_client.find_device(device.device)
+
+    if nk_client.has_pin() and not ctx.pin:
+        return TestResult(
+            TestStatus.FAILURE,
+            "FIDO2 pin is set, but not provided (use the --pin argument)",
+        )
 
     # Based on https://github.com/Yubico/python-fido2/blob/142587b3e698ca0e253c78d75758fda635cac51a/examples/credential.py
 
