@@ -86,29 +86,4 @@ Commands that require a password should first try to read the password from an e
 Updating the NetHSM client
 --------------------------
 
-To update the NetHSM HTTP client, you need to download the updated ``nethsm-api.yml`` OpenAPI specification. The easiest is to download it from the NetHSM demo server (``curl`` required):
-
-.. code:: bash
-
-    make nethsm-api.yaml --always-make
-
-Then, run the generation script, docker is required:
-
-.. code:: bash
-
-    make nethsm-client
-
-Be sure to run the linter, tests and check that everything is working as expected after the update.
-
-Custom functions
-~~~~~~~~~~~~~~~~
-
-The generator doesn't support upload of binary files and custom ``Content-Type`` headers (fails to serialize).
-To work around this, some functions are written manually, using ``NetHSM.request()`` to send the request.
-
-The current list of such functions is:
-
-- ``NetHSM.restore()`` : ``/system/restore``
-- ``NetHSM.set_key_certificate()`` : ``/keys/{KeyID}/cert``
-- ``NetHSM.set_certificate()`` : ``/config/tls/cert.pem``
-- ``NetHSM.update()`` : ``/system/update``
+The NetHSM client is now managed in a `separate repo <https://github.com/Nitrokey/nethsm-sdk-py>`__

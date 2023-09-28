@@ -13,10 +13,8 @@ import mimetypes
 import os.path
 
 import click
-import requests
-import urllib3
+import nethsm as nethsm_sdk
 
-import pynitrokey.nethsm
 from pynitrokey.helpers import prompt
 
 
@@ -33,15 +31,15 @@ KEY_CERTIFICATE_MIME_TYPES = [
 
 
 DATETIME_TYPE = click.DateTime(formats=["%Y-%m-%dT%H:%M:%S%z"])
-ROLE_TYPE = make_enum_type(pynitrokey.nethsm.Role)
-LOG_LEVEL_TYPE = make_enum_type(pynitrokey.nethsm.LogLevel)
-UNATTENDED_BOOT_STATUS_TYPE = make_enum_type(pynitrokey.nethsm.UnattendedBootStatus)
-TYPE_TYPE = make_enum_type(pynitrokey.nethsm.KeyType)
-TYPE_TLS_KEY_TYPE = make_enum_type(pynitrokey.nethsm.TlsKeyType)
-MECHANISM_TYPE = make_enum_type(pynitrokey.nethsm.KeyMechanism)
-ENCRYPT_MODE_TYPE = make_enum_type(pynitrokey.nethsm.EncryptMode)
-DECRYPT_MODE_TYPE = make_enum_type(pynitrokey.nethsm.DecryptMode)
-SIGN_MODE_TYPE = make_enum_type(pynitrokey.nethsm.SignMode)
+ROLE_TYPE = make_enum_type(nethsm_sdk.Role)
+LOG_LEVEL_TYPE = make_enum_type(nethsm_sdk.LogLevel)
+UNATTENDED_BOOT_STATUS_TYPE = make_enum_type(nethsm_sdk.UnattendedBootStatus)
+TYPE_TYPE = make_enum_type(nethsm_sdk.KeyType)
+TYPE_TLS_KEY_TYPE = make_enum_type(nethsm_sdk.TlsKeyType)
+MECHANISM_TYPE = make_enum_type(nethsm_sdk.KeyMechanism)
+ENCRYPT_MODE_TYPE = make_enum_type(nethsm_sdk.EncryptMode)
+DECRYPT_MODE_TYPE = make_enum_type(nethsm_sdk.DecryptMode)
+SIGN_MODE_TYPE = make_enum_type(nethsm_sdk.SignMode)
 
 
 def print_row(values, widths):
@@ -91,9 +89,6 @@ def nethsm(ctx, host, version, username, password, verify_tls):
     ctx.obj["NETHSM_PASSWORD"] = password
     ctx.obj["NETHSM_VERIFY_TLS"] = verify_tls
 
-    if not verify_tls:
-        urllib3.disable_warnings()
-
 
 @contextlib.contextmanager
 def connect(ctx, require_auth=True):
@@ -113,26 +108,20 @@ def connect(ctx, require_auth=True):
                 f"[auth] Password for user {username} on NetHSM {host}", hide_input=True
             )
 
-    with pynitrokey.nethsm.connect(
-        host, version, username, password, verify_tls
-    ) as nethsm:
-        import urllib3.exceptions
-
+    with nethsm_sdk.connect(host, version, username, password, verify_tls) as nethsm:
         try:
             yield nethsm
-        except pynitrokey.nethsm.NetHSMError as e:
+        except nethsm_sdk.NetHSMError as e:
             raise click.ClickException(e)
-        except urllib3.exceptions.MaxRetryError as e:
-            if isinstance(e.reason, urllib3.exceptions.SSLError):
+        except nethsm_sdk.NetHSMRequestError as e:
+            if e.type == nethsm_sdk.RequestErrorType.SSL_ERROR:
                 raise click.ClickException(
                     f"Could not connect to the NetHSM: {e.reason}\nIf you use a self-signed certificate, please set the --no-verify-tls option."
                 )
             else:
-                raise e
-        except requests.exceptions.SSLError as e:
-            raise click.ClickException(
-                f"Could not connect to the NetHSM: {e}\nIf you use a self-signed certificate, please set the --no-verify-tls option."
-            )
+                raise click.ClickException(
+                    f"Cound not connect to the NetHSM: {e.reason}\nIs the NetHSM running and reachable?"
+                )
 
 
 @nethsm.command()
@@ -517,14 +506,14 @@ def delete_key(ctx, key_id):
 def prompt_mechanisms(type):
     # We assume that key type X corresponds to the mechanisms starting with X.
     # This is no longer true for curves, so we have to adapt the type
-    if type == pynitrokey.nethsm.KeyType.CURVE25519.value:
+    if type == nethsm_sdk.KeyType.CURVE25519.value:
         type = "EdDSA"
     elif type.startswith("EC_"):
         type = "ECDSA"
 
     available_mechanisms = []
     print("Supported mechanisms for this key type:")
-    for mechanism in pynitrokey.nethsm.KeyMechanism:
+    for mechanism in nethsm_sdk.KeyMechanism:
         if mechanism.value.startswith(type):
             available_mechanisms.append(mechanism.value)
             print(f"  {mechanism.value}")

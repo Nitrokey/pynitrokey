@@ -6,7 +6,7 @@ PYTHON3=python3
 PYTHON3_VENV=venv/bin/python3
 
 # whitelist of directories for flake8
-FLAKE8_DIRS=pynitrokey/nethsm pynitrokey/cli/nk3 pynitrokey/nk3
+FLAKE8_DIRS=pynitrokey/cli/nk3 pynitrokey/nk3
 
 all: init
 
@@ -131,22 +131,6 @@ build-CI-test:
 .PHONY: CI-test
 CI-test:
 	sudo docker run -it --rm -v $(PWD):/app nitro-python-ci make CI VENV=venv-ci
-
-OPENAPI_OUTPUT_DIR=${PWD}/tmp/openapi-client
-
-nethsm-api.yaml:
-	curl "https://nethsmdemo.nitrokey.com/api_docs/nethsm-api.yaml" --output nethsm-api.yaml
-
-# Generates the OpenAPI client for the NetHSM REST API
-.PHONY: nethsm-client
-nethsm-client: nethsm-api.yaml
-	mkdir -p "${OPENAPI_OUTPUT_DIR}"
-	python tools/transform_nethsm_api_spec.py nethsm-api.yaml "${OPENAPI_OUTPUT_DIR}/nethsm-api.json"
-	docker run --rm -ti -v "${OPENAPI_OUTPUT_DIR}:/out" \
-		openapijsonschematools/openapi-json-schema-generator-cli:3.0.0 generate \
-		-i=/out/nethsm-api.json \
-		-g=python -o=/out/python --package-name=pynitrokey.nethsm.client
-	cp -r "${OPENAPI_OUTPUT_DIR}/python/src/pynitrokey/nethsm/client" pynitrokey/nethsm
 
 .PHONY: secrets-test-all secrets-test secrets-test-report
 LOG=info
