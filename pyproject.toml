@@ -34,13 +34,13 @@ dependencies = [
   "requests",
   "spsdk >=1.11.0,<1.12.0",
   "tqdm",
-  "urllib3 >=2.0,<2.1",
   "tlv8",
   "typing_extensions ~= 4.3.0",
   "pyserial",
   "protobuf >=3.17.3, < 4.0.0",
   "click-aliases",
   "semver",
+  "nethsm >= 0.3.1",
 ]
 dynamic = ["version", "description"]
 
@@ -70,12 +70,10 @@ nitropy = "pynitrokey.cli:main"
 
 [tool.black]
 target-version = ["py39"]
-extend-exclude = 'pynitrokey/nethsm/client'
 
 [tool.isort]
 py_version = "39"
 profile = "black"
-extend_skip = ["pynitrokey/nethsm/client"]
 
 [tool.mypy]
 mypy_path = "stubs"
@@ -108,10 +106,6 @@ strict_equality = true
 warn_unused_ignores = true
 warn_return_any = true
 
-# pynitrokey.nethsm.client is auto-generated
-[[tool.mypy.overrides]]
-module = "pynitrokey.nethsm.client.*"
-ignore_errors = true
 
 # pynitrokey.nk3.bootloader.nrf52_upload is only temporary in this package
 [[tool.mypy.overrides]]
@@ -135,7 +129,6 @@ module = [
     "nkdfu.*",
     "ruamel.*",
     "serial.*",
-    "urllib3.*",
     "usb.*",
     "usb1.*",
     "tlv8.*",
@@ -157,7 +150,6 @@ markers = [
 line-length = 120
 exclude = [
     "venv",
-    "nethsm",
     "start",
     "nk3",
 ]
