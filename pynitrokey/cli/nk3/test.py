@@ -378,11 +378,11 @@ def test_se050(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
 
     t = Thread(target=internal_se050_run, args=[que])
     t.start()
-    total = 900
+    total = 1200
     bar = tqdm(
         desc="Running SE050 test", unit="%", bar_format="{l_bar}{bar}", total=total
     )
-    # 1m30 in increments of 0.1 second
+    # 2min in increments of 0.1 second
     for i in range(total):
         t.join(0.1)
         bar.update(1)
