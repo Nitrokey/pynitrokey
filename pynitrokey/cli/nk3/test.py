@@ -355,10 +355,6 @@ SE050_STEPS = [
 ]
 
 
-class NotSupported:
-    pass
-
-
 @test_case("se050", "SE050")
 def test_se050(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
     from queue import Queue
@@ -373,18 +369,12 @@ def test_se050(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
     ):
         return TestResult(TestStatus.SKIPPED)
 
-    que: Queue[Union[bytes, None, NotSupported]] = Queue()
+    que: Queue[Optional[bytes]] = Queue()
 
     def internal_se050_run(
-        q: Queue[Union[bytes, None, NotSupported]],
+        q: Queue[Optional[bytes]],
     ) -> None:
-        try:
-            q.put(AdminApp(device).se050_tests())
-        except CtapError as e:
-            if e.code == CtapError.ERR.INVALID_LENGTH:
-                q.put(NotSupported())
-            else:
-                q.put(None)
+        q.put(AdminApp(device).se050_tests())
 
     t = Thread(target=internal_se050_run, args=[que])
     t.start()
@@ -408,14 +398,12 @@ def test_se050(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
     bar.close()
     result = que.get()
 
-    if isinstance(result, NotSupported):
-        # This means  that the device responded with `NotAvailable`, so either it is a version that doesn't support this feature or it was disabled at compile time
+    # This means  that the device responded with `CommandNotSupported`, so either it is a version that doesn't support this feature or it was disabled at compile time
+    if result is None:
         return TestResult(
             TestStatus.SKIPPED,
             "Testing SE050 functionality is not supported by the device",
         )
-    elif result is None:
-        return TestResult(TestStatus.FAILURE, "Failed to get test run data")
 
     if len(result) < 11:
         return TestResult(TestStatus.FAILURE, "Did not get full test run data")
