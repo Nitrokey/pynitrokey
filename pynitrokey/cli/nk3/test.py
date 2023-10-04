@@ -387,12 +387,13 @@ def test_se050(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
         t.join(0.1)
         bar.update(1)
         if not t.is_alive():
+            bar.update(total - i)
             break
     else:
         bar.close()
         return TestResult(
             TestStatus.FAILURE,
-            "Test timed out after 1m30",
+            "Test timed out after 2min",
         )
 
     bar.close()
