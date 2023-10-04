@@ -19,7 +19,6 @@ from threading import Thread
 from types import TracebackType
 from typing import Any, Callable, Iterable, Optional, Tuple, Type, Union
 
-from fido2.ctap import CtapError
 from tqdm import tqdm
 
 from pynitrokey.cli.exceptions import CliException
