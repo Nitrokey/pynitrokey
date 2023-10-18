@@ -87,3 +87,8 @@ Updating the NetHSM client
 --------------------------
 
 The NetHSM client is now managed in a `separate repo <https://github.com/Nitrokey/nethsm-sdk-py>`__
+
+Error Message for Dependencies Updates
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When updating the dependencies, an error message appears in which the updated tool is more current than the registered version.
