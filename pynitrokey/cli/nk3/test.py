@@ -14,8 +14,12 @@ import sys
 from dataclasses import dataclass
 from enum import Enum, auto, unique
 from hashlib import sha256
+from struct import unpack
+from threading import Thread
 from types import TracebackType
 from typing import Any, Callable, Iterable, Optional, Tuple, Type, Union
+
+from tqdm import tqdm
 
 from pynitrokey.cli.exceptions import CliException
 from pynitrokey.fido2 import device_path_to_str
@@ -232,6 +236,202 @@ def test_firmware_mode(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
         return TestResult(TestStatus.FAILURE, "provisioner application active")
     else:
         return TestResult(TestStatus.SUCCESS)
+
+
+SE050_STEPS = [
+    "Enable",
+    "Random1",
+    "Random2",
+    "Random3",
+    "WriteUserId",
+    "CreateSession",
+    "VerifySessionUserId",
+    "DeleteAll",
+    "List",
+    "WriteBinary1",
+    "ReadBinary1",
+    "DeleteBinary1",
+    "WriteBinary2",
+    "ReadBinary2",
+    "DeleteBinary2",
+    "WriteBinary3",
+    "ReadBinary3",
+    "DeleteBinary3",
+    "CreateP256",
+    "ListP256",
+    "GenerateP256",
+    "EcDsaP256",
+    "VerifyP256",
+    "DeleteP256",
+    "CreateP521",
+    "GenerateP521",
+    "EcDsaP521",
+    "VerifyP521",
+    "DeleteP521",
+    "RecreationWriteUserId",
+    "RecreationWriteBinary",
+    "RecreationDeleteAttempt",
+    "RecreationDeleteUserId",
+    "RecreationRecreateUserId",
+    "RecreationCreateSession",
+    "RecreationAuthSession",
+    "RecreationDeleteAttack",
+    "Rsa2048Gen",
+    "Rsa2048Sign",
+    "Rsa2048Verify",
+    "Rsa2048Encrypt",
+    "Rsa2048Decrypt",
+    "Rsa2048Delete",
+    "Rsa3072Gen",
+    "Rsa3072Sign",
+    "Rsa3072Verify",
+    "Rsa3072Encrypt",
+    "Rsa3072Decrypt",
+    "Rsa3072Delete",
+    "Rsa4096Gen",
+    "Rsa4096Sign",
+    "Rsa4096Verify",
+    "Rsa4096Encrypt",
+    "Rsa4096Decrypt",
+    "Rsa4096Delete",
+    "SymmWrite",
+    "SymmEncryptOneShot",
+    "SymmDecryptOneShot",
+    "SymmEncryptCreate",
+    "SymmEncryptInit",
+    "SymmEncryptUpdate1",
+    "SymmEncryptUpdate2",
+    "SymmEncryptFinal",
+    "SymmEncryptDelete",
+    "SymmDecryptCreate",
+    "SymmDecryptInit",
+    "SymmDecryptUpdate1",
+    "SymmDecryptUpdate2",
+    "SymmDecryptFinal",
+    "SymmDecryptDelete",
+    "SymmDelete",
+    "MacWrite",
+    "MacSignOneShot",
+    "MacVerifyOneShot",
+    "MacSignCreate",
+    "MacSignInit",
+    "MacSignUpdate1",
+    "MacSignUpdate2",
+    "MacSignFinal",
+    "MacSignDelete",
+    "MacVerifyCreate",
+    "MacVerifyInit",
+    "MacVerifyUpdate1",
+    "MacVerifyUpdate2",
+    "MacVerifyFinal",
+    "MacVerifyDelete",
+    "MacDelete",
+    "AesSessionCreateKey",
+    "AesSessionCreateBinary",
+    "AesSessionCreateSession",
+    "AesSessionAuthenticate",
+    "AesSessionReadBinary",
+    "AesSessionUpdateKey",
+    "AesSessionCloseSession",
+    "AesSessionRecreateSession",
+    "AesSessionReAuthenticate",
+    "AesSessionReadBinary2",
+    "AesSessionDeleteBinary",
+    "AesSessionDeleteKey",
+    "Pbkdf2WritePin",
+    "Pbkdf2Calculate",
+    "Pbkdf2Compare",
+    "Pbkdf2DeletePin",
+    "ImportWrite",
+    "ImportCipher",
+    "ImportExport",
+    "ImportDelete",
+    "ImportDeletionWorked",
+    "ImportImport",
+    "ImportCipher2",
+    "ImportComp",
+    "ImportDeleteFinal",
+]
+
+
+@test_case("se050", "SE050")
+def test_se050(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
+    from queue import Queue
+
+    if not isinstance(device, Nitrokey3Device):
+        return TestResult(TestStatus.SKIPPED)
+    firmware_version = ctx.firmware_version or device.version()
+    if (
+        firmware_version.core() < Version(1, 5, 0)
+        or firmware_version.core() >= Version(1, 6, 0)
+        or firmware_version.pre is None
+    ):
+        return TestResult(TestStatus.SKIPPED)
+
+    que: Queue[Optional[bytes]] = Queue()
+
+    def internal_se050_run(
+        q: Queue[Optional[bytes]],
+    ) -> None:
+        q.put(AdminApp(device).se050_tests())
+
+    t = Thread(target=internal_se050_run, args=[que])
+    t.start()
+    total = 1200
+    bar = tqdm(
+        desc="Running SE050 test", unit="%", bar_format="{l_bar}{bar}", total=total
+    )
+    # 2min in increments of 0.1 second
+    for i in range(total):
+        t.join(0.1)
+        bar.update(1)
+        if not t.is_alive():
+            bar.update(total - i)
+            break
+    else:
+        bar.close()
+        return TestResult(
+            TestStatus.FAILURE,
+            "Test timed out after 2min",
+        )
+
+    bar.close()
+    result = que.get()
+
+    # This means  that the device responded with `CommandNotSupported`, so either it is a version that doesn't support this feature or it was disabled at compile time
+    if result is None:
+        return TestResult(
+            TestStatus.SKIPPED,
+            "Testing SE050 functionality is not supported by the device",
+        )
+
+    if len(result) < 11:
+        return TestResult(TestStatus.FAILURE, "Did not get full test run data")
+    major = result[0]
+    minor = result[1]
+    patch = result[2]
+    sb_major = result[3]
+    sb_minor = result[4]
+    persistent = unpack(">H", result[5:7])
+    transient_deselect = unpack(">H", result[7:9])
+    transient_reset = unpack(">H", result[9:11])
+
+    success_message = f"SE050 firmware version: {major}.{minor}.{patch} - {sb_major}.{sb_minor}, (persistent: {persistent}, transient_deselect: {transient_deselect}, transient_reset: {transient_reset})"
+
+    i = 0
+    max = len(SE050_STEPS)
+    for b in result[11:]:
+        i += 1
+        if i != b:
+            index = SE050_STEPS[i - 1] if i < max else hex(i)
+            return TestResult(
+                TestStatus.FAILURE,
+                f"Failed at {index}, got {result[10+i:].hex()} of {result.hex()}",
+            )
+    if i != max:
+        return TestResult(TestStatus.FAILURE, f"Got to {i}, expected {max}")
+
+    return TestResult(TestStatus.SUCCESS, success_message)
 
 
 @test_case("fido2", "FIDO2")
