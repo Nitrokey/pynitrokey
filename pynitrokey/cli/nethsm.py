@@ -7,14 +7,19 @@
 # http://opensource.org/licenses/MIT>, at your option. This file may not be
 # copied, modified, or distributed except according to those terms.
 
+import base64
 import contextlib
 import datetime
+import json
 import mimetypes
 import os.path
+import sys
 
 import click
 import nethsm as nethsm_sdk
+from nethsm.backup import EncryptedBackup
 
+from pynitrokey.cli.exceptions import CliException
 from pynitrokey.helpers import prompt
 
 
@@ -1127,6 +1132,10 @@ def backup(ctx, filename):
         with open(filename, "xb") as f:
             f.write(data)
             print(f"Backup for {nethsm.host} written to {filename}")
+        try:
+            EncryptedBackup.parse(data)
+        except ValueError as e:
+            raise CliException(f"Failed to validate backup: {e}", support_hint=False)
 
 
 @nethsm.command()
@@ -1143,18 +1152,113 @@ def backup(ctx, filename):
     type=DATETIME_TYPE,
     help="The system time to set (default: the time of this system)",
 )
+@click.option(
+    "-f",
+    "--force",
+    is_flag=True,
+    help="Restore the backup even if validation fails",
+)
 @click.argument("filename")
 @click.pass_context
-def restore(ctx, backup_passphrase, system_time, filename):
+def restore(ctx, backup_passphrase, system_time, force, filename):
     """Restore a backup of a NetHSM instance from a file.
 
     If the system time is not set, the current system time is used."""
     if not system_time:
         system_time = datetime.datetime.now(datetime.timezone.utc)
+
+    with open(filename, "rb") as f:
+        data = f.read()
+    try:
+        EncryptedBackup.parse(data).decrypt(backup_passphrase)
+    except ValueError as e:
+        if force:
+            print(f"Failed to validate backup: {e}")
+            print("Backup is restored anyway as --force is set")
+        else:
+            raise CliException(
+                f"Failed to validate backup (use --force to restore anyway): {e}",
+                support_hint=False,
+            )
+
     with connect(ctx, require_auth=False) as nethsm:
         with open(filename, "rb") as f:
-            nethsm.restore(f, backup_passphrase, system_time)
+            nethsm.restore(data, backup_passphrase, system_time)
         print(f"Backup restored on NetHSM {nethsm.host}")
+
+
+@nethsm.command()
+@click.option(
+    "-p",
+    "--backup-passphrase",
+    help="The backup passphrase for decryption (default: only the unencrypted metadata is validated)",
+)
+@click.argument("filename")
+def validate_backup(backup_passphrase, filename):
+    """Validate a NetHSM backup file.
+
+    Per default, only the metadata of the encrypted backup is validated.  If
+    the backup passphrase is set, the backup is decrypted and the content is
+    also validated."""
+
+    with open(filename, "rb") as f:
+        data = f.read()
+    try:
+        encrypted = EncryptedBackup.parse(data)
+    except ValueError as e:
+        raise CliException(
+            f"Failed to validate backup metadata: {e}", support_hint=False
+        )
+
+    if backup_passphrase:
+        try:
+            encrypted.decrypt(backup_passphrase)
+        except ValueError as e:
+            raise CliException(
+                f"Failed to validate backup content: {e}", support_hint=False
+            )
+        print("Backup metadata and content are valid.")
+    else:
+        print("Backup metadata is valid.")
+
+
+@nethsm.command()
+@click.option(
+    "-p",
+    "--backup-passphrase",
+    hide_input=True,
+    prompt=True,
+    help="The backup passphrase",
+)
+@click.argument("filename")
+def export_backup(backup_passphrase, filename):
+    """Export the content of a NetHSM backup file.
+
+    The key-value data stored in the backup file is printed to the standard
+    output as a JSON object using the base64 encoding for binary data.
+    Additionally, the .locked-domain-key and .version keys are set with the
+    domain key and version info extracted from the backup file."""
+
+    with open(filename, "rb") as f:
+        data = f.read()
+    try:
+        encrypted = EncryptedBackup.parse(data)
+    except ValueError as e:
+        raise CliException(f"Failed to parse backup metadata: {e}", support_hint=False)
+
+    try:
+        decrypted = encrypted.decrypt(backup_passphrase)
+    except ValueError as e:
+        raise CliException(f"Failed to decrypt backup content: {e}", support_hint=False)
+
+    data = {}
+    data[".locked-domain-key"] = base64.b64encode(decrypted.domain_key).decode()
+    data[".version"] = decrypted.version
+    for key, value in decrypted.data.items():
+        data[key] = base64.b64encode(value).decode()
+
+    json.dump(data, sys.stdout, indent=4)
+    print()
 
 
 @nethsm.command()

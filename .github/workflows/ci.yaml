@@ -19,7 +19,7 @@ jobs:
       - name: Install required packages
         run: |
           apt update
-          apt install -y gcc libpcsclite-dev make swig
+          apt install -y gcc libpcsclite-dev make swig git
       - name: Create virtual environment
         run: make init
       - name: Check code format
@@ -36,7 +36,7 @@ jobs:
       - name: Install required packages
         run: |
           apt update
-          apt install -y gcc libpcsclite-dev make swig
+          apt install -y gcc libpcsclite-dev make swig git
       - name: Create virtual environment
         run: make init
       - name: Check code import format
@@ -53,7 +53,7 @@ jobs:
       - name: Install required packages
         run: |
           apt update
-          apt install -y gcc libpcsclite-dev make swig
+          apt install -y gcc libpcsclite-dev make swig git
       - name: Create virtual environment
         run: make init
       - name: Check code style
@@ -70,7 +70,7 @@ jobs:
       - name: Install required packages
         run: |
           apt update
-          apt install -y gcc libpcsclite-dev make swig
+          apt install -y gcc libpcsclite-dev make swig git
       - name: Create virtual environment
         run: make init
       - name: Check code static typing
@@ -87,7 +87,7 @@ jobs:
       - name: Install required packages
         run: |
           apt update
-          apt install -y gcc libpcsclite-dev make swig
+          apt install -y gcc libpcsclite-dev make swig git
       - name: Create virtual environment
         run: make init
       - name: Check code static typing
