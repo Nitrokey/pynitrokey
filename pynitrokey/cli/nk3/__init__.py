@@ -366,7 +366,7 @@ def fetch_update(path: str, force: bool, version: Optional[str]) -> None:
 
 
 @nk3.command()
-@click.argument("image")
+@click.argument("image", type=click.Path(exists=True, dir_okay=False))
 def validate_update(image: str) -> None:
     """
     Validates the given firmware image and prints the firmware version and the signer for all
@@ -398,7 +398,7 @@ def validate_update(image: str) -> None:
 
 
 @nk3.command()
-@click.argument("image", required=False)
+@click.argument("image", type=click.Path(exists=True, dir_okay=False), required=False)
 @click.option(
     "--version",
     help="Set the firmware version to update to (default: latest stable)",
