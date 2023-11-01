@@ -553,7 +553,9 @@ def list_tests(selector: TestSelector) -> None:
         print(f"- {test_case.name}: {test_case.description}")
 
 
-def run_tests(ctx: TestContext, device: Nitrokey3Base, selector: TestSelector) -> bool:
+def run_tests(
+    ctx: TestContext, device: Nitrokey3Base, selector: TestSelector, deny_skipped: bool
+) -> bool:
     test_cases = selector.select()
     if not test_cases:
         raise CliException("No test cases selected", support_hint=False)
@@ -599,4 +601,7 @@ def run_tests(ctx: TestContext, device: Nitrokey3Base, selector: TestSelector) -
     local_print("")
     local_print(f"{n} tests, {success} successful, {skipped} skipped, {failed} failed")
 
-    return all([result.status != TestStatus.FAILURE for result in results])
+    if deny_skipped:
+        return all([result.status == TestStatus.SUCCESS for result in results])
+    else:
+        return all([result.status != TestStatus.FAILURE for result in results])
