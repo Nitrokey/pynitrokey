@@ -411,12 +411,31 @@ def feedkernel(count: int, serial: Optional[str]) -> None:
     local_print(f"entropy after:  0x{open(entropy_info_file).read().strip()}")
 
 
+REQUIREMENT_CHOICE = click.Choice(["discouraged", "preferred", "required"])
+
+
 @click.command()
 @click.option(
     "--host", help="Relying party's host", default="nitrokeys.dev", show_default=True
 )
 @click.option("--user", help="User ID", default="they", show_default=True)
-def make_credential(host: str, user: str) -> None:
+@click.option(
+    "--resident-key",
+    help="Whether to create a resident key",
+    type=REQUIREMENT_CHOICE,
+    default="discouraged",
+    show_default=True,
+)
+@click.option(
+    "--user-verification",
+    help="Whether to perform user verification (PIN query)",
+    type=REQUIREMENT_CHOICE,
+    default="preferred",
+    show_default=True,
+)
+def make_credential(
+    host: str, user: str, resident_key: str, user_verification: str
+) -> None:
     """Generate a credential.
 
     Pass `--prompt ""` to output only the `credential_id` as hex.
@@ -426,6 +445,8 @@ def make_credential(host: str, user: str) -> None:
         host=host,
         user_id=user,
         output=True,
+        resident_key=resident_key,
+        user_verification=user_verification,
     )
 
 

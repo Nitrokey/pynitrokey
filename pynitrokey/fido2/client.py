@@ -28,11 +28,14 @@ from fido2.ctap2.credman import CredentialManagement
 from fido2.ctap2.pin import ClientPin
 from fido2.hid import CTAPHID, CtapHidDevice, open_device
 from fido2.webauthn import (
+    AuthenticatorSelectionCriteria,
     PublicKeyCredentialCreationOptions,
     PublicKeyCredentialParameters,
     PublicKeyCredentialRpEntity,
     PublicKeyCredentialType,
     PublicKeyCredentialUserEntity,
+    ResidentKeyRequirement,
+    UserVerificationRequirement,
 )
 from intelhex import IntelHex
 
@@ -248,6 +251,8 @@ class NKFido2Client:
         self,
         host: str = "nitrokeys.dev",
         user_id: str = "they",
+        resident_key: str = "",
+        user_verification: str = "",
         output: bool = True,
         fingerprint_only: bool = False,
     ) -> str:
@@ -272,6 +277,10 @@ class NKFido2Client:
                 ),
             ],
             extensions={"hmacCreateSecret": True},
+            authenticator_selection=AuthenticatorSelectionCriteria(
+                resident_key=ResidentKeyRequirement(resident_key),
+                user_verification=UserVerificationRequirement(user_verification),
+            ),
         )
         self.client.origin = f"https://{host}"
         attestation_object = self.client.make_credential(options).attestation_object
