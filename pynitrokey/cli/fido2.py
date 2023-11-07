@@ -413,41 +413,19 @@ def feedkernel(count: int, serial: Optional[str]) -> None:
 
 @click.command()
 @click.option(
-    "-s",
-    "--serial",
-    help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
-)
-@click.option(
     "--host", help="Relying party's host", default="nitrokeys.dev", show_default=True
 )
 @click.option("--user", help="User ID", default="they", show_default=True)
-@click.option("--pin", help="provide PIN instead of asking the user", default=None)
-@click.option(
-    "--udp", is_flag=True, default=False, help="Communicate over UDP with software key"
-)
-@click.option(
-    "--prompt",
-    help="Prompt for user",
-    default="Touch your authenticator to generate a credential...",
-    show_default=True,
-)
-def make_credential(
-    serial: Optional[str], host: str, user: str, udp: bool, prompt: str, pin: str
-) -> None:
+def make_credential(host: str, user: str) -> None:
     """Generate a credential.
 
     Pass `--prompt ""` to output only the `credential_id` as hex.
     """
 
-    if not pin:
-        pin = AskUser.hidden("Please provide pin: ")
-
     nkfido2.find().make_credential(
         host=host,
         user_id=user,
-        serial=serial,
         output=True,
-        udp=udp,
     )
 
 

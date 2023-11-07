@@ -20,12 +20,20 @@ from getpass import getpass
 from typing import Any, Callable, List, Optional, Tuple, Union
 
 from fido2.client import Fido2Client, UserInteraction
+from fido2.cose import ES256, EdDSA
 from fido2.ctap import CtapError
 from fido2.ctap1 import Ctap1
 from fido2.ctap2 import CredentialManagement, Ctap2
 from fido2.ctap2.credman import CredentialManagement
 from fido2.ctap2.pin import ClientPin
 from fido2.hid import CTAPHID, CtapHidDevice, open_device
+from fido2.webauthn import (
+    PublicKeyCredentialCreationOptions,
+    PublicKeyCredentialParameters,
+    PublicKeyCredentialRpEntity,
+    PublicKeyCredentialType,
+    PublicKeyCredentialUserEntity,
+)
 from intelhex import IntelHex
 
 import pynitrokey.exceptions
@@ -240,11 +248,7 @@ class NKFido2Client:
         self,
         host: str = "nitrokeys.dev",
         user_id: str = "they",
-        serial: Optional[str] = None,
-        pin: Optional[str] = None,
-        prompt: str = "Touch your authenticator to generate a credential...",
         output: bool = True,
-        udp: bool = False,
         fingerprint_only: bool = False,
     ) -> str:
 
@@ -253,30 +257,24 @@ class NKFido2Client:
             device's model and firmware.
         """
 
-        _user_id = user_id.encode()
-        assert isinstance(self.client, Fido2Client)
-        client = self.client
+        assert self.client is not None
 
-        # @todo: rewrite with typing; use fido2.webauthn.PublicKeyCredentialCreationOptions
-        rp = {"id": host, "name": "Example RP"}
-        client.host = host  # type: ignore
-        client.origin = f"https://{client.host}"  # type: ignore
-        client.user_id = _user_id  # type: ignore
-        user = {"id": _user_id, "name": "A. User"}
-        challenge = secrets.token_bytes(32)
-        # @todo: ... pass PublicKeyCredentialCreationOptions here
-        attestation_object = client.make_credential(
-            {
-                "rp": rp,
-                "user": user,
-                "challenge": challenge,
-                "pubKeyCredParams": [
-                    {"type": "public-key", "alg": -8},
-                    {"type": "public-key", "alg": -7},
-                ],
-                "extensions": {"hmacCreateSecret": True},
-            },  # type: ignore
-        ).attestation_object
+        options = PublicKeyCredentialCreationOptions(
+            rp=PublicKeyCredentialRpEntity(name="Example RP", id=host),
+            user=PublicKeyCredentialUserEntity(name="A. User", id=user_id.encode()),
+            challenge=secrets.token_bytes(32),
+            pub_key_cred_params=[
+                PublicKeyCredentialParameters(
+                    type=PublicKeyCredentialType.PUBLIC_KEY, alg=EdDSA.ALGORITHM
+                ),
+                PublicKeyCredentialParameters(
+                    type=PublicKeyCredentialType.PUBLIC_KEY, alg=ES256.ALGORITHM
+                ),
+            ],
+            extensions={"hmacCreateSecret": True},
+        )
+        self.client.origin = f"https://{host}"
+        attestation_object = self.client.make_credential(options).attestation_object
 
         if fingerprint_only:
             if "x5c" not in attestation_object.att_stmt:
@@ -287,8 +285,9 @@ class NKFido2Client:
             return sha256(data[0]).digest().hex()
 
         credential = attestation_object.auth_data.credential_data
-        # @todo: this generally will not work, fix this
-        credential_id = credential.credential_id  # type: ignore
+        if not credential:
+            raise ValueError("No credential ID available")
+        credential_id = credential.credential_id
         if output:
             print(credential_id.hex())
 
