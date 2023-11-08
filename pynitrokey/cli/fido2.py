@@ -411,43 +411,42 @@ def feedkernel(count: int, serial: Optional[str]) -> None:
     local_print(f"entropy after:  0x{open(entropy_info_file).read().strip()}")
 
 
+REQUIREMENT_CHOICE = click.Choice(["discouraged", "preferred", "required"])
+
+
 @click.command()
-@click.option(
-    "-s",
-    "--serial",
-    help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
-)
 @click.option(
     "--host", help="Relying party's host", default="nitrokeys.dev", show_default=True
 )
 @click.option("--user", help="User ID", default="they", show_default=True)
-@click.option("--pin", help="provide PIN instead of asking the user", default=None)
 @click.option(
-    "--udp", is_flag=True, default=False, help="Communicate over UDP with software key"
+    "--resident-key",
+    help="Whether to create a resident key",
+    type=REQUIREMENT_CHOICE,
+    default="discouraged",
+    show_default=True,
 )
 @click.option(
-    "--prompt",
-    help="Prompt for user",
-    default="Touch your authenticator to generate a credential...",
+    "--user-verification",
+    help="Whether to perform user verification (PIN query)",
+    type=REQUIREMENT_CHOICE,
+    default="preferred",
     show_default=True,
 )
 def make_credential(
-    serial: Optional[str], host: str, user: str, udp: bool, prompt: str, pin: str
+    host: str, user: str, resident_key: str, user_verification: str
 ) -> None:
     """Generate a credential.
 
     Pass `--prompt ""` to output only the `credential_id` as hex.
     """
 
-    if not pin:
-        pin = AskUser.hidden("Please provide pin: ")
-
     nkfido2.find().make_credential(
         host=host,
         user_id=user,
-        serial=serial,
         output=True,
-        udp=udp,
+        resident_key=resident_key,
+        user_verification=user_verification,
     )
 
 
