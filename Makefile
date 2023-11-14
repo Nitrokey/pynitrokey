@@ -132,7 +132,7 @@ build-CI-test:
 CI-test:
 	sudo docker run -it --rm -v $(PWD):/app nitro-python-ci make CI VENV=venv-ci
 
-.PHONY: secrets-test-all secrets-test secrets-test-report
+.PHONY: secrets-test-all secrets-test secrets-test-report secrets-test-report-CI
 LOG=info
 TESTADD=
 TESTPARAM=-x -s -o log_cli=true -o log_cli_level=$(LOG) -W ignore::DeprecationWarning $(TESTADD)
@@ -147,7 +147,13 @@ REPORT=report.html
 secrets-test-report:
 	./venv/bin/pytest  -v pynitrokey/test_secrets_app.py --durations=0 -o log_cli=false -o log_cli_level=debug -W ignore::DeprecationWarning --template=html1/index.html --report $(REPORT)
 	@echo "Report written to $(REPORT)"
-	xdg-open $(REPORT)
+
+
+REPORT=report.html
+secrets-test-report-CI:
+	./venv/bin/pytest  -v pynitrokey/test_secrets_app.py --durations=0  -m "not slow" -o log_cli=false -o log_cli_level=debug -W ignore::DeprecationWarning --template=html1/index.html --report $(REPORT) --junitxml=report-junit.xml $(TESTADD)
+	@echo "Report written to $(REPORT)"
+
 
 CORPUS_PATH=$(shell mktemp -d)
 secrets-test-generate-corpus:
