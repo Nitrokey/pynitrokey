@@ -12,6 +12,7 @@ import os
 import platform
 import struct
 import sys
+from dataclasses import dataclass
 from time import sleep, time
 from typing import List, Literal, Optional
 
@@ -26,6 +27,7 @@ from fido2.client import ClientError as Fido2ClientError
 from fido2.ctap import CtapError
 from fido2.ctap1 import ApduError
 from fido2.ctap2.base import Ctap2
+from fido2.ctap2.blob import LargeBlobs
 from fido2.ctap2.credman import CredentialManagement
 from fido2.ctap2.pin import ClientPin, PinProtocol
 from fido2.hid import CtapHidDevice
@@ -33,6 +35,7 @@ from fido2.hid import CtapHidDevice
 import pynitrokey
 import pynitrokey.fido2 as nkfido2
 import pynitrokey.fido2.operations
+from pynitrokey.cli.exceptions import CliException
 from pynitrokey.cli.monitor import monitor
 from pynitrokey.cli.program import program
 from pynitrokey.cli.update import update
@@ -844,6 +847,119 @@ def reboot(serial: Optional[str], udp: bool) -> None:
         local_critical(f"...failed ({str(e)})")
 
 
+def _large_blobs(client: NKFido2Client) -> LargeBlobs:
+    large_blobs = client.large_blobs()
+    if large_blobs is None:
+        raise CliException("Device does not support large blobs", support_hint=False)
+    return large_blobs
+
+
+def _cred_mgmt(client: NKFido2Client, pin: str) -> Optional[CredentialManagement]:
+    if not client.ctap2:
+        return None
+    if not CredentialManagement.is_supported(client.ctap2.info):
+        return None
+    client_pin = ClientPin(client.ctap2)
+    try:
+        client_token = client_pin.get_pin_token(pin)
+    except CtapError as error:
+        if error.code == CtapError.ERR.PIN_NOT_SET:
+            return None
+        elif error.code == CtapError.ERR.PIN_AUTH_BLOCKED:
+            raise CliException(
+                "Pin authentication is blocked, try reinserting the key or setting a pin if none is set.",
+                support_hint=False,
+            )
+        elif error.code == CtapError.ERR.PIN_BLOCKED:
+            raise CliException(
+                "Your device has been blocked after too many failed unlock attempts.  You need to reset it to fix this. "
+                "If no pin is set, reinserting the key might fix this warning.",
+                support_hint=False,
+            )
+        else:
+            raise
+    return CredentialManagement(client.ctap2, client_pin.protocol, client_token)
+
+
+@dataclass
+class LargeBlobKey:
+    rp: str
+    cred: str
+    large_blob_key: str
+
+
+def _large_blob_keys(cred_mgmt: CredentialManagement) -> List[LargeBlobKey]:
+    credentials = []
+
+    for rp in cred_mgmt.enumerate_rps():
+        rp_id_hash = rp[CredentialManagement.RESULT.RP_ID_HASH]
+        rp_entity = rp[CredentialManagement.RESULT.RP]
+        rp_label = rp_entity.get("name", rp_entity.get("id", rp_id_hash))
+        for cred in cred_mgmt.enumerate_creds(rp_id_hash):
+            if CredentialManagement.RESULT.LARGE_BLOB_KEY not in cred:
+                continue
+            user_entity = cred[CredentialManagement.RESULT.USER]
+            cred_id = cred[CredentialManagement.RESULT.CREDENTIAL_ID]
+            cred_label = user_entity.get(
+                "displayName", user_entity.get("name", cred_id["id"].hex())
+            )
+            large_blob_key = cred[CredentialManagement.RESULT.LARGE_BLOB_KEY]
+            credentials.append(
+                LargeBlobKey(
+                    rp=rp_label, cred=cred_label, large_blob_key=large_blob_key
+                )
+            )
+
+    return credentials
+
+
+@click.command()
+def list_large_blobs() -> None:
+    """
+    List the large blobs on the FIDO2 device.
+
+    This command only works for models that implement the Large Blobs extension
+    for FIDO2.
+    """
+    # TODO: use public API
+    import zlib
+
+    from fido2.ctap2.blob import _decompress, _lb_unpack
+
+    pin = AskUser.hidden("Please provide pin: ")
+    client = nkfido2.find()
+    large_blobs = _large_blobs(client)
+    large_blob_array = large_blobs.read_blob_array()
+    print(f"Found large blob array with {len(large_blob_array)} elements")
+
+    cred_mgmt = _cred_mgmt(client, pin)
+    large_blob_keys = _large_blob_keys(cred_mgmt) if cred_mgmt else []
+    print(f"Found {len(large_blob_keys)} credentials with large blob keys")
+
+    print()
+    print("Large blob array:")
+
+    for entry in large_blob_array:
+        key = None
+        blob = None
+        for large_blob_key in large_blob_keys:
+            try:
+                compressed, orig_size = _lb_unpack(large_blob_key.large_blob_key, entry)  # type: ignore[no-untyped-call]
+                decompressed = _decompress(compressed)  # type: ignore[no-untyped-call]
+                if len(decompressed) == orig_size:
+                    key = large_blob_key
+                    blob = decompressed
+                    break
+            except (ValueError, zlib.error):
+                pass
+
+        if blob and key:
+            print(f"- entry for {key.rp}/{key.cred}:")
+            print(f"  {blob.hex()}")
+        else:
+            print("- entry without matching key")
+
+
 fido2.add_command(rng)
 
 # @fixme: this one exists twice, once here, once in "util program aux"
@@ -869,6 +985,8 @@ fido2.add_command(wink)
 
 fido2.add_command(set_pin)
 fido2.add_command(change_pin)
+
+fido2.add_command(list_large_blobs)
 
 fido2.add_command(util)
 
