@@ -14,8 +14,8 @@ from secrets import token_bytes
 from struct import pack
 from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
 
-import semver
 import tlv8
+from semver.version import Version
 
 from pynitrokey.nk3.device import Nitrokey3Device
 from pynitrokey.start.gnuk_token import iso7816_compose
@@ -851,6 +851,6 @@ class SecretsApp:
         return not (counter is None or counter == 0)
 
     def _semver_equal_or_newer(self, required_version: str) -> bool:
-        current = semver.Version.parse(self.get_feature_status_cached().version_str())
-        semver_req_version = semver.Version.parse(required_version)
+        current = Version.parse(self.get_feature_status_cached().version_str())
+        semver_req_version = Version.parse(required_version)
         return current >= semver_req_version

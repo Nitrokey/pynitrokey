@@ -17,7 +17,7 @@ import serial
 
 @click.command()
 @click.argument("serial_port")
-def monitor(serial_port):
+def monitor(serial_port: str) -> None:
     """Reads Nitrokey  serial output from USB serial port SERIAL_PORT.
 
     SERIAL-PORT is something like /dev/ttyACM0 or COM10.
@@ -36,7 +36,7 @@ def monitor(serial_port):
             sys.stdout.flush()
         time.sleep(0.5)
 
-    def reconnect():
+    def reconnect() -> serial.Serial:
         while True:
             time.sleep(0.5)
             try:

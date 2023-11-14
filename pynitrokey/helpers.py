@@ -22,7 +22,7 @@ from threading import Event, Timer
 from typing import Any, Callable, Dict, List, NoReturn, Optional, Tuple, TypeVar, Union
 
 import click
-import semver
+from semver.version import Version
 from tqdm import tqdm
 
 from pynitrokey.confconsts import (
@@ -98,7 +98,7 @@ class ProgressBar:
     """
 
     def __init__(self, **kwargs: Any) -> None:
-        self.bar: Optional[tqdm] = None
+        self.bar: Optional[tqdm[Any]] = None
         self.kwargs = kwargs
         self.sum = 0
 
@@ -413,9 +413,9 @@ def check_pynitrokey_version() -> None:
     """Checks wether the used pynitrokey version is the latest available version and warns the user if the used version is outdated"""
 
     latest_release = Repository("Nitrokey", "pynitrokey").get_latest_release()
-    latest_version = semver.Version.parse(latest_release.tag[1:])
+    latest_version = Version.parse(latest_release.tag[1:])
 
-    current_version = semver.Version.parse(version("pynitrokey"))
+    current_version = Version.parse(version("pynitrokey"))
 
     if current_version < latest_version:
         local_print(

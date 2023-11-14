@@ -7,13 +7,19 @@
 # http://opensource.org/licenses/MIT>, at your option. This file may not be
 # copied, modified, or distributed except according to those terms.
 
+from typing import Any
+
 from pynitrokey.helpers import local_critical
 
 
 class CliException(Exception):
     def __init__(
-        self, *messages, support_hint: bool = True, ret_code: int = 1, **kwargs
-    ):
+        self,
+        *messages: Any,
+        support_hint: bool = True,
+        ret_code: int = 1,
+        **kwargs: Any,
+    ) -> None:
         super().__init__("\n".join([str(message) for message in messages]))
 
         self.messages = messages
@@ -21,7 +27,7 @@ class CliException(Exception):
         self.ret_code = ret_code
         self.kwargs = kwargs
 
-    def show(self):
+    def show(self) -> None:
         local_critical(
             *self.messages,
             support_hint=self.support_hint,

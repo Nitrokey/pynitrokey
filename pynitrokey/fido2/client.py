@@ -23,7 +23,7 @@ from fido2.client import Fido2Client, UserInteraction
 from fido2.cose import ES256, EdDSA
 from fido2.ctap import CtapError
 from fido2.ctap1 import Ctap1
-from fido2.ctap2 import CredentialManagement, Ctap2
+from fido2.ctap2.base import Ctap2
 from fido2.ctap2.credman import CredentialManagement
 from fido2.ctap2.pin import ClientPin
 from fido2.hid import CTAPHID, CtapHidDevice, open_device

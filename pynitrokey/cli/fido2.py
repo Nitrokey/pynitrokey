@@ -25,7 +25,8 @@ from fido2.cbor import dump_dict
 from fido2.client import ClientError as Fido2ClientError
 from fido2.ctap import CtapError
 from fido2.ctap1 import ApduError
-from fido2.ctap2 import CredentialManagement, Ctap2
+from fido2.ctap2.base import Ctap2
+from fido2.ctap2.credman import CredentialManagement
 from fido2.ctap2.pin import ClientPin, PinProtocol
 from fido2.hid import CtapHidDevice
 

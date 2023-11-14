@@ -14,7 +14,7 @@ import sys
 from typing import List, Optional, Tuple
 
 from spsdk.mboot import McuBoot, StatusCode
-from spsdk.mboot.interfaces import RawHid
+from spsdk.mboot.interfaces.usb import RawHid
 from spsdk.mboot.properties import PropertyTag
 from spsdk.sbfile.sb2.images import BootImageV21
 from spsdk.utils.usbfilter import USBDeviceFilter
