@@ -21,6 +21,7 @@ class AdminCommand(Enum):
     GET_CONFIG = 0x82
     SET_CONFIG = 0x83
     FACTORY_RESET = 0x84
+    FACTORY_RESET_APP = 0x85
 
 
 @enum.unique
@@ -199,4 +200,19 @@ class AdminApp:
                 return
             else:
                 raise e
+        FactoryResetStatus.check(reply[0], "Failed to factory reset the device")
+
+    def factory_reset_app(self, application: str) -> None:
+        local_print("Please touch the device to confirm the operation", file=sys.stderr)
+        reply = self._call(
+            AdminCommand.FACTORY_RESET_APP,
+            data=application.encode("ascii"),
+            response_len=1,
+        )
+        if reply is None:
+            local_critical(
+                "Application Factory reset is not supported by the firmware version on the device",
+                support_hint=False,
+            )
+            return
         FactoryResetStatus.check(reply[0], "Failed to factory reset the device")

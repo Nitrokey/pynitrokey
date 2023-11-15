@@ -511,6 +511,19 @@ def factory_reset(ctx: Context) -> None:
         device.factory_reset()
 
 
+# We consciously do not allow resetting the admin app
+APPLICATIONS_CHOICE = click.Choice(["fido", "opcard", "secrets", "piv", "webcrypt"])
+
+
+@nk3.command()
+@click.pass_obj
+@click.argument("application", type=APPLICATIONS_CHOICE, required=True)
+def factory_reset_app(ctx: Context, application: str) -> None:
+    """Factory reset all functionality of an application"""
+    with ctx.connect_device() as device:
+        device.factory_reset_app(application)
+
+
 @nk3.command()
 @click.pass_obj
 def wink(ctx: Context) -> None:

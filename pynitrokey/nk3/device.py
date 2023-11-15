@@ -117,6 +117,9 @@ class Nitrokey3Device(Nitrokey3Base):
     def factory_reset(self) -> None:
         self.admin.factory_reset()
 
+    def factory_reset_app(self, app: str) -> None:
+        self.admin.factory_reset_app(app)
+
     def wink(self) -> None:
         self.device.wink()
 
