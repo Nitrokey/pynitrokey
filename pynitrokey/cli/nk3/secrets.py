@@ -385,19 +385,6 @@ def abort_if_not_supported(cond: bool, name: str = "") -> None:
         raise click.Abort()
 
 
-def check_experimental_flag(experimental: bool) -> None:
-    """Helper function to show common warning for the experimental features"""
-    if not experimental:
-        local_print(" ")
-        local_print(
-            "This feature is experimental, which means it was not tested thoroughly.\n"
-            "Note: data stored with it can be lost in the next firmware update.\n"
-            "Please pass --experimental switch to force running it anyway."
-        )
-        local_print(" ")
-        raise click.Abort()
-
-
 def ask_to_touch_if_needed() -> None:
     """Helper function to show common request for the touch if device signalizes it"""
     local_print("Please touch the device if it blinks", file=sys.stderr)
