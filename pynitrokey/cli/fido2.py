@@ -885,7 +885,8 @@ def _cred_mgmt(client: NKFido2Client, pin: str) -> Optional[CredentialManagement
 class LargeBlobKey:
     rp: str
     cred: str
-    large_blob_key: str
+    cred_id: str
+    large_blob_key: bytes
 
 
 def _large_blob_keys(cred_mgmt: CredentialManagement) -> List[LargeBlobKey]:
@@ -906,7 +907,7 @@ def _large_blob_keys(cred_mgmt: CredentialManagement) -> List[LargeBlobKey]:
             large_blob_key = cred[CredentialManagement.RESULT.LARGE_BLOB_KEY]
             credentials.append(
                 LargeBlobKey(
-                    rp=rp_label, cred=cred_label, large_blob_key=large_blob_key
+                    rp=rp_label, cred=cred_label, cred_id=cred_id["id"].hex(), large_blob_key=large_blob_key
                 )
             )
 
@@ -960,6 +961,69 @@ def list_large_blobs() -> None:
             print("- entry without matching key")
 
 
+@click.command()
+@click.argument("cred-id")
+@click.argument("blob")
+def set_large_blob(cred_id: str, blob: str) -> None:
+    """
+    List the large blobs on the FIDO2 device.
+
+    This command only works for models that implement the Large Blobs extension
+    for FIDO2.
+    """
+    pin = AskUser.hidden("Please provide pin: ")
+    client = nkfido2.find()
+    assert client.ctap2
+
+    client_pin = ClientPin(client.ctap2)
+    client_token = client_pin.get_pin_token(pin)
+    cred_mgmt = CredentialManagement(client.ctap2, client_pin.protocol, client_token)
+
+    large_blob_keys = _large_blob_keys(cred_mgmt) if cred_mgmt else []
+
+    large_blob_key = None
+    for key in large_blob_keys:
+        if key.cred_id == cred_id:
+            large_blob_key = key
+            break
+    if not large_blob_key:
+        raise CliException(f"No credential with large blob key and ID {cred_id} found", support_hint=False)
+
+    large_blobs = LargeBlobs(client.ctap2, client_pin.protocol, client_token)
+    large_blobs.put_blob(large_blob_key.large_blob_key, blob.encode())
+
+
+@click.command()
+@click.argument("cred-id")
+def delete_large_blob(cred_id: str) -> None:
+    """
+    List the large blobs on the FIDO2 device.
+
+    This command only works for models that implement the Large Blobs extension
+    for FIDO2.
+    """
+    pin = AskUser.hidden("Please provide pin: ")
+    client = nkfido2.find()
+    assert client.ctap2
+
+    client_pin = ClientPin(client.ctap2)
+    client_token = client_pin.get_pin_token(pin)
+    cred_mgmt = CredentialManagement(client.ctap2, client_pin.protocol, client_token)
+
+    large_blob_keys = _large_blob_keys(cred_mgmt) if cred_mgmt else []
+
+    large_blob_key = None
+    for key in large_blob_keys:
+        if key.cred_id == cred_id:
+            large_blob_key = key
+            break
+    if not large_blob_key:
+        raise CliException(f"No credential with large blob key and ID {cred_id} found", support_hint=False)
+
+    large_blobs = LargeBlobs(client.ctap2, client_pin.protocol, client_token)
+    large_blobs.delete_blob(large_blob_key.large_blob_key)
+
+
 fido2.add_command(rng)
 
 # @fixme: this one exists twice, once here, once in "util program aux"
@@ -987,6 +1051,8 @@ fido2.add_command(set_pin)
 fido2.add_command(change_pin)
 
 fido2.add_command(list_large_blobs)
+fido2.add_command(set_large_blob)
+fido2.add_command(delete_large_blob)
 
 fido2.add_command(util)
 
