@@ -218,6 +218,14 @@ def provision(
     used."""
     if not system_time:
         system_time = datetime.datetime.now(datetime.timezone.utc)
+
+    print(
+        "Warning: The unlock passphrase cannot be reset without knowing the current value. If the "
+        "unlock passphrase is lost, neither can it be reset to a new value nor can the NetHSM be "
+        "unlocked.",
+        file=sys.stderr,
+    )
+
     with connect(ctx, require_auth=False) as nethsm:
         nethsm.provision(unlock_passphrase, admin_passphrase, system_time)
         print(f"NetHSM {nethsm.host} provisioned")
@@ -824,9 +832,15 @@ def get_config(ctx: Context, **kwargs: bool) -> None:
     "--current-passphrase",
     help="The current backup passphrase (or an empty string if not set)",
 )
+@click.option(
+    "-f",
+    "--force",
+    is_flag=True,
+    help="Do not ask for confirmation before changing the passphrase",
+)
 @click.pass_context
 def set_backup_passphrase(
-    ctx: Context, new_passphrase: str, current_passphrase: Optional[str]
+    ctx: Context, new_passphrase: str, current_passphrase: Optional[str], force: bool
 ) -> None:
     """Set the backup passphrase of a NetHSM.
 
@@ -835,6 +849,18 @@ def set_backup_passphrase(
 
     This command requires authentication as a user with the Administrator
     role."""
+
+    print(
+        "Warning: The backup passphrase cannot be reset without knowing the current value. If the "
+        "backup passphrase is lost, neither can it be reset to a new value nor can the created "
+        "backups be restored.",
+        file=sys.stderr,
+    )
+
+    confirmed = force or click.confirm("Do you want to continue?")
+    if not confirmed:
+        raise click.Abort()
+
     if not current_passphrase:
         current_passphrase = prompt_str(
             "The current backup passphrase (or an empty string if not set)",
@@ -864,9 +890,15 @@ def set_backup_passphrase(
     prompt=True,
     help="The current unlock passphrase",
 )
+@click.option(
+    "-f",
+    "--force",
+    is_flag=True,
+    help="Do not ask for confirmation before changing the passphrase",
+)
 @click.pass_context
 def set_unlock_passphrase(
-    ctx: Context, new_passphrase: str, current_passphrase: str
+    ctx: Context, new_passphrase: str, current_passphrase: str, force: bool
 ) -> None:
     """Set the unlock passphrase of a NetHSM.
 
@@ -874,6 +906,18 @@ def set_unlock_passphrase(
 
     This command requires authentication as a user with the Administrator
     role."""
+
+    print(
+        "Warning: The unlock passphrase cannot be reset without knowing the current value. If the "
+        "unlock passphrase is lost, neither can it be reset to a new value nor can the NetHSM be "
+        "unlocked.",
+        file=sys.stderr,
+    )
+
+    confirmed = force or click.confirm("Do you want to continue?")
+    if not confirmed:
+        raise click.Abort()
+
     with connect(ctx) as nethsm:
         nethsm.set_unlock_passphrase(
             new_passphrase=new_passphrase, current_passphrase=current_passphrase
