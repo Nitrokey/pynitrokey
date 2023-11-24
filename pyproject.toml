@@ -39,7 +39,7 @@ dependencies = [
   "protobuf >=3.17.3, < 4.0.0",
   "click-aliases",
   "semver",
-  "nethsm >= 0.4,<0.5",
+  "nethsm >=0.5, <0.6",
 ]
 dynamic = ["version", "description"]
 
@@ -86,7 +86,6 @@ strict = true
 [[tool.mypy.overrides]]
 module = [
     "pynitrokey.cli",
-    "pynitrokey.cli.nethsm",
     "pynitrokey.cli.pro",
     "pynitrokey.cli.program",
     "pynitrokey.cli.start",
