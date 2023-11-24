@@ -41,23 +41,26 @@ class Version:
     both version instances are complete.
 
     >>> Version(1, 0, 0)
-    Version(major=1, minor=0, patch=0, pre=None)
+    Version(major=1, minor=0, patch=0, pre=None, build=None)
     >>> Version.from_str("1.0.0")
-    Version(major=1, minor=0, patch=0, pre=None)
+    Version(major=1, minor=0, patch=0, pre=None, build=None)
     >>> Version.from_v_str("v1.0.0")
-    Version(major=1, minor=0, patch=0, pre=None)
+    Version(major=1, minor=0, patch=0, pre=None, build=None)
     >>> Version(1, 0, 0, "rc.1")
-    Version(major=1, minor=0, patch=0, pre='rc.1')
+    Version(major=1, minor=0, patch=0, pre='rc.1', build=None)
     >>> Version.from_str("1.0.0-rc.1")
-    Version(major=1, minor=0, patch=0, pre='rc.1')
+    Version(major=1, minor=0, patch=0, pre='rc.1', build=None)
     >>> Version.from_v_str("v1.0.0-rc.1")
-    Version(major=1, minor=0, patch=0, pre='rc.1')
+    Version(major=1, minor=0, patch=0, pre='rc.1', build=None)
+    >>> Version.from_v_str("v1.0.0-rc.1+git")
+    Version(major=1, minor=0, patch=0, pre='rc.1', build='git')
     """
 
     major: int
     minor: int
     patch: int
     pre: Optional[str] = None
+    build: Optional[str] = None
     complete: bool = field(default=False, repr=False)
 
     def __str__(self) -> str:
@@ -66,12 +69,16 @@ class Version:
         'v1.0.0'
         >>> str(Version(major=1, minor=0, patch=0, pre="rc.1"))
         'v1.0.0-rc.1'
+        >>> str(Version(major=1, minor=0, patch=0, pre="rc.1", build="git"))
+        'v1.0.0-rc.1+git'
         """
 
+        version = f"v{self.major}.{self.minor}.{self.patch}"
         if self.pre:
-            return f"v{self.major}.{self.minor}.{self.patch}-{self.pre}"
-        else:
-            return f"v{self.major}.{self.minor}.{self.patch}"
+            version += f"-{self.pre}"
+        if self.build:
+            version += f"+{self.build}"
+        return version
 
     def __eq__(self, other: object) -> bool:
         """
@@ -83,6 +90,8 @@ class Version:
         True
         >>> Version.from_str("1.0.0") == Version.from_str("1.0.0-rc.1")
         False
+        >>> Version.from_str("1.0.0") == Version.from_str("1.0.0+git")
+        True
         >>> Version(1, 0, 0, complete=False) == Version.from_str("1.0.0-rc.1")
         True
         >>> Version(1, 0, 0, complete=False) == Version.from_str("1.0.1")
@@ -169,14 +178,16 @@ class Version:
     def core(self) -> "Version":
         """
         Returns the core part of this version, i. e. the version without the
-        pre-release component.
+        pre-release and build components.
 
         >>> Version(1, 0, 0).core()
-        Version(major=1, minor=0, patch=0, pre=None)
+        Version(major=1, minor=0, patch=0, pre=None, build=None)
         >>> Version(1, 0, 0, "rc.1").core()
-        Version(major=1, minor=0, patch=0, pre=None)
+        Version(major=1, minor=0, patch=0, pre=None, build=None)
+        >>> Version(1, 0, 0, "rc.1", "git").core()
+        Version(major=1, minor=0, patch=0, pre=None, build=None)
         """
-        return dataclasses.replace(self, pre=None)
+        return dataclasses.replace(self, pre=None, build=None)
 
     @classmethod
     def from_int(cls, version: int) -> "Version":
@@ -189,6 +200,10 @@ class Version:
 
     @classmethod
     def from_str(cls, s: str) -> "Version":
+        version_parts = s.split("+", maxsplit=1)
+        s = version_parts[0]
+        build = version_parts[1] if len(version_parts) == 2 else None
+
         version_parts = s.split("-", maxsplit=1)
         pre = version_parts[1] if len(version_parts) == 2 else None
 
@@ -202,7 +217,9 @@ class Version:
             raise ValueError(f"Invalid component in firmware version: {s}")
 
         [major, minor, patch] = int_parts
-        return cls(major=major, minor=minor, patch=patch, pre=pre, complete=True)
+        return cls(
+            major=major, minor=minor, patch=patch, pre=pre, build=build, complete=True
+        )
 
     @classmethod
     def from_v_str(cls, s: str) -> "Version":
@@ -225,17 +242,17 @@ class Fido2Certs:
         """
         >>> Fido2Certs.get(Version.from_str("0.0.0"))
         >>> Fido2Certs.get(Version.from_str("0.1.0")).start
-        Version(major=0, minor=1, patch=0, pre=None)
+        Version(major=0, minor=1, patch=0, pre=None, build=None)
         >>> Fido2Certs.get(Version.from_str("0.1.0-rc.1")).start
-        Version(major=0, minor=1, patch=0, pre=None)
+        Version(major=0, minor=1, patch=0, pre=None, build=None)
         >>> Fido2Certs.get(Version.from_str("0.2.0")).start
-        Version(major=0, minor=1, patch=0, pre=None)
+        Version(major=0, minor=1, patch=0, pre=None, build=None)
         >>> Fido2Certs.get(Version.from_str("1.0.3")).start
-        Version(major=1, minor=0, patch=3, pre=None)
+        Version(major=1, minor=0, patch=3, pre=None, build=None)
         >>> Fido2Certs.get(Version.from_str("1.0.3-alpha.1")).start
-        Version(major=1, minor=0, patch=3, pre=None)
+        Version(major=1, minor=0, patch=3, pre=None, build=None)
         >>> Fido2Certs.get(Version.from_str("2.5.0")).start
-        Version(major=1, minor=0, patch=3, pre=None)
+        Version(major=1, minor=0, patch=3, pre=None, build=None)
         """
         certs = [certs for certs in FIDO2_CERTS if version >= certs.start]
         if certs:
