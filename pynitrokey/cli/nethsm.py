@@ -498,8 +498,8 @@ def list_keys(ctx: Context, details: bool, filter: Optional[str]) -> None:
                 data.append(
                     [
                         key_id,
-                        key.type,
-                        ", ".join([str(m) for m in key.mechanisms]),
+                        key.type.value,
+                        ", ".join([m.value for m in key.mechanisms]),
                         key.operations,
                         ", ".join(key.tags) if key.tags is not None else "",
                     ]
