@@ -21,7 +21,7 @@ from typing import Any, Iterable, Iterator, Optional, Protocol, Sequence
 import click
 import nethsm as nethsm_sdk
 from click import Context
-from nethsm import Authentication, NetHSM
+from nethsm import Authentication, Base64, NetHSM
 from nethsm.backup import EncryptedBackup
 
 from pynitrokey.cli.exceptions import CliException
@@ -634,22 +634,22 @@ def prompt_mechanisms(type: str) -> list[str]:
 @click.option(
     "-p",
     "--prime-p",
-    help="The prime p for RSA keys",
+    help="The prime p for RSA keys, base64-encoded",
 )
 @click.option(
     "-q",
     "--prime-q",
-    help="The prime q for RSA keys",
+    help="The prime q for RSA keys, base64-encoded",
 )
 @click.option(
     "-e",
     "--public-exponent",
-    help="The public exponent for RSA keys",
+    help="The public exponent for RSA keys, base64-encoded",
 )
 @click.option(
     "-d",
     "--data",
-    help="The key data for ED25519 or ECDSA_* keys",
+    help="The key data for ED25519 or ECDSA_* keys, base64-encoded",
 )
 @click.option(
     "-k",
@@ -688,7 +688,9 @@ def add_key(
         if not public_exponent:
             public_exponent = prompt_str("Public exponent")
         private_key = nethsm_sdk.RsaPrivateKey(
-            prime_p=prime_p, prime_q=prime_q, public_exponent=public_exponent
+            prime_p=Base64.from_encoded(prime_p),
+            prime_q=Base64.from_encoded(prime_q),
+            public_exponent=Base64.from_encoded(public_exponent),
         )
     else:
         if prime_p:
@@ -701,7 +703,7 @@ def add_key(
             )
         if not data:
             data = prompt_str("Key data")
-        private_key = nethsm_sdk.GenericPrivateKey(data=data)
+        private_key = nethsm_sdk.GenericPrivateKey(data=Base64.from_encoded(data))
 
     with connect(ctx) as nethsm:
         key_id = nethsm.add_key(
@@ -1531,20 +1533,22 @@ def factory_reset(ctx: Context, force: bool) -> None:
     "--initialization-vector",
     "iv",
     type=str,
-    prompt=True,
-    help="The initialization vector",
+    help="The initialization vector in Base64 encoding",
 )
 @click.pass_context
-def encrypt(ctx: Context, key_id: str, data: str, mode: str, iv: str) -> None:
+def encrypt(ctx: Context, key_id: str, data: str, mode: str, iv: Optional[str]) -> None:
     """Encrypt data with an asymmetric secret key on the NetHSM and print the encrypted message.
 
     This command requires authentication as a user with the Operator role."""
     with connect(ctx) as nethsm:
         encrypted = nethsm.encrypt(
-            key_id, data, nethsm_sdk.EncryptMode.from_string(mode), iv
+            key_id,
+            Base64.from_encoded(data),
+            nethsm_sdk.EncryptMode.from_string(mode),
+            iv=Base64.from_encoded(iv) if iv else None,
         )
-        print(f"Encrypted: {encrypted.encrypted}")
-        print(f"Initialization vector: {encrypted.iv}")
+        print(f"Encrypted: {encrypted.encrypted.data}")
+        print(f"Initialization vector: {encrypted.iv.data}")
 
 
 @nethsm.command()
@@ -1572,18 +1576,21 @@ def encrypt(ctx: Context, key_id: str, data: str, mode: str, iv: str) -> None:
     "--initialization-vector",
     "iv",
     type=str,
-    default="",
-    help="The initialization vector",
+    help="The initialization vector in Base64 encoding",
 )
 @click.pass_context
-def decrypt(ctx: Context, key_id: str, data: str, mode: str, iv: str) -> None:
+def decrypt(ctx: Context, key_id: str, data: str, mode: str, iv: Optional[str]) -> None:
     """Decrypt data with a secret key on the NetHSM and print the decrypted message.
 
     This command requires authentication as a user with the Operator role."""
     with connect(ctx) as nethsm:
-        print(
-            nethsm.decrypt(key_id, data, nethsm_sdk.DecryptMode.from_string(mode), iv)
+        decrypted = nethsm.decrypt(
+            key_id,
+            Base64.from_encoded(data),
+            nethsm_sdk.DecryptMode.from_string(mode),
+            Base64.from_encoded(iv) if iv else None,
         )
+        print(decrypted.data)
 
 
 @nethsm.command()
@@ -1612,5 +1619,7 @@ def sign(ctx: Context, key_id: str, data: str, mode: str) -> None:
 
     This command requires authentication as a user with the Operator role."""
     with connect(ctx) as nethsm:
-        signature = nethsm.sign(key_id, data, nethsm_sdk.SignMode.from_string(mode))
-        print(signature)
+        signature = nethsm.sign(
+            key_id, Base64.from_encoded(data), nethsm_sdk.SignMode.from_string(mode)
+        )
+        print(signature.data)

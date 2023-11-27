@@ -39,7 +39,7 @@ dependencies = [
   "protobuf >=3.17.3, < 4.0.0",
   "click-aliases",
   "semver",
-  "nethsm >=0.5, <0.6",
+  "nethsm >= 1.0.0,<2",
 ]
 dynamic = ["version", "description"]
 
