@@ -76,8 +76,9 @@ def print_table(headers: Sequence[str], data: Iterable[Sequence[Any]]) -> None:
     for row in data:
         str_row = []
         for i in range(len(widths)):
-            str_row.append(str(row[i]))
-            widths[i] = max(widths[i], len(row[i]))
+            str_value = str(row[i])
+            str_row.append(str_value)
+            widths[i] = max(widths[i], len(str_value))
         str_data.append(str_row)
 
     print_row(headers, widths)
