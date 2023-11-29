@@ -40,6 +40,10 @@ dependencies = [
   "click-aliases",
   "semver",
   "nethsm >= 1.0.0,<2",
+  "pyopenssl",
+  "pyscard",
+  "asn1crypto",
+  "ber-tlv"
 ]
 dynamic = ["version", "description"]
 
