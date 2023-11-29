@@ -76,8 +76,9 @@ def print_table(headers: Sequence[str], data: Iterable[Sequence[Any]]) -> None:
     for row in data:
         str_row = []
         for i in range(len(widths)):
-            str_row.append(str(row[i]))
-            widths[i] = max(widths[i], len(row[i]))
+            str_value = str(row[i])
+            str_row.append(str_value)
+            widths[i] = max(widths[i], len(str_value))
         str_data.append(str_row)
 
     print_row(headers, widths)
@@ -497,8 +498,8 @@ def list_keys(ctx: Context, details: bool, filter: Optional[str]) -> None:
                 data.append(
                     [
                         key_id,
-                        key.type,
-                        ", ".join([str(m) for m in key.mechanisms]),
+                        key.type.value,
+                        ", ".join([m.value for m in key.mechanisms]),
                         key.operations,
                         ", ".join(key.tags) if key.tags is not None else "",
                     ]
