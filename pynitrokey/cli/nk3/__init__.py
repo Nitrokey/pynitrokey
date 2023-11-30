@@ -21,6 +21,7 @@ from pynitrokey.cli.exceptions import CliException
 from pynitrokey.helpers import (
     DownloadProgressBar,
     Retries,
+    check_experimental_flag,
     local_print,
     require_windows_admin,
 )
@@ -501,6 +502,43 @@ def version(ctx: Context) -> None:
     with ctx.connect_device() as device:
         version = device.version()
         local_print(version)
+
+
+@nk3.command()
+@click.pass_obj
+@click.option(
+    "--experimental",
+    default=False,
+    is_flag=True,
+    help="Allow to execute experimental features",
+    hidden=True,
+)
+def factory_reset(ctx: Context, experimental: bool) -> None:
+    """Factory reset all functionality of the device"""
+    check_experimental_flag(experimental)
+    with ctx.connect_device() as device:
+        device.factory_reset()
+
+
+# We consciously do not allow resetting the admin app
+APPLICATIONS_CHOICE = click.Choice(["fido", "opcard", "secrets", "piv", "webcrypt"])
+
+
+@nk3.command()
+@click.pass_obj
+@click.argument("application", type=APPLICATIONS_CHOICE, required=True)
+@click.option(
+    "--experimental",
+    default=False,
+    is_flag=True,
+    help="Allow to execute experimental features",
+    hidden=True,
+)
+def factory_reset_app(ctx: Context, application: str, experimental: bool) -> None:
+    """Factory reset all functionality of an application"""
+    check_experimental_flag(experimental)
+    with ctx.connect_device() as device:
+        device.factory_reset_app(application)
 
 
 @nk3.command()

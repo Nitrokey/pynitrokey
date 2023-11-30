@@ -1,4 +1,5 @@
 import enum
+import sys
 from dataclasses import dataclass
 from enum import Enum, IntFlag
 from typing import Optional
@@ -6,6 +7,7 @@ from typing import Optional
 from fido2 import cbor
 from fido2.ctap import CtapError
 
+from pynitrokey.helpers import local_critical, local_print
 from pynitrokey.nk3.device import Command, Nitrokey3Device
 
 from .device import VERSION_LEN
@@ -18,6 +20,8 @@ class AdminCommand(Enum):
     TEST_SE050 = 0x81
     GET_CONFIG = 0x82
     SET_CONFIG = 0x83
+    FACTORY_RESET = 0x84
+    FACTORY_RESET_APP = 0x85
 
 
 @enum.unique
@@ -55,6 +59,35 @@ class Status:
     ifs_blocks: Optional[int] = None
     efs_blocks: Optional[int] = None
     variant: Optional[Variant] = None
+
+
+@enum.unique
+class FactoryResetStatus(Enum):
+    SUCCESS = 0
+    NOT_CONFIRMED = 0x01
+    APP_NOT_ALLOWED = 0x02
+    APP_FAILED_PARSE = 0x03
+
+    @classmethod
+    def from_int(cls, i: int) -> Optional["FactoryResetStatus"]:
+        for status in FactoryResetStatus:
+            if status.value == i:
+                return status
+        return None
+
+    @classmethod
+    def check(cls, i: int, msg: str) -> None:
+        status = FactoryResetStatus.from_int(i)
+        if status != FactoryResetStatus.SUCCESS:
+            if status is None:
+                raise Exception(f"Unknown error {i:x}")
+            if status == FactoryResetStatus.NOT_CONFIRMED:
+                error = "Operation was not confirmed with touch"
+            elif status == FactoryResetStatus.APP_NOT_ALLOWED:
+                error = "The application does not support factory reset through nitropy"
+            elif status == FactoryResetStatus.APP_FAILED_PARSE:
+                error = "The application name must be utf-8"
+            local_critical(f"{msg}: {error}", support_hint=False)
 
 
 @enum.unique
@@ -148,3 +181,38 @@ class AdminApp:
         reply = self._call(AdminCommand.SET_CONFIG, data=request, response_len=1)
         assert reply
         ConfigStatus.check(reply[0], "Failed to set config value")
+
+    def factory_reset(self) -> None:
+        try:
+            local_print(
+                "Please touch the device to confirm the operation", file=sys.stderr
+            )
+            reply = self._call(AdminCommand.FACTORY_RESET, response_len=1)
+            if reply is None:
+                local_critical(
+                    "Factory reset is not supported by the firmware version on the device",
+                    support_hint=False,
+                )
+                return
+        except OSError as e:
+            if e.errno == 5:
+                self.device.logger.debug("ignoring OSError after reboot", exc_info=e)
+                return
+            else:
+                raise e
+        FactoryResetStatus.check(reply[0], "Failed to factory reset the device")
+
+    def factory_reset_app(self, application: str) -> None:
+        local_print("Please touch the device to confirm the operation", file=sys.stderr)
+        reply = self._call(
+            AdminCommand.FACTORY_RESET_APP,
+            data=application.encode("ascii"),
+            response_len=1,
+        )
+        if reply is None:
+            local_critical(
+                "Application Factory reset is not supported by the firmware version on the device",
+                support_hint=False,
+            )
+            return
+        FactoryResetStatus.check(reply[0], "Failed to factory reset the device")

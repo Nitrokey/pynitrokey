@@ -426,3 +426,16 @@ def check_pynitrokey_version() -> None:
 
         if not confirm("Do you still want to continue?", default=False):
             raise click.Abort()
+
+
+def check_experimental_flag(experimental: bool) -> None:
+    """Helper function to show common warning for the experimental features"""
+    if not experimental:
+        local_print(" ")
+        local_print(
+            "This feature is experimental, which means it was not tested thoroughly.\n"
+            "Note: data stored with it can be lost in the next firmware update.\n"
+            "Please pass --experimental switch to force running it anyway."
+        )
+        local_print(" ")
+        raise click.Abort()
