@@ -6,8 +6,10 @@
 # http://apache.org/licenses/LICENSE-2.0> or the MIT license <LICENSE-MIT or
 # http://opensource.org/licenses/MIT>, at your option. This file may not be
 # copied, modified, or distributed except according to those terms.
+
 import logging
 import os.path
+import sys
 from hashlib import sha256
 from typing import BinaryIO, Callable, List, Optional, Type, TypeVar
 
@@ -488,7 +490,31 @@ def get_config(ctx: Context, key: str) -> None:
 @click.argument("key")
 @click.argument("value")
 def set_config(ctx: Context, key: str, value: str) -> None:
-    """Query a config value."""
+    """
+    Set a config value.
+
+    This command should not be used directly as it may have unexpected
+    side effects, for example resetting an application.  It is only intended
+    for development and testing.
+    """
+
+    # config fields that don’t have side effects
+    whitelist = [
+        "fido.disable_skip_up_timeout",
+    ]
+
+    if key not in whitelist:
+        print(
+            "Changing configuration values can have unexpected side effects, including data loss.",
+            file=sys.stderr,
+        )
+        print(
+            "This command should only be used for development and testing.",
+            file=sys.stderr,
+        )
+
+        click.confirm("Do you want to continue anyway?", abort=True)
+
     with ctx.connect_device() as device:
         admin = AdminApp(device)
         admin.set_config(key, value)
