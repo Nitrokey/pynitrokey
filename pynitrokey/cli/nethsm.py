@@ -524,9 +524,9 @@ def get_key(ctx: Context, key_id: str, public_key: bool) -> None:
             print(nethsm.get_key_public_key(key_id))
         else:
             key = nethsm.get_key(key_id)
-            mechanisms = ", ".join([str(m) for m in key.mechanisms])
+            mechanisms = ", ".join([str(m.value) for m in key.mechanisms])
             print(f"Key {key_id} on NetHSM {nethsm.host}:")
-            print(f"Type:            {key.type}")
+            print(f"Type:            {key.type.value}")
             print(f"Mechanisms:      {mechanisms}")
             print(f"Operations:      {key.operations}")
             if key.tags:
