@@ -489,35 +489,104 @@ def get_config(ctx: Context, key: str) -> None:
 @click.pass_obj
 @click.argument("key")
 @click.argument("value")
-def set_config(ctx: Context, key: str, value: str) -> None:
+@click.option(
+    "-f",
+    "--force",
+    is_flag=True,
+    default=False,
+    help="Set the config value even if it is not known to pynitrokey",
+)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Perform all checks but don’t execute the configuration change",
+)
+def set_config(ctx: Context, key: str, value: str, force: bool, dry_run: bool) -> None:
     """
     Set a config value.
 
-    This command should not be used directly as it may have unexpected
-    side effects, for example resetting an application.  It is only intended
-    for development and testing.
+    Per default, this command can only be used with configuration values that
+    are known to pynitrokey.  Changing some configuration values can have side
+    effects.  For these values, a summary of the effects of the change and a
+    confirmation prompt will be printed.
+
+    If you use the --force/-f flag, you can also set configuration values that
+    are not known to pynitrokey.  This may have unexpected side effects, for
+    example resetting an application.  It is only intended for development and
+    testing.
+
+    To see the information about a config value without actually performing the
+    change, use the --dry-run flag.
     """
-
-    # config fields that don’t have side effects
-    whitelist = [
-        "fido.disable_skip_up_timeout",
-    ]
-
-    if key not in whitelist:
-        print(
-            "Changing configuration values can have unexpected side effects, including data loss.",
-            file=sys.stderr,
-        )
-        print(
-            "This command should only be used for development and testing.",
-            file=sys.stderr,
-        )
-
-        click.confirm("Do you want to continue anyway?", abort=True)
 
     with ctx.connect_device() as device:
         admin = AdminApp(device)
+
+        # before the confirmation prompt, check if the config value is supported
+        if not admin.has_config(key):
+            raise CliException(
+                f"The configuration option '{key}' is not supported by the device.",
+                support_hint=False,
+            )
+
+        # config fields that don’t have side effects
+        whitelist = [
+            "fido.disable_skip_up_timeout",
+        ]
+        requires_touch = False
+        requires_reboot = False
+
+        if key == "opcard.use_se050_backend":
+            requires_touch = True
+            requires_reboot = True
+            print(
+                "This configuration values determines whether the OpenPGP Card "
+                "application uses a software implementation or the secure element.",
+                file=sys.stderr,
+            )
+            print(
+                "Changing this configuration value will cause a factory reset of "
+                "the OpenPGP card application and destroy all OpenPGP keys and "
+                "user data currently stored on the device.",
+                file=sys.stderr,
+            )
+        elif key not in whitelist:
+            pass
+            print(
+                "Changing configuration values can have unexpected side effects, including data loss.",
+                file=sys.stderr,
+            )
+            print(
+                "This should only be used for development and testing.",
+                file=sys.stderr,
+            )
+
+            if not force:
+                raise CliException(
+                    "Unknown config values can only be set if the --force/-f flag is set.  Aborting.",
+                    support_hint=False,
+                )
+
+        if key not in whitelist:
+            click.confirm("Do you want to continue anyway?", abort=True)
+
+        if dry_run:
+            print("Stopping dry run.", file=sys.stderr)
+            raise click.Abort()
+
+        if requires_touch:
+            print(
+                "Press the touch button to confirm the configuration change.",
+                file=sys.stderr,
+            )
+
         admin.set_config(key, value)
+
+        if requires_reboot:
+            print("Rebooting device to apply config change.")
+            device.reboot()
+
         print(f"Updated configuration {key}.")
 
 

@@ -169,6 +169,12 @@ class AdminApp:
     def se050_tests(self) -> Optional[bytes]:
         return self._call(AdminCommand.TEST_SE050)
 
+    def has_config(self, key: str) -> bool:
+        reply = self._call(AdminCommand.GET_CONFIG, data=key.encode())
+        if not reply or len(reply) < 1:
+            return False
+        return ConfigStatus.from_int(reply[0]) == ConfigStatus.SUCCESS
+
     def get_config(self, key: str) -> str:
         reply = self._call(AdminCommand.GET_CONFIG, data=key.encode())
         if not reply or len(reply) < 1:
