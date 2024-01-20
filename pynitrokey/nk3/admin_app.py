@@ -9,9 +9,9 @@ from fido2.ctap import CtapError
 
 from pynitrokey.helpers import local_critical, local_print
 from pynitrokey.nk3.device import Command, Nitrokey3Device
+from pynitrokey.trussed.utils import Version
 
 from .device import VERSION_LEN
-from .utils import Version
 
 
 @enum.unique
@@ -130,7 +130,7 @@ class AdminApp:
         data: bytes = b"",
     ) -> Optional[bytes]:
         try:
-            return self.device._call(
+            return self.device._call_nk3(
                 Command.ADMIN,
                 response_len=response_len,
                 data=command.value.to_bytes(1, "big") + data,
@@ -159,7 +159,7 @@ class AdminApp:
         return status
 
     def version(self) -> Version:
-        reply = self.device._call(Command.VERSION, data=bytes([0x01]))
+        reply = self.device._call_nk3(Command.VERSION, data=bytes([0x01]))
         if len(reply) == VERSION_LEN:
             version = int.from_bytes(reply, "big")
             return Version.from_int(version)

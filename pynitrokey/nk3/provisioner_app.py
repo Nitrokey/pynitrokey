@@ -34,7 +34,7 @@ class ProvisionerApp:
         response_len: Optional[int] = None,
         data: bytes = b"",
     ) -> bytes:
-        return self.device._call(
+        return self.device._call_nk3(
             Command.PROVISIONER,
             response_len=response_len,
             data=command.value.to_bytes(1, "big") + data,

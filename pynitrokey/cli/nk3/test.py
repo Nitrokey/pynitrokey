@@ -26,9 +26,10 @@ from pynitrokey.fido2 import device_path_to_str
 from pynitrokey.fido2.client import NKFido2Client
 from pynitrokey.helpers import local_print
 from pynitrokey.nk3.admin_app import AdminApp
-from pynitrokey.nk3.base import Nitrokey3Base
 from pynitrokey.nk3.device import Nitrokey3Device
-from pynitrokey.nk3.utils import Fido2Certs, Uuid, Version
+from pynitrokey.nk3.utils import Fido2Certs
+from pynitrokey.trussed.base import NitrokeyTrussedBase
+from pynitrokey.trussed.utils import Uuid, Version
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +70,7 @@ class TestResult:
         self.exc_info = exc_info
 
 
-TestCaseFn = Callable[[TestContext, Nitrokey3Base], TestResult]
+TestCaseFn = Callable[[TestContext, NitrokeyTrussedBase], TestResult]
 
 
 class TestCase:
@@ -133,14 +134,16 @@ def log_system() -> None:
 
 
 @test_case("uuid", "UUID query")
-def test_uuid_query(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
+def test_uuid_query(ctx: TestContext, device: NitrokeyTrussedBase) -> TestResult:
     uuid = device.uuid()
     uuid_str = str(uuid) if uuid else "[not supported]"
     return TestResult(TestStatus.SUCCESS, uuid_str)
 
 
 @test_case("version", "Firmware version query")
-def test_firmware_version_query(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
+def test_firmware_version_query(
+    ctx: TestContext, device: NitrokeyTrussedBase
+) -> TestResult:
     if not isinstance(device, Nitrokey3Device):
         return TestResult(TestStatus.SKIPPED)
     version = device.version()
@@ -149,7 +152,7 @@ def test_firmware_version_query(ctx: TestContext, device: Nitrokey3Base) -> Test
 
 
 @test_case("status", "Device status")
-def test_device_status(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
+def test_device_status(ctx: TestContext, device: NitrokeyTrussedBase) -> TestResult:
     if not isinstance(device, Nitrokey3Device):
         return TestResult(TestStatus.SKIPPED)
     firmware_version = ctx.firmware_version or device.version()
@@ -182,7 +185,7 @@ def test_device_status(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
 
 @test_case("bootloader", "Bootloader configuration")
 def test_bootloader_configuration(
-    ctx: TestContext, device: Nitrokey3Base
+    ctx: TestContext, device: NitrokeyTrussedBase
 ) -> TestResult:
     if not isinstance(device, Nitrokey3Device):
         return TestResult(TestStatus.SKIPPED)
@@ -193,7 +196,7 @@ def test_bootloader_configuration(
 
 
 @test_case("provisioner", "Firmware mode")
-def test_firmware_mode(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
+def test_firmware_mode(ctx: TestContext, device: NitrokeyTrussedBase) -> TestResult:
     try:
         from smartcard import System
         from smartcard.CardConnection import CardConnection
@@ -355,7 +358,7 @@ SE050_STEPS = [
 
 
 @test_case("se050", "SE050")
-def test_se050(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
+def test_se050(ctx: TestContext, device: NitrokeyTrussedBase) -> TestResult:
     from queue import Queue
 
     if not isinstance(device, Nitrokey3Device):
@@ -428,7 +431,7 @@ def test_se050(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
 
 
 @test_case("fido2", "FIDO2")
-def test_fido2(ctx: TestContext, device: Nitrokey3Base) -> TestResult:
+def test_fido2(ctx: TestContext, device: NitrokeyTrussedBase) -> TestResult:
     if not isinstance(device, Nitrokey3Device):
         return TestResult(TestStatus.SKIPPED)
 
@@ -546,7 +549,9 @@ def list_tests(selector: TestSelector) -> None:
         print(f"- {test_case.name}: {test_case.description}")
 
 
-def run_tests(ctx: TestContext, device: Nitrokey3Base, selector: TestSelector) -> bool:
+def run_tests(
+    ctx: TestContext, device: NitrokeyTrussedBase, selector: TestSelector
+) -> bool:
     test_cases = selector.select()
     if not test_cases:
         raise CliException("No test cases selected", support_hint=False)

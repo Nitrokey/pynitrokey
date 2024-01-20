@@ -17,7 +17,7 @@ from pynitrokey.cli.exceptions import CliException
 from pynitrokey.cli.nk3 import Context
 from pynitrokey.helpers import DownloadProgressBar, ProgressBar, confirm, local_print
 from pynitrokey.nk3.updates import Updater, UpdateUi
-from pynitrokey.nk3.utils import Version
+from pynitrokey.trussed.utils import Version
 
 logger = logging.getLogger(__name__)
 

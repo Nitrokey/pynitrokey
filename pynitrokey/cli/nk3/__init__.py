@@ -30,19 +30,20 @@ from pynitrokey.helpers import (
 from pynitrokey.nk3 import list as list_nk3
 from pynitrokey.nk3 import open as open_nk3
 from pynitrokey.nk3.admin_app import AdminApp
-from pynitrokey.nk3.base import Nitrokey3Base
-from pynitrokey.nk3.bootloader import (
-    FirmwareContainer,
-    Nitrokey3Bootloader,
-    parse_firmware_image,
-)
+from pynitrokey.nk3.bootloader import Nitrokey3Bootloader
 from pynitrokey.nk3.device import BootMode, Nitrokey3Device
 from pynitrokey.nk3.exceptions import TimeoutException
 from pynitrokey.nk3.provisioner_app import ProvisionerApp
 from pynitrokey.nk3.updates import REPOSITORY, get_firmware_update
+from pynitrokey.trussed.base import NitrokeyTrussedBase
+from pynitrokey.trussed.bootloader import (
+    Device,
+    FirmwareContainer,
+    parse_firmware_image,
+)
 from pynitrokey.updates import OverwriteError
 
-T = TypeVar("T", bound=Nitrokey3Base)
+T = TypeVar("T", bound=NitrokeyTrussedBase)
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +52,7 @@ class Context:
     def __init__(self, path: Optional[str]) -> None:
         self.path = path
 
-    def list(self) -> List[Nitrokey3Base]:
+    def list(self) -> List[NitrokeyTrussedBase]:
         if self.path:
             device = open_nk3(self.path)
             if device:
@@ -75,7 +76,7 @@ class Context:
 
         return devices[0]
 
-    def connect(self) -> Nitrokey3Base:
+    def connect(self) -> NitrokeyTrussedBase:
         return self._select_unique("Nitrokey 3", self.list())
 
     def connect_device(self) -> Nitrokey3Device:
@@ -375,7 +376,7 @@ def validate_update(image: str) -> None:
     Validates the given firmware image and prints the firmware version and the signer for all
     available variants.
     """
-    container = FirmwareContainer.parse(image)
+    container = FirmwareContainer.parse(image, Device.NITROKEY3)
     print(f"version:      {container.version}")
     if container.pynitrokey:
         print(f"pynitrokey:   >= {container.pynitrokey}")

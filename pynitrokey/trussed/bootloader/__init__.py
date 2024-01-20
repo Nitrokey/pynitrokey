@@ -19,13 +19,24 @@ from re import Pattern
 from typing import Callable, Dict, List, Optional, Tuple, Union
 from zipfile import ZipFile
 
-from ..base import Nitrokey3Base
+from ..base import NitrokeyTrussedBase
 from ..utils import Version
 
 logger = logging.getLogger(__name__)
 
 
 ProgressCallback = Callable[[int, int], None]
+
+
+class Device(enum.Enum):
+    NITROKEY3 = "Nitrokey 3"
+
+    @classmethod
+    def from_str(cls, s: str) -> "Device":
+        for device in cls:
+            if device.value == s:
+                return device
+        raise ValueError(f"Unknown device {s}")
 
 
 class Variant(enum.Enum):
@@ -57,7 +68,7 @@ class FirmwareContainer:
     images: Dict[Variant, bytes]
 
     @classmethod
-    def parse(cls, path: Union[str, BytesIO]) -> "FirmwareContainer":
+    def parse(cls, path: Union[str, BytesIO], device: Device) -> "FirmwareContainer":
         with ZipFile(path) as z:
             checksum_lines = z.read("sha256sums").decode("utf-8").splitlines()
             checksum_pairs = [line.split("  ", maxsplit=1) for line in checksum_lines]
@@ -66,9 +77,10 @@ class FirmwareContainer:
             manifest_bytes = z.read("manifest.json")
             _validate_checksum(checksums, "manifest.json", manifest_bytes)
             manifest = json.loads(manifest_bytes)
-            if manifest["device"] != "Nitrokey 3":
-                raise Exception(
-                    f"Unexpected device value in manifest: {manifest['device']}"
+            actual_device = Device.from_str(manifest["device"])
+            if actual_device != device:
+                raise ValueError(
+                    f"Expected firmware container for {device.value}, got {actual_device.value}"
                 )
             version = Version.from_v_str(manifest["version"])
             pynitrokey = None
@@ -95,7 +107,7 @@ class FirmwareMetadata:
     signed_by_nitrokey: bool = False
 
 
-class Nitrokey3Bootloader(Nitrokey3Base):
+class NitrokeyTrussedBootloader(NitrokeyTrussedBase):
     @abstractmethod
     def update(
         self,
@@ -108,31 +120,6 @@ class Nitrokey3Bootloader(Nitrokey3Base):
     @abstractmethod
     def variant(self) -> Variant:
         ...
-
-
-def list() -> List[Nitrokey3Bootloader]:
-    from .lpc55 import Nitrokey3BootloaderLpc55
-    from .nrf52 import Nitrokey3BootloaderNrf52
-
-    devices: List[Nitrokey3Bootloader] = []
-    devices.extend(Nitrokey3BootloaderLpc55.list())
-    devices.extend(Nitrokey3BootloaderNrf52.list())
-    return devices
-
-
-def open(path: str) -> Optional[Nitrokey3Bootloader]:
-    from .lpc55 import Nitrokey3BootloaderLpc55
-    from .nrf52 import Nitrokey3BootloaderNrf52
-
-    lpc55 = Nitrokey3BootloaderLpc55.open(path)
-    if lpc55:
-        return lpc55
-
-    nrf52 = Nitrokey3BootloaderNrf52.open(path)
-    if nrf52:
-        return nrf52
-
-    return None
 
 
 def get_firmware_filename_pattern(variant: Variant) -> Pattern[str]:

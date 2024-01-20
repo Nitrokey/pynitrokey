@@ -9,19 +9,16 @@
 
 import enum
 import logging
-import platform
-import sys
 from enum import Enum
-from typing import List, Optional
+from typing import Optional
 
 from fido2.ctap import CtapError
-from fido2.hid import CtapHidDevice, open_device
+from fido2.hid import CtapHidDevice
 
-from pynitrokey.fido2 import device_path_to_str
+from pynitrokey.trussed.device import NitrokeyTrussedDevice
+from pynitrokey.trussed.utils import Uuid, Version
 
-from .base import Nitrokey3Base
 from .exceptions import TimeoutException
-from .utils import Uuid, Version
 
 RNG_LEN = 57
 UUID_LEN = 16
@@ -51,45 +48,36 @@ class BootMode(Enum):
     BOOTROM = enum.auto()
 
 
-class Nitrokey3Device(Nitrokey3Base):
+class Nitrokey3Device(NitrokeyTrussedDevice):
     """A Nitrokey 3 device running the firmware."""
 
     def __init__(self, device: CtapHidDevice) -> None:
-        from . import PID_NITROKEY3_DEVICE, VID_NITROKEY
+        super().__init__(device)
+
         from .admin_app import AdminApp
 
-        (vid, pid) = (device.descriptor.vid, device.descriptor.pid)
-        if (vid, pid) != (VID_NITROKEY, PID_NITROKEY3_DEVICE):
-            raise ValueError(
-                "Not a Nitrokey 3 device: expected VID:PID "
-                f"{VID_NITROKEY:x}:{PID_NITROKEY3_DEVICE:x}, got {vid:x}:{pid:x}"
-            )
-
-        self.device = device
-        self._path = device_path_to_str(device.descriptor.path)
         self.logger = logger.getChild(self._path)
 
         self.admin = AdminApp(self)
         self.admin.status()
 
     @property
-    def path(self) -> str:
-        return self._path
+    def pid(self) -> int:
+        from . import PID_NITROKEY3_DEVICE
+
+        return PID_NITROKEY3_DEVICE
 
     @property
     def name(self) -> str:
         return "Nitrokey 3"
 
-    def close(self) -> None:
-        self.device.close()
-
     def reboot(self, mode: BootMode = BootMode.FIRMWARE) -> bool:
         try:
             if mode == BootMode.FIRMWARE:
-                self._call(Command.REBOOT)
+                self._call_nk3(Command.REBOOT)
             elif mode == BootMode.BOOTROM:
                 try:
-                    self._call(Command.UPDATE)
+                    self._call_nk3(Command.UPDATE)
                 except CtapError as e:
                     # The admin app returns an Invalid Length error if the user confirmation
                     # request times out
@@ -103,7 +91,7 @@ class Nitrokey3Device(Nitrokey3Base):
         return True
 
     def uuid(self) -> Optional[Uuid]:
-        uuid = self._call(Command.UUID)
+        uuid = self._call_nk3(Command.UUID)
         if len(uuid) == 0:
             # Firmware version 1.0.0 does not support querying the UUID
             return None
@@ -120,53 +108,17 @@ class Nitrokey3Device(Nitrokey3Base):
     def factory_reset_app(self, app: str) -> None:
         self.admin.factory_reset_app(app)
 
-    def wink(self) -> None:
-        self.device.wink()
-
     def rng(self) -> bytes:
-        return self._call(Command.RNG, response_len=RNG_LEN)
+        return self._call_nk3(Command.RNG, response_len=RNG_LEN)
 
     def otp(self, data: bytes = b"") -> bytes:
-        return self._call(Command.OTP, data=data)
+        return self._call_nk3(Command.OTP, data=data)
 
     def is_locked(self) -> bool:
-        response = self._call(Command.LOCKED, response_len=1)
+        response = self._call_nk3(Command.LOCKED, response_len=1)
         return response[0] == 1
 
-    def _call(
+    def _call_nk3(
         self, command: Command, response_len: Optional[int] = None, data: bytes = b""
     ) -> bytes:
-        response = self.device.call(command.value, data=data)
-        if response_len is not None and response_len != len(response):
-            raise ValueError(
-                f"The response for the CTAPHID {command.name} command has an unexpected length "
-                f"(expected: {response_len}, actual: {len(response)})"
-            )
-        return response
-
-    @staticmethod
-    def list() -> List["Nitrokey3Device"]:
-        devices = []
-        for device in CtapHidDevice.list_devices():
-            try:
-                devices.append(Nitrokey3Device(device))
-            except ValueError:
-                # not a Nitrokey 3 device, skip
-                pass
-        return devices
-
-    @staticmethod
-    def open(path: str) -> Optional["Nitrokey3Device"]:
-        try:
-            if platform.system() == "Windows":
-                device = open_device(bytes(path, "utf-8"))
-            else:
-                device = open_device(path)
-        except Exception:
-            logger.warn(f"No CTAPHID device at path {path}", exc_info=sys.exc_info())
-            return None
-        try:
-            return Nitrokey3Device(device)
-        except ValueError:
-            logger.warn(f"No Nitrokey 3 device at path {path}", exc_info=sys.exc_info())
-            return None
+        return super()._call(command.value, command.name, response_len, data)
