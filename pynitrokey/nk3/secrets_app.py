@@ -347,9 +347,7 @@ class SecretsApp:
         return self._send_receive_inner(bytes_data, log_info=f"{ins}")
 
     def _send_receive_inner(self, data: bytes, log_info: str = "") -> bytes:
-        self.logfn(
-            f"Sending {log_info if log_info else ''} {data.hex() if data else data!r}"
-        )
+        self.logfn(f"Sending {log_info if log_info else ''} (data: {len(data)} bytes)")
 
         try:
             result = self.dev.otp(data=data)
@@ -358,18 +356,14 @@ class SecretsApp:
             raise
 
         status_bytes, result = result[:2], result[2:]
-        self.logfn(
-            f"Received [{status_bytes.hex()}] {result.hex() if result else result!r}"
-        )
+        self.logfn(f"Received [{status_bytes.hex()}] (data: {len(result)} bytes)")
 
         log_multipacket = False
         data_final = result
         MORE_DATA_STATUS_BYTE = 0x61
         while status_bytes[0] == MORE_DATA_STATUS_BYTE:
             if log_multipacket:
-                self.logfn(
-                    f"Got RemainingData status: [{status_bytes.hex()}] {result.hex() if result else result!r}"
-                )
+                self.logfn(f"Got RemainingData status: [{status_bytes.hex()}]")
             log_multipacket = True
             ins_b, p1, p2 = self._encode_command(Instruction.SendRemaining)
             bytes_data = iso7816_compose(ins_b, p1, p2)
@@ -380,9 +374,7 @@ class SecretsApp:
                 raise
             # Data order is different here than in APDU - SW is first, then the data if any
             status_bytes, result = result[:2], result[2:]
-            self.logfn(
-                f"Received [{status_bytes.hex()}] {result.hex() if result else result!r}"
-            )
+            self.logfn(f"Received [{status_bytes.hex()}] (data: {len(result)} bytes)")
             if status_bytes[0] in [0x90, MORE_DATA_STATUS_BYTE]:
                 data_final += result
 
@@ -391,15 +383,15 @@ class SecretsApp:
 
         if log_multipacket:
             self.logfn(
-                f"Received final data: [{status_bytes.hex()}] {data_final.hex() if data_final else data_final!r}"
+                f"Received final data: [{status_bytes.hex()}] (data: {len(data_final)} bytes)"
             )
 
         if data_final:
             try:
-                self.logfn(
-                    f"Decoded received: {[e.data for e in tlv8.decode(data_final)]}"
-                )
+                tlv8.decode(data_final)
+                self.logfn("TLV-decoding of data successful")
             except Exception:
+                self.logfn("TLV-decoding of data failed")
                 pass
 
         return data_final
@@ -481,7 +473,7 @@ class SecretsApp:
         for e in resd:
             # e: tlv8.Entry
             res[e.type_id] = e.data
-            self.logfn(f"{hex(e.type_id)} {hex(len(e.data))}  {e.data.hex()}")
+            self.logfn(f"{hex(e.type_id)} {hex(len(e.data))}")
         p = PasswordSafeEntry(
             login=res.get(Tag.PwsLogin.value),
             password=res.get(Tag.PwsPassword.value),
