@@ -7,11 +7,10 @@
 # http://opensource.org/licenses/MIT>, at your option. This file may not be
 # copied, modified, or distributed except according to those terms.
 
-import logging
 import os.path
 import sys
 from hashlib import sha256
-from typing import BinaryIO, Callable, List, Optional, Type, TypeVar
+from typing import BinaryIO, List, Optional
 
 import click
 from cryptography import x509
@@ -19,111 +18,39 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey
 from ecdsa import NIST256p, SigningKey
 
+from pynitrokey.cli import trussed
 from pynitrokey.cli.exceptions import CliException
-from pynitrokey.helpers import (
-    DownloadProgressBar,
-    Retries,
-    check_experimental_flag,
-    local_print,
-    require_windows_admin,
-)
-from pynitrokey.nk3 import list as list_nk3
-from pynitrokey.nk3 import open as open_nk3
+from pynitrokey.helpers import DownloadProgressBar, check_experimental_flag, local_print
 from pynitrokey.nk3.bootloader import Nitrokey3Bootloader
 from pynitrokey.nk3.device import Nitrokey3Device
 from pynitrokey.nk3.provisioner_app import ProvisionerApp
 from pynitrokey.nk3.updates import REPOSITORY, get_firmware_update
-from pynitrokey.trussed.admin_app import BootMode
 from pynitrokey.trussed.base import NitrokeyTrussedBase
 from pynitrokey.trussed.bootloader import (
     Device,
     FirmwareContainer,
     parse_firmware_image,
 )
-from pynitrokey.trussed.exceptions import TimeoutException
 from pynitrokey.updates import OverwriteError
 
-T = TypeVar("T", bound=NitrokeyTrussedBase)
 
-logger = logging.getLogger(__name__)
-
-
-class Context:
+class Context(trussed.Context[Nitrokey3Bootloader, Nitrokey3Device]):
     def __init__(self, path: Optional[str]) -> None:
-        self.path = path
+        super().__init__(path, Nitrokey3Bootloader, Nitrokey3Device)  # type: ignore[type-abstract]
 
-    def list(self) -> List[NitrokeyTrussedBase]:
-        if self.path:
-            device = open_nk3(self.path)
-            if device:
-                return [device]
-            else:
-                return []
-        else:
-            return list_nk3()
+    @property
+    def device_name(self) -> str:
+        return "Nitrokey 3"
 
-    def _select_unique(self, name: str, devices: List[T]) -> T:
-        if len(devices) == 0:
-            msg = f"No {name} device found"
-            if self.path:
-                msg += f" at path {self.path}"
-            raise CliException(msg)
+    def open(self, path: str) -> Optional[NitrokeyTrussedBase]:
+        from pynitrokey.nk3 import open
 
-        if len(devices) > 1:
-            raise CliException(
-                f"Multiple {name} devices found -- use the --path option to select one"
-            )
+        return open(path)
 
-        return devices[0]
+    def list_all(self) -> List[NitrokeyTrussedBase]:
+        from pynitrokey.nk3 import list
 
-    def connect(self) -> NitrokeyTrussedBase:
-        return self._select_unique("Nitrokey 3", self.list())
-
-    def connect_device(self) -> Nitrokey3Device:
-        devices = [
-            device for device in self.list() if isinstance(device, Nitrokey3Device)
-        ]
-        return self._select_unique("Nitrokey 3", devices)
-
-    def _await(
-        self,
-        name: str,
-        ty: Type[T],
-        retries: int,
-        callback: Optional[Callable[[int, int], None]] = None,
-    ) -> T:
-        for t in Retries(retries):
-            logger.debug(f"Searching {name} device ({t})")
-            devices = [device for device in self.list() if isinstance(device, ty)]
-            if len(devices) == 0:
-                if callback:
-                    callback(int((t.i / retries) * 100), 100)
-                logger.debug(f"No {name} device found, continuing")
-                continue
-            if len(devices) > 1:
-                raise CliException(f"Multiple {name} devices found")
-            if callback:
-                callback(100, 100)
-            return devices[0]
-
-        raise CliException(f"No {name} device found")
-
-    def await_device(
-        self,
-        retries: Optional[int] = 30,
-        callback: Optional[Callable[[int, int], None]] = None,
-    ) -> Nitrokey3Device:
-        assert isinstance(retries, int)
-        return self._await("Nitrokey 3", Nitrokey3Device, retries, callback)
-
-    def await_bootloader(
-        self,
-        retries: Optional[int] = 30,
-        callback: Optional[Callable[[int, int], None]] = None,
-    ) -> Nitrokey3Bootloader:
-        assert isinstance(retries, int)
-        # mypy does not allow abstract types here, but this is still valid
-        return self._await("Nitrokey 3 bootloader", Nitrokey3Bootloader, retries, callback)  # type: ignore
+        return list()
 
 
 @click.group()
@@ -132,86 +59,11 @@ class Context:
 def nk3(ctx: click.Context, path: Optional[str]) -> None:
     """Interact with Nitrokey 3 devices, see subcommands."""
     ctx.obj = Context(path)
-    require_windows_admin()
+    trussed.prepare_group()
 
 
-@nk3.command()
-def list() -> None:
-    """List all Nitrokey 3 devices."""
-    local_print(":: 'Nitrokey 3' keys")
-    for device in list_nk3():
-        with device as device:
-            uuid = device.uuid()
-            if uuid:
-                local_print(f"{device.path}: {device.name} {uuid}")
-            else:
-                local_print(f"{device.path}: {device.name}")
-
-
-@nk3.command()
-@click.option(
-    "--bootloader",
-    is_flag=True,
-    help="Reboot a Nitrokey 3 device into bootloader mode",
-)
-@click.pass_obj
-def reboot(ctx: Context, bootloader: bool) -> None:
-    """
-    Reboot the key.
-
-    Per default, the key will reboot into regular firmware mode.  If the --bootloader option
-    is set, a key can boot from firmware mode to bootloader mode.  Booting into
-    bootloader mode has to be confirmed by pressing the touch button.
-    """
-    with ctx.connect() as device:
-        if bootloader:
-            if isinstance(device, Nitrokey3Device):
-                success = reboot_to_bootloader(device)
-            else:
-                raise CliException(
-                    "A Nitrokey 3 device in bootloader mode can only reboot into firmware mode.",
-                    support_hint=False,
-                )
-        else:
-            success = device.reboot()
-
-    if not success:
-        raise CliException(
-            "The connected device cannot be rebooted automatically.  Remove and reinsert the "
-            "device to reboot it.",
-            support_hint=False,
-        )
-
-
-def reboot_to_bootloader(device: Nitrokey3Device) -> bool:
-    local_print(
-        "Please press the touch button to reboot the device into bootloader mode ..."
-    )
-    try:
-        return device.admin.reboot(BootMode.BOOTROM)
-    except TimeoutException:
-        raise CliException(
-            "The reboot was not confirmed with the touch button.",
-            support_hint=False,
-        )
-
-
-@nk3.command()
-@click.option(
-    "-l",
-    "--length",
-    "length",
-    default=57,
-    help="The length of the generated data (default: 57)",
-)
-@click.pass_obj
-def rng(ctx: Context, length: int) -> None:
-    """Generate random data on the device."""
-    with ctx.connect_device() as device:
-        while length > 0:
-            rng = device.admin.rng()
-            local_print(rng[:length].hex())
-            length -= len(rng)
+# shared Trussed commands
+trussed.add_commands(nk3)
 
 
 @nk3.command()
@@ -396,8 +248,8 @@ def validate_update(image: str) -> None:
 
         if container.version != metadata.version:
             raise CliException(
-                f"The firmware image for the {variant} variant and the release {version} has an "
-                f"unexpected product version ({metadata.version})."
+                f"The firmware image for the {variant} variant and the release "
+                f"{container.version} has an unexpected product version ({metadata.version})."
             )
 
 
@@ -449,29 +301,6 @@ def update(
     from .update import update as exec_update
 
     exec_update(ctx, image, version, ignore_pynitrokey_version)
-
-
-@nk3.command()
-@click.pass_obj
-def status(ctx: Context) -> None:
-    """Query the device status."""
-    with ctx.connect_device() as device:
-        uuid = device.uuid()
-        if uuid is not None:
-            local_print(f"UUID:               {uuid}")
-
-        version = device.admin.version()
-        local_print(f"Firmware version:   {version}")
-
-        status = device.admin.status()
-        if status.init_status is not None:
-            local_print(f"Init status:        {status.init_status}")
-        if status.ifs_blocks is not None:
-            local_print(f"Free blocks (int):  {status.ifs_blocks}")
-        if status.efs_blocks is not None:
-            local_print(f"Free blocks (ext):  {status.efs_blocks}")
-        if status.variant is not None:
-            local_print(f"Variant:            {status.variant.name}")
 
 
 @nk3.command()
@@ -585,15 +414,6 @@ def set_config(ctx: Context, key: str, value: str, force: bool, dry_run: bool) -
             device.reboot()
 
         print(f"Updated configuration {key}.")
-
-
-@nk3.command()
-@click.pass_obj
-def version(ctx: Context) -> None:
-    """Query the firmware version of the device."""
-    with ctx.connect_device() as device:
-        version = device.admin.version()
-        local_print(version)
 
 
 @nk3.command()
