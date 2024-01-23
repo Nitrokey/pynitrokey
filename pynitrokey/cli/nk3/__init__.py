@@ -30,17 +30,17 @@ from pynitrokey.helpers import (
 from pynitrokey.nk3 import list as list_nk3
 from pynitrokey.nk3 import open as open_nk3
 from pynitrokey.nk3.bootloader import Nitrokey3Bootloader
-from pynitrokey.nk3.device import BootMode, Nitrokey3Device
-from pynitrokey.nk3.exceptions import TimeoutException
+from pynitrokey.nk3.device import Nitrokey3Device
 from pynitrokey.nk3.provisioner_app import ProvisionerApp
 from pynitrokey.nk3.updates import REPOSITORY, get_firmware_update
-from pynitrokey.trussed.admin_app import AdminApp
+from pynitrokey.trussed.admin_app import BootMode
 from pynitrokey.trussed.base import NitrokeyTrussedBase
 from pynitrokey.trussed.bootloader import (
     Device,
     FirmwareContainer,
     parse_firmware_image,
 )
+from pynitrokey.trussed.exceptions import TimeoutException
 from pynitrokey.updates import OverwriteError
 
 T = TypeVar("T", bound=NitrokeyTrussedBase)
@@ -188,7 +188,7 @@ def reboot_to_bootloader(device: Nitrokey3Device) -> bool:
         "Please press the touch button to reboot the device into bootloader mode ..."
     )
     try:
-        return device.reboot(BootMode.BOOTROM)
+        return device.admin.reboot(BootMode.BOOTROM)
     except TimeoutException:
         raise CliException(
             "The reboot was not confirmed with the touch button.",
@@ -209,7 +209,7 @@ def rng(ctx: Context, length: int) -> None:
     """Generate random data on the device."""
     with ctx.connect_device() as device:
         while length > 0:
-            rng = device.rng()
+            rng = device.admin.rng()
             local_print(rng[:length].hex())
             length -= len(rng)
 
@@ -460,11 +460,10 @@ def status(ctx: Context) -> None:
         if uuid is not None:
             local_print(f"UUID:               {uuid}")
 
-        admin = AdminApp(device)
-        version = admin.version()
+        version = device.admin.version()
         local_print(f"Firmware version:   {version}")
 
-        status = admin.status()
+        status = device.admin.status()
         if status.init_status is not None:
             local_print(f"Init status:        {status.init_status}")
         if status.ifs_blocks is not None:
@@ -481,8 +480,7 @@ def status(ctx: Context) -> None:
 def get_config(ctx: Context, key: str) -> None:
     """Query a config value."""
     with ctx.connect_device() as device:
-        admin = AdminApp(device)
-        value = admin.get_config(key)
+        value = device.admin.get_config(key)
         print(value)
 
 
@@ -522,10 +520,8 @@ def set_config(ctx: Context, key: str, value: str, force: bool, dry_run: bool) -
     """
 
     with ctx.connect_device() as device:
-        admin = AdminApp(device)
-
         # before the confirmation prompt, check if the config value is supported
-        if not admin.has_config(key):
+        if not device.admin.has_config(key):
             raise CliException(
                 f"The configuration option '{key}' is not supported by the device.",
                 support_hint=False,
@@ -582,7 +578,7 @@ def set_config(ctx: Context, key: str, value: str, force: bool, dry_run: bool) -
                 file=sys.stderr,
             )
 
-        admin.set_config(key, value)
+        device.admin.set_config(key, value)
 
         if requires_reboot:
             print("Rebooting device to apply config change.")
@@ -596,7 +592,7 @@ def set_config(ctx: Context, key: str, value: str, force: bool, dry_run: bool) -
 def version(ctx: Context) -> None:
     """Query the firmware version of the device."""
     with ctx.connect_device() as device:
-        version = device.version()
+        version = device.admin.version()
         local_print(version)
 
 
@@ -613,7 +609,7 @@ def factory_reset(ctx: Context, experimental: bool) -> None:
     """Factory reset all functionality of the device"""
     check_experimental_flag(experimental)
     with ctx.connect_device() as device:
-        device.factory_reset()
+        device.admin.factory_reset()
 
 
 # We consciously do not allow resetting the admin app
@@ -634,7 +630,7 @@ def factory_reset_app(ctx: Context, application: str, experimental: bool) -> Non
     """Factory reset all functionality of an application"""
     check_experimental_flag(experimental)
     with ctx.connect_device() as device:
-        device.factory_reset_app(application)
+        device.admin.factory_reset_app(application)
 
 
 @nk3.command()

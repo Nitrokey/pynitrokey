@@ -8,9 +8,13 @@ from fido2 import cbor
 from fido2.ctap import CtapError
 
 from pynitrokey.helpers import local_critical, local_print
-from pynitrokey.trussed.device import App, NitrokeyTrussedDevice
-from pynitrokey.trussed.utils import Version
 
+from .device import App, NitrokeyTrussedDevice
+from .exceptions import TimeoutException
+from .utils import Uuid, Version
+
+RNG_LEN = 57
+UUID_LEN = 16
 VERSION_LEN = 4
 
 
@@ -46,6 +50,12 @@ class AdminCommand(Enum):
         if self == AdminCommand.LOCKED:
             return True
         return False
+
+
+@enum.unique
+class BootMode(Enum):
+    FIRMWARE = enum.auto()
+    BOOTROM = enum.auto()
 
 
 @enum.unique
@@ -173,6 +183,35 @@ class AdminApp:
             else:
                 raise
 
+    def is_locked(self) -> bool:
+        response = self._call(AdminCommand.LOCKED, response_len=1)
+        assert response is not None
+        return response[0] == 1
+
+    def reboot(self, mode: BootMode = BootMode.FIRMWARE) -> bool:
+        try:
+            if mode == BootMode.FIRMWARE:
+                self._call(AdminCommand.REBOOT)
+            elif mode == BootMode.BOOTROM:
+                try:
+                    self._call(AdminCommand.UPDATE)
+                except CtapError as e:
+                    # The admin app returns an Invalid Length error if the user confirmation
+                    # request times out
+                    if e.code == CtapError.ERR.INVALID_LENGTH:
+                        raise TimeoutException()
+                    else:
+                        raise e
+        except OSError as e:
+            # OS error is expected as the device does not respond during the reboot
+            self.device.logger.debug("ignoring OSError after reboot", exc_info=e)
+        return True
+
+    def rng(self) -> bytes:
+        data = self._call(AdminCommand.RNG, response_len=RNG_LEN)
+        assert data is not None
+        return data
+
     def status(self) -> Status:
         status = Status()
         reply = self._call(AdminCommand.STATUS)
@@ -189,6 +228,15 @@ class AdminApp:
                 except ValueError:
                     pass
         return status
+
+    def uuid(self) -> Optional[Uuid]:
+        uuid = self._call(AdminCommand.UUID)
+        if uuid is None or len(uuid) == 0:
+            # Firmware version 1.0.0 does not support querying the UUID
+            return None
+        if len(uuid) != UUID_LEN:
+            raise ValueError(f"UUID response has invalid length {len(uuid)}")
+        return Uuid(int.from_bytes(uuid, byteorder="big"))
 
     def version(self) -> Version:
         reply = self._call(AdminCommand.VERSION, data=bytes([0x01]))

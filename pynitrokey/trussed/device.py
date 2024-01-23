@@ -20,6 +20,7 @@ from fido2.hid import CtapHidDevice, open_device
 from pynitrokey.fido2 import device_path_to_str
 
 from .base import NitrokeyTrussedBase
+from .utils import Uuid, Version
 
 T = TypeVar("T", bound="NitrokeyTrussedDevice")
 
@@ -54,6 +55,14 @@ class NitrokeyTrussedDevice(NitrokeyTrussedBase):
 
     def close(self) -> None:
         self.device.close()
+
+    def reboot(self) -> bool:
+        from .admin_app import BootMode
+
+        return self.admin.reboot(BootMode.FIRMWARE)
+
+    def uuid(self) -> Optional[Uuid]:
+        return self.admin.uuid()
 
     def wink(self) -> None:
         self.device.wink()

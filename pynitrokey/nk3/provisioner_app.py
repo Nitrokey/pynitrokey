@@ -2,7 +2,8 @@ import enum
 from enum import Enum
 from typing import Optional
 
-from pynitrokey.nk3.device import Command, Nitrokey3Device
+from pynitrokey.nk3.device import Nitrokey3Device
+from pynitrokey.trussed.device import App
 
 
 @enum.unique
@@ -34,8 +35,8 @@ class ProvisionerApp:
         response_len: Optional[int] = None,
         data: bytes = b"",
     ) -> bytes:
-        return self.device._call_nk3(
-            Command.PROVISIONER,
+        return self.device._call_app(
+            App.PROVISIONER,
             response_len=response_len,
             data=command.value.to_bytes(1, "big") + data,
         )

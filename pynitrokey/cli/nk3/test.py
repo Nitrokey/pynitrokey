@@ -27,7 +27,6 @@ from pynitrokey.fido2.client import NKFido2Client
 from pynitrokey.helpers import local_print
 from pynitrokey.nk3.device import Nitrokey3Device
 from pynitrokey.nk3.utils import Fido2Certs
-from pynitrokey.trussed.admin_app import AdminApp
 from pynitrokey.trussed.base import NitrokeyTrussedBase
 from pynitrokey.trussed.utils import Uuid, Version
 
@@ -146,7 +145,7 @@ def test_firmware_version_query(
 ) -> TestResult:
     if not isinstance(device, Nitrokey3Device):
         return TestResult(TestStatus.SKIPPED)
-    version = device.version()
+    version = device.admin.version()
     ctx.firmware_version = version
     return TestResult(TestStatus.SUCCESS, str(version))
 
@@ -155,13 +154,13 @@ def test_firmware_version_query(
 def test_device_status(ctx: TestContext, device: NitrokeyTrussedBase) -> TestResult:
     if not isinstance(device, Nitrokey3Device):
         return TestResult(TestStatus.SKIPPED)
-    firmware_version = ctx.firmware_version or device.version()
+    firmware_version = ctx.firmware_version or device.admin.version()
     if firmware_version.core() < Version(1, 3, 0):
         return TestResult(TestStatus.SKIPPED)
 
     errors = []
 
-    status = AdminApp(device).status()
+    status = device.admin.status()
     logger.info(f"Device status: {status}")
 
     if status.init_status is None:
@@ -189,7 +188,7 @@ def test_bootloader_configuration(
 ) -> TestResult:
     if not isinstance(device, Nitrokey3Device):
         return TestResult(TestStatus.SKIPPED)
-    if device.is_locked():
+    if device.admin.is_locked():
         return TestResult(TestStatus.SUCCESS)
     else:
         return TestResult(TestStatus.FAILURE, "bootloader not locked")
@@ -369,7 +368,7 @@ def test_se050(ctx: TestContext, device: NitrokeyTrussedBase) -> TestResult:
     def internal_se050_run(
         q: Queue[Optional[bytes]],
     ) -> None:
-        q.put(AdminApp(device).se050_tests())
+        q.put(device.admin.se050_tests())
 
     t = Thread(target=internal_se050_run, args=[que])
     t.start()
@@ -500,7 +499,7 @@ def test_fido2(ctx: TestContext, device: NitrokeyTrussedBase) -> TestResult:
     cert = make_credential_result.attestation_object.att_stmt["x5c"]
     cert_hash = sha256(cert[0]).digest().hex()
 
-    firmware_version = ctx.firmware_version or device.version()
+    firmware_version = ctx.firmware_version or device.admin.version()
     if firmware_version:
         expected_certs = Fido2Certs.get(firmware_version)
         if expected_certs and cert_hash not in expected_certs.hashes:
