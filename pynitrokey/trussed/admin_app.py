@@ -8,20 +8,44 @@ from fido2 import cbor
 from fido2.ctap import CtapError
 
 from pynitrokey.helpers import local_critical, local_print
-from pynitrokey.nk3.device import Command, Nitrokey3Device
+from pynitrokey.trussed.device import App, NitrokeyTrussedDevice
 from pynitrokey.trussed.utils import Version
 
-from .device import VERSION_LEN
+VERSION_LEN = 4
 
 
 @enum.unique
 class AdminCommand(Enum):
+    # legacy commands -- can be called directly or using the admin namespace
+    UPDATE = 0x51
+    REBOOT = 0x53
+    RNG = 0x60
+    VERSION = 0x61
+    UUID = 0x62
+    LOCKED = 0x63
+
+    # new commands -- can only be called using the admin namespace
     STATUS = 0x80
     TEST_SE050 = 0x81
     GET_CONFIG = 0x82
     SET_CONFIG = 0x83
     FACTORY_RESET = 0x84
     FACTORY_RESET_APP = 0x85
+
+    def is_legacy_command(self) -> bool:
+        if self == AdminCommand.UPDATE:
+            return True
+        if self == AdminCommand.REBOOT:
+            return True
+        if self == AdminCommand.RNG:
+            return True
+        if self == AdminCommand.VERSION:
+            return True
+        if self == AdminCommand.UUID:
+            return True
+        if self == AdminCommand.LOCKED:
+            return True
+        return False
 
 
 @enum.unique
@@ -120,7 +144,7 @@ class ConfigStatus(Enum):
 
 
 class AdminApp:
-    def __init__(self, device: Nitrokey3Device) -> None:
+    def __init__(self, device: NitrokeyTrussedDevice) -> None:
         self.device = device
 
     def _call(
@@ -130,11 +154,19 @@ class AdminApp:
         data: bytes = b"",
     ) -> Optional[bytes]:
         try:
-            return self.device._call_nk3(
-                Command.ADMIN,
-                response_len=response_len,
-                data=command.value.to_bytes(1, "big") + data,
-            )
+            if command.is_legacy_command():
+                return self.device._call(
+                    command.value,
+                    command.name,
+                    response_len=response_len,
+                    data=data,
+                )
+            else:
+                return self.device._call_app(
+                    App.ADMIN,
+                    response_len=response_len,
+                    data=command.value.to_bytes(1, "big") + data,
+                )
         except CtapError as e:
             if e.code == CtapError.ERR.INVALID_COMMAND:
                 return None
@@ -159,7 +191,8 @@ class AdminApp:
         return status
 
     def version(self) -> Version:
-        reply = self.device._call_nk3(Command.VERSION, data=bytes([0x01]))
+        reply = self._call(AdminCommand.VERSION, data=bytes([0x01]))
+        assert reply is not None
         if len(reply) == VERSION_LEN:
             version = int.from_bytes(reply, "big")
             return Version.from_int(version)

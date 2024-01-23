@@ -29,12 +29,12 @@ from pynitrokey.helpers import (
 )
 from pynitrokey.nk3 import list as list_nk3
 from pynitrokey.nk3 import open as open_nk3
-from pynitrokey.nk3.admin_app import AdminApp
 from pynitrokey.nk3.bootloader import Nitrokey3Bootloader
 from pynitrokey.nk3.device import BootMode, Nitrokey3Device
 from pynitrokey.nk3.exceptions import TimeoutException
 from pynitrokey.nk3.provisioner_app import ProvisionerApp
 from pynitrokey.nk3.updates import REPOSITORY, get_firmware_update
+from pynitrokey.trussed.admin_app import AdminApp
 from pynitrokey.trussed.base import NitrokeyTrussedBase
 from pynitrokey.trussed.bootloader import (
     Device,

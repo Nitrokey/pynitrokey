@@ -8,7 +8,6 @@
 # copied, modified, or distributed except according to those terms.
 
 import enum
-import logging
 from enum import Enum
 from typing import Optional
 
@@ -23,8 +22,6 @@ from .exceptions import TimeoutException
 RNG_LEN = 57
 UUID_LEN = 16
 VERSION_LEN = 4
-
-logger = logging.getLogger(__name__)
 
 
 @enum.unique
@@ -53,13 +50,6 @@ class Nitrokey3Device(NitrokeyTrussedDevice):
 
     def __init__(self, device: CtapHidDevice) -> None:
         super().__init__(device)
-
-        from .admin_app import AdminApp
-
-        self.logger = logger.getChild(self._path)
-
-        self.admin = AdminApp(self)
-        self.admin.status()
 
     @property
     def pid(self) -> int:

@@ -7,10 +7,12 @@
 # http://opensource.org/licenses/MIT>, at your option. This file may not be
 # copied, modified, or distributed except according to those terms.
 
+import enum
 import logging
 import platform
 import sys
 from abc import abstractmethod
+from enum import Enum
 from typing import Optional, TypeVar
 
 from fido2.hid import CtapHidDevice, open_device
@@ -24,12 +26,27 @@ T = TypeVar("T", bound="NitrokeyTrussedDevice")
 logger = logging.getLogger(__name__)
 
 
+@enum.unique
+class App(Enum):
+    """Vendor-specific CTAPHID commands for Trussed apps."""
+
+    SECRETS = 0x70
+    PROVISIONER = 0x71
+    ADMIN = 0x72
+
+
 class NitrokeyTrussedDevice(NitrokeyTrussedBase):
     def __init__(self, device: CtapHidDevice) -> None:
         self.validate_vid_pid(device.descriptor.vid, device.descriptor.pid)
 
         self.device = device
         self._path = device_path_to_str(device.descriptor.path)
+        self.logger = logger.getChild(self._path)
+
+        from .admin_app import AdminApp
+
+        self.admin = AdminApp(self)
+        self.admin.status()
 
     @property
     def path(self) -> str:
@@ -55,6 +72,14 @@ class NitrokeyTrussedDevice(NitrokeyTrussedBase):
                 f"(expected: {response_len}, actual: {len(response)})"
             )
         return response
+
+    def _call_app(
+        self,
+        app: App,
+        response_len: Optional[int] = None,
+        data: bytes = b"",
+    ) -> bytes:
+        return self._call(app.value, app.name, response_len, data)
 
     @classmethod
     def open(cls: type[T], path: str) -> Optional[T]:

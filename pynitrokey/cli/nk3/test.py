@@ -25,9 +25,9 @@ from pynitrokey.cli.exceptions import CliException
 from pynitrokey.fido2 import device_path_to_str
 from pynitrokey.fido2.client import NKFido2Client
 from pynitrokey.helpers import local_print
-from pynitrokey.nk3.admin_app import AdminApp
 from pynitrokey.nk3.device import Nitrokey3Device
 from pynitrokey.nk3.utils import Fido2Certs
+from pynitrokey.trussed.admin_app import AdminApp
 from pynitrokey.trussed.base import NitrokeyTrussedBase
 from pynitrokey.trussed.utils import Uuid, Version
 
