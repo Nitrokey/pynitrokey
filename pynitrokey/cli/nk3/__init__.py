@@ -20,6 +20,7 @@ from ecdsa import NIST256p, SigningKey
 
 from pynitrokey.cli import trussed
 from pynitrokey.cli.exceptions import CliException
+from pynitrokey.cli.trussed.test import TestCase
 from pynitrokey.helpers import DownloadProgressBar, check_experimental_flag, local_print
 from pynitrokey.nk3.bootloader import Nitrokey3Bootloader
 from pynitrokey.nk3.device import Nitrokey3Device
@@ -41,6 +42,20 @@ class Context(trussed.Context[Nitrokey3Bootloader, Nitrokey3Device]):
     @property
     def device_name(self) -> str:
         return "Nitrokey 3"
+
+    @property
+    def test_cases(self) -> list[TestCase]:
+        from pynitrokey.cli.trussed import tests
+
+        return [
+            tests.test_uuid_query,
+            tests.test_firmware_version_query,
+            tests.test_device_status,
+            tests.test_bootloader_configuration,
+            tests.test_firmware_mode,
+            tests.test_se050,
+            tests.test_fido2,
+        ]
 
     def open(self, path: str) -> Optional[NitrokeyTrussedBase]:
         from pynitrokey.nk3 import open
@@ -64,107 +79,6 @@ def nk3(ctx: click.Context, path: Optional[str]) -> None:
 
 # shared Trussed commands
 trussed.add_commands(nk3)
-
-
-@nk3.command()
-@click.option(
-    "--pin",
-    "pin",
-    help="The FIDO2 PIN of the device (if enabled)",
-)
-@click.option(
-    "--only",
-    "only",
-    help="Run only the specified tests (may not be used with --all, --include or --exclude)",
-)
-@click.option(
-    "--all",
-    "all",
-    is_flag=True,
-    default=False,
-    help="Run all tests (except those specified with --exclude)",
-)
-@click.option(
-    "--include",
-    "include",
-    help="Also run the specified tests",
-)
-@click.option(
-    "--exclude",
-    "exclude",
-    help="Do not run the specified tests",
-)
-@click.option(
-    "--list",
-    "list_",
-    is_flag=True,
-    default=False,
-    help="List the selected tests instead of running them",
-)
-@click.pass_obj
-def test(
-    ctx: Context,
-    pin: Optional[str],
-    only: Optional[str],
-    all: bool,
-    include: Optional[str],
-    exclude: Optional[str],
-    list_: bool,
-) -> None:
-    """Run some tests on all connected Nitrokey 3 devices."""
-    from .test import (
-        TestContext,
-        TestSelector,
-        list_tests,
-        log_devices,
-        log_system,
-        run_tests,
-    )
-
-    test_selector = TestSelector(all=all)
-    if only:
-        if all or include or exclude:
-            raise CliException(
-                "--only may not be used together with --all, --include or --exclude.",
-                support_hint=False,
-            )
-        test_selector.only = only.split(",")
-    if include:
-        test_selector.include = include.split(",")
-    if exclude:
-        test_selector.exclude = exclude.split(",")
-
-    if list_:
-        list_tests(test_selector)
-        return
-
-    log_system()
-    devices = ctx.list()
-
-    if len(devices) == 0:
-        log_devices()
-        raise CliException("No connected Nitrokey 3 devices found")
-
-    local_print(f"Found {len(devices)} Nitrokey 3 device(s):")
-    for device in devices:
-        local_print(f"- {device.name} at {device.path}")
-
-    results = []
-    test_ctx = TestContext(pin=pin)
-    for device in devices:
-        results.append(run_tests(test_ctx, device, test_selector))
-
-    n = len(devices)
-    success = sum(results)
-    failure = n - success
-    local_print("")
-    local_print(
-        f"Summary: {n} device(s) tested, {success} successful, {failure} failed"
-    )
-
-    if failure > 0:
-        local_print("")
-        raise CliException(f"Test failed for {failure} device(s)")
 
 
 @nk3.command()

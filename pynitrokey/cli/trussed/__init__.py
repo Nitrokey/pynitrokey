@@ -21,6 +21,8 @@ from pynitrokey.trussed.bootloader import NitrokeyTrussedBootloader
 from pynitrokey.trussed.device import NitrokeyTrussedDevice
 from pynitrokey.trussed.exceptions import TimeoutException
 
+from .test import TestCase
+
 T = TypeVar("T", bound=NitrokeyTrussedBase)
 Bootloader = TypeVar("Bootloader", bound=NitrokeyTrussedBootloader)
 Device = TypeVar("Device", bound=NitrokeyTrussedDevice)
@@ -42,6 +44,11 @@ class Context(ABC, Generic[Bootloader, Device]):
     @property
     @abstractmethod
     def device_name(self) -> str:
+        ...
+
+    @property
+    @abstractmethod
+    def test_cases(self) -> Sequence[TestCase]:
         ...
 
     @abstractmethod
@@ -137,6 +144,7 @@ def add_commands(group: click.Group) -> None:
     group.add_command(reboot)
     group.add_command(rng)
     group.add_command(status)
+    group.add_command(test)
     group.add_command(version)
 
 
@@ -241,6 +249,114 @@ def status(ctx: Context[Bootloader, Device]) -> None:
             local_print(f"Free blocks (ext):  {status.efs_blocks}")
         if status.variant is not None:
             local_print(f"Variant:            {status.variant.name}")
+
+
+@click.command()
+@click.option(
+    "--pin",
+    "pin",
+    help="The FIDO2 PIN of the device (if enabled)",
+)
+@click.option(
+    "--only",
+    "only",
+    help="Run only the specified tests (may not be used with --all, --include or --exclude)",
+)
+@click.option(
+    "--all",
+    "all",
+    is_flag=True,
+    default=False,
+    help="Run all tests (except those specified with --exclude)",
+)
+@click.option(
+    "--include",
+    "include",
+    help="Also run the specified tests",
+)
+@click.option(
+    "--exclude",
+    "exclude",
+    help="Do not run the specified tests",
+)
+@click.option(
+    "--list",
+    "list_",
+    is_flag=True,
+    default=False,
+    help="List the selected tests instead of running them",
+)
+@click.pass_obj
+def test(
+    ctx: Context[Bootloader, Device],
+    pin: Optional[str],
+    only: Optional[str],
+    all: bool,
+    include: Optional[str],
+    exclude: Optional[str],
+    list_: bool,
+) -> None:
+    """Run some tests on all connected devices."""
+    from pynitrokey.cli.trussed.test import (
+        TestContext,
+        TestSelector,
+        list_tests,
+        log_devices,
+        log_system,
+        run_tests,
+    )
+
+    test_selector = TestSelector(all=all)
+    if only:
+        if all or include or exclude:
+            raise CliException(
+                "--only may not be used together with --all, --include or --exclude.",
+                support_hint=False,
+            )
+        test_selector.only = only.split(",")
+    if include:
+        test_selector.include = include.split(",")
+    if exclude:
+        test_selector.exclude = exclude.split(",")
+
+    if list_:
+        list_tests(test_selector, ctx.test_cases)
+        return
+
+    log_system()
+    devices = ctx.list()
+
+    if len(devices) == 0:
+        log_devices()
+        raise CliException(f"No connected {ctx.device_name} devices found")
+
+    local_print(f"Found {len(devices)} {ctx.device_name} device(s):")
+    for device in devices:
+        local_print(f"- {device.name} at {device.path}")
+
+    results = []
+    test_ctx = TestContext(pin=pin)
+    for device in devices:
+        results.append(
+            run_tests(
+                test_ctx,
+                device,
+                test_selector,
+                ctx.test_cases,
+            )
+        )
+
+    n = len(devices)
+    success = sum(results)
+    failure = n - success
+    local_print("")
+    local_print(
+        f"Summary: {n} device(s) tested, {success} successful, {failure} failed"
+    )
+
+    if failure > 0:
+        local_print("")
+        raise CliException(f"Test failed for {failure} device(s)")
 
 
 @click.command()
