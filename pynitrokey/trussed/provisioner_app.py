@@ -2,8 +2,7 @@ import enum
 from enum import Enum
 from typing import Optional
 
-from pynitrokey.nk3.device import Nitrokey3Device
-from pynitrokey.trussed.device import App
+from pynitrokey.trussed.device import App, NitrokeyTrussedDevice
 
 
 @enum.unique
@@ -21,7 +20,7 @@ class ProvisionerCommand(Enum):
 
 
 class ProvisionerApp:
-    def __init__(self, device: Nitrokey3Device) -> None:
+    def __init__(self, device: NitrokeyTrussedDevice) -> None:
         self.device = device
 
         try:
