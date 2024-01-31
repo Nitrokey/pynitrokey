@@ -159,6 +159,10 @@ def add_commands(group: click.Group) -> None:
 @click.pass_obj
 def list(ctx: Context[Bootloader, Device]) -> None:
     """List all devices."""
+    return _list(ctx)
+
+
+def _list(ctx: Context[Bootloader, Device]) -> None:
     local_print(f":: '{ctx.device_name}' keys")
     for device in ctx.list_all():
         with device as device:

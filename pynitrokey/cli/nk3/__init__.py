@@ -75,6 +75,10 @@ def nk3(ctx: click.Context, path: Optional[str]) -> None:
 trussed.add_commands(nk3)
 
 
+def _list() -> None:
+    trussed._list(Context(None))
+
+
 @nk3.command()
 @click.argument("path", default=".")
 @click.option(

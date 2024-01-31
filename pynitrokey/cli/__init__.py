@@ -104,10 +104,13 @@ nitropy.add_command(version)
 
 
 def _list():
+    from .nk3 import _list as list_nk3
+    from .nkpk import _list as list_nkpk
+
     fido2.commands["list"].callback()
     start.commands["list"].callback()
-    nk3.commands["list"].callback()
-    nkpk.commands["list"].callback()
+    list_nk3()
+    list_nkpk()
     # TODO add other handled models
 
 
