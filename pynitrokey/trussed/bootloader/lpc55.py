@@ -11,7 +11,7 @@ import logging
 import platform
 import re
 import sys
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, TypeVar
 
 from spsdk.mboot.error_codes import StatusCode
 from spsdk.mboot.interfaces.usb import MbootUSBInterface
@@ -21,33 +21,29 @@ from spsdk.sbfile.sb2.images import BootImageV21
 from spsdk.utils.interfaces.device.usb_device import UsbDevice
 from spsdk.utils.usbfilter import USBDeviceFilter
 
-from ..utils import Uuid, Version
-from . import FirmwareMetadata, Nitrokey3Bootloader, ProgressCallback, Variant
+from pynitrokey.trussed.utils import Uuid, Version
+
+from . import FirmwareMetadata, NitrokeyTrussedBootloader, ProgressCallback, Variant
 
 RKTH = bytes.fromhex("050aad3e77791a81e59c5b2ba5a158937e9460ee325d8ccba09734b8fdebb171")
 KEK = bytes([0xAA] * 32)
 UUID_LEN = 4
 FILENAME_PATTERN = re.compile("(firmware|alpha)-nk3..-lpc55-(?P<version>.*)\\.sb2$")
 
+T = TypeVar("T", bound="NitrokeyTrussedBootloaderLpc55")
+
 logger = logging.getLogger(__name__)
 
 
-class Nitrokey3BootloaderLpc55(Nitrokey3Bootloader):
+class NitrokeyTrussedBootloaderLpc55(NitrokeyTrussedBootloader):
     """A Nitrokey 3 device running the LPC55 bootloader."""
 
     def __init__(self, device: UsbDevice):
-        from .. import PID_NITROKEY3_LPC55_BOOTLOADER, VID_NITROKEY
-
-        if (device.vid, device.pid) != (VID_NITROKEY, PID_NITROKEY3_LPC55_BOOTLOADER):
-            raise ValueError(
-                "Not a Nitrokey 3 device: expected VID:PID "
-                f"{VID_NITROKEY:x}:{PID_NITROKEY3_LPC55_BOOTLOADER:x}, "
-                f"got {device.vid:x}:{device.pid:x}"
-            )
+        self.validate_vid_pid(device.vid, device.pid)
         self._path = device.path
         self.device = McuBoot(MbootUSBInterface(device))
 
-    def __enter__(self) -> "Nitrokey3BootloaderLpc55":
+    def __enter__(self: T) -> T:
         self.device.open()
         return self
 
@@ -60,10 +56,6 @@ class Nitrokey3BootloaderLpc55(Nitrokey3Bootloader):
         if isinstance(self._path, bytes):
             return self._path.decode("UTF-8")
         return self._path
-
-    @property
-    def name(self) -> str:
-        return "Nitrokey 3 Bootloader (LPC55)"
 
     @property
     def status(self) -> Tuple[int, str]:
@@ -116,25 +108,21 @@ class Nitrokey3BootloaderLpc55(Nitrokey3Bootloader):
                 f"Firmware update failed with status code {code}: {message}"
             )
 
-    @staticmethod
-    def list() -> List["Nitrokey3BootloaderLpc55"]:
-        from .. import PID_NITROKEY3_LPC55_BOOTLOADER, VID_NITROKEY
-
-        device_filter = USBDeviceFilter(
-            f"0x{VID_NITROKEY:x}:0x{PID_NITROKEY3_LPC55_BOOTLOADER:x}"
-        )
+    @classmethod
+    def list_vid_pid(cls: type[T], vid: int, pid: int) -> list[T]:
+        device_filter = USBDeviceFilter(f"0x{vid:x}:0x{pid:x}")
         devices = []
         for device in UsbDevice.enumerate(device_filter):
             try:
-                devices.append(Nitrokey3BootloaderLpc55(device))
+                devices.append(cls(device))
             except ValueError:
                 logger.warn(
                     f"Invalid Nitrokey 3 LPC55 bootloader returned by enumeration: {device}"
                 )
         return devices
 
-    @staticmethod
-    def open(path: str) -> Optional["Nitrokey3BootloaderLpc55"]:
+    @classmethod
+    def open(cls: type[T], path: str) -> Optional[T]:
         device_filter = USBDeviceFilter(path)
         devices = UsbDevice.enumerate(device_filter)
         if len(devices) == 0:
@@ -145,7 +133,7 @@ class Nitrokey3BootloaderLpc55(Nitrokey3Bootloader):
             return None
 
         try:
-            return Nitrokey3BootloaderLpc55(devices[0])
+            return cls(devices[0])
         except ValueError:
             logger.warn(
                 f"No Nitrokey 3 bootloader at path {path}", exc_info=sys.exc_info()

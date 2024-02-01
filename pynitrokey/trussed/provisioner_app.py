@@ -2,7 +2,7 @@ import enum
 from enum import Enum
 from typing import Optional
 
-from pynitrokey.nk3.device import Command, Nitrokey3Device
+from pynitrokey.trussed.device import App, NitrokeyTrussedDevice
 
 
 @enum.unique
@@ -20,7 +20,7 @@ class ProvisionerCommand(Enum):
 
 
 class ProvisionerApp:
-    def __init__(self, device: Nitrokey3Device) -> None:
+    def __init__(self, device: NitrokeyTrussedDevice) -> None:
         self.device = device
 
         try:
@@ -34,8 +34,8 @@ class ProvisionerApp:
         response_len: Optional[int] = None,
         data: bytes = b"",
     ) -> bytes:
-        return self.device._call(
-            Command.PROVISIONER,
+        return self.device._call_app(
+            App.PROVISIONER,
             response_len=response_len,
             data=command.value.to_bytes(1, "big") + data,
         )

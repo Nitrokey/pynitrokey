@@ -13,15 +13,16 @@ import re
 import time
 from dataclasses import dataclass
 from io import BytesIO
-from typing import Optional
+from typing import Optional, TypeVar
 from zipfile import ZipFile
 
 import ecdsa
 import ecdsa.curves
 from ecdsa.keys import BadSignatureError
 
-from ..utils import Uuid, Version
-from . import FirmwareMetadata, Nitrokey3Bootloader, ProgressCallback, Variant
+from pynitrokey.trussed.utils import Uuid, Version
+
+from . import FirmwareMetadata, NitrokeyTrussedBootloader, ProgressCallback, Variant
 from .nrf52_upload.dfu.dfu_transport import DfuEvent
 from .nrf52_upload.dfu.dfu_transport_serial import DfuTransportSerial
 from .nrf52_upload.dfu.init_packet_pb import InitPacketPB
@@ -32,6 +33,8 @@ from .nrf52_upload.lister.device_lister import DeviceLister
 logger = logging.getLogger(__name__)
 
 FILENAME_PATTERN = re.compile("(firmware|alpha)-nk3..-nrf52-(?P<version>.*)\\.zip$")
+
+T = TypeVar("T", bound="NitrokeyTrussedBootloaderNrf52")
 
 
 @dataclass
@@ -130,7 +133,7 @@ class Image:
         return image
 
 
-class Nitrokey3BootloaderNrf52(Nitrokey3Bootloader):
+class NitrokeyTrussedBootloaderNrf52(NitrokeyTrussedBootloader):
     def __init__(self, path: str, uuid: int) -> None:
         self._path = path
         self._uuid = uuid
@@ -142,10 +145,6 @@ class Nitrokey3BootloaderNrf52(Nitrokey3Bootloader):
     @property
     def path(self) -> str:
         return self._path
-
-    @property
-    def name(self) -> str:
-        return "Nitrokey 3 Bootloader (NRF52)"
 
     def close(self) -> None:
         pass
@@ -180,17 +179,15 @@ class Nitrokey3BootloaderNrf52(Nitrokey3Bootloader):
         dfu.send_firmware(image.firmware_bin)
         dfu.close()
 
-    @staticmethod
-    def list() -> list["Nitrokey3BootloaderNrf52"]:
-        return [
-            Nitrokey3BootloaderNrf52(port, serial) for port, serial in _list_ports()
-        ]
+    @classmethod
+    def list_vid_pid(cls: type[T], vid: int, pid: int) -> list[T]:
+        return [cls(port, serial) for port, serial in _list_ports(vid, pid)]
 
-    @staticmethod
-    def open(path: str) -> Optional["Nitrokey3BootloaderNrf52"]:
-        for port, serial in _list_ports():
+    @classmethod
+    def open_vid_pid(cls: type[T], vid: int, pid: int, path: str) -> Optional[T]:
+        for port, serial in _list_ports(vid, pid):
             if path == port:
-                return Nitrokey3BootloaderNrf52(path, serial)
+                return cls(path, serial)
         return None
 
 
@@ -205,9 +202,7 @@ class CallbackWrapper:
         self.callback(self.n, self.total)
 
 
-def _list_ports() -> list[tuple[str, int]]:
-    from .. import PID_NITROKEY3_NRF52_BOOTLOADER, VID_NITROKEY
-
+def _list_ports(vid: int, pid: int) -> list[tuple[str, int]]:
     ports = []
     for device in DeviceLister().enumerate():
         vendor_id = int(device.vendor_id, base=16)
@@ -217,7 +212,7 @@ def _list_ports() -> list[tuple[str, int]]:
             logger.warn(
                 f"Nitrokey 3 NRF52 bootloader has multiple com ports: {device.com_ports}"
             )
-        if vendor_id == VID_NITROKEY and product_id == PID_NITROKEY3_NRF52_BOOTLOADER:
+        if vendor_id == vid and product_id == pid:
             port = device.com_ports[0]
             serial = int(device.serial_number, base=16)
             logger.debug(f"Found Nitrokey 3 NRF52 bootloader with port {port}")

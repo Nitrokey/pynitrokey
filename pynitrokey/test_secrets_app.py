@@ -47,6 +47,7 @@ from pynitrokey.nk3.secrets_app import (
     SecretsAppException,
     Tag,
 )
+from pynitrokey.trussed.device import App
 
 CREDENTIAL_LABEL_MAX_SIZE = 127
 
@@ -1223,7 +1224,7 @@ def helper_send_receive_ins(
     data_to_send = app._custom_encode(structure) if structure is not None else data_raw
     data = iso7816_compose(ins_b, p1, p2, data_to_send, le=le)
     app.logfn(f">> {_trunc(data.hex())}")
-    res = app.dev.otp(data=data)
+    res = app.dev._call_app(App.SECRETS, data=data)
     app.logfn(f"<< {_trunc(res.hex())}")
     status_bytes, result = res[:2], res[2:]
 
@@ -1390,7 +1391,7 @@ def test_select_applet(secretsAppRaw):
     data = "00 a4 04 00   07 a0 00 00   05 27 21 01"
     data = data.replace(" ", "")
     data = binascii.a2b_hex(data)
-    res = secretsAppRaw.dev.otp(data=data)
+    res = secretsAppRaw.dev._call_app(App.SECRETS, data=data)
     assert res.hex() != "6a82"
     assert res.hex().startswith("9000")  # 90007903040a00710869f72b4b3712f627
     print(res.hex())

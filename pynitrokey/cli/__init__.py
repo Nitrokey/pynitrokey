@@ -24,6 +24,7 @@ from pynitrokey.cli.exceptions import CliException
 from pynitrokey.cli.fido2 import fido2
 from pynitrokey.cli.nethsm import nethsm
 from pynitrokey.cli.nk3 import nk3
+from pynitrokey.cli.nkpk import nkpk
 from pynitrokey.cli.pro import pro
 from pynitrokey.cli.start import start
 from pynitrokey.cli.storage import storage
@@ -87,6 +88,7 @@ def nitropy():
 nitropy.add_command(fido2)
 nitropy.add_command(nethsm)
 nitropy.add_command(nk3)
+nitropy.add_command(nkpk)
 nitropy.add_command(start)
 nitropy.add_command(storage)
 nitropy.add_command(pro)
@@ -102,9 +104,13 @@ nitropy.add_command(version)
 
 
 def _list():
+    from .nk3 import _list as list_nk3
+    from .nkpk import _list as list_nkpk
+
     fido2.commands["list"].callback()
     start.commands["list"].callback()
-    nk3.commands["list"].callback()
+    list_nk3()
+    list_nkpk()
     # TODO add other handled models
 
 

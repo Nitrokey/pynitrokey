@@ -21,16 +21,18 @@ from spsdk.mboot.exceptions import McuBootConnectionError
 
 import pynitrokey
 from pynitrokey.helpers import Retries
-from pynitrokey.nk3.base import Nitrokey3Base
-from pynitrokey.nk3.bootloader import (
+from pynitrokey.nk3.bootloader import Nitrokey3Bootloader
+from pynitrokey.nk3.device import Nitrokey3Device
+from pynitrokey.trussed.admin_app import BootMode
+from pynitrokey.trussed.base import NitrokeyTrussedBase
+from pynitrokey.trussed.bootloader import (
+    Device,
     FirmwareContainer,
-    Nitrokey3Bootloader,
     Variant,
     validate_firmware_image,
 )
-from pynitrokey.nk3.device import BootMode, Nitrokey3Device
-from pynitrokey.nk3.exceptions import TimeoutException
-from pynitrokey.nk3.utils import Version
+from pynitrokey.trussed.exceptions import TimeoutException
+from pynitrokey.trussed.utils import Version
 from pynitrokey.updates import Asset, Release, Repository
 
 logger = logging.getLogger(__name__)
@@ -167,13 +169,13 @@ class Updater:
 
     def update(
         self,
-        device: Nitrokey3Base,
+        device: NitrokeyTrussedBase,
         image: Optional[str],
         update_version: Optional[str],
         ignore_pynitrokey_version: bool = False,
     ) -> Version:
         current_version = (
-            device.version() if isinstance(device, Nitrokey3Device) else None
+            device.admin.version() if isinstance(device, Nitrokey3Device) else None
         )
         logger.info(f"Firmware version before update: {current_version or ''}")
         container = self._prepare_update(image, update_version, current_version)
@@ -218,7 +220,7 @@ class Updater:
         wait_retries = get_finalization_wait_retries(update_path)
         with self.ui.finalization_progress_bar() as callback:
             with self.await_device(wait_retries, callback) as device:
-                version = device.version()
+                version = device.admin.version()
                 if version != container.version:
                     raise self.ui.error(
                         f"The firmware update to {container.version} was successful, but the "
@@ -235,7 +237,7 @@ class Updater:
     ) -> FirmwareContainer:
         if image:
             try:
-                container = FirmwareContainer.parse(image)
+                container = FirmwareContainer.parse(image, Device.NITROKEY3)
             except Exception as e:
                 raise self.ui.error("Failed to parse firmware container", e)
             self._validate_version(current_version, container.version)
@@ -282,7 +284,7 @@ class Updater:
             )
 
         try:
-            container = FirmwareContainer.parse(BytesIO(data))
+            container = FirmwareContainer.parse(BytesIO(data), Device.NITROKEY3)
         except Exception as e:
             raise self.ui.error(
                 f"Failed to parse firmware container for {update.tag}", e
@@ -315,11 +317,13 @@ class Updater:
                 self.ui.confirm_update_same_version(same_version)
 
     @contextmanager
-    def _get_bootloader(self, device: Nitrokey3Base) -> Iterator[Nitrokey3Bootloader]:
+    def _get_bootloader(
+        self, device: NitrokeyTrussedBase
+    ) -> Iterator[Nitrokey3Bootloader]:
         if isinstance(device, Nitrokey3Device):
             self.ui.request_bootloader_confirmation()
             try:
-                device.reboot(BootMode.BOOTROM)
+                device.admin.reboot(BootMode.BOOTROM)
             except TimeoutException:
                 raise self.ui.abort(
                     "The reboot was not confirmed with the touch button"

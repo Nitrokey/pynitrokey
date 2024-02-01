@@ -9,24 +9,24 @@
 
 from typing import List, Optional
 
+from pynitrokey.trussed.base import NitrokeyTrussedBase
+
 from . import bootloader
-from .base import Nitrokey3Base
 from .device import Nitrokey3Device
 
-VID_NITROKEY = 0x20A0
 PID_NITROKEY3_DEVICE = 0x42B2
 PID_NITROKEY3_LPC55_BOOTLOADER = 0x42DD
 PID_NITROKEY3_NRF52_BOOTLOADER = 0x42E8
 
 
-def list() -> List[Nitrokey3Base]:
-    devices: List[Nitrokey3Base] = []
+def list() -> List[NitrokeyTrussedBase]:
+    devices: List[NitrokeyTrussedBase] = []
     devices.extend(bootloader.list())
     devices.extend(Nitrokey3Device.list())
     return devices
 
 
-def open(path: str) -> Optional[Nitrokey3Base]:
+def open(path: str) -> Optional[NitrokeyTrussedBase]:
     device = Nitrokey3Device.open(path)
     bootloader_device = bootloader.open(path)
     if device and bootloader_device:

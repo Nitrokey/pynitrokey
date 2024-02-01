@@ -112,12 +112,12 @@ warn_return_any = false
 
 # pynitrokey.nk3.bootloader.nrf52_upload is only temporary in this package
 [[tool.mypy.overrides]]
-module = "pynitrokey.nk3.bootloader.nrf52_upload.*"
+module = "pynitrokey.trussed.bootloader.nrf52_upload.*"
 ignore_errors = true
 
 # nrf52 has to use the untyped nrf52_upload module
 [[tool.mypy.overrides]]
-module = "pynitrokey.nk3.bootloader.nrf52"
+module = "pynitrokey.trussed.bootloader.nrf52"
 disallow_untyped_calls = false
 
 # libraries without annotations

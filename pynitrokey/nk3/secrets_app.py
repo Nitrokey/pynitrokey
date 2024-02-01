@@ -19,6 +19,7 @@ from semver.version import Version
 
 from pynitrokey.nk3.device import Nitrokey3Device
 from pynitrokey.start.gnuk_token import iso7816_compose
+from pynitrokey.trussed.device import App
 
 LogFn = Callable[[str], Any]
 WriteCorpusFn = Callable[[typing.Union["Instruction", "CCIDInstruction"], bytes], Any]
@@ -350,7 +351,7 @@ class SecretsApp:
         self.logfn(f"Sending {log_info if log_info else ''} (data: {len(data)} bytes)")
 
         try:
-            result = self.dev.otp(data=data)
+            result = self.dev._call_app(App.SECRETS, data=data)
         except Exception as e:
             self.logfn(f"Got exception: {e}")
             raise
@@ -368,7 +369,7 @@ class SecretsApp:
             ins_b, p1, p2 = self._encode_command(Instruction.SendRemaining)
             bytes_data = iso7816_compose(ins_b, p1, p2)
             try:
-                result = self.dev.otp(data=bytes_data)
+                result = self.dev._call_app(App.SECRETS, data=bytes_data)
             except Exception as e:
                 self.logfn(f"Got exception: {e}")
                 raise
