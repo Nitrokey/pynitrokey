@@ -14,7 +14,7 @@ import click
 
 from pynitrokey.cli.trussed.test import TestCase
 from pynitrokey.helpers import local_print
-from pynitrokey.nkpk import NitrokeyPasskeyBootloader, NitrokeyPasskeyDevice
+from pynitrokey.nkpk import NKPK_DATA, NitrokeyPasskeyBootloader, NitrokeyPasskeyDevice
 from pynitrokey.trussed.base import NitrokeyTrussedBase
 from pynitrokey.trussed.bootloader import Device
 from pynitrokey.trussed.device import NitrokeyTrussedDevice
@@ -30,8 +30,7 @@ class Context(trussed.Context[NitrokeyPasskeyBootloader, NitrokeyPasskeyDevice])
             NitrokeyPasskeyBootloader,
             NitrokeyPasskeyDevice,
             Device.NITROKEY_PASSKEY,
-            Repository("Nitrokey", "nitrokey-passkey-firmware"),
-            re.compile("firmware-nkpk-v.*\\.zip$"),
+            NKPK_DATA,
         )
 
     @property

@@ -15,21 +15,17 @@ import click
 from pynitrokey.cli import trussed
 from pynitrokey.cli.exceptions import CliException
 from pynitrokey.cli.trussed.test import TestCase
-from pynitrokey.helpers import check_experimental_flag, local_print
+from pynitrokey.helpers import check_experimental_flag
+from pynitrokey.nk3 import NK3_DATA
 from pynitrokey.nk3.bootloader import Nitrokey3Bootloader
 from pynitrokey.nk3.device import Nitrokey3Device
-from pynitrokey.nk3.updates import FIRMWARE_PATTERN, REPOSITORY
 from pynitrokey.trussed.base import NitrokeyTrussedBase
 from pynitrokey.trussed.bootloader import Device
 
 
 class Context(trussed.Context[Nitrokey3Bootloader, Nitrokey3Device]):
     def __init__(self, path: Optional[str]) -> None:
-        super().__init__(path, Nitrokey3Bootloader, Nitrokey3Device, Device.NITROKEY3, REPOSITORY, FIRMWARE_PATTERN)  # type: ignore[type-abstract]
-
-    @property
-    def device_name(self) -> str:
-        return "Nitrokey 3"
+        super().__init__(path, Nitrokey3Bootloader, Nitrokey3Device, Device.NITROKEY3, NK3_DATA)  # type: ignore[type-abstract]
 
     @property
     def test_cases(self) -> list[TestCase]:

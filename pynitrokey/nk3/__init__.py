@@ -9,6 +9,7 @@
 
 from typing import List, Optional
 
+from pynitrokey.trussed import DeviceData
 from pynitrokey.trussed.base import NitrokeyTrussedBase
 
 from . import bootloader
@@ -17,6 +18,12 @@ from .device import Nitrokey3Device
 PID_NITROKEY3_DEVICE = 0x42B2
 PID_NITROKEY3_LPC55_BOOTLOADER = 0x42DD
 PID_NITROKEY3_NRF52_BOOTLOADER = 0x42E8
+
+NK3_DATA = DeviceData(
+    name="Nitrokey 3",
+    firmware_repository_name="nitrokey-3-firmware",
+    firmware_pattern_string="firmware-nk3-v.*\\.zip$",
+)
 
 
 def list() -> List[NitrokeyTrussedBase]:

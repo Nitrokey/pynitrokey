@@ -11,7 +11,7 @@ from typing import List, Optional
 
 from fido2.hid import CtapHidDevice
 
-from pynitrokey.trussed import VID_NITROKEY
+from pynitrokey.trussed import VID_NITROKEY, DeviceData
 from pynitrokey.trussed.base import NitrokeyTrussedBase
 from pynitrokey.trussed.bootloader.nrf52 import NitrokeyTrussedBootloaderNrf52
 from pynitrokey.trussed.device import NitrokeyTrussedDevice
@@ -28,6 +28,12 @@ FIDO2_CERTS = [
         ],
     ),
 ]
+
+NKPK_DATA = DeviceData(
+    name="Nitrokey Passkey",
+    firmware_repository_name="nitrokey-passkey-firmware",
+    firmware_pattern_string="firmware-nkpk-v.*\\.zip$",
+)
 
 
 class NitrokeyPasskeyDevice(NitrokeyTrussedDevice):

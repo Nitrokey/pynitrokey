@@ -10,7 +10,6 @@
 import enum
 import logging
 import platform
-import re
 import time
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
@@ -21,6 +20,7 @@ from spsdk.mboot.exceptions import McuBootConnectionError
 
 import pynitrokey
 from pynitrokey.helpers import Retries
+from pynitrokey.nk3 import NK3_DATA
 from pynitrokey.nk3.bootloader import Nitrokey3Bootloader
 from pynitrokey.nk3.device import Nitrokey3Device
 from pynitrokey.trussed.admin_app import BootMode
@@ -33,14 +33,9 @@ from pynitrokey.trussed.bootloader import (
 )
 from pynitrokey.trussed.exceptions import TimeoutException
 from pynitrokey.trussed.utils import Version
-from pynitrokey.updates import Asset, Release, Repository
+from pynitrokey.updates import Asset, Release
 
 logger = logging.getLogger(__name__)
-
-REPOSITORY_OWNER = "Nitrokey"
-REPOSITORY_NAME = "nitrokey-3-firmware"
-REPOSITORY = Repository(owner=REPOSITORY_OWNER, name=REPOSITORY_NAME)
-FIRMWARE_PATTERN = re.compile("firmware-nk3-v.*\\.zip$")
 
 
 @enum.unique
@@ -63,7 +58,7 @@ class UpdatePath(enum.Enum):
 
 
 def get_firmware_update(release: Release) -> Asset:
-    return release.require_asset(FIRMWARE_PATTERN)
+    return release.require_asset(NK3_DATA.firmware_pattern)
 
 
 def get_extra_information(upath: UpdatePath) -> List[str]:
@@ -243,15 +238,16 @@ class Updater:
             self._validate_version(current_version, container.version)
             return container
         else:
+            repository = NK3_DATA.firmware_repository
             if version:
                 try:
                     logger.info(f"Downloading firmare version {version}")
-                    release = REPOSITORY.get_release(version)
+                    release = repository.get_release(version)
                 except Exception as e:
                     raise self.ui.error(f"Failed to get firmware release {version}", e)
             else:
                 try:
-                    release = REPOSITORY.get_latest_release()
+                    release = repository.get_latest_release()
                     logger.info(f"Latest firmware version: {release}")
                 except Exception as e:
                     raise self.ui.error("Failed to find latest firmware release", e)

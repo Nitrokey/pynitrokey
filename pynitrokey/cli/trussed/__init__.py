@@ -27,6 +27,7 @@ from pynitrokey.helpers import (
     local_print,
     require_windows_admin,
 )
+from pynitrokey.trussed import DeviceData
 from pynitrokey.trussed.admin_app import BootMode
 from pynitrokey.trussed.base import NitrokeyTrussedBase
 from pynitrokey.trussed.bootloader import Device as BootloaderDevice
@@ -56,20 +57,13 @@ class Context(ABC, Generic[Bootloader, Device]):
         bootloader_type: type[Bootloader],
         device_type: type[Device],
         bootloader_device: BootloaderDevice,
-        firmware_repository: Repository,
-        firmware_pattern: Pattern[str],
+        data: DeviceData,
     ) -> None:
         self.path = path
         self.bootloader_type = bootloader_type
         self.device_type = device_type
         self.bootloader_device = bootloader_device
-        self.firmware_repository = firmware_repository
-        self.firmware_pattern = firmware_pattern
-
-    @property
-    @abstractmethod
-    def device_name(self) -> str:
-        ...
+        self.data = data
 
     @property
     @abstractmethod
@@ -95,20 +89,20 @@ class Context(ABC, Generic[Bootloader, Device]):
             return self.list_all()
 
     def connect(self) -> NitrokeyTrussedBase:
-        return self._select_unique(self.device_name, self.list())
+        return self._select_unique(self.data.name, self.list())
 
     def connect_device(self) -> Device:
         devices = [
             device for device in self.list() if isinstance(device, self.device_type)
         ]
-        return self._select_unique(self.device_name, devices)
+        return self._select_unique(self.data.name, devices)
 
     def await_device(
         self,
         retries: Optional[int] = None,
         callback: Optional[Callable[[int, int], None]] = None,
     ) -> Device:
-        return self._await(self.device_name, self.device_type, retries, callback)
+        return self._await(self.data.name, self.device_type, retries, callback)
 
     def await_bootloader(
         self,
@@ -117,7 +111,7 @@ class Context(ABC, Generic[Bootloader, Device]):
     ) -> Bootloader:
         # mypy does not allow abstract types here, but this is still valid
         return self._await(
-            f"{self.device_name} bootloader", self.bootloader_type, retries, callback
+            f"{self.data.name} bootloader", self.bootloader_type, retries, callback
         )
 
     def _select_unique(self, name: str, devices: Sequence[T]) -> T:
@@ -202,8 +196,8 @@ def fetch_update(
     download a specific version, use the --version option.
     """
     try:
-        release = ctx.firmware_repository.get_release_or_latest(version)
-        update = release.require_asset(ctx.firmware_pattern)
+        release = ctx.data.firmware_repository.get_release_or_latest(version)
+        update = release.require_asset(ctx.data.firmware_pattern)
     except Exception as e:
         if version:
             raise CliException(f"Failed to find firmware update {version}", e)
@@ -241,7 +235,7 @@ def list(ctx: Context[Bootloader, Device]) -> None:
 
 
 def _list(ctx: Context[Bootloader, Device]) -> None:
-    local_print(f":: '{ctx.device_name}' keys")
+    local_print(f":: '{ctx.data.name}' keys")
     for device in ctx.list_all():
         with device as device:
             uuid = device.uuid()
@@ -510,9 +504,9 @@ def test(
 
     if len(devices) == 0:
         log_devices()
-        raise CliException(f"No connected {ctx.device_name} devices found")
+        raise CliException(f"No connected {ctx.data.name} devices found")
 
-    local_print(f"Found {len(devices)} {ctx.device_name} device(s):")
+    local_print(f"Found {len(devices)} {ctx.data.name} device(s):")
     for device in devices:
         local_print(f"- {device.name} at {device.path}")
 
