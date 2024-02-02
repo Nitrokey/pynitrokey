@@ -32,7 +32,9 @@ from .nrf52_upload.lister.device_lister import DeviceLister
 
 logger = logging.getLogger(__name__)
 
-FILENAME_PATTERN = re.compile("(firmware|alpha)-nk3..-nrf52-(?P<version>.*)\\.zip$")
+FILENAME_PATTERN = re.compile(
+    "(firmware|alpha)-(nk3..|nkpk)-nrf52-(?P<version>.*)\\.zip$"
+)
 
 T = TypeVar("T", bound="NitrokeyTrussedBootloaderNrf52")
 

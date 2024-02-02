@@ -30,6 +30,7 @@ ProgressCallback = Callable[[int, int], None]
 
 class Device(enum.Enum):
     NITROKEY3 = "Nitrokey 3"
+    NITROKEY_PASSKEY = "Nitrokey Passkey"
 
     @classmethod
     def from_str(cls, s: str) -> "Device":
@@ -53,12 +54,12 @@ class Variant(enum.Enum):
 
 def _validate_checksum(checksums: dict[str, str], path: str, data: bytes) -> None:
     if path not in checksums:
-        raise Exception(f"Missing checksum for file {path} in firmware container")
+        raise ValueError(f"Missing checksum for file {path} in firmware container")
     m = hashlib.sha256()
     m.update(data)
     checksum = m.hexdigest()
     if checksum != checksums[path]:
-        raise Exception(f"Invalid checksum for file {path} in firmware container")
+        raise ValueError(f"Invalid checksum for file {path} in firmware container")
 
 
 @dataclass
