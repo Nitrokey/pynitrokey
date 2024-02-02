@@ -10,8 +10,12 @@
 import re
 from dataclasses import dataclass
 from re import Pattern
+from typing import TYPE_CHECKING
 
 from pynitrokey.updates import Repository
+
+if TYPE_CHECKING:
+    from .bootloader.nrf52 import SignatureKey
 
 VID_NITROKEY = 0x20A0
 
@@ -21,6 +25,7 @@ class DeviceData:
     name: str
     firmware_repository_name: str
     firmware_pattern_string: str
+    nrf52_signature_keys: list["SignatureKey"]
 
     @property
     def firmware_repository(self) -> Repository:

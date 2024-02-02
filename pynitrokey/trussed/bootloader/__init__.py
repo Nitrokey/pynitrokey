@@ -19,6 +19,7 @@ from re import Pattern
 from typing import Callable, Dict, List, Optional, Tuple, Union
 from zipfile import ZipFile
 
+from .. import DeviceData
 from ..base import NitrokeyTrussedBase
 from ..utils import Version
 
@@ -149,9 +150,10 @@ def validate_firmware_image(
     variant: Variant,
     data: bytes,
     version: Optional[Version],
+    device: DeviceData,
 ) -> FirmwareMetadata:
     try:
-        metadata = parse_firmware_image(variant, data)
+        metadata = parse_firmware_image(variant, data, device)
     except Exception:
         logger.exception("Failed to parse firmware image", exc_info=sys.exc_info())
         raise Exception("Failed to parse firmware image")
@@ -174,13 +176,15 @@ def validate_firmware_image(
     return metadata
 
 
-def parse_firmware_image(variant: Variant, data: bytes) -> FirmwareMetadata:
+def parse_firmware_image(
+    variant: Variant, data: bytes, device: DeviceData
+) -> FirmwareMetadata:
     from .lpc55 import parse_firmware_image as parse_firmware_image_lpc55
     from .nrf52 import parse_firmware_image as parse_firmware_image_nrf52
 
     if variant == Variant.LPC55:
         return parse_firmware_image_lpc55(data)
     elif variant == Variant.NRF52:
-        return parse_firmware_image_nrf52(data)
+        return parse_firmware_image_nrf52(data, device.nrf52_signature_keys)
     else:
         raise ValueError(f"Unexpected variant {variant}")

@@ -7,12 +7,17 @@
 # http://opensource.org/licenses/MIT>, at your option. This file may not be
 # copied, modified, or distributed except according to those terms.
 
-from typing import List, Optional
+from typing import List, Optional, Sequence
 
 from pynitrokey.trussed import VID_NITROKEY
 from pynitrokey.trussed.bootloader import NitrokeyTrussedBootloader
 from pynitrokey.trussed.bootloader.lpc55 import NitrokeyTrussedBootloaderLpc55
-from pynitrokey.trussed.bootloader.nrf52 import NitrokeyTrussedBootloaderNrf52
+from pynitrokey.trussed.bootloader.nrf52 import (
+    NitrokeyTrussedBootloaderNrf52,
+    SignatureKey,
+)
+
+from . import NK3_DATA
 
 
 class Nitrokey3Bootloader(NitrokeyTrussedBootloader):
@@ -59,6 +64,10 @@ class Nitrokey3BootloaderNrf52(NitrokeyTrussedBootloaderNrf52, Nitrokey3Bootload
         from . import PID_NITROKEY3_NRF52_BOOTLOADER
 
         return cls.open_vid_pid(VID_NITROKEY, PID_NITROKEY3_NRF52_BOOTLOADER, path)
+
+    @property
+    def signature_keys(self) -> Sequence[SignatureKey]:
+        return NK3_DATA.nrf52_signature_keys
 
 
 def list() -> List[Nitrokey3Bootloader]:

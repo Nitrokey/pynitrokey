@@ -555,7 +555,7 @@ def validate_update(ctx: Context[Bootloader, Device], image: str) -> None:
     for variant in container.images:
         data = container.images[variant]
         try:
-            metadata = parse_firmware_image(variant, data)
+            metadata = parse_firmware_image(variant, data, ctx.data)
         except Exception as e:
             raise CliException("Failed to parse and validate firmware image", e)
 

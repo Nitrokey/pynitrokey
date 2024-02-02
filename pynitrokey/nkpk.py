@@ -7,13 +7,16 @@
 # http://opensource.org/licenses/MIT>, at your option. This file may not be
 # copied, modified, or distributed except according to those terms.
 
-from typing import List, Optional
+from typing import List, Optional, Sequence
 
 from fido2.hid import CtapHidDevice
 
 from pynitrokey.trussed import VID_NITROKEY, DeviceData
 from pynitrokey.trussed.base import NitrokeyTrussedBase
-from pynitrokey.trussed.bootloader.nrf52 import NitrokeyTrussedBootloaderNrf52
+from pynitrokey.trussed.bootloader.nrf52 import (
+    NitrokeyTrussedBootloaderNrf52,
+    SignatureKey,
+)
 from pynitrokey.trussed.device import NitrokeyTrussedDevice
 from pynitrokey.trussed.utils import Fido2Certs, Version
 
@@ -33,6 +36,18 @@ NKPK_DATA = DeviceData(
     name="Nitrokey Passkey",
     firmware_repository_name="nitrokey-passkey-firmware",
     firmware_pattern_string="firmware-nkpk-v.*\\.zip$",
+    nrf52_signature_keys=[
+        SignatureKey(
+            name="Nitrokey",
+            is_official=True,
+            der="3059301306072a8648ce3d020106082a8648ce3d0301070342000445121cdf7a10826faa58c8cbe7bb1a40fe71c85c7756324eac09610d4710e9dadd473c0c9d35838b5cce301e796b2e14a8c29c86f0eb15f36325096506e275e6",
+        ),
+        SignatureKey(
+            name="Nitrokey Test",
+            is_official=False,
+            der="3059301306072a8648ce3d020106082a8648ce3d03010703420004d9a355a2927bd6ecb7ed714294d4692ad31ae9dd21853bf99e2cf7182d1acd6c2ada4a9707ab43f9e6194480d94e477dce4de9be5c35119c714bac459b21cbdc",
+        ),
+    ],
 )
 
 
@@ -69,6 +84,10 @@ class NitrokeyPasskeyBootloader(NitrokeyTrussedBootloaderNrf52):
     @classmethod
     def open(cls, path: str) -> Optional["NitrokeyPasskeyBootloader"]:
         return cls.open_vid_pid(VID_NITROKEY, PID_NITROKEY_PASSKEY_BOOTLOADER, path)
+
+    @property
+    def signature_keys(self) -> Sequence[SignatureKey]:
+        return NKPK_DATA.nrf52_signature_keys
 
 
 def list() -> List[NitrokeyTrussedBase]:

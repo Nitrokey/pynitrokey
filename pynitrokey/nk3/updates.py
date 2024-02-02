@@ -200,6 +200,7 @@ class Updater:
                     bootloader.variant,
                     container.images[bootloader.variant],
                     container.version,
+                    NK3_DATA,
                 )
             except Exception as e:
                 raise self.ui.error("Failed to validate firmware image", e)
