@@ -19,10 +19,9 @@ from tqdm import tqdm
 from pynitrokey.cli.trussed.test import TestContext, TestResult, TestStatus, test_case
 from pynitrokey.fido2.client import NKFido2Client
 from pynitrokey.helpers import local_print
-from pynitrokey.nk3.utils import Fido2Certs
 from pynitrokey.trussed.base import NitrokeyTrussedBase
 from pynitrokey.trussed.device import NitrokeyTrussedDevice
-from pynitrokey.trussed.utils import Uuid, Version
+from pynitrokey.trussed.utils import Fido2Certs, Uuid, Version
 
 logger = logging.getLogger(__name__)
 
@@ -400,7 +399,7 @@ def test_fido2(ctx: TestContext, device: NitrokeyTrussedBase) -> TestResult:
 
     firmware_version = ctx.firmware_version or device.admin.version()
     if firmware_version:
-        expected_certs = Fido2Certs.get(firmware_version)
+        expected_certs = Fido2Certs.get(device.fido2_certs, firmware_version)
         if expected_certs and cert_hash not in expected_certs.hashes:
             return TestResult(
                 TestStatus.FAILURE,

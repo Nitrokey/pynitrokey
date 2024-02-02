@@ -13,14 +13,14 @@ import platform
 import sys
 from abc import abstractmethod
 from enum import Enum
-from typing import Optional, TypeVar
+from typing import Optional, Sequence, TypeVar
 
 from fido2.hid import CtapHidDevice, open_device
 
 from pynitrokey.fido2 import device_path_to_str
 
 from .base import NitrokeyTrussedBase
-from .utils import Uuid, Version
+from .utils import Fido2Certs, Uuid, Version
 
 T = TypeVar("T", bound="NitrokeyTrussedDevice")
 
@@ -37,10 +37,13 @@ class App(Enum):
 
 
 class NitrokeyTrussedDevice(NitrokeyTrussedBase):
-    def __init__(self, device: CtapHidDevice) -> None:
+    def __init__(
+        self, device: CtapHidDevice, fido2_certs: Sequence[Fido2Certs]
+    ) -> None:
         self.validate_vid_pid(device.descriptor.vid, device.descriptor.pid)
 
         self.device = device
+        self.fido2_certs = fido2_certs
         self._path = device_path_to_str(device.descriptor.path)
         self.logger = logger.getChild(self._path)
 
@@ -91,6 +94,11 @@ class NitrokeyTrussedDevice(NitrokeyTrussedBase):
         return self._call(app.value, app.name, response_len, data)
 
     @classmethod
+    @abstractmethod
+    def from_device(cls: type[T], device: CtapHidDevice) -> T:
+        ...
+
+    @classmethod
     def open(cls: type[T], path: str) -> Optional[T]:
         try:
             if platform.system() == "Windows":
@@ -101,7 +109,7 @@ class NitrokeyTrussedDevice(NitrokeyTrussedBase):
             logger.warn(f"No CTAPHID device at path {path}", exc_info=sys.exc_info())
             return None
         try:
-            return cls(device)
+            return cls.from_device(device)
         except ValueError:
             logger.warn(f"No Nitrokey device at path {path}", exc_info=sys.exc_info())
             return None
@@ -111,7 +119,7 @@ class NitrokeyTrussedDevice(NitrokeyTrussedBase):
         devices = []
         for device in CtapHidDevice.list_devices():
             try:
-                devices.append(cls(device))
+                devices.append(cls.from_device(device))
             except ValueError:
                 # not the correct device type, skip
                 pass

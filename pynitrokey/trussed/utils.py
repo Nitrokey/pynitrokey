@@ -10,7 +10,7 @@
 import dataclasses
 from dataclasses import dataclass, field
 from functools import total_ordering
-from typing import Optional
+from typing import Optional, Sequence
 
 from spsdk.sbfile.misc import BcdVersion3
 
@@ -231,3 +231,17 @@ class Version:
     @classmethod
     def from_bcd_version(cls, version: BcdVersion3) -> "Version":
         return cls(major=version.major, minor=version.minor, patch=version.service)
+
+
+@dataclass
+class Fido2Certs:
+    start: Version
+    hashes: list[str]
+
+    @staticmethod
+    def get(certs: Sequence["Fido2Certs"], version: Version) -> Optional["Fido2Certs"]:
+        matching_certs = [c for c in certs if version >= c.start]
+        if matching_certs:
+            return max(matching_certs, key=lambda c: c.start)
+        else:
+            return None

@@ -15,14 +15,24 @@ from pynitrokey.trussed import VID_NITROKEY
 from pynitrokey.trussed.base import NitrokeyTrussedBase
 from pynitrokey.trussed.bootloader.nrf52 import NitrokeyTrussedBootloaderNrf52
 from pynitrokey.trussed.device import NitrokeyTrussedDevice
+from pynitrokey.trussed.utils import Fido2Certs, Version
 
 PID_NITROKEY_PASSKEY_DEVICE = 0x42F3
 PID_NITROKEY_PASSKEY_BOOTLOADER = 0x42F4
 
+FIDO2_CERTS = [
+    Fido2Certs(
+        start=Version(0, 1, 0),
+        hashes=[
+            "c7512dfcd15ffc5a7b4000e4898e5956ee858027794c5086cc137a02cd15d123",
+        ],
+    ),
+]
+
 
 class NitrokeyPasskeyDevice(NitrokeyTrussedDevice):
     def __init__(self, device: CtapHidDevice) -> None:
-        super().__init__(device)
+        super().__init__(device, FIDO2_CERTS)
 
     @property
     def pid(self) -> int:
@@ -31,6 +41,10 @@ class NitrokeyPasskeyDevice(NitrokeyTrussedDevice):
     @property
     def name(self) -> str:
         return "Nitrokey Passkey"
+
+    @classmethod
+    def from_device(cls, device: CtapHidDevice) -> "NitrokeyPasskeyDevice":
+        return cls(device)
 
 
 class NitrokeyPasskeyBootloader(NitrokeyTrussedBootloaderNrf52):
