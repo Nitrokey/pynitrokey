@@ -11,9 +11,10 @@ import hashlib
 import logging
 import re
 import time
+from abc import abstractmethod
 from dataclasses import dataclass
 from io import BytesIO
-from typing import Optional, TypeVar
+from typing import Optional, Sequence, TypeVar
 from zipfile import ZipFile
 
 import ecdsa
@@ -32,7 +33,9 @@ from .nrf52_upload.lister.device_lister import DeviceLister
 
 logger = logging.getLogger(__name__)
 
-FILENAME_PATTERN = re.compile("(firmware|alpha)-nk3..-nrf52-(?P<version>.*)\\.zip$")
+FILENAME_PATTERN = re.compile(
+    "(firmware|alpha)-(nk3..|nkpk)-nrf52-(?P<version>.*)\\.zip$"
+)
 
 T = TypeVar("T", bound="NitrokeyTrussedBootloaderNrf52")
 
@@ -41,6 +44,8 @@ T = TypeVar("T", bound="NitrokeyTrussedBootloaderNrf52")
 class SignatureKey:
     name: str
     is_official: bool
+    # generate with:
+    # $ openssl ec -in dfu_public.pem -inform pem -pubin -outform der | xxd -p
     der: str
 
     def vk(self) -> ecdsa.VerifyingKey:
@@ -58,23 +63,6 @@ class SignatureKey:
             return False
 
 
-# openssl ec -in dfu_public.pem -inform pem -pubin -outform der | xxd -p
-SIGNATURE_KEYS = [
-    # Nitrokey production key
-    SignatureKey(
-        name="Nitrokey",
-        is_official=True,
-        der="3059301306072a8648ce3d020106082a8648ce3d03010703420004a0849b19007ccd4661c01c533804b7fd0c4d8c0e7583653f1f36a8331afff298b542bd00a3dc47c16bf428ac4d2864137d63f702d89e5b42674e0549b4232618",
-    ),
-    # Nitrokey test key
-    SignatureKey(
-        name="Nitrokey Test",
-        is_official=False,
-        der="3059301306072a8648ce3d020106082a8648ce3d0301070342000493e461ab0582bda1f45b0ce47d66bc4e8623e289c31af2098cde6ebd8631da85acf17e412d406c1e38c2de654a8fd0196506a85b169a756aeac2505a541cdd5d",
-    ),
-]
-
-
 @dataclass
 class Image:
     init_packet: InitPacketPB
@@ -84,7 +72,7 @@ class Image:
     signature_key: Optional[SignatureKey] = None
 
     @classmethod
-    def parse(cls, data: bytes) -> "Image":
+    def parse(cls, data: bytes, keys: Sequence[SignatureKey]) -> "Image":
         io = BytesIO(data)
         with ZipFile(io) as pkg:
             with pkg.open(Package.MANIFEST_FILENAME) as f:
@@ -126,7 +114,7 @@ class Image:
             # see nordicsemi.dfu.signing.Signing.sign
             signature = signature[31::-1] + signature[63:31:-1]
             message = init_packet.get_init_command_bytes()
-            for key in SIGNATURE_KEYS:
+            for key in keys:
                 if key.verify(signature, message):
                     image.signature_key = key
 
@@ -146,6 +134,11 @@ class NitrokeyTrussedBootloaderNrf52(NitrokeyTrussedBootloader):
     def path(self) -> str:
         return self._path
 
+    @property
+    @abstractmethod
+    def signature_keys(self) -> Sequence[SignatureKey]:
+        ...
+
     def close(self) -> None:
         pass
 
@@ -160,7 +153,7 @@ class NitrokeyTrussedBootloaderNrf52(NitrokeyTrussedBootloader):
         # we have to implement this ourselves because we want to read the files
         # from memory, not from the filesystem
 
-        image = Image.parse(data)
+        image = Image.parse(data, self.signature_keys)
 
         time.sleep(3)
 
@@ -224,8 +217,8 @@ def _list_ports(vid: int, pid: int) -> list[tuple[str, int]]:
     return ports
 
 
-def parse_firmware_image(data: bytes) -> FirmwareMetadata:
-    image = Image.parse(data)
+def parse_firmware_image(data: bytes, keys: Sequence[SignatureKey]) -> FirmwareMetadata:
+    image = Image.parse(data, keys)
     version = Version.from_int(image.init_packet.init_command.fw_version)
     metadata = FirmwareMetadata(version=version)
 

@@ -7,22 +7,31 @@
 # http://opensource.org/licenses/MIT>, at your option. This file may not be
 # copied, modified, or distributed except according to those terms.
 
+import re
 from typing import Optional, Sequence
 
 import click
 
 from pynitrokey.cli.trussed.test import TestCase
 from pynitrokey.helpers import local_print
-from pynitrokey.nkpk import NitrokeyPasskeyBootloader, NitrokeyPasskeyDevice
+from pynitrokey.nkpk import NKPK_DATA, NitrokeyPasskeyBootloader, NitrokeyPasskeyDevice
 from pynitrokey.trussed.base import NitrokeyTrussedBase
+from pynitrokey.trussed.bootloader import Device
 from pynitrokey.trussed.device import NitrokeyTrussedDevice
+from pynitrokey.updates import Repository
 
 from . import trussed
 
 
 class Context(trussed.Context[NitrokeyPasskeyBootloader, NitrokeyPasskeyDevice]):
     def __init__(self, path: Optional[str]) -> None:
-        super().__init__(path, NitrokeyPasskeyBootloader, NitrokeyPasskeyDevice)
+        super().__init__(
+            path,
+            NitrokeyPasskeyBootloader,
+            NitrokeyPasskeyDevice,
+            Device.NITROKEY_PASSKEY,
+            NKPK_DATA,
+        )
 
     @property
     def test_cases(self) -> list[TestCase]:

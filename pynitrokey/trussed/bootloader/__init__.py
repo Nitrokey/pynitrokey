@@ -19,6 +19,7 @@ from re import Pattern
 from typing import Callable, Dict, List, Optional, Tuple, Union
 from zipfile import ZipFile
 
+from .. import DeviceData
 from ..base import NitrokeyTrussedBase
 from ..utils import Version
 
@@ -30,6 +31,7 @@ ProgressCallback = Callable[[int, int], None]
 
 class Device(enum.Enum):
     NITROKEY3 = "Nitrokey 3"
+    NITROKEY_PASSKEY = "Nitrokey Passkey"
 
     @classmethod
     def from_str(cls, s: str) -> "Device":
@@ -53,12 +55,12 @@ class Variant(enum.Enum):
 
 def _validate_checksum(checksums: dict[str, str], path: str, data: bytes) -> None:
     if path not in checksums:
-        raise Exception(f"Missing checksum for file {path} in firmware container")
+        raise ValueError(f"Missing checksum for file {path} in firmware container")
     m = hashlib.sha256()
     m.update(data)
     checksum = m.hexdigest()
     if checksum != checksums[path]:
-        raise Exception(f"Invalid checksum for file {path} in firmware container")
+        raise ValueError(f"Invalid checksum for file {path} in firmware container")
 
 
 @dataclass
@@ -148,9 +150,10 @@ def validate_firmware_image(
     variant: Variant,
     data: bytes,
     version: Optional[Version],
+    device: DeviceData,
 ) -> FirmwareMetadata:
     try:
-        metadata = parse_firmware_image(variant, data)
+        metadata = parse_firmware_image(variant, data, device)
     except Exception:
         logger.exception("Failed to parse firmware image", exc_info=sys.exc_info())
         raise Exception("Failed to parse firmware image")
@@ -173,13 +176,15 @@ def validate_firmware_image(
     return metadata
 
 
-def parse_firmware_image(variant: Variant, data: bytes) -> FirmwareMetadata:
+def parse_firmware_image(
+    variant: Variant, data: bytes, device: DeviceData
+) -> FirmwareMetadata:
     from .lpc55 import parse_firmware_image as parse_firmware_image_lpc55
     from .nrf52 import parse_firmware_image as parse_firmware_image_nrf52
 
     if variant == Variant.LPC55:
         return parse_firmware_image_lpc55(data)
     elif variant == Variant.NRF52:
-        return parse_firmware_image_nrf52(data)
+        return parse_firmware_image_nrf52(data, device.nrf52_signature_keys)
     else:
         raise ValueError(f"Unexpected variant {variant}")

@@ -8,8 +8,10 @@
 # copied, modified, or distributed except according to those terms.
 
 import logging
+import os.path
 from abc import ABC, abstractmethod
 from hashlib import sha256
+from re import Pattern
 from typing import BinaryIO, Callable, Generic, Optional, Sequence, TypeVar
 
 import click
@@ -19,13 +21,25 @@ from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey
 from ecdsa import NIST256p, SigningKey
 
 from pynitrokey.cli.exceptions import CliException
-from pynitrokey.helpers import Retries, local_print, require_windows_admin
+from pynitrokey.helpers import (
+    DownloadProgressBar,
+    Retries,
+    local_print,
+    require_windows_admin,
+)
+from pynitrokey.trussed import DeviceData
 from pynitrokey.trussed.admin_app import BootMode
 from pynitrokey.trussed.base import NitrokeyTrussedBase
-from pynitrokey.trussed.bootloader import NitrokeyTrussedBootloader
+from pynitrokey.trussed.bootloader import Device as BootloaderDevice
+from pynitrokey.trussed.bootloader import (
+    FirmwareContainer,
+    NitrokeyTrussedBootloader,
+    parse_firmware_image,
+)
 from pynitrokey.trussed.device import NitrokeyTrussedDevice
 from pynitrokey.trussed.exceptions import TimeoutException
 from pynitrokey.trussed.provisioner_app import ProvisionerApp
+from pynitrokey.updates import OverwriteError, Repository
 
 from .test import TestCase
 
@@ -42,15 +56,14 @@ class Context(ABC, Generic[Bootloader, Device]):
         path: Optional[str],
         bootloader_type: type[Bootloader],
         device_type: type[Device],
+        bootloader_device: BootloaderDevice,
+        data: DeviceData,
     ) -> None:
         self.path = path
         self.bootloader_type = bootloader_type
         self.device_type = device_type
-
-    @property
-    @abstractmethod
-    def device_name(self) -> str:
-        ...
+        self.bootloader_device = bootloader_device
+        self.data = data
 
     @property
     @abstractmethod
@@ -76,20 +89,20 @@ class Context(ABC, Generic[Bootloader, Device]):
             return self.list_all()
 
     def connect(self) -> NitrokeyTrussedBase:
-        return self._select_unique(self.device_name, self.list())
+        return self._select_unique(self.data.name, self.list())
 
     def connect_device(self) -> Device:
         devices = [
             device for device in self.list() if isinstance(device, self.device_type)
         ]
-        return self._select_unique(self.device_name, devices)
+        return self._select_unique(self.data.name, devices)
 
     def await_device(
         self,
         retries: Optional[int] = None,
         callback: Optional[Callable[[int, int], None]] = None,
     ) -> Device:
-        return self._await(self.device_name, self.device_type, retries, callback)
+        return self._await(self.data.name, self.device_type, retries, callback)
 
     def await_bootloader(
         self,
@@ -98,7 +111,7 @@ class Context(ABC, Generic[Bootloader, Device]):
     ) -> Bootloader:
         # mypy does not allow abstract types here, but this is still valid
         return self._await(
-            f"{self.device_name} bootloader", self.bootloader_type, retries, callback
+            f"{self.data.name} bootloader", self.bootloader_type, retries, callback
         )
 
     def _select_unique(self, name: str, devices: Sequence[T]) -> T:
@@ -146,13 +159,72 @@ def prepare_group() -> None:
 
 
 def add_commands(group: click.Group) -> None:
+    group.add_command(fetch_update)
     group.add_command(list)
     group.add_command(provision)
     group.add_command(reboot)
     group.add_command(rng)
     group.add_command(status)
     group.add_command(test)
+    group.add_command(validate_update)
     group.add_command(version)
+
+
+@click.command()
+@click.argument("path", default=".")
+@click.option(
+    "-f",
+    "--force",
+    is_flag=True,
+    default=False,
+    help="Overwrite the firmware image if it already exists",
+)
+@click.option("--version", help="Download this version instead of the latest one")
+@click.pass_obj
+def fetch_update(
+    ctx: Context[Bootloader, Device], path: str, force: bool, version: Optional[str]
+) -> None:
+    """
+    Fetches a firmware update and stores it at the given path.
+
+    If no path is given, the firmware image stored in the current working
+    directory.  If the given path is a directory, the image is stored under
+    that directory.  Otherwise it is written to the path.  Existing files are
+    only overwritten if --force is set.
+
+    Per default, the latest firmware release is fetched.  If you want to
+    download a specific version, use the --version option.
+    """
+    try:
+        release = ctx.data.firmware_repository.get_release_or_latest(version)
+        update = release.require_asset(ctx.data.firmware_pattern)
+    except Exception as e:
+        if version:
+            raise CliException(f"Failed to find firmware update {version}", e)
+        else:
+            raise CliException("Failed to find latest firmware update", e)
+
+    bar = DownloadProgressBar(desc=update.tag)
+
+    try:
+        if os.path.isdir(path):
+            path = update.download_to_dir(path, overwrite=force, callback=bar.update)
+        else:
+            if not force and os.path.exists(path):
+                raise OverwriteError(path)
+            with open(path, "wb") as f:
+                update.download(f, callback=bar.update)
+
+        bar.close()
+
+        local_print(f"Successfully downloaded firmware release {update.tag} to {path}")
+    except OverwriteError as e:
+        raise CliException(
+            f"{e.path} already exists.  Use --force to overwrite the file.",
+            support_hint=False,
+        )
+    except Exception as e:
+        raise CliException(f"Failed to download firmware update {update.tag}", e)
 
 
 @click.command()
@@ -163,7 +235,7 @@ def list(ctx: Context[Bootloader, Device]) -> None:
 
 
 def _list(ctx: Context[Bootloader, Device]) -> None:
-    local_print(f":: '{ctx.device_name}' keys")
+    local_print(f":: '{ctx.data.name}' keys")
     for device in ctx.list_all():
         with device as device:
             uuid = device.uuid()
@@ -432,9 +504,9 @@ def test(
 
     if len(devices) == 0:
         log_devices()
-        raise CliException(f"No connected {ctx.device_name} devices found")
+        raise CliException(f"No connected {ctx.data.name} devices found")
 
-    local_print(f"Found {len(devices)} {ctx.device_name} device(s):")
+    local_print(f"Found {len(devices)} {ctx.data.name} device(s):")
     for device in devices:
         local_print(f"- {device.name} at {device.path}")
 
@@ -461,6 +533,43 @@ def test(
     if failure > 0:
         local_print("")
         raise CliException(f"Test failed for {failure} device(s)")
+
+
+@click.command()
+@click.argument("image", type=click.Path(exists=True, dir_okay=False))
+@click.pass_obj
+def validate_update(ctx: Context[Bootloader, Device], image: str) -> None:
+    """
+    Validates the given firmware image and prints the firmware version and the signer for all
+    available variants.
+    """
+    try:
+        container = FirmwareContainer.parse(image, ctx.bootloader_device)
+    except ValueError as e:
+        raise CliException("Failed to validate firmware image", e, support_hint=False)
+
+    print(f"version:      {container.version}")
+    if container.pynitrokey:
+        print(f"pynitrokey:   >= {container.pynitrokey}")
+
+    for variant in container.images:
+        data = container.images[variant]
+        try:
+            metadata = parse_firmware_image(variant, data, ctx.data)
+        except Exception as e:
+            raise CliException("Failed to parse and validate firmware image", e)
+
+        signed_by = metadata.signed_by or "unsigned"
+
+        print(f"variant:      {variant.value}")
+        print(f"  version:    {metadata.version}")
+        print(f"  signed by:  {signed_by}")
+
+        if container.version != metadata.version:
+            raise CliException(
+                f"The firmware image for the {variant} variant and the release "
+                f"{container.version} has an unexpected product version ({metadata.version})."
+            )
 
 
 @click.command()

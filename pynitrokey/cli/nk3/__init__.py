@@ -7,7 +7,6 @@
 # http://opensource.org/licenses/MIT>, at your option. This file may not be
 # copied, modified, or distributed except according to those terms.
 
-import os.path
 import sys
 from typing import List, Optional
 
@@ -16,26 +15,17 @@ import click
 from pynitrokey.cli import trussed
 from pynitrokey.cli.exceptions import CliException
 from pynitrokey.cli.trussed.test import TestCase
-from pynitrokey.helpers import DownloadProgressBar, check_experimental_flag, local_print
+from pynitrokey.helpers import check_experimental_flag
+from pynitrokey.nk3 import NK3_DATA
 from pynitrokey.nk3.bootloader import Nitrokey3Bootloader
 from pynitrokey.nk3.device import Nitrokey3Device
-from pynitrokey.nk3.updates import REPOSITORY, get_firmware_update
 from pynitrokey.trussed.base import NitrokeyTrussedBase
-from pynitrokey.trussed.bootloader import (
-    Device,
-    FirmwareContainer,
-    parse_firmware_image,
-)
-from pynitrokey.updates import OverwriteError
+from pynitrokey.trussed.bootloader import Device
 
 
 class Context(trussed.Context[Nitrokey3Bootloader, Nitrokey3Device]):
     def __init__(self, path: Optional[str]) -> None:
-        super().__init__(path, Nitrokey3Bootloader, Nitrokey3Device)  # type: ignore[type-abstract]
-
-    @property
-    def device_name(self) -> str:
-        return "Nitrokey 3"
+        super().__init__(path, Nitrokey3Bootloader, Nitrokey3Device, Device.NITROKEY3, NK3_DATA)  # type: ignore[type-abstract]
 
     @property
     def test_cases(self) -> list[TestCase]:
@@ -77,92 +67,6 @@ trussed.add_commands(nk3)
 
 def _list() -> None:
     trussed._list(Context(None))
-
-
-@nk3.command()
-@click.argument("path", default=".")
-@click.option(
-    "-f",
-    "--force",
-    is_flag=True,
-    default=False,
-    help="Overwrite the firmware image if it already exists",
-)
-@click.option("--version", help="Download this version instead of the latest one")
-def fetch_update(path: str, force: bool, version: Optional[str]) -> None:
-    """
-    Fetches a firmware update for the Nitrokey 3 and stores it at the given path.
-
-    If no path is given, the firmware image stored in the current working
-    directory.  If the given path is a directory, the image is stored under
-    that directory.  Otherwise it is written to the path.  Existing files are
-    only overwritten if --force is set.
-
-    Per default, the latest firmware release is fetched.  If you want to
-    download a specific version, use the --version option.
-    """
-    try:
-        release = REPOSITORY.get_release_or_latest(version)
-        update = get_firmware_update(release)
-    except Exception as e:
-        if version:
-            raise CliException(f"Failed to find firmware update {version}", e)
-        else:
-            raise CliException("Failed to find latest firmware update", e)
-
-    bar = DownloadProgressBar(desc=update.tag)
-
-    try:
-        if os.path.isdir(path):
-            path = update.download_to_dir(path, overwrite=force, callback=bar.update)
-        else:
-            if not force and os.path.exists(path):
-                raise OverwriteError(path)
-            with open(path, "wb") as f:
-                update.download(f, callback=bar.update)
-
-        bar.close()
-
-        local_print(f"Successfully downloaded firmware release {update.tag} to {path}")
-    except OverwriteError as e:
-        raise CliException(
-            f"{e.path} already exists.  Use --force to overwrite the file.",
-            support_hint=False,
-        )
-    except Exception as e:
-        raise CliException(f"Failed to download firmware update {update.tag}", e)
-
-
-@nk3.command()
-@click.argument("image", type=click.Path(exists=True, dir_okay=False))
-def validate_update(image: str) -> None:
-    """
-    Validates the given firmware image and prints the firmware version and the signer for all
-    available variants.
-    """
-    container = FirmwareContainer.parse(image, Device.NITROKEY3)
-    print(f"version:      {container.version}")
-    if container.pynitrokey:
-        print(f"pynitrokey:   >= {container.pynitrokey}")
-
-    for variant in container.images:
-        data = container.images[variant]
-        try:
-            metadata = parse_firmware_image(variant, data)
-        except Exception as e:
-            raise CliException("Failed to parse and validate firmware image", e)
-
-        signed_by = metadata.signed_by or "unsigned"
-
-        print(f"variant:      {variant.value}")
-        print(f"  version:    {metadata.version}")
-        print(f"  signed by:  {signed_by}")
-
-        if container.version != metadata.version:
-            raise CliException(
-                f"The firmware image for the {variant} variant and the release "
-                f"{container.version} has an unexpected product version ({metadata.version})."
-            )
 
 
 @nk3.command()
