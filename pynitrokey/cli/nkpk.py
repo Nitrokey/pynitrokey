@@ -40,7 +40,7 @@ class Context(trussed.Context[NitrokeyPasskeyBootloader, NitrokeyPasskeyDevice])
         return [
             tests.test_uuid_query,
             tests.test_firmware_version_query,
-            tests.test_device_status,
+            tests.test_nkpk_device_status,
             tests.test_bootloader_configuration,
             tests.test_firmware_mode,
             tests.test_fido2,

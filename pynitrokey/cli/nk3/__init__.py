@@ -34,7 +34,7 @@ class Context(trussed.Context[Nitrokey3Bootloader, Nitrokey3Device]):
         return [
             tests.test_uuid_query,
             tests.test_firmware_version_query,
-            tests.test_device_status,
+            tests.test_nk3_device_status,
             tests.test_bootloader_configuration,
             tests.test_firmware_mode,
             tests.test_se050,

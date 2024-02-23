@@ -48,12 +48,14 @@ def test_firmware_version_query(
     return TestResult(TestStatus.SUCCESS, str(version))
 
 
-@test_case("status", "Device status")
-def test_device_status(ctx: TestContext, device: NitrokeyTrussedBase) -> TestResult:
+def test_device_status_internal(
+    ctx: TestContext, device: NitrokeyTrussedBase, skip_if_version: Optional[Version]
+) -> TestResult:
     if not isinstance(device, NitrokeyTrussedDevice):
         return TestResult(TestStatus.SKIPPED)
     firmware_version = ctx.firmware_version or device.admin.version()
-    if firmware_version.core() < Version(1, 3, 0):
+
+    if skip_if_version is not None and firmware_version.core() < skip_if_version:
         return TestResult(TestStatus.SKIPPED)
 
     errors = []
@@ -78,6 +80,18 @@ def test_device_status(ctx: TestContext, device: NitrokeyTrussedBase) -> TestRes
         return TestResult(TestStatus.FAILURE, ", ".join(errors))
     else:
         return TestResult(TestStatus.SUCCESS, str(status))
+
+
+@test_case("status", "Device status")
+def test_nk3_device_status(ctx: TestContext, device: NitrokeyTrussedBase) -> TestResult:
+    return test_device_status_internal(ctx, device, skip_if_version=Version(1, 3, 0))
+
+
+@test_case("status", "Device status")
+def test_nkpk_device_status(
+    ctx: TestContext, device: NitrokeyTrussedBase
+) -> TestResult:
+    return test_device_status_internal(ctx, device, skip_if_version=None)
 
 
 @test_case("bootloader", "Bootloader configuration")
