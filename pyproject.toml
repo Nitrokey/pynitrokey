@@ -43,7 +43,6 @@ dependencies = [
   "nethsm >= 1.0.0,<2",
   "pyscard",
   "asn1crypto",
-  "ber-tlv"
 ]
 dynamic = ["version", "description"]
 
