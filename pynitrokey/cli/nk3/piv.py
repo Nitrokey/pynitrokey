@@ -33,7 +33,7 @@ def piv() -> None:
 def admin_auth(admin_key: str) -> None:
     try:
         admin_key: bytes = bytearray.fromhex(admin_key)
-    except:
+    except ValueError:
         local_critical(
             "Key is expected to be an hexadecimal string",
             support_hint=False,
@@ -53,7 +53,7 @@ def admin_auth(admin_key: str) -> None:
 def init(admin_key: str) -> None:
     try:
         admin_key: bytes = bytearray.fromhex(admin_key)
-    except:
+    except ValueError:
         local_critical(
             "Key is expected to be an hexadecimal string",
             support_hint=False,
@@ -81,7 +81,7 @@ def info() -> None:
         cert = device.cert(bytes(bytearray.fromhex(slot)))
         if cert is not None:
             if not printed_head:
-                local_print(f"Keys:")
+                local_print("Keys:")
                 printed_head = True
             cert = cryptography.x509.load_der_x509_certificate(cert)
             local_print(f"    {key}")
@@ -105,7 +105,7 @@ def change_admin_key(current_admin_key: str, new_admin_key: str) -> None:
     try:
         current_admin_key: bytes = bytearray.fromhex(current_admin_key)
         new_admin_key: bytes = bytearray.fromhex(new_admin_key)
-    except:
+    except ValueError:
         local_critical(
             "Key is expected to be an hexadecimal string",
             support_hint=False,
@@ -179,7 +179,7 @@ def factory_reset() -> None:
     device = PivApp()
     try:
         device.factory_reset()
-    except:
+    except ValueError:
         local_critical(
             "Factory reset could not be performed. You first need to lock the PIN with 3 failed attempts",
             support_hint=False,
@@ -295,7 +295,7 @@ def generate_key(
 ) -> None:
     try:
         admin_key: bytes = bytearray.fromhex(admin_key)
-    except:
+    except ValueError:
         local_critical(
             "Key is expected to be an hexadecimal string",
             support_hint=False,
@@ -553,7 +553,7 @@ def generate_key(
 def write_certificate(admin_key: str, format: str, key: str, path: str) -> None:
     try:
         admin_key: bytes = bytearray.fromhex(admin_key)
-    except:
+    except ValueError:
         local_critical(
             "Key is expected to be an hexadecimal string",
             support_hint=False,
