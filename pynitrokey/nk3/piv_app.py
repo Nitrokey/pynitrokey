@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Any, Callable, Optional, Sequence
+from typing import Any, Callable, Optional, Sequence, Union
 
 from ber_tlv.tlv import Tlv
 from cryptography.hazmat.primitives import hashes
@@ -19,6 +19,7 @@ def find_by_id(tag: int, data: Sequence[tuple[int, bytes]]) -> Optional[bytes]:
     for t, b in data:
         if t == tag:
             return b
+    return None
 
 
 # size is in bytes
@@ -41,7 +42,7 @@ class StatusError(Exception):
     def __init__(self, value: int):
         self.value = value
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{hex(self.value)}"
 
 
@@ -179,7 +180,9 @@ class PivApp:
     def authenticate_admin(self, admin_key: bytes) -> None:
 
         if len(admin_key) == 24:
-            algorithm = algorithms.TripleDES(admin_key)
+            algorithm: Union[
+                algorithms.TripleDES, algorithms.AES128, algorithms.AES256
+            ] = algorithms.TripleDES(admin_key)
             # algo = "tdes"
             algo_byte = 0x03
             expected_len = 8
@@ -208,6 +211,10 @@ class PivApp:
                 recursive=False,
             ),
         )
+
+        if challenge is None:
+            local_critical("Failed to get authentication challenge from the device")
+            return
 
         # challenge = decoded.first_by_id(0x7C).data.first_by_id(0x80).data
         if len(challenge) != expected_len:
@@ -263,32 +270,32 @@ class PivApp:
         body += bytes([0xFF for i in range(8 - len(body))])
         return body
 
-    def login(self, pin: str):
+    def login(self, pin: str) -> None:
         body = self.encode_pin(pin)
         self.send_receive(0x20, 0x00, 0x80, body)
 
-    def change_pin(self, old_pin: str, new_pin: str):
+    def change_pin(self, old_pin: str, new_pin: str) -> None:
         body = self.encode_pin(old_pin) + self.encode_pin(new_pin)
         self.send_receive(0x24, 0, 0x80, body)
 
-    def change_puk(self, old_puk: str, new_puk: str):
-        old_puk = old_puk.encode("utf-8")
-        new_puk = new_puk.encode("utf-8")
-        if len(old_puk) != 8 or len(new_puk) != 8:
+    def change_puk(self, old_puk: str, new_puk: str) -> None:
+        old_puk_bytes = old_puk.encode("utf-8")
+        new_puk_bytes = new_puk.encode("utf-8")
+        if len(old_puk_bytes) != 8 or len(new_puk) != 8:
             local_critical("PUK must be 8 bytes long", support_hint=False)
-        body = old_puk + new_puk
+        body = old_puk_bytes + new_puk_bytes
         self.send_receive(0x24, 0, 0x81, body)
 
-    def reset_retry_counter(self, puk, new_pin):
-        puk = puk.encode("utf-8")
+    def reset_retry_counter(self, puk: str, new_pin: str) -> None:
+        puk_bytes = puk.encode("utf-8")
 
-        if len(puk) != 8:
+        if len(puk_bytes) != 8:
             local_critical("PUK must be 8 bytes long", support_hint=False)
 
-        body = puk + self.encode_pin(new_pin)
+        body = puk_bytes + self.encode_pin(new_pin)
         self.send_receive(0x2C, 0, 0x80, body)
 
-    def factory_reset(self):
+    def factory_reset(self) -> None:
         self.send_receive(0xFB, 0, 0)
 
     def sign_p256(self, data: bytes, key: int) -> bytes:
@@ -305,12 +312,21 @@ class PivApp:
     def raw_sign(self, payload: bytes, key: int, algo: int) -> bytes:
         body = Tlv.build({0x7C: {0x81: payload, 0x82: b""}})
         result = self.send_receive(0x87, algo, key, body)
-        return find_by_id(
+
+        signature = find_by_id(
             0x82,
             Tlv.parse(
                 find_by_id(0x7C, Tlv.parse(result, recursive=False)), recursive=False
             ),
         )
+
+        if signature is None:
+            local_critical("Failed to get signature from device")
+            # Satisfy the type checker.
+            # local_critical raises always raises an error
+            return b""
+
+        return signature
 
     def init(self) -> bytes:
         # Template for card capabilities with nothing but a random ID
@@ -353,7 +369,14 @@ class PivApp:
         payload = Tlv.build({0x5C: bytes(bytearray.fromhex("5FC102"))})
         chuid = self.send_receive(0xCB, 0x3F, 0xFF, payload)
 
-        return find_by_id(0x34, Tlv.parse(find_by_id(0x53, Tlv.parse(chuid))))
+        chuid_data = find_by_id(0x34, Tlv.parse(find_by_id(0x53, Tlv.parse(chuid))))
+        if chuid_data is None:
+            local_critical("Failed to get chuid from device")
+            # Satisfy the type checker.
+            # local_critical raises always raises an error
+            return b""
+
+        return chuid_data
 
     def cert(self, container_id: bytes) -> Optional[bytes]:
         payload = Tlv.build({0x5C: container_id})
@@ -381,4 +404,4 @@ class PivApp:
             if e.value == 0x6A82:
                 return None
             else:
-                raise ValueError(f"{e.value.hex()}, Received error")
+                raise ValueError(f"{hex(e.value)}, Received error")
