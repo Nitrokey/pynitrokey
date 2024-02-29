@@ -335,13 +335,13 @@ def generate_key(
         key_data = key_data[1:]
         public_x = int.from_bytes(key_data[:32], byteorder="big", signed=False)
         public_y = int.from_bytes(key_data[32:], byteorder="big", signed=False)
-        public_numbers = ec.EllipticCurvePublicNumbers(
+        public_numbers_ecc = ec.EllipticCurvePublicNumbers(
             public_x,
             public_y,
             cryptography.hazmat.primitives.asymmetric.ec.SECP256R1(),
         )
-        public_key = public_numbers.public_key()
-        public_key_der = public_key.public_bytes(
+        public_key_ecc = public_numbers_ecc.public_key()
+        public_key_der = public_key_ecc.public_bytes(
             serialization.Encoding.DER,
             serialization.PublicFormat.SubjectPublicKeyInfo,
         )
@@ -354,9 +354,9 @@ def generate_key(
 
         modulus = int.from_bytes(modulus_data, byteorder="big", signed=False)
         exponent = int.from_bytes(exponent_data, byteorder="big", signed=False)
-        public_numbers = rsa.RSAPublicNumbers(exponent, modulus)
-        public_key = public_numbers.public_key()
-        public_key_der = public_key.public_bytes(
+        public_numbers_rsa = rsa.RSAPublicNumbers(exponent, modulus)
+        public_key_rsa = public_numbers_rsa.public_key()
+        public_key_der = public_key_rsa.public_bytes(
             serialization.Encoding.DER,
             serialization.PublicFormat.SubjectPublicKeyInfo,
         )
