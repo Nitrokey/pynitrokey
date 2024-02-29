@@ -2,7 +2,6 @@ import logging
 import os
 from typing import Any, Callable, Optional, Sequence, Union
 
-from ber_tlv.tlv import Tlv
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from smartcard.CardRequest import CardRequest
@@ -11,6 +10,7 @@ from smartcard.CardType import ATRCardType
 
 from pynitrokey.helpers import local_critical
 from pynitrokey.start.gnuk_token import iso7816_compose
+from pynitrokey.tlv import Tlv
 
 LogFn = Callable[[str], Any]
 
@@ -202,14 +202,16 @@ class PivApp:
                 support_hint=False,
             )
 
-        challenge_body = Tlv.build({0x7C: {0x80: b""}})
+        challenge_body = Tlv.build([(0x7C, Tlv.build([(0x80, b"")]))])
         challenge_response = self.send_receive(0x87, algo_byte, 0x9B, challenge_body)
+        general_auth_data = find_by_id(0x7C, Tlv.parse(challenge_response))
+        if general_auth_data is None:
+            local_critical("Failed to get response to GENERAL AUTHENTICATE")
+            return
+
         challenge = find_by_id(
             0x80,
-            Tlv.parse(
-                find_by_id(0x7C, Tlv.parse(challenge_response, recursive=False)),
-                recursive=False,
-            ),
+            Tlv.parse(general_auth_data),
         )
 
         if challenge is None:
@@ -227,16 +229,18 @@ class PivApp:
         response = encryptor.update(challenge) + encryptor.finalize()
         our_challenge_encrypted = decryptor.update(our_challenge) + decryptor.finalize()
         response_body = Tlv.build(
-            {0x7C: {0x80: response, 0x81: our_challenge_encrypted}}
+            [(0x7C, Tlv.build([(0x80, response), (0x81, our_challenge_encrypted)]))]
         )
 
         final_response = self.send_receive(0x87, algo_byte, 0x9B, response_body)
+        general_auth_data = find_by_id(0x7C, Tlv.parse(final_response))
+        if general_auth_data is None:
+            local_critical("Failed to get response to GENERAL AUTHENTICATE")
+            return
+
         decoded_challenge = find_by_id(
             0x82,
-            Tlv.parse(
-                find_by_id(0x7C, Tlv.parse(final_response, recursive=False)),
-                recursive=False,
-            ),
+            Tlv.parse(general_auth_data),
         )
 
         if decoded_challenge != our_challenge:
@@ -310,14 +314,16 @@ class PivApp:
         return self.raw_sign(payload, key, 0x07)
 
     def raw_sign(self, payload: bytes, key: int, algo: int) -> bytes:
-        body = Tlv.build({0x7C: {0x81: payload, 0x82: b""}})
+        body = Tlv.build([(0x7C, Tlv.build([(0x81, payload), (0x82, b"")]))])
         result = self.send_receive(0x87, algo, key, body)
+        general_auth_data = find_by_id(0x7C, Tlv.parse(result))
+        if general_auth_data is None:
+            local_critical("Failed to get response to GENERAL AUTHENTICATE")
+            return bytes()
 
         signature = find_by_id(
             0x82,
-            Tlv.parse(
-                find_by_id(0x7C, Tlv.parse(result, recursive=False)), recursive=False
-            ),
+            Tlv.parse(general_auth_data),
         )
 
         if signature is None:
@@ -337,23 +343,26 @@ class PivApp:
         card_id = os.urandom(16)
         cardcaps = template_begin + card_id + template_end
         cardcaps_body = Tlv.build(
-            {0x5C: bytes(bytearray.fromhex("5fc107")), 0x53: bytes(cardcaps)}
+            [(0x5C, bytes(bytearray.fromhex("5fc107"))), (0x53, bytes(cardcaps))]
         )
         self.send_receive(0xDB, 0x3F, 0xFF, cardcaps_body)
 
         pinfo_body = Tlv.build(
-            {
-                0x5C: bytes(bytearray.fromhex("5FC109")),
-                0x53: Tlv.build(
-                    {
-                        0x01: "Nitrokey PIV user".encode("ascii"),
-                        # TODO: use representation of real serial number of card (currently static value)
-                        # Base 10 representation of
-                        # https://github.com/Nitrokey/piv-authenticator/blob/2c948a966f3e410e9a4cee3c351ca20b956383e0/src/lib.rs#L197
-                        0x05: "5437251".encode("ascii"),
-                    }
+            [
+                (0x5C, bytes(bytearray.fromhex("5FC109"))),
+                (
+                    0x53,
+                    Tlv.build(
+                        [
+                            (0x01, "Nitrokey PIV user".encode("ascii")),
+                            # TODO: use representation of real serial number of card (currently static value)
+                            # Base 10 representation of
+                            # https://github.com/Nitrokey/piv-authenticator/blob/2c948a966f3e410e9a4cee3c351ca20b956383e0/src/lib.rs#L197
+                            (0x05, "5437251".encode("ascii")),
+                        ]
+                    ),
                 ),
-            }
+            ]
         )
         self.send_receive(0xDB, 0x3F, 0xFF, pinfo_body)
         return card_id
@@ -366,10 +375,15 @@ class PivApp:
         return self.cardservice.connection.getReader()
 
     def guid(self) -> bytes:
-        payload = Tlv.build({0x5C: bytes(bytearray.fromhex("5FC102"))})
+        payload = Tlv.build([(0x5C, bytes(bytearray.fromhex("5FC102")))])
         chuid = self.send_receive(0xCB, 0x3F, 0xFF, payload)
 
-        chuid_data = find_by_id(0x34, Tlv.parse(find_by_id(0x53, Tlv.parse(chuid))))
+        chuid_tmp = find_by_id(0x53, Tlv.parse(chuid))
+        if chuid_tmp is None:
+            local_critical("Failed to get chuid from device")
+            return b""
+
+        chuid_data = find_by_id(0x34, Tlv.parse(chuid_tmp))
         if chuid_data is None:
             local_critical("Failed to get chuid from device")
             # Satisfy the type checker.
@@ -379,10 +393,10 @@ class PivApp:
         return chuid_data
 
     def cert(self, container_id: bytes) -> Optional[bytes]:
-        payload = Tlv.build({0x5C: container_id})
+        payload = Tlv.build([(0x5C, container_id)])
         try:
             cert = self.send_receive(0xCB, 0x3F, 0xFF, payload)
-            parsed = Tlv.parse(cert, False, False)
+            parsed = Tlv.parse(cert)
             if len(parsed) != 1:
                 local_critical("Bad number of elements", support_hint=False)
 
@@ -390,7 +404,7 @@ class PivApp:
             if tag != 0x53:
                 local_critical("Bad tag", support_hint=False)
 
-            parsed = Tlv.parse(value, False, False)
+            parsed = Tlv.parse(value)
             if len(parsed) < 1:
                 local_critical("Bad number of sub-elements", support_hint=False)
 

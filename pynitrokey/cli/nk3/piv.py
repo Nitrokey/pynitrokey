@@ -7,7 +7,6 @@ import cryptography
 from asn1crypto import x509
 from asn1crypto.csr import CertificationRequest, CertificationRequestInfo
 from asn1crypto.keys import PublicKeyInfo
-from ber_tlv.tlv import Tlv
 from click_aliases import ClickAliasedGroup
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec, rsa
@@ -16,6 +15,7 @@ from cryptography.hazmat.primitives.serialization import Encoding
 from pynitrokey.cli.nk3 import nk3
 from pynitrokey.helpers import local_critical, local_print
 from pynitrokey.nk3.piv_app import PivApp, find_by_id
+from pynitrokey.tlv import Tlv
 
 
 @nk3.group(cls=ClickAliasedGroup)
@@ -318,14 +318,19 @@ def generate_key(
     else:
         local_critical("Unimplemented algorithm", support_hint=False)
 
-    body = Tlv.build({0xAC: {0x80: algo_id}})
+    body = Tlv.build([(0xAC, Tlv.build([(0x80, algo_id)]))])
     ins = 0x47
     p1 = 0
     p2 = key_ref
     response = device.send_receive(ins, p1, p2, body)
 
-    data = Tlv.parse(response, recursive=False)
-    data = Tlv.parse(find_by_id(0x7F49, data), recursive=False)
+    data = Tlv.parse(response)
+    data_tmp = find_by_id(0x7F49, data)
+    if data_tmp is None:
+        local_critical("Device did not send public key data")
+        return
+
+    data = Tlv.parse(data_tmp)
 
     if algo == "nistp256":
         key_data = find_by_id(0x86, data)
@@ -512,10 +517,10 @@ def generate_key(
         }
     ).dump()
     payload = Tlv.build(
-        {
-            0x5C: bytes(bytearray.fromhex(KEY_TO_CERT_OBJ_ID_MAP[key_hex])),
-            0x53: Tlv.build({0x70: certificate, 0x71: bytes([0])}),
-        }
+        [
+            (0x5C, bytes(bytearray.fromhex(KEY_TO_CERT_OBJ_ID_MAP[key_hex]))),
+            (0x53, Tlv.build([(0x70, certificate), (0x71, bytes([0]))])),
+        ]
     )
 
     device.send_receive(0xDB, 0x3F, 0xFF, payload)
@@ -587,10 +592,10 @@ def write_certificate(admin_key: str, format: str, key: str, path: str) -> None:
         cert_serialized = cert.public_bytes(Encoding.DER)
 
     payload = Tlv.build(
-        {
-            0x5C: bytes(bytearray.fromhex(KEY_TO_CERT_OBJ_ID_MAP[key])),
-            0x53: Tlv.build({0x70: cert_serialized, 0x71: bytes([0])}),
-        }
+        [
+            (0x5C, bytes(bytearray.fromhex(KEY_TO_CERT_OBJ_ID_MAP[key]))),
+            (0x53, Tlv.build([(0x70, cert_serialized), (0x71, bytes([0]))])),
+        ]
     )
 
     device.send_receive(0xDB, 0x3F, 0xFF, payload)
