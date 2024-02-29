@@ -39,7 +39,6 @@ dependencies = [
   "click-aliases",
   "semver",
   "nethsm >=1.2.1, <2",
-  "pyopenssl",
   "pyscard",
   "asn1crypto",
   "ber-tlv"
