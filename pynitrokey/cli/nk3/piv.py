@@ -32,7 +32,7 @@ def piv() -> None:
 )
 def admin_auth(admin_key: str) -> None:
     try:
-        admin_key: bytes = bytearray.fromhex(admin_key)
+        admin_key_bytes = bytearray.fromhex(admin_key)
     except ValueError:
         local_critical(
             "Key is expected to be an hexadecimal string",
@@ -40,7 +40,7 @@ def admin_auth(admin_key: str) -> None:
         )
 
     device = PivApp()
-    device.authenticate_admin(admin_key)
+    device.authenticate_admin(admin_key_bytes)
     local_print("Authenticated successfully")
 
 
@@ -52,7 +52,7 @@ def admin_auth(admin_key: str) -> None:
 )
 def init(admin_key: str) -> None:
     try:
-        admin_key: bytes = bytearray.fromhex(admin_key)
+        admin_key_bytes = bytearray.fromhex(admin_key)
     except ValueError:
         local_critical(
             "Key is expected to be an hexadecimal string",
@@ -60,7 +60,7 @@ def init(admin_key: str) -> None:
         )
 
     device = PivApp()
-    device.authenticate_admin(admin_key)
+    device.authenticate_admin(admin_key_bytes)
     guid = device.init()
     local_print("Device intialized successfully")
     local_print(f"GUID: {guid.hex().upper()}")
@@ -83,9 +83,11 @@ def info() -> None:
             if not printed_head:
                 local_print("Keys:")
                 printed_head = True
-            cert = cryptography.x509.load_der_x509_certificate(cert)
+            parsed_cert = cryptography.x509.load_der_x509_certificate(cert)
             local_print(f"    {key}")
-            local_print(f"        algorithm: {cert.signature_algorithm_oid._name}")
+            local_print(
+                f"        algorithm: {parsed_cert.signature_algorithm_oid._name}"
+            )
     if not printed_head:
         local_print("No certificate found")
     pass
@@ -103,8 +105,8 @@ def info() -> None:
 )
 def change_admin_key(current_admin_key: str, new_admin_key: str) -> None:
     try:
-        current_admin_key: bytes = bytearray.fromhex(current_admin_key)
-        new_admin_key: bytes = bytearray.fromhex(new_admin_key)
+        current_admin_key_bytes = bytearray.fromhex(current_admin_key)
+        new_admin_key_bytes = bytearray.fromhex(new_admin_key)
     except ValueError:
         local_critical(
             "Key is expected to be an hexadecimal string",
@@ -112,8 +114,8 @@ def change_admin_key(current_admin_key: str, new_admin_key: str) -> None:
         )
 
     device = PivApp()
-    device.authenticate_admin(current_admin_key)
-    device.set_admin_key(new_admin_key)
+    device.authenticate_admin(current_admin_key_bytes)
+    device.set_admin_key(new_admin_key_bytes)
     local_print("Changed key successfully")
 
 
@@ -168,7 +170,7 @@ def change_puk(current_puk: str, new_puk: str) -> None:
     prompt="Enter the new PIN",
     hide_input=True,
 )
-def reset_retry_counter(puk: str, new_pin: str):
+def reset_retry_counter(puk: str, new_pin: str) -> None:
     device = PivApp()
     device.reset_retry_counter(puk, new_pin)
     local_print("Unlocked PIN successfully")
@@ -294,7 +296,7 @@ def generate_key(
     out_file: str,
 ) -> None:
     try:
-        admin_key: bytes = bytearray.fromhex(admin_key)
+        admin_key_bytes = bytearray.fromhex(admin_key)
     except ValueError:
         local_critical(
             "Key is expected to be an hexadecimal string",
@@ -304,7 +306,7 @@ def generate_key(
     key_ref = int(key_hex, 16)
 
     device = PivApp()
-    device.authenticate_admin(admin_key)
+    device.authenticate_admin(admin_key_bytes)
     device.login(pin)
 
     if algo == "rsa2048":
@@ -326,9 +328,13 @@ def generate_key(
     data = Tlv.parse(find_by_id(0x7F49, data), recursive=False)
 
     if algo == "nistp256":
-        key = find_by_id(0x86, data)[1:]
-        public_x = int.from_bytes(key[:32], byteorder="big", signed=False)
-        public_y = int.from_bytes(key[32:], byteorder="big", signed=False)
+        key_data = find_by_id(0x86, data)
+        if key_data is None:
+            local_critical("Device did not send public key data")
+            return
+        key_data = key_data[1:]
+        public_x = int.from_bytes(key_data[:32], byteorder="big", signed=False)
+        public_y = int.from_bytes(key_data[32:], byteorder="big", signed=False)
         public_numbers = ec.EllipticCurvePublicNumbers(
             public_x,
             public_y,
@@ -340,8 +346,14 @@ def generate_key(
             serialization.PublicFormat.SubjectPublicKeyInfo,
         )
     elif algo == "rsa2048":
-        modulus = int.from_bytes(find_by_id(0x81, data), byteorder="big", signed=False)
-        exponent = int.from_bytes(find_by_id(0x82, data), byteorder="big", signed=False)
+        modulus_data = find_by_id(0x81, data)
+        exponent_data = find_by_id(0x82, data)
+        if modulus_data is None or exponent_data is None:
+            local_critical("Device did not send public key data")
+            return
+
+        modulus = int.from_bytes(modulus_data, byteorder="big", signed=False)
+        exponent = int.from_bytes(exponent_data, byteorder="big", signed=False)
         public_numbers = rsa.RSAPublicNumbers(exponent, modulus)
         public_key = public_numbers.public_key()
         public_key_der = public_key.public_bytes(
@@ -352,6 +364,9 @@ def generate_key(
         local_critical("Unimplemented algorithm")
 
     public_key_info = PublicKeyInfo.load(public_key_der, strict=True)
+
+    if domain_component is None:
+        domain_component = []
 
     if subject_name is None:
         rdns = []
@@ -552,7 +567,7 @@ def generate_key(
 )
 def write_certificate(admin_key: str, format: str, key: str, path: str) -> None:
     try:
-        admin_key: bytes = bytearray.fromhex(admin_key)
+        admin_key_bytes: bytes = bytearray.fromhex(admin_key)
     except ValueError:
         local_critical(
             "Key is expected to be an hexadecimal string",
@@ -560,7 +575,7 @@ def write_certificate(admin_key: str, format: str, key: str, path: str) -> None:
         )
 
     device = PivApp()
-    device.authenticate_admin(admin_key)
+    device.authenticate_admin(admin_key_bytes)
 
     with click.open_file(path, mode="rb") as f:
         cert_bytes = f.read()
