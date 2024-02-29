@@ -372,7 +372,8 @@ class PivApp:
         return int.from_bytes(response, byteorder="big")
 
     def reader(self) -> str:
-        return self.cardservice.connection.getReader()
+        reader: str = self.cardservice.connection.getReader()
+        return reader
 
     def guid(self) -> bytes:
         payload = Tlv.build([(0x5C, bytes(bytearray.fromhex("5FC102")))])
