@@ -365,7 +365,9 @@ class NKFido2Client:
         client_pin = ClientPin(device.ctap2)
 
         try:
-            client_token = client_pin.get_pin_token(pin)
+            client_token = client_pin.get_pin_token(
+                pin, permissions=ClientPin.PERMISSION.CREDENTIAL_MGMT
+            )
         except CtapError as error:
             if error.code == CtapError.ERR.PIN_NOT_SET:
                 local_critical("Please set a pin in order to manage credentials")
