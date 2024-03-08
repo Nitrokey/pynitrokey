@@ -40,6 +40,8 @@ dependencies = [
   "click-aliases",
   "semver",
   "nethsm >= 1.0.0,<2",
+  "pyscard",
+  "asn1crypto",
 ]
 dynamic = ["version", "description"]
 
@@ -137,6 +139,8 @@ module = [
     "tlv8.*",
     "pytest.*",
     "click_aliases.*",
+    "smartcard.*",
+    "asn1crypto.*",
 ]
 ignore_missing_imports = true
 
