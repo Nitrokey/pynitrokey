@@ -4,6 +4,7 @@ Oath Authenticator client
 Used through CTAPHID transport, via the custom vendor command.
 Can be used directly over CCID as well.
 """
+
 import dataclasses
 import hmac
 import logging
@@ -81,15 +82,21 @@ class PasswordSafeEntry:
 
     def tlv_encode(self) -> list[tlv8.Entry]:
         entries = [
-            tlv8.Entry(Tag.PwsLogin.value, self.login)
-            if self.login is not None
-            else None,
-            tlv8.Entry(Tag.PwsPassword.value, self.password)
-            if self.password is not None
-            else None,
-            tlv8.Entry(Tag.PwsMetadata.value, self.metadata)
-            if self.metadata is not None
-            else None,
+            (
+                tlv8.Entry(Tag.PwsLogin.value, self.login)
+                if self.login is not None
+                else None
+            ),
+            (
+                tlv8.Entry(Tag.PwsPassword.value, self.password)
+                if self.password is not None
+                else None
+            ),
+            (
+                tlv8.Entry(Tag.PwsMetadata.value, self.metadata)
+                if self.metadata is not None
+                else None
+            ),
         ]
         # Filter out empty entries
         entries = [r for r in entries if r is not None]
@@ -517,16 +524,22 @@ class SecretsApp:
         structure = [
             tlv8.Entry(Tag.CredentialId.value, cred_id),
             tlv8.Entry(Tag.CredentialId.value, new_name) if new_name else None,
-            self.encode_properties_to_send(touch_button, False, tlv=True)
-            if touch_button is not None
-            else None,
+            (
+                self.encode_properties_to_send(touch_button, False, tlv=True)
+                if touch_button is not None
+                else None
+            ),
             tlv8.Entry(Tag.PwsLogin.value, login) if login is not None else None,
-            tlv8.Entry(Tag.PwsPassword.value, password)
-            if password is not None
-            else None,
-            tlv8.Entry(Tag.PwsMetadata.value, metadata)
-            if metadata is not None
-            else None,
+            (
+                tlv8.Entry(Tag.PwsPassword.value, password)
+                if password is not None
+                else None
+            ),
+            (
+                tlv8.Entry(Tag.PwsMetadata.value, metadata)
+                if metadata is not None
+                else None
+            ),
         ]
         structure = list(filter(lambda x: x is not None, structure))
         self._send_receive(Instruction.UpdateCredential, structure=structure)
@@ -602,11 +615,13 @@ class SecretsApp:
                 Tag.Key.value, bytes([kind.value | algo.value, digits]) + secret
             ),
             self.encode_properties_to_send(touch_button_required, pin_based_encryption),
-            tlv8.Entry(
-                Tag.InitialCounter.value, initial_counter_value.to_bytes(4, "big")
-            )
-            if kind in [Kind.Hotp, Kind.HotpReverse]
-            else None,
+            (
+                tlv8.Entry(
+                    Tag.InitialCounter.value, initial_counter_value.to_bytes(4, "big")
+                )
+                if kind in [Kind.Hotp, Kind.HotpReverse]
+                else None
+            ),
             *PasswordSafeEntry(
                 name=credid, login=login, password=password, metadata=metadata
             ).tlv_encode(),

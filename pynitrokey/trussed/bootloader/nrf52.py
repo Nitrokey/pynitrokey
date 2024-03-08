@@ -136,8 +136,7 @@ class NitrokeyTrussedBootloaderNrf52(NitrokeyTrussedBootloader):
 
     @property
     @abstractmethod
-    def signature_keys(self) -> Sequence[SignatureKey]:
-        ...
+    def signature_keys(self) -> Sequence[SignatureKey]: ...
 
     def close(self) -> None:
         pass

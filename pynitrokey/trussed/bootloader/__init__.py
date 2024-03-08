@@ -115,13 +115,11 @@ class NitrokeyTrussedBootloader(NitrokeyTrussedBase):
         self,
         image: bytes,
         callback: Optional[ProgressCallback] = None,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @property
     @abstractmethod
-    def variant(self) -> Variant:
-        ...
+    def variant(self) -> Variant: ...
 
 
 def get_firmware_filename_pattern(variant: Variant) -> Pattern[str]:

@@ -67,16 +67,13 @@ class Context(ABC, Generic[Bootloader, Device]):
 
     @property
     @abstractmethod
-    def test_cases(self) -> Sequence[TestCase]:
-        ...
+    def test_cases(self) -> Sequence[TestCase]: ...
 
     @abstractmethod
-    def open(self, path: str) -> Optional[NitrokeyTrussedBase]:
-        ...
+    def open(self, path: str) -> Optional[NitrokeyTrussedBase]: ...
 
     @abstractmethod
-    def list_all(self) -> Sequence[NitrokeyTrussedBase]:
-        ...
+    def list_all(self) -> Sequence[NitrokeyTrussedBase]: ...
 
     def list(self) -> Sequence[NitrokeyTrussedBase]:
         if self.path:

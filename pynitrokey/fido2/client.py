@@ -256,7 +256,6 @@ class NKFido2Client:
         output: bool = True,
         fingerprint_only: bool = False,
     ) -> str:
-
         """
         fingerprint_only bool Return sha256 digest of the certificate, in a hex string format. Useful for detecting
             device's model and firmware.

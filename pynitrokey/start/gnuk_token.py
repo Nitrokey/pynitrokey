@@ -20,6 +20,7 @@ License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
+
 import binascii
 import logging
 import time
@@ -742,7 +743,7 @@ def get_gnuk_device(verbose=True, logger: Optional[logging.Logger] = None):
 
     candidates = []
     icc = None
-    for (dev, config, intf) in gnuk_devices():
+    for dev, config, intf in gnuk_devices():
         try:
             icc = gnuk_token(dev, config, intf)
             if logger:
