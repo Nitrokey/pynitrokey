@@ -57,7 +57,7 @@ def check_root():
             print()
 
 
-@click.group()
+@click.group(context_settings={"help_option_names": ["-h", "--help"]})
 def nitropy():
     handler = logging.FileHandler(filename=LOG_FN, delay=True, encoding="utf-8")
     logging.basicConfig(format=LOG_FORMAT, level=logging.DEBUG, handlers=[handler])
