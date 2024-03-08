@@ -95,8 +95,7 @@ class NitrokeyTrussedDevice(NitrokeyTrussedBase):
 
     @classmethod
     @abstractmethod
-    def from_device(cls: type[T], device: CtapHidDevice) -> T:
-        ...
+    def from_device(cls: type[T], device: CtapHidDevice) -> T: ...
 
     @classmethod
     def open(cls: type[T], path: str) -> Optional[T]:

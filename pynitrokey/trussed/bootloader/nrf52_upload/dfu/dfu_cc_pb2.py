@@ -789,7 +789,7 @@ Hash = _reflection.GeneratedProtocolMessageType(
     (_message.Message,),
     dict(
         DESCRIPTOR=_HASH,
-        __module__="nordicsemi.dfu.dfu_cc_pb2"
+        __module__="nordicsemi.dfu.dfu_cc_pb2",
         # @@protoc_insertion_point(class_scope:dfu.Hash)
     ),
 )
@@ -800,7 +800,7 @@ BootValidation = _reflection.GeneratedProtocolMessageType(
     (_message.Message,),
     dict(
         DESCRIPTOR=_BOOTVALIDATION,
-        __module__="nordicsemi.dfu.dfu_cc_pb2"
+        __module__="nordicsemi.dfu.dfu_cc_pb2",
         # @@protoc_insertion_point(class_scope:dfu.BootValidation)
     ),
 )
@@ -811,7 +811,7 @@ InitCommand = _reflection.GeneratedProtocolMessageType(
     (_message.Message,),
     dict(
         DESCRIPTOR=_INITCOMMAND,
-        __module__="nordicsemi.dfu.dfu_cc_pb2"
+        __module__="nordicsemi.dfu.dfu_cc_pb2",
         # @@protoc_insertion_point(class_scope:dfu.InitCommand)
     ),
 )
@@ -822,7 +822,7 @@ ResetCommand = _reflection.GeneratedProtocolMessageType(
     (_message.Message,),
     dict(
         DESCRIPTOR=_RESETCOMMAND,
-        __module__="nordicsemi.dfu.dfu_cc_pb2"
+        __module__="nordicsemi.dfu.dfu_cc_pb2",
         # @@protoc_insertion_point(class_scope:dfu.ResetCommand)
     ),
 )
@@ -833,7 +833,7 @@ Command = _reflection.GeneratedProtocolMessageType(
     (_message.Message,),
     dict(
         DESCRIPTOR=_COMMAND,
-        __module__="nordicsemi.dfu.dfu_cc_pb2"
+        __module__="nordicsemi.dfu.dfu_cc_pb2",
         # @@protoc_insertion_point(class_scope:dfu.Command)
     ),
 )
@@ -844,7 +844,7 @@ SignedCommand = _reflection.GeneratedProtocolMessageType(
     (_message.Message,),
     dict(
         DESCRIPTOR=_SIGNEDCOMMAND,
-        __module__="nordicsemi.dfu.dfu_cc_pb2"
+        __module__="nordicsemi.dfu.dfu_cc_pb2",
         # @@protoc_insertion_point(class_scope:dfu.SignedCommand)
     ),
 )
@@ -855,7 +855,7 @@ Packet = _reflection.GeneratedProtocolMessageType(
     (_message.Message,),
     dict(
         DESCRIPTOR=_PACKET,
-        __module__="nordicsemi.dfu.dfu_cc_pb2"
+        __module__="nordicsemi.dfu.dfu_cc_pb2",
         # @@protoc_insertion_point(class_scope:dfu.Packet)
     ),
 )

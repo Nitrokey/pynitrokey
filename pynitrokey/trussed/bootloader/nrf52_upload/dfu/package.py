@@ -148,7 +148,6 @@ class Package:
         zigbee_ota_min_hw_version=None,
         zigbee_ota_max_hw_version=None,
     ):
-
         """
         Constructor that requires values used for generating a Nordic DFU package.
 
@@ -475,10 +474,10 @@ DFU Package: <{0}>:
         for key, firmware_data in self.firmwares_data.items():
 
             # Normalize the firmware file and store it in the work directory
-            firmware_data[
-                FirmwareKeys.BIN_FILENAME
-            ] = Package.normalize_firmware_to_bin(
-                self.work_dir, firmware_data[FirmwareKeys.FIRMWARE_FILENAME]
+            firmware_data[FirmwareKeys.BIN_FILENAME] = (
+                Package.normalize_firmware_to_bin(
+                    self.work_dir, firmware_data[FirmwareKeys.FIRMWARE_FILENAME]
+                )
             )
 
             # Calculate the hash for the .bin file located in the work directory
