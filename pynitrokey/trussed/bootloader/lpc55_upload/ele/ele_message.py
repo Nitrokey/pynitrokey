@@ -14,7 +14,7 @@ from typing import Dict, List, Optional
 
 from crcmod.predefined import mkPredefinedCrcFun
 
-from spsdk.ele.ele_constants import (
+from ..ele.ele_constants import (
     EleCsalState,
     EleFwStatus,
     EleInfo2Commit,
@@ -28,10 +28,10 @@ from spsdk.ele.ele_constants import (
     ResponseIndication,
     ResponseStatus,
 )
-from spsdk.exceptions import SPSDKParsingError, SPSDKValueError
-from spsdk.image.ahab.signed_msg import SignedMessage
-from spsdk.utils.misc import Endianness, align, align_block
-from spsdk.utils.spsdk_enum import SpsdkEnum
+from ..exceptions import SPSDKParsingError, SPSDKValueError
+from ..image.ahab.signed_msg import SignedMessage
+from ..utils.misc import Endianness, align, align_block
+from ..utils.spsdk_enum import SpsdkEnum
 
 logger = logging.getLogger(__name__)
 

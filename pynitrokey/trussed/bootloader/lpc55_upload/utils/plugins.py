@@ -16,9 +16,9 @@ from typing import Dict, List, Optional
 
 import importlib_metadata
 
-from spsdk.exceptions import SPSDKError, SPSDKTypeError
-from spsdk.utils.misc import SingletonMeta
-from spsdk.utils.spsdk_enum import SpsdkEnum
+from ..exceptions import SPSDKError, SPSDKTypeError
+from ..utils.misc import SingletonMeta
+from ..utils.spsdk_enum import SpsdkEnum
 
 logger = logging.getLogger(__name__)
 

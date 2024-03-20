@@ -14,23 +14,23 @@ from typing import Any, Dict, Iterator, List, Optional
 
 from typing_extensions import Self
 
-from spsdk.crypto.certificate import Certificate
-from spsdk.crypto.hash import EnumHashAlgorithm, get_hash
-from spsdk.crypto.hmac import hmac
-from spsdk.crypto.rng import random_bytes
-from spsdk.crypto.signature_provider import (
+from ...crypto.certificate import Certificate
+from ...crypto.hash import EnumHashAlgorithm, get_hash
+from ...crypto.hmac import hmac
+from ...crypto.rng import random_bytes
+from ...crypto.signature_provider import (
     SignatureProvider,
     get_signature_provider,
     try_to_verify_public_key,
 )
-from spsdk.crypto.symmetric import Counter, aes_key_unwrap, aes_key_wrap
-from spsdk.exceptions import SPSDKError
-from spsdk.sbfile.misc import SecBootBlckSize
-from spsdk.sbfile.sb2.sb_21_helper import SB21Helper
-from spsdk.utils.abstract import BaseClass
-from spsdk.utils.crypto.cert_blocks import CertBlockV1
-from spsdk.utils.database import DatabaseManager, get_db, get_families, get_schema_file
-from spsdk.utils.misc import (
+from ...crypto.symmetric import Counter, aes_key_unwrap, aes_key_wrap
+from ...exceptions import SPSDKError
+from ...sbfile.misc import SecBootBlckSize
+from ...sbfile.sb2.sb_21_helper import SB21Helper
+from ...utils.abstract import BaseClass
+from ...utils.crypto.cert_blocks import CertBlockV1
+from ...utils.database import DatabaseManager, get_db, get_families, get_schema_file
+from ...utils.misc import (
     find_first,
     load_configuration,
     load_hex_string,
@@ -38,7 +38,7 @@ from spsdk.utils.misc import (
     value_to_int,
     write_file,
 )
-from spsdk.utils.schema_validator import CommentedConfig, check_config
+from ...utils.schema_validator import CommentedConfig, check_config
 
 from . import sly_bd_parser as bd_parser
 from .commands import CmdHeader

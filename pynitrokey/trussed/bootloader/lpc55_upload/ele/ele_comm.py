@@ -13,13 +13,13 @@ from abc import abstractmethod
 from types import TracebackType
 from typing import List, Optional, Tuple, Type, Union
 
-from spsdk.ele.ele_constants import ResponseStatus
-from spsdk.ele.ele_message import EleMessage
-from spsdk.exceptions import SPSDKError, SPSDKLengthError
-from spsdk.mboot.mcuboot import McuBoot
-from spsdk.uboot.uboot import Uboot
-from spsdk.utils.database import DatabaseManager, get_db, get_families
-from spsdk.utils.misc import value_to_bytes
+from ..ele.ele_constants import ResponseStatus
+from ..ele.ele_message import EleMessage
+from ..exceptions import SPSDKError, SPSDKLengthError
+from ..mboot.mcuboot import McuBoot
+from ..uboot.uboot import Uboot
+from ..utils.database import DatabaseManager, get_db, get_families
+from ..utils.misc import value_to_bytes
 
 logger = logging.getLogger(__name__)
 

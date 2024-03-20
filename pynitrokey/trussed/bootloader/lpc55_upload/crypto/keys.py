@@ -34,9 +34,9 @@ from cryptography.hazmat.primitives.serialization import (
 )
 from typing_extensions import Self
 
-from spsdk.exceptions import SPSDKError, SPSDKNotImplementedError, SPSDKValueError
-from spsdk.utils.abstract import BaseClass
-from spsdk.utils.misc import Endianness, load_binary, write_file
+from ..exceptions import SPSDKError, SPSDKNotImplementedError, SPSDKValueError
+from ..utils.abstract import BaseClass
+from ..utils.misc import Endianness, load_binary, write_file
 
 from .hash import EnumHashAlgorithm, get_hash, get_hash_algorithm
 from .oscca import IS_OSCCA_SUPPORTED

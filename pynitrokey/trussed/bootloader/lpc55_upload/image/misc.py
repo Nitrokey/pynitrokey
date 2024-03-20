@@ -11,8 +11,8 @@ import io
 from io import SEEK_CUR
 from typing import Optional, Union
 
-from spsdk.exceptions import SPSDKError
-from spsdk.utils.registers import value_to_int
+from ..exceptions import SPSDKError
+from ..utils.registers import value_to_int
 
 from .header import Header
 

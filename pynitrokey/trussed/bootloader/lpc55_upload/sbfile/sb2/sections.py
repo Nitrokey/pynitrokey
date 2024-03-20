@@ -10,12 +10,12 @@
 from struct import unpack_from
 from typing import Iterator, List, Optional
 
-from spsdk.crypto.hmac import hmac
-from spsdk.crypto.symmetric import Counter, aes_ctr_decrypt, aes_ctr_encrypt
-from spsdk.exceptions import SPSDKError
-from spsdk.sbfile.misc import SecBootBlckSize
-from spsdk.utils.abstract import BaseClass
-from spsdk.utils.crypto.cert_blocks import CertBlockV1
+from ...crypto.hmac import hmac
+from ...crypto.symmetric import Counter, aes_ctr_decrypt, aes_ctr_encrypt
+from ...exceptions import SPSDKError
+from ...sbfile.misc import SecBootBlckSize
+from ...utils.abstract import BaseClass
+from ...utils.crypto.cert_blocks import CertBlockV1
 
 from .commands import CmdBaseClass, CmdHeader, EnumCmdTag, EnumSectionFlag, parse_command
 

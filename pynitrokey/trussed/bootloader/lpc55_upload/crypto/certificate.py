@@ -15,9 +15,9 @@ from cryptography.hazmat.primitives.asymmetric import ec, rsa
 from cryptography.x509.extensions import ExtensionNotFound
 from typing_extensions import Self
 
-from spsdk.crypto.hash import EnumHashAlgorithm
-from spsdk.crypto.keys import PrivateKey, PublicKey, PublicKeyEcc, PublicKeyRsa
-from spsdk.crypto.types import (
+from ..crypto.hash import EnumHashAlgorithm
+from ..crypto.keys import PrivateKey, PublicKey, PublicKeyEcc, PublicKeyRsa
+from ..crypto.types import (
     SPSDKEncoding,
     SPSDKExtensionOID,
     SPSDKExtensions,
@@ -26,9 +26,9 @@ from spsdk.crypto.types import (
     SPSDKObjectIdentifier,
     SPSDKVersion,
 )
-from spsdk.exceptions import SPSDKError, SPSDKValueError
-from spsdk.utils.abstract import BaseClass
-from spsdk.utils.misc import align_block, load_binary, write_file
+from ..exceptions import SPSDKError, SPSDKValueError
+from ..utils.abstract import BaseClass
+from ..utils.misc import align_block, load_binary, write_file
 
 
 class SPSDKExtensionNotFoundError(SPSDKError, ExtensionNotFound):

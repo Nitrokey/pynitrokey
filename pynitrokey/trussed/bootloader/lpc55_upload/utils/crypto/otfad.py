@@ -15,15 +15,15 @@ from typing import Any, Dict, List, Optional, Union
 
 from crcmod.predefined import mkPredefinedCrcFun
 
-from spsdk import version as spsdk_version
-from spsdk.apps.utils.utils import filepath_from_config
-from spsdk.crypto.rng import random_bytes
-from spsdk.crypto.symmetric import Counter, aes_ctr_encrypt, aes_key_wrap
-from spsdk.exceptions import SPSDKError, SPSDKValueError
-from spsdk.utils.database import DatabaseManager, get_db, get_families, get_schema_file
-from spsdk.utils.exceptions import SPSDKRegsErrorBitfieldNotFound
-from spsdk.utils.images import BinaryImage
-from spsdk.utils.misc import (
+from ... import version as spsdk_version
+from ...apps.utils.utils import filepath_from_config
+from ...crypto.rng import random_bytes
+from ...crypto.symmetric import Counter, aes_ctr_encrypt, aes_key_wrap
+from ...exceptions import SPSDKError, SPSDKValueError
+from ...utils.database import DatabaseManager, get_db, get_families, get_schema_file
+from ...utils.exceptions import SPSDKRegsErrorBitfieldNotFound
+from ...utils.images import BinaryImage
+from ...utils.misc import (
     Endianness,
     align_block,
     load_binary,
@@ -33,8 +33,8 @@ from spsdk.utils.misc import (
     value_to_bytes,
     value_to_int,
 )
-from spsdk.utils.registers import Registers
-from spsdk.utils.schema_validator import CommentedConfig
+from ...utils.registers import Registers
+from ...utils.schema_validator import CommentedConfig
 
 logger = logging.getLogger(__name__)
 

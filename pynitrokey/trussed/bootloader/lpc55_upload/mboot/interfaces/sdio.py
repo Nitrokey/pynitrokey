@@ -13,10 +13,10 @@ from typing import List, Optional, Tuple, Union
 
 from typing_extensions import Self
 
-from spsdk.mboot.commands import CmdResponse, parse_cmd_response
-from spsdk.mboot.exceptions import McuBootConnectionError, McuBootDataAbortError
-from spsdk.mboot.protocol.serial_protocol import FPType, MbootSerialProtocol
-from spsdk.utils.interfaces.device.sdio_device import SdioDevice
+from ...mboot.commands import CmdResponse, parse_cmd_response
+from ...mboot.exceptions import McuBootConnectionError, McuBootDataAbortError
+from ...mboot.protocol.serial_protocol import FPType, MbootSerialProtocol
+from ...utils.interfaces.device.sdio_device import SdioDevice
 
 logger = logging.getLogger(__name__)
 

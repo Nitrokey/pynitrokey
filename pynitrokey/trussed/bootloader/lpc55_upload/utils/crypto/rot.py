@@ -11,16 +11,16 @@
 from abc import abstractmethod
 from typing import List, Optional, Sequence, Type, Union
 
-from spsdk.crypto.certificate import Certificate
-from spsdk.crypto.keys import PrivateKey, PublicKey
-from spsdk.exceptions import SPSDKError
-from spsdk.image.ahab.ahab_container import SRKRecord
-from spsdk.image.ahab.ahab_container import SRKTable as AhabSrkTable
-from spsdk.image.secret import SrkItem
-from spsdk.image.secret import SrkTable as HabSrkTable
-from spsdk.utils.crypto.rkht import RKHT, RKHTv1, RKHTv21
-from spsdk.utils.database import DatabaseManager, get_db, get_families
-from spsdk.utils.misc import load_binary
+from ...crypto.certificate import Certificate
+from ...crypto.keys import PrivateKey, PublicKey
+from ...exceptions import SPSDKError
+from ...image.ahab.ahab_container import SRKRecord
+from ...image.ahab.ahab_container import SRKTable as AhabSrkTable
+from ...image.secret import SrkItem
+from ...image.secret import SrkTable as HabSrkTable
+from ...utils.crypto.rkht import RKHT, RKHTv1, RKHTv21
+from ...utils.database import DatabaseManager, get_db, get_families
+from ...utils.misc import load_binary
 
 
 class Rot:

@@ -7,7 +7,7 @@
 
 """EdgeLock Enclave Message constants."""
 
-from spsdk.utils.spsdk_enum import SpsdkEnum, SpsdkSoftEnum
+from ..utils.spsdk_enum import SpsdkEnum, SpsdkSoftEnum
 
 
 class MessageIDs(SpsdkSoftEnum):

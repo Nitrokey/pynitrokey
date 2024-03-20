@@ -7,7 +7,7 @@
 
 """Exceptions used in the Crypto module."""
 
-from spsdk.exceptions import SPSDKError
+from ..exceptions import SPSDKError
 
 
 class SPSDKPCryptoError(SPSDKError):

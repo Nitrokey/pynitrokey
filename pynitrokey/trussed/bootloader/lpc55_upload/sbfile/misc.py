@@ -10,8 +10,8 @@
 from datetime import datetime, timezone
 from typing import Any, Sequence, Union
 
-from spsdk.exceptions import SPSDKError
-from spsdk.utils import misc
+from ..exceptions import SPSDKError
+from ..utils import misc
 
 
 class SecBootBlckSize:
