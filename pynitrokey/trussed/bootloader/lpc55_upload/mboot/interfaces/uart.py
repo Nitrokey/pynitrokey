@@ -13,8 +13,8 @@ from typing import List, Optional
 
 from typing_extensions import Self
 
-from spsdk.mboot.protocol.serial_protocol import MbootSerialProtocol
-from spsdk.utils.interfaces.device.serial_device import SerialDevice
+from ...mboot.protocol.serial_protocol import MbootSerialProtocol
+from ...utils.interfaces.device.serial_device import SerialDevice
 
 logger = logging.getLogger(__name__)
 

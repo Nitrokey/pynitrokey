@@ -13,9 +13,9 @@ from typing import Optional, Union
 
 from typing_extensions import Self
 
-from spsdk.exceptions import SPSDKError, SPSDKParsingError
-from spsdk.utils.abstract import BaseClass
-from spsdk.utils.spsdk_enum import SpsdkEnum
+from ..exceptions import SPSDKError, SPSDKParsingError
+from ..utils.abstract import BaseClass
+from ..utils.spsdk_enum import SpsdkEnum
 
 ########################################################################################################################
 # Enums

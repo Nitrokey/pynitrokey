@@ -15,9 +15,9 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import colorama
 
-from spsdk.exceptions import SPSDKError, SPSDKOverlapError, SPSDKValueError
-from spsdk.utils.database import DatabaseManager
-from spsdk.utils.misc import (
+from ..exceptions import SPSDKError, SPSDKOverlapError, SPSDKValueError
+from ..utils.database import DatabaseManager
+from ..utils.misc import (
     BinaryPattern,
     align,
     align_block,
@@ -26,7 +26,7 @@ from spsdk.utils.misc import (
     size_fmt,
     write_file,
 )
-from spsdk.utils.schema_validator import CommentedConfig
+from ..utils.schema_validator import CommentedConfig
 
 if TYPE_CHECKING:
     # bincopy will be loaded lazily as needed, this is just to satisfy type-hint checkers

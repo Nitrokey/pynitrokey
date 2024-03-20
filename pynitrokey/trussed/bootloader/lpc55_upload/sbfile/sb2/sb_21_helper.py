@@ -11,9 +11,9 @@ import struct
 from numbers import Number
 from typing import Callable, Dict, List, Optional, Union
 
-from spsdk.exceptions import SPSDKError
-from spsdk.mboot.memories import ExtMemId, MemId
-from spsdk.sbfile.sb2.commands import (
+from ...exceptions import SPSDKError
+from ...mboot.memories import ExtMemId, MemId
+from ...sbfile.sb2.commands import (
     CmdBaseClass,
     CmdErase,
     CmdFill,
@@ -26,8 +26,8 @@ from spsdk.sbfile.sb2.commands import (
     CmdVersionCheck,
     VersionCheckType,
 )
-from spsdk.utils.crypto.otfad import KeyBlob
-from spsdk.utils.misc import (
+from ...utils.crypto.otfad import KeyBlob
+from ...utils.misc import (
     align_block,
     get_bytes_cnt_of_int,
     load_binary,

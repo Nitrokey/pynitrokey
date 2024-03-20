@@ -17,11 +17,10 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 import platformdirs
 from typing_extensions import Self
 
-import spsdk
-from spsdk import SPSDK_CACHE_DISABLED, SPSDK_DATA_FOLDER
-from spsdk.crypto.hash import EnumHashAlgorithm, Hash, get_hash
-from spsdk.exceptions import SPSDKError, SPSDKValueError
-from spsdk.utils.misc import (
+from .. import SPSDK_DATA_FOLDER, SPSDK_CACHE_DISABLED
+from ..crypto.hash import EnumHashAlgorithm, Hash, get_hash
+from ..exceptions import SPSDKError, SPSDKValueError
+from ..utils.misc import (
     deep_update,
     find_first,
     load_configuration,
@@ -667,7 +666,7 @@ class DatabaseManager:
             + get_hash(data_folder.encode(), algorithm=EnumHashAlgorithm.SHA1)[:6].hex()
             + ".cache"
         )
-        cache_path = platformdirs.user_cache_dir(appname="spsdk", version=spsdk.version)
+        cache_path = platformdirs.user_cache_dir(appname="spsdk", version="2.1.0")
         return (cache_path, os.path.join(cache_path, cache_name))
 
     @staticmethod

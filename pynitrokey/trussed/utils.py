@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from functools import total_ordering
 from typing import Optional, Sequence
 
-from spsdk.sbfile.misc import BcdVersion3
+# from .bootloader.lpc55_upload.sbfile.misc import BcdVersion3
 
 
 @dataclass(order=True, frozen=True)
@@ -229,7 +229,7 @@ class Version:
         return Version.from_str(s[1:])
 
     @classmethod
-    def from_bcd_version(cls, version: BcdVersion3) -> "Version":
+    def from_bcd_version(cls, version: any) -> "Version":
         return cls(major=version.major, minor=version.minor, patch=version.service)
 
 

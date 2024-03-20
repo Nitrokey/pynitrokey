@@ -13,9 +13,9 @@ from math import ceil
 
 from cryptography.hazmat.primitives import hashes
 
-from spsdk.exceptions import SPSDKError
-from spsdk.utils.misc import Endianness
-from spsdk.utils.spsdk_enum import SpsdkEnum
+from ..exceptions import SPSDKError
+from ..utils.misc import Endianness
+from ..utils.spsdk_enum import SpsdkEnum
 
 
 class EnumHashAlgorithm(SpsdkEnum):

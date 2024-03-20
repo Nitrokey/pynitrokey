@@ -8,9 +8,9 @@
 """Helper module used for scanning the existing devices."""
 from typing import List, Optional
 
-from spsdk.exceptions import SPSDKError
-from spsdk.mboot.protocol.base import MbootProtocolBase
-from spsdk.utils.interfaces.scanner_helper import InterfaceParams, parse_plugin_config
+from ..exceptions import SPSDKError
+from .protocol.base import MbootProtocolBase
+from ..utils.interfaces.scanner_helper import InterfaceParams, parse_plugin_config
 
 
 def get_mboot_interface(

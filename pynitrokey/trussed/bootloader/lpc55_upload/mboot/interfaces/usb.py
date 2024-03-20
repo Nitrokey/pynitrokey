@@ -14,8 +14,8 @@ from typing import List, Optional
 
 from typing_extensions import Self
 
-from spsdk.mboot.protocol.bulk_protocol import MbootBulkProtocol
-from spsdk.utils.interfaces.device.usb_device import UsbDevice
+from ...mboot.protocol.bulk_protocol import MbootBulkProtocol
+from ...utils.interfaces.device.usb_device import UsbDevice
 
 
 @dataclass

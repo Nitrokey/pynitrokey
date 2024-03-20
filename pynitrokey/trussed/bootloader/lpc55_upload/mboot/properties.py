@@ -13,10 +13,10 @@ import ctypes
 from copy import deepcopy
 from typing import Callable, Dict, List, Optional, Tuple, Type, Union
 
-from spsdk.exceptions import SPSDKKeyError
-from spsdk.mboot.exceptions import McuBootError
-from spsdk.utils.misc import Endianness
-from spsdk.utils.spsdk_enum import SpsdkEnum
+from ..exceptions import SPSDKKeyError
+from ..mboot.exceptions import McuBootError
+from ..utils.misc import Endianness
+from ..utils.spsdk_enum import SpsdkEnum
 
 from .commands import CommandTag
 from .error_codes import StatusCode

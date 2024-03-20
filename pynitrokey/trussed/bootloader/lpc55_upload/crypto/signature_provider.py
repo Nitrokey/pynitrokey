@@ -22,9 +22,9 @@ from typing import Any, Dict, List, Optional, Tuple, Type, Union
 import requests
 from cryptography.hazmat.primitives.hashes import HashAlgorithm
 
-from spsdk.crypto.exceptions import SPSDKKeysNotMatchingError
-from spsdk.crypto.hash import EnumHashAlgorithm, get_hash_algorithm
-from spsdk.crypto.keys import (
+from ..crypto.exceptions import SPSDKKeysNotMatchingError
+from ..crypto.hash import EnumHashAlgorithm, get_hash_algorithm
+from ..crypto.keys import (
     ECDSASignature,
     PrivateKey,
     PrivateKeyEcc,
@@ -36,10 +36,10 @@ from spsdk.crypto.keys import (
     SPSDKKeyPassphraseMissing,
     prompt_for_passphrase,
 )
-from spsdk.crypto.types import SPSDKEncoding
-from spsdk.exceptions import SPSDKError, SPSDKKeyError, SPSDKUnsupportedOperation, SPSDKValueError
-from spsdk.utils.misc import find_file
-from spsdk.utils.plugins import PluginsManager, PluginType
+from ..crypto.types import SPSDKEncoding
+from ..exceptions import SPSDKError, SPSDKKeyError, SPSDKUnsupportedOperation, SPSDKValueError
+from ..utils.misc import find_file
+from ..utils.plugins import PluginsManager, PluginType
 
 logger = logging.getLogger(__name__)
 

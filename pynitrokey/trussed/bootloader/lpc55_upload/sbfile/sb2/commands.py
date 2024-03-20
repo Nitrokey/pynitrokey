@@ -14,12 +14,12 @@ from typing import Mapping, Optional, Type
 from crcmod.predefined import mkPredefinedCrcFun
 from typing_extensions import Self
 
-from spsdk.exceptions import SPSDKError
-from spsdk.mboot.memories import ExtMemId
-from spsdk.sbfile.misc import SecBootBlckSize
-from spsdk.utils.abstract import BaseClass
-from spsdk.utils.misc import Endianness
-from spsdk.utils.spsdk_enum import SpsdkEnum
+from ...exceptions import SPSDKError
+from ...mboot.memories import ExtMemId
+from ...sbfile.misc import SecBootBlckSize
+from ...utils.abstract import BaseClass
+from ...utils.misc import Endianness
+from ...utils.spsdk_enum import SpsdkEnum
 
 ########################################################################################################################
 # Constants

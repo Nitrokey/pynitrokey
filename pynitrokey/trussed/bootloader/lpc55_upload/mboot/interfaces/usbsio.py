@@ -10,8 +10,8 @@ from typing import List, Optional
 
 from typing_extensions import Self
 
-from spsdk.mboot.protocol.serial_protocol import MbootSerialProtocol
-from spsdk.utils.interfaces.device.usbsio_device import ScanArgs, UsbSioI2CDevice, UsbSioSPIDevice
+from ...mboot.protocol.serial_protocol import MbootSerialProtocol
+from ...utils.interfaces.device.usbsio_device import ScanArgs, UsbSioI2CDevice, UsbSioSPIDevice
 
 
 class MbootUsbSioI2CInterface(MbootSerialProtocol):

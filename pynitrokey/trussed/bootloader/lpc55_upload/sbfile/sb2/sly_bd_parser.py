@@ -15,7 +15,7 @@ from sly import Parser
 from sly.lex import Token
 from sly.yacc import YaccProduction
 
-from spsdk.exceptions import SPSDKError
+from ...exceptions import SPSDKError
 
 from . import sly_bd_lexer as bd_lexer
 
@@ -26,7 +26,7 @@ from . import sly_bd_lexer as bd_lexer
 #   is disabled.
 # too-many-lines : the class can't be shortened, as all the methods represent
 #   rules.
-class BDParser(Parser):
+class BDParser(Parser): # type: ignore
     """Command (BD) file parser.
 
     The parser is based on SLY framework (python implementation of Lex/YACC)

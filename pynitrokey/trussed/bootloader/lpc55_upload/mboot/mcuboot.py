@@ -14,8 +14,8 @@ import time
 from types import TracebackType
 from typing import Callable, Dict, List, Optional, Sequence, Type
 
-from spsdk.mboot.protocol.base import MbootProtocolBase
-from spsdk.utils.interfaces.device.usb_device import UsbDevice
+from ..mboot.protocol.base import MbootProtocolBase
+from ..utils.interfaces.device.usb_device import UsbDevice
 
 from .commands import (
     CmdPacket,
@@ -683,20 +683,21 @@ class McuBoot:  # pylint: disable=too-many-public-methods
             if isinstance(self._interface.device, UsbDevice):
                 try:
                     # pylint: disable=import-outside-toplevel   # import only if needed to save time
-                    from spsdk.sbfile.sb2.images import ImageHeaderV2
+                    from ..sbfile.sb2.images import ImageHeaderV2
 
                     sb2_header = ImageHeaderV2.parse(data=data)
                     self._pause_point = sb2_header.first_boot_tag_block * 16
                 except SPSDKError:
                     pass
-                try:
-                    # pylint: disable=import-outside-toplevel   # import only if needed to save time
-                    from spsdk.sbfile.sb31.images import SecureBinary31Header
+                # Deactivated for pynitrokey
+                # try:
+                #     # pylint: disable=import-outside-toplevel   # import only if needed to save time
+                #     from spsdk.sbfile.sb31.images import SecureBinary31Header
 
-                    sb3_header = SecureBinary31Header.parse(data=data)
-                    self._pause_point = sb3_header.image_total_length
-                except SPSDKError:
-                    pass
+                #     sb3_header = SecureBinary31Header.parse(data=data)
+                #     self._pause_point = sb3_header.image_total_length
+                # except SPSDKError:
+                #     pass
             result = self._send_data(CommandTag.RECEIVE_SB_FILE, data_chunks, progress_callback)
             self.enable_data_abort = False
             return result

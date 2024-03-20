@@ -9,11 +9,11 @@
 
 from typing import Iterable, List, Optional
 
-from spsdk.crypto.certificate import Certificate
-from spsdk.crypto.keys import PrivateKey, PublicKey
-from spsdk.crypto.signature_provider import SignatureProvider
-from spsdk.exceptions import SPSDKError, SPSDKValueError
-from spsdk.utils.misc import load_binary
+from ..crypto.certificate import Certificate
+from ..crypto.keys import PrivateKey, PublicKey
+from ..crypto.signature_provider import SignatureProvider
+from ..exceptions import SPSDKError, SPSDKValueError
+from ..utils.misc import load_binary
 
 
 def get_matching_key_id(public_keys: List[PublicKey], signature_provider: SignatureProvider) -> int:

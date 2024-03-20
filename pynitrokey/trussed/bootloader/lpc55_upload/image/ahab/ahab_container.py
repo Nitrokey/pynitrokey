@@ -19,7 +19,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 from typing_extensions import Self
 
-spsdk_version = "2.1.0"
+from ... import version as spsdk_version
 from ...crypto.hash import EnumHashAlgorithm, get_hash
 from ...crypto.keys import (
     IS_OSCCA_SUPPORTED,

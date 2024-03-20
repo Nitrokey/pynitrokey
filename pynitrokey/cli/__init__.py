@@ -72,7 +72,7 @@ def nitropy():
         "ecdsa",
         "fido2",
         "pyusb",
-        "spsdk",
+        # "spsdk",
     ]
     for x in pymodules:
         logger.info(f"{x} version: {package_version(x)}")

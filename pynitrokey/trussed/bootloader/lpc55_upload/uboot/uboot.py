@@ -12,8 +12,8 @@ from crcmod.predefined import mkPredefinedCrcFun
 from hexdump import restore
 from serial import Serial
 
-from spsdk.exceptions import SPSDKError
-from spsdk.utils.misc import align, change_endianness, split_data
+from ..exceptions import SPSDKError
+from ..utils.misc import align, change_endianness, split_data
 
 logger = logging.getLogger(__name__)
 

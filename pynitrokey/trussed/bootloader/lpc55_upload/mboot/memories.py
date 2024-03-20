@@ -10,8 +10,8 @@
 
 from typing import List, Optional, cast
 
-from spsdk.utils.misc import size_fmt
-from spsdk.utils.spsdk_enum import SpsdkEnum
+from ..utils.misc import size_fmt
+from ..utils.spsdk_enum import SpsdkEnum
 
 LEGACY_MEM_ID = {
     "internal": "INTERNAL",

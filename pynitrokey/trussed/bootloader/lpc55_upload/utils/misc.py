@@ -31,9 +31,9 @@ from typing import (
     Union,
 )
 
-from spsdk.crypto.rng import random_bytes
-from spsdk.exceptions import SPSDKError, SPSDKValueError
-from spsdk.utils.exceptions import SPSDKTimeoutError
+from ..crypto.rng import random_bytes
+from ..exceptions import SPSDKError, SPSDKValueError
+from ..utils.exceptions import SPSDKTimeoutError
 
 # for generics
 T = TypeVar("T")  # pylint: disable=invalid-name

@@ -44,8 +44,7 @@ class Variable:
         """
         return f"{self.name}, {self.t}, {self.value}"
 
-
-class BDLexer(Lexer):
+class BDLexer(Lexer): # type: ignore
     """Lexer for bd files."""
 
     def __init__(self) -> None:

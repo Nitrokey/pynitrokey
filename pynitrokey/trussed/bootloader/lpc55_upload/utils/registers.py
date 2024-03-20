@@ -12,16 +12,16 @@ import xml.etree.ElementTree as ET
 from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union
 from xml.dom import minidom
 
-from spsdk.exceptions import SPSDKError, SPSDKValueError
-from spsdk.utils.exceptions import (
+from ..exceptions import SPSDKError, SPSDKValueError
+from ..utils.exceptions import (
     SPSDKRegsError,
     SPSDKRegsErrorBitfieldNotFound,
     SPSDKRegsErrorEnumNotFound,
     SPSDKRegsErrorRegisterGroupMishmash,
     SPSDKRegsErrorRegisterNotFound,
 )
-from spsdk.utils.images import BinaryImage, BinaryPattern
-from spsdk.utils.misc import (
+from ..utils.images import BinaryImage, BinaryPattern
+from ..utils.misc import (
     Endianness,
     format_value,
     get_bytes_cnt_of_int,

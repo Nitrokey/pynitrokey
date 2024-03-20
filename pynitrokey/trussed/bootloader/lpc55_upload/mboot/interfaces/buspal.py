@@ -17,10 +17,10 @@ from serial import SerialException
 from serial.tools.list_ports import comports
 from typing_extensions import Self
 
-from spsdk.exceptions import SPSDKError
-from spsdk.mboot.exceptions import McuBootConnectionError, McuBootDataAbortError
-from spsdk.mboot.protocol.serial_protocol import FPType, MbootSerialProtocol, to_int
-from spsdk.utils.interfaces.device.serial_device import SerialDevice
+from ...exceptions import SPSDKError
+from ...mboot.exceptions import McuBootConnectionError, McuBootDataAbortError
+from ...mboot.protocol.serial_protocol import FPType, MbootSerialProtocol, to_int
+from ...utils.interfaces.device.serial_device import SerialDevice
 
 logger = logging.getLogger(__name__)
 
