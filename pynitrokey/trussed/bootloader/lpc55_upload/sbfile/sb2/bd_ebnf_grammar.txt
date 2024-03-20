@@ -1,0 +1,174 @@
+/* BD file grammar in EBNF form */
+command_file ::= pre_section_block* section_block*
+
+pre_section_block ::= options_block
+| constants_block
+| sources_block
+| keyblob_block
+
+options_block ::= OPTIONS '{' option_def* '}'
+
+option_def ::= IDENT '=' const_expr ';'
+
+constants_block ::= CONSTANTS '{' constant_def* '}'
+
+constant_def ::= IDENT '=' bool_expr ';'
+
+sources_block ::= SOURCES '{' source_def* '}'
+
+source_def ::= IDENT '=' source_value ( '(' option_list? ')' )? ';'
+
+source_value ::= STRING_LITERAL
+| EXTERN '(' int_const_expr ')'
+
+option_list ::= IDENT '=' const_expr (',' IDENT '=' const_expr )*
+
+keyblob_block ::= KEYBLOB '(' int_const_expr ')' '{' keyblob_contents '}'
+
+keyblob_contents ::= '(' option_list* ')'
+
+section_block ::= SECTION '(' int_const_expr section_options? ')' section_contents
+
+section_options ::= ';' option_list?
+
+section_contents ::= '{' statement* '}'
+| '<=' source_name ';'
+
+statement ::= basic_stmt ';'
+| from_stmt
+| if_stmt
+| keywrap_stmt
+
+basic_stmt ::= load_stmt
+| load_ifr_stmt
+| call_stmt
+| jump_sp_stmt
+| mode_stmt
+| message_stmt
+| erase_stmt
+| enable_stmt
+| reset_stmt
+| encrypt_stmt
+| keystore_stmt
+
+load_stmt ::= LOAD load_opt load_data load_target
+
+load_opt ::= IDENT
+| int_const_expr
+| empty
+
+load_data ::= int_const_expr
+| STRING_LITERAL
+| IDENT
+| section_list
+| section_list FROM IDENT
+| BINARY_BLOB
+
+load_target ::= '>' '.'
+| '>' address_or_range
+
+section_list ::= section_ref (',' section_ref )*
+
+section_ref ::= '~' SECTION_NAME
+| SECTION_NAME
+
+erase_stmt ::= ERASE address_or_range
+| ERASE ALL
+
+address_or_range ::= int_const_expr ( '..' int_const_expr)?
+
+symbol_ref ::= IDENT'?' ':' IDENT
+
+load_ifr_stmt ::= LOAD IFR int_const_expr '>' int_const_expr
+
+call_stmt ::= call_type call_target call_arg?
+
+call_type ::= CALL
+| JUMP
+
+call_target ::= int_const_expr
+| symbol_ref
+| IDENT
+
+call_arg ::= '(' int_const_expr? ')'
+
+jump_sp_stmt ::= JUMP_SP int_const_expr call_target call_arg?
+
+from_stmt ::= FROM IDENT '{' in_from_stmt* '}'
+
+in_from_stmt ::= basic_stmt ';'
+| if_stmt
+
+mode_stmt ::= MODE int_const_expr
+
+message_stmt ::= message_type STRING_LITERAL
+
+message_type ::= INFO
+| WARNING
+| ERROR
+
+keystore_stmt ::= KEYSTORE_TO_NV mem_opt address_or_range
+| KEYSTORE_FROM_NV mem_opt address_or_range
+
+mem_opt ::= IDENT
+| '@' int_const_expr
+| empty
+
+if_stmt ::= IF bool_expr '{' statement* '}' else_stmt?
+
+else_stmt ::= ELSE '(' statement* ')'
+| ELSE if_stmt
+
+keywrap_stmt ::= KEYWRAP '(' int_const_expr ')' '{' statement* '}'
+
+encrypt_stmt ::= ENCRYPT '(' int_const_expr ')' '{' statement* '}'
+
+enable_stmt ::= ENABLE AT_INT_LITERAL int_const_expr
+
+reset_stmt ::= RESET
+
+ver_check_stmt ::= VERSION_CHECK sec_or_nsec int_const_expr
+
+sec_or_nsec ::= SEC
+| NSEC
+
+const_expr ::= STRING_LITERAL
+| bool_expr
+
+int_const_expr ::= expr
+
+bool_expr ::= bool_expr '<' bool_expr
+| bool_expr '<=' bool_expr
+| bool_expr '>' bool_expr
+| bool_expr '>=' bool_expr
+| bool_expr '==' bool_expr
+| bool_expr '!=' bool_expr
+| bool_expr '&&' bool_expr
+| bool_expr '||' bool_expr
+| '(' bool_expr ')'
+| int_const_expr
+| '!' bool_expr
+| DEFINED '(' IDENT ')'
+| IDENT '(' source_name ')'
+
+expr ::= expr '+' expr
+| expr '-' expr
+| expr '*' expr
+| expr '/' expr
+| expr '%' expr
+| expr '<<' expr
+| expr '>>' expr
+| expr '&' expr
+| expr '|' expr
+| expr '^' expr
+| expr '.' INT_SIZE
+| '(' expr ')'
+| INT_LITERAL
+| IDENT
+| SYMBOL_REF
+| unary_expr
+| SIZEOF '(' SYMBOL_REF ')'
+| SIZEOF '(' IDENT ')'
+
+unary_expr ::= '+' expr
+| '-' expr
