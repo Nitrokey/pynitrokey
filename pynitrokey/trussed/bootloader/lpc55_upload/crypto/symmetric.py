@@ -14,8 +14,8 @@ from typing import Optional
 from cryptography.hazmat.primitives import keywrap
 from cryptography.hazmat.primitives.ciphers import Cipher, aead, algorithms, modes
 
-from spsdk.exceptions import SPSDKError
-from spsdk.utils.misc import Endianness, align_block
+from ..exceptions import SPSDKError
+from ..utils.misc import Endianness, align_block
 
 
 class Counter:

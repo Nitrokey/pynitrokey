@@ -12,12 +12,12 @@
 from datetime import datetime
 from typing import Optional
 
-from spsdk.crypto.certificate import Certificate
-from spsdk.crypto.hash import EnumHashAlgorithm, get_hash
-from spsdk.crypto.keys import ECDSASignature, PrivateKey, PrivateKeyEcc, PrivateKeyRsa
-from spsdk.crypto.signature_provider import SignatureProvider
-from spsdk.crypto.types import SPSDKEncoding
-from spsdk.exceptions import SPSDKError, SPSDKTypeError, SPSDKValueError
+from ..crypto.certificate import Certificate
+from ..crypto.hash import EnumHashAlgorithm, get_hash
+from ..crypto.keys import ECDSASignature, PrivateKey, PrivateKeyEcc, PrivateKeyRsa
+from ..crypto.signature_provider import SignatureProvider
+from ..crypto.types import SPSDKEncoding
+from ..exceptions import SPSDKError, SPSDKTypeError, SPSDKValueError
 
 
 def cms_sign(

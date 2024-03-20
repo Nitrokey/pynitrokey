@@ -13,11 +13,11 @@ from typing import Optional
 
 from typing_extensions import Self
 
-from spsdk.crypto.rng import random_bytes
-from spsdk.exceptions import SPSDKError
-from spsdk.sbfile.misc import BcdVersion3, pack_timestamp, unpack_timestamp
-from spsdk.utils.abstract import BaseClass
-from spsdk.utils.misc import swap16
+from ...crypto.rng import random_bytes
+from ...exceptions import SPSDKError
+from ...sbfile.misc import BcdVersion3, pack_timestamp, unpack_timestamp
+from ...utils.abstract import BaseClass
+from ...utils.misc import swap16
 
 
 ########################################################################################################################

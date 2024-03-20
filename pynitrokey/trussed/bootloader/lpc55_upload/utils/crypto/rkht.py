@@ -14,12 +14,12 @@ from typing import List, Optional, Sequence, Union
 
 from typing_extensions import Self
 
-from spsdk.crypto.certificate import Certificate
-from spsdk.crypto.hash import EnumHashAlgorithm, get_hash, get_hash_length
-from spsdk.crypto.keys import PrivateKey, PublicKey, PublicKeyEcc, PublicKeyRsa
-from spsdk.crypto.utils import extract_public_key, extract_public_key_from_data
-from spsdk.exceptions import SPSDKError
-from spsdk.utils.misc import Endianness
+from ...crypto.certificate import Certificate
+from ...crypto.hash import EnumHashAlgorithm, get_hash, get_hash_length
+from ...crypto.keys import PrivateKey, PublicKey, PublicKeyEcc, PublicKeyRsa
+from ...crypto.utils import extract_public_key, extract_public_key_from_data
+from ...exceptions import SPSDKError
+from ...utils.misc import Endianness
 
 logger = logging.getLogger(__name__)
 

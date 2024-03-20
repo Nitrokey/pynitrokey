@@ -8,7 +8,7 @@
 
 """Exceptions used in the MBoot module."""
 
-from spsdk.exceptions import SPSDKError
+from ..exceptions import SPSDKError
 
 from .error_codes import StatusCode
 

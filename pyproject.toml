@@ -32,7 +32,7 @@ dependencies = [
   "python-dateutil ~= 2.7.0",
   "pyusb",
   "requests",
-  "spsdk >=2.0,<2.2",
+  # "spsdk >=2.0,<2.2",
   "tqdm",
   "tlv8",
   "typing_extensions ~= 4.3.0",
@@ -40,7 +40,10 @@ dependencies = [
   "protobuf >=3.17.3, < 4.0.0",
   "click-aliases",
   "semver",
+  "libusbsio",
   "nethsm >= 1.0.0,<2",
+  "asn1tools >= 0.166.0",
+  "gmssl >= 3.2, < 4",
 ]
 dynamic = ["version", "description"]
 
@@ -138,6 +141,10 @@ module = [
     "tlv8.*",
     "pytest.*",
     "click_aliases.*",
+    "sly.*",
+    "libusbsio.*",
+    "fastjsonschema",
+    "deepmerge.*",
 ]
 ignore_missing_imports = true
 

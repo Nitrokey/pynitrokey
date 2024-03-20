@@ -5,6 +5,8 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
+from typing import Dict
+
 def filepath_from_config(
     config: Dict,
     key: str,

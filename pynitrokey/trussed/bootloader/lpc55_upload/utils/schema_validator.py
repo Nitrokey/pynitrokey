@@ -22,9 +22,10 @@ from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap as CMap
 from ruamel.yaml.comments import CommentedSeq as CSeq
 
-from spsdk import SPSDK_YML_INDENT
-from spsdk.exceptions import SPSDKError
-from spsdk.utils.misc import (
+SPSDK_YML_INDENT = 2
+
+from ..exceptions import SPSDKError
+from ..utils.misc import (
     find_dir,
     find_file,
     load_configuration,
@@ -32,7 +33,7 @@ from spsdk.utils.misc import (
     wrap_text,
     write_file,
 )
-from spsdk.utils.spsdk_enum import SpsdkEnum
+from ..utils.spsdk_enum import SpsdkEnum
 
 ENABLE_DEBUG = False
 
@@ -212,8 +213,7 @@ def check_config(
         raise SPSDKError(f"Invalid validation schema to check config: {str(exc)}") from exc
     try:
         if ENABLE_DEBUG:
-            # pylint: disable=import-error,import-outside-toplevel
-            import validator_file
+            import validator_file # type: ignore
 
             validator_file.validate(config_to_check, formats)
         else:

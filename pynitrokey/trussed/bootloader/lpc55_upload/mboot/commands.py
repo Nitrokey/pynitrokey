@@ -11,8 +11,8 @@
 from struct import pack, unpack, unpack_from
 from typing import Dict, List, Optional, Type
 
-from spsdk.utils.interfaces.commands import CmdPacketBase, CmdResponseBase
-from spsdk.utils.spsdk_enum import SpsdkEnum
+from ..utils.interfaces.commands import CmdPacketBase, CmdResponseBase
+from ..utils.spsdk_enum import SpsdkEnum
 
 from .error_codes import StatusCode
 from .exceptions import McuBootError

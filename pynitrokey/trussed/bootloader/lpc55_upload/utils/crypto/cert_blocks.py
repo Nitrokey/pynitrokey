@@ -17,24 +17,24 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Type, U
 
 from typing_extensions import Self
 
-from spsdk import version as spsdk_version
-from spsdk.crypto.certificate import Certificate
-from spsdk.crypto.hash import EnumHashAlgorithm, get_hash
-from spsdk.crypto.keys import PrivateKeyRsa, PublicKeyEcc
-from spsdk.crypto.signature_provider import SignatureProvider, get_signature_provider
-from spsdk.crypto.types import SPSDKEncoding
-from spsdk.crypto.utils import extract_public_key, extract_public_key_from_data, get_matching_key_id
-from spsdk.exceptions import (
+from ... import version as spsdk_version
+from ...crypto.certificate import Certificate
+from ...crypto.hash import EnumHashAlgorithm, get_hash
+from ...crypto.keys import PrivateKeyRsa, PublicKeyEcc
+from ...crypto.signature_provider import SignatureProvider, get_signature_provider
+from ...crypto.types import SPSDKEncoding
+from ...crypto.utils import extract_public_key, extract_public_key_from_data, get_matching_key_id
+from ...exceptions import (
     SPSDKError,
     SPSDKNotImplementedError,
     SPSDKTypeError,
     SPSDKUnsupportedOperation,
     SPSDKValueError,
 )
-from spsdk.utils.abstract import BaseClass
-from spsdk.utils.crypto.rkht import RKHTv1, RKHTv21
-from spsdk.utils.database import DatabaseManager, get_db, get_families, get_schema_file
-from spsdk.utils.misc import (
+from ...utils.abstract import BaseClass
+from ...utils.crypto.rkht import RKHTv1, RKHTv21
+from ...utils.database import DatabaseManager, get_db, get_families, get_schema_file
+from ...utils.misc import (
     Endianness,
     align,
     align_block,
@@ -46,7 +46,7 @@ from spsdk.utils.misc import (
     value_to_int,
     write_file,
 )
-from spsdk.utils.schema_validator import CommentedConfig
+from ...utils.schema_validator import CommentedConfig
 
 logger = logging.getLogger(__name__)
 

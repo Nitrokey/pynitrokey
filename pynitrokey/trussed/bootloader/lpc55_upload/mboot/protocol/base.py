@@ -6,7 +6,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 """MBoot protocol base."""
-from spsdk.utils.interfaces.protocol.protocol_base import ProtocolBase
+from ...utils.interfaces.protocol.protocol_base import ProtocolBase
 
 
 class MbootProtocolBase(ProtocolBase):

@@ -16,7 +16,7 @@ from contextlib import contextmanager
 from io import BytesIO
 from typing import Any, Callable, Iterator, List, Optional
 
-from spsdk.mboot.exceptions import McuBootConnectionError
+from ..trussed.bootloader.lpc55_upload.mboot.exceptions import McuBootConnectionError
 
 import pynitrokey
 from pynitrokey.helpers import Retries

@@ -14,14 +14,14 @@ from typing import Any, Dict, List, Optional, Union
 
 from crcmod.predefined import mkPredefinedCrcFun
 
-from spsdk import version as spsdk_version
-from spsdk.apps.utils.utils import filepath_from_config
-from spsdk.crypto.rng import random_bytes
-from spsdk.crypto.symmetric import Counter, aes_ctr_encrypt, aes_xts_encrypt
-from spsdk.exceptions import SPSDKError, SPSDKValueError
-from spsdk.utils.database import DatabaseManager, get_db, get_families, get_schema_file
-from spsdk.utils.images import BinaryImage
-from spsdk.utils.misc import (
+from ... import version as spsdk_version
+from ...apps.utils.utils import filepath_from_config
+from ...crypto.rng import random_bytes
+from ...crypto.symmetric import Counter, aes_ctr_encrypt, aes_xts_encrypt
+from ...exceptions import SPSDKError, SPSDKValueError
+from ...utils.database import DatabaseManager, get_db, get_families, get_schema_file
+from ...utils.images import BinaryImage
+from ...utils.misc import (
     Endianness,
     align_block,
     load_hex_string,
@@ -30,9 +30,9 @@ from spsdk.utils.misc import (
     value_to_bytes,
     value_to_int,
 )
-from spsdk.utils.registers import Registers
-from spsdk.utils.schema_validator import CommentedConfig
-from spsdk.utils.spsdk_enum import SpsdkEnum
+from ...utils.registers import Registers
+from ...utils.schema_validator import CommentedConfig
+from ...utils.spsdk_enum import SpsdkEnum
 
 logger = logging.getLogger(__name__)
 

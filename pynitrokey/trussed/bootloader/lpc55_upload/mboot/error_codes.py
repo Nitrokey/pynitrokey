@@ -8,7 +8,7 @@
 
 """Status and error codes used by the MBoot protocol."""
 
-from spsdk.utils.spsdk_enum import SpsdkEnum
+from ..utils.spsdk_enum import SpsdkEnum
 
 ########################################################################################################################
 # McuBoot Status Codes (Errors)

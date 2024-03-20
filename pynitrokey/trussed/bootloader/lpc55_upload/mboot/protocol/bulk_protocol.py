@@ -10,13 +10,13 @@ import logging
 from struct import pack, unpack_from
 from typing import Optional, Union
 
-from spsdk.exceptions import SPSDKAttributeError
-from spsdk.mboot.commands import CmdResponse, parse_cmd_response
-from spsdk.mboot.exceptions import McuBootConnectionError, McuBootDataAbortError
-from spsdk.mboot.protocol.base import MbootProtocolBase
-from spsdk.utils.exceptions import SPSDKTimeoutError
-from spsdk.utils.interfaces.commands import CmdPacketBase
-from spsdk.utils.spsdk_enum import SpsdkEnum
+from ...exceptions import SPSDKAttributeError
+from ...mboot.commands import CmdResponse, parse_cmd_response
+from ...mboot.exceptions import McuBootConnectionError, McuBootDataAbortError
+from ...mboot.protocol.base import MbootProtocolBase
+from ...utils.exceptions import SPSDKTimeoutError
+from ...utils.interfaces.commands import CmdPacketBase
+from ...utils.spsdk_enum import SpsdkEnum
 
 
 class ReportId(SpsdkEnum):

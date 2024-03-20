@@ -13,9 +13,9 @@ from serial import Serial, SerialException, SerialTimeoutException
 from serial.tools.list_ports import comports
 from typing_extensions import Self
 
-from spsdk.exceptions import SPSDKConnectionError
-from spsdk.utils.exceptions import SPSDKTimeoutError
-from spsdk.utils.interfaces.device.base import DeviceBase
+from ....exceptions import SPSDKConnectionError
+from ....utils.exceptions import SPSDKTimeoutError
+from ....utils.interfaces.device.base import DeviceBase
 
 logger = logging.getLogger(__name__)
 

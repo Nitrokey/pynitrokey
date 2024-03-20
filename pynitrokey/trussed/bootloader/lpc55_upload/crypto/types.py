@@ -14,7 +14,7 @@ from cryptography.x509.base import Version
 from cryptography.x509.extensions import ExtensionOID, Extensions, KeyUsage
 from cryptography.x509.name import Name, NameOID, ObjectIdentifier
 
-from spsdk.exceptions import SPSDKError
+from ..exceptions import SPSDKError
 
 
 class SPSDKEncoding(utils.Enum):

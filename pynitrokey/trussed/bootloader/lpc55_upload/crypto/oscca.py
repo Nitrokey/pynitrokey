@@ -7,8 +7,9 @@
 
 """Support for OSCCA SM2/SM3."""
 
-from spsdk import SPSDK_DATA_FOLDER_COMMON
-from spsdk.utils.misc import Endianness
+
+from ..utils.misc import Endianness
+from .. import SPSDK_DATA_FOLDER_COMMON
 
 try:
     # this import is to find out whether OSCCA support is installed or not
