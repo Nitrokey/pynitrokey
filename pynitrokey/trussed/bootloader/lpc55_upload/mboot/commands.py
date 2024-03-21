@@ -13,7 +13,6 @@ from typing import Dict, List, Optional, Type
 
 from ..utils.interfaces.commands import CmdPacketBase, CmdResponseBase
 from ..utils.spsdk_enum import SpsdkEnum
-
 from .error_codes import StatusCode
 from .exceptions import McuBootError
 
@@ -232,7 +231,9 @@ class CmdHeader:
         :raises McuBootError: Invalid data format
         """
         if len(data) < 4:
-            raise McuBootError(f"Invalid format of RX packet (data length is {len(data)} bytes)")
+            raise McuBootError(
+                f"Invalid format of RX packet (data length is {len(data)} bytes)"
+            )
         return cls(*unpack_from("4B", data, offset))
 
 

@@ -21,7 +21,6 @@ from ..exceptions import SPSDKError
 from ..utils.abstract import BaseClass
 from ..utils.misc import Endianness
 from ..utils.spsdk_enum import SpsdkEnum
-
 from .header import Header, SegTag
 from .misc import hexdump_fmt, modulus_fmt
 
@@ -183,9 +182,7 @@ class CertificateImg(BaseSecretClass):
         return self._data.__iter__()
 
     def __repr__(self) -> str:
-        return (
-            f"Certificate <Ver: {self.version_major}.{self.version_minor}, Size: {len(self._data)}>"
-        )
+        return f"Certificate <Ver: {self.version_major}.{self.version_minor}, Size: {len(self._data)}>"
 
     def __str__(self) -> str:
         """String representation of the CertificateImg."""
@@ -729,7 +726,9 @@ class SrkItemEcc(SrkItem):
             raise SPSDKError("Incorrect flag")
         self._flag = value
 
-    def __init__(self, key_size: int, x_coordinate: int, y_coordinate: int, flag: int = 0) -> None:
+    def __init__(
+        self, key_size: int, x_coordinate: int, y_coordinate: int, flag: int = 0
+    ) -> None:
         """Initialize the srk table item."""
         self._header = Header(tag=EnumSRK.KEY_PUBLIC.tag, param=EnumAlgorithm.ECDSA.tag)
         self.x_coordinate = x_coordinate
@@ -739,8 +738,16 @@ class SrkItemEcc(SrkItem):
         self.flag = flag
         self._header.length += (
             8
-            + len(self.x_coordinate.to_bytes(self.coordinate_size, byteorder=Endianness.BIG.value))
-            + len(self.y_coordinate.to_bytes(self.coordinate_size, byteorder=Endianness.BIG.value))
+            + len(
+                self.x_coordinate.to_bytes(
+                    self.coordinate_size, byteorder=Endianness.BIG.value
+                )
+            )
+            + len(
+                self.y_coordinate.to_bytes(
+                    self.coordinate_size, byteorder=Endianness.BIG.value
+                )
+            )
         )
 
     def __repr__(self) -> str:
@@ -773,10 +780,22 @@ class SrkItemEcc(SrkItem):
         data = self._header.export()
         curve_id = self.ECC_KEY_TYPE[get_ecc_curve(self.key_size // 8)]
         data += pack(
-            ">8B", 0, 0, 0, self.flag, curve_id, 0, self.key_size >> 8 & 0xFF, self.key_size & 0xFF
+            ">8B",
+            0,
+            0,
+            0,
+            self.flag,
+            curve_id,
+            0,
+            self.key_size >> 8 & 0xFF,
+            self.key_size & 0xFF,
         )
-        data += self.x_coordinate.to_bytes(self.coordinate_size, byteorder=Endianness.BIG.value)
-        data += self.y_coordinate.to_bytes(self.coordinate_size, byteorder=Endianness.BIG.value)
+        data += self.x_coordinate.to_bytes(
+            self.coordinate_size, byteorder=Endianness.BIG.value
+        )
+        data += self.y_coordinate.to_bytes(
+            self.coordinate_size, byteorder=Endianness.BIG.value
+        )
         return data
 
     @classmethod

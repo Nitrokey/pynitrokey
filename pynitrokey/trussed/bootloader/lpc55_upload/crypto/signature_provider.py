@@ -37,7 +37,12 @@ from ..crypto.keys import (
     prompt_for_passphrase,
 )
 from ..crypto.types import SPSDKEncoding
-from ..exceptions import SPSDKError, SPSDKKeyError, SPSDKUnsupportedOperation, SPSDKValueError
+from ..exceptions import (
+    SPSDKError,
+    SPSDKKeyError,
+    SPSDKUnsupportedOperation,
+    SPSDKValueError,
+)
 from ..utils.misc import find_file
 from ..utils.plugins import PluginsManager, PluginType
 
@@ -141,7 +146,9 @@ class SignatureProvider(abc.ABC):
         if isinstance(params, str):
             params = cls.convert_params(params)
         sp_classes = cls.get_all_signature_providers()
-        for klass in sp_classes:  # pragma: no branch  # there always be at least one subclass
+        for (
+            klass
+        ) in sp_classes:  # pragma: no branch  # there always be at least one subclass
             if klass.sp_type == params["type"]:
                 klass.filter_params(klass, params)
                 return klass(**params)
@@ -190,7 +197,9 @@ class PlainFileSP(SignatureProvider):
         self.private_key = PrivateKey.load(self.file_path, password=password)
         self.hash_alg = self._get_hash_algorithm(hash_alg)
 
-    def _get_hash_algorithm(self, hash_alg: Optional[EnumHashAlgorithm] = None) -> HashAlgorithm:
+    def _get_hash_algorithm(
+        self, hash_alg: Optional[EnumHashAlgorithm] = None
+    ) -> HashAlgorithm:
         if hash_alg:
             hash_alg_name = hash_alg
         else:
@@ -331,7 +340,9 @@ class HttpProxySP(SignatureProvider):
         except json.JSONDecodeError as e:
             raise SPSDKError("Response is not a valid JSON object") from e
 
-    def _check_response(self, response: Dict, names_types: List[Tuple[str, Type]]) -> None:
+    def _check_response(
+        self, response: Dict, names_types: List[Tuple[str, Type]]
+    ) -> None:
         """Check if the response contains required data.
 
         :param response: Response to check
@@ -395,7 +406,9 @@ def get_signature_provider(
         raise SPSDKValueError("No signature provider configuration is provided")
 
     if not signature_provider:
-        raise SPSDKError(f"Cannot create signature provider from: {sp_cfg or local_file_key}")
+        raise SPSDKError(
+            f"Cannot create signature provider from: {sp_cfg or local_file_key}"
+        )
 
     return signature_provider
 
@@ -407,7 +420,9 @@ def load_plugins() -> Dict[str, ModuleType]:
     return plugins_manager.plugins
 
 
-def try_to_verify_public_key(signature_provider: SignatureProvider, public_key_data: bytes) -> None:
+def try_to_verify_public_key(
+    signature_provider: SignatureProvider, public_key_data: bytes
+) -> None:
     """Verify public key by signature provider if verify method is implemented.
 
     :param signature_provider: Signature provider used for verification.
@@ -421,6 +436,10 @@ def try_to_verify_public_key(signature_provider: SignatureProvider, public_key_d
             raise SPSDKKeysNotMatchingError(
                 "Signature verification failed, public key does not match to private key"
             )
-        logger.debug("The verification of private key pair integrity has been successful.")
+        logger.debug(
+            "The verification of private key pair integrity has been successful."
+        )
     except SPSDKUnsupportedOperation:
-        logger.warning("Signature provider could not verify the integrity of private key pair.")
+        logger.warning(
+            "Signature provider could not verify the integrity of private key pair."
+        )

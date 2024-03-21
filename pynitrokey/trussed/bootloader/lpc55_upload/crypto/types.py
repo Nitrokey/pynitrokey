@@ -55,7 +55,11 @@ class SPSDKEncoding(utils.Enum):
     @staticmethod
     def all() -> Dict[str, "SPSDKEncoding"]:
         """Get all supported encodings."""
-        return {"NXP": SPSDKEncoding.NXP, "PEM": SPSDKEncoding.PEM, "DER": SPSDKEncoding.DER}
+        return {
+            "NXP": SPSDKEncoding.NXP,
+            "PEM": SPSDKEncoding.PEM,
+            "DER": SPSDKEncoding.DER,
+        }
 
 
 SPSDKExtensions = Extensions

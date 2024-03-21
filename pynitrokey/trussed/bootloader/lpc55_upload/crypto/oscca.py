@@ -8,8 +8,8 @@
 """Support for OSCCA SM2/SM3."""
 
 
-from ..utils.misc import Endianness
 from .. import SPSDK_DATA_FOLDER_COMMON
+from ..utils.misc import Endianness
 
 try:
     # this import is to find out whether OSCCA support is installed or not
@@ -28,7 +28,9 @@ if IS_OSCCA_SUPPORTED:
 
     from ..exceptions import SPSDKError
 
-    OSCCA_ASN_DEFINITION_FILE = os.path.join(SPSDK_DATA_FOLDER_COMMON, "crypto", "oscca.asn")
+    OSCCA_ASN_DEFINITION_FILE = os.path.join(
+        SPSDK_DATA_FOLDER_COMMON, "crypto", "oscca.asn"
+    )
     SM2_OID = "1.2.156.10197.1.301"
 
     class SM2KeySet(NamedTuple):
@@ -76,7 +78,9 @@ if IS_OSCCA_SUPPORTED:
             """Parse private SM2 key set from binary data."""
             result = self.parser.decode("Private", data)
             key_set = self.parser.decode("KeySet", result["keyset"])
-            return SM2KeySet(private=key_set["prk"].hex(), public=key_set["puk"][0][1:].hex())
+            return SM2KeySet(
+                private=key_set["prk"].hex(), public=key_set["puk"][0][1:].hex()
+            )
 
         def decode_public_key(self, data: bytes) -> SM2PublicKey:
             """Parse public SM2 key set from binary data."""

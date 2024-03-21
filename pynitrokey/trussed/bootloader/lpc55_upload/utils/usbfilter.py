@@ -279,7 +279,9 @@ class NXPUSBDeviceFilter(USBDeviceFilter):
         return False
 
     def _is_nxp_device_name(self, vid: int, pid: int) -> bool:
-        nxp_device_name_to_compare = {k.lower(): v for k, v in self.nxp_device_names.items()}
+        nxp_device_name_to_compare = {
+            k.lower(): v for k, v in self.nxp_device_names.items()
+        }
         assert isinstance(self.usb_id, str)
         if self.usb_id.lower() in nxp_device_name_to_compare:
             vendor_id, product_id = nxp_device_name_to_compare[self.usb_id.lower()]

@@ -31,7 +31,9 @@ SPSDK_DATA_FOLDER_SCHEMAS = os.path.join(SPSDK_DATA_FOLDER, "jsonschemas")
 # SPSDK_CACHE_DISABLED might be redefined by SPSDK_CACHE_DISABLED_{version} env variable, default is False
 SPSDK_ENV_CACHE_DISABLED = "SPSDK_CACHE_DISABLED_" + version.replace(".", "_")
 SPSDK_CACHE_DISABLED = bool(
-    os.environ.get(SPSDK_ENV_CACHE_DISABLED) or os.environ.get("SPSDK_CACHE_DISABLED") or False
+    os.environ.get(SPSDK_ENV_CACHE_DISABLED)
+    or os.environ.get("SPSDK_CACHE_DISABLED")
+    or False
 )
 
 SPSDK_YML_INDENT = 2

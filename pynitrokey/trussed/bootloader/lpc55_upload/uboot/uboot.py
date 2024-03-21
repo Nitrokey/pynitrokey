@@ -67,7 +67,9 @@ class Uboot:
 
     def open(self) -> None:
         """Open uboot device."""
-        self._device = Serial(port=self.port, timeout=self.timeout, baudrate=self.baudrate)
+        self._device = Serial(
+            port=self.port, timeout=self.timeout, baudrate=self.baudrate
+        )
         self.is_opened = True
 
     def close(self) -> None:

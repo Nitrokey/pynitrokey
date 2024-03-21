@@ -104,7 +104,12 @@ class ProtocolBase(ABC):
     def get_interface(cls, identifier: str) -> Type[Self]:
         """Get list of all available interfaces."""
         interface = next(
-            (iface for iface in cls._get_interfaces() if iface.identifier == identifier), None
+            (
+                iface
+                for iface in cls._get_interfaces()
+                if iface.identifier == identifier
+            ),
+            None,
         )
         if not interface:
             raise SPSDKError(f"Interface with identifier {identifier} does not exist.")

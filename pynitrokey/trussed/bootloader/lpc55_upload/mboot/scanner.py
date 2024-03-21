@@ -9,8 +9,8 @@
 from typing import List, Optional
 
 from ..exceptions import SPSDKError
-from .protocol.base import MbootProtocolBase
 from ..utils.interfaces.scanner_helper import InterfaceParams, parse_plugin_config
+from .protocol.base import MbootProtocolBase
 
 
 def get_mboot_interface(
@@ -43,7 +43,9 @@ def get_mboot_interface(
     interface_params.extend(
         [
             InterfaceParams(identifier="usb", is_defined=bool(usb), params=usb),
-            InterfaceParams(identifier="uart", is_defined=bool(port and not buspal), params=port),
+            InterfaceParams(
+                identifier="uart", is_defined=bool(port and not buspal), params=port
+            ),
             InterfaceParams(
                 identifier="buspal_spi",
                 is_defined=bool(port and buspal and "spi" in buspal),
@@ -68,7 +70,9 @@ def get_mboot_interface(
             ),
             InterfaceParams(identifier="sdio", is_defined=bool(sdio), params=sdio),
             InterfaceParams(
-                identifier=plugin_params[0], is_defined=bool(plugin), params=plugin_params[1]
+                identifier=plugin_params[0],
+                is_defined=bool(plugin),
+                params=plugin_params[1],
             ),
         ]
     )
@@ -89,7 +93,9 @@ def get_mboot_interface(
         timeout=timeout,
     )
     if len(devices) == 0:
-        raise SPSDKError(f"Selected '{interface_params[0].identifier}' device not found.")
+        raise SPSDKError(
+            f"Selected '{interface_params[0].identifier}' device not found."
+        )
     if len(devices) > 1:
         raise SPSDKError(
             f"Multiple '{interface_params[0].identifier}' devices found: {len(devices)}"

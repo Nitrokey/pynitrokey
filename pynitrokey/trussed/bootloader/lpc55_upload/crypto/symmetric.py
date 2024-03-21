@@ -98,7 +98,9 @@ def aes_ecb_decrypt(key: bytes, encrypted_data: bytes) -> bytes:
     return enc.update(encrypted_data) + enc.finalize()
 
 
-def aes_cbc_encrypt(key: bytes, plain_data: bytes, iv_data: Optional[bytes] = None) -> bytes:
+def aes_cbc_encrypt(
+    key: bytes, plain_data: bytes, iv_data: Optional[bytes] = None
+) -> bytes:
     """Encrypt plain data with AES in CBC mode.
 
     :param key: The key for data encryption
@@ -114,7 +116,9 @@ def aes_cbc_encrypt(key: bytes, plain_data: bytes, iv_data: Optional[bytes] = No
         )
     init_vector = iv_data or bytes(algorithms.AES.block_size // 8)
     if len(init_vector) * 8 != algorithms.AES.block_size:
-        raise SPSDKError(f"The initial vector length must be {algorithms.AES.block_size // 8}")
+        raise SPSDKError(
+            f"The initial vector length must be {algorithms.AES.block_size // 8}"
+        )
     cipher = Cipher(algorithms.AES(key), modes.CBC(init_vector))
     enc = cipher.encryptor()
     return (
@@ -123,7 +127,9 @@ def aes_cbc_encrypt(key: bytes, plain_data: bytes, iv_data: Optional[bytes] = No
     )
 
 
-def aes_cbc_decrypt(key: bytes, encrypted_data: bytes, iv_data: Optional[bytes] = None) -> bytes:
+def aes_cbc_decrypt(
+    key: bytes, encrypted_data: bytes, iv_data: Optional[bytes] = None
+) -> bytes:
     """Decrypt encrypted data with AES in CBC mode.
 
     :param key: The key for data decryption
@@ -139,7 +145,9 @@ def aes_cbc_decrypt(key: bytes, encrypted_data: bytes, iv_data: Optional[bytes] 
         )
     init_vector = iv_data or bytes(algorithms.AES.block_size)
     if len(init_vector) * 8 != algorithms.AES.block_size:
-        raise SPSDKError(f"The initial vector length must be {algorithms.AES.block_size}")
+        raise SPSDKError(
+            f"The initial vector length must be {algorithms.AES.block_size}"
+        )
     cipher = Cipher(algorithms.AES(key), modes.CBC(init_vector))
     dec = cipher.decryptor()
     return dec.update(encrypted_data) + dec.finalize()
@@ -198,7 +206,11 @@ def aes_xts_decrypt(key: bytes, encrypted_data: bytes, tweak: bytes) -> bytes:
 
 
 def aes_ccm_encrypt(
-    key: bytes, plain_data: bytes, nonce: bytes, associated_data: bytes = b"", tag_len: int = 16
+    key: bytes,
+    plain_data: bytes,
+    nonce: bytes,
+    associated_data: bytes = b"",
+    tag_len: int = 16,
 ) -> bytes:
     """Encrypt plain data with AES in CCM mode (Counter with CBC).
 
@@ -214,7 +226,11 @@ def aes_ccm_encrypt(
 
 
 def aes_ccm_decrypt(
-    key: bytes, encrypted_data: bytes, nonce: bytes, associated_data: bytes, tag_len: int = 16
+    key: bytes,
+    encrypted_data: bytes,
+    nonce: bytes,
+    associated_data: bytes,
+    tag_len: int = 16,
 ) -> bytes:
     """Decrypt encrypted data with AES in CCM mode (Counter with CBC).
 
@@ -229,7 +245,9 @@ def aes_ccm_decrypt(
     return aesccm.decrypt(nonce, encrypted_data, associated_data)
 
 
-def sm4_cbc_encrypt(key: bytes, plain_data: bytes, iv_data: Optional[bytes] = None) -> bytes:
+def sm4_cbc_encrypt(
+    key: bytes, plain_data: bytes, iv_data: Optional[bytes] = None
+) -> bytes:
     """Encrypt plain data with SM4 in CBC mode.
 
     :param key: The key for data encryption
@@ -245,7 +263,9 @@ def sm4_cbc_encrypt(key: bytes, plain_data: bytes, iv_data: Optional[bytes] = No
         )
     init_vector = iv_data or bytes(algorithms.SM4.block_size // 8)
     if len(init_vector) * 8 != algorithms.SM4.block_size:
-        raise SPSDKError(f"The initial vector length must be {algorithms.SM4.block_size // 8}")
+        raise SPSDKError(
+            f"The initial vector length must be {algorithms.SM4.block_size // 8}"
+        )
     cipher = Cipher(algorithms.SM4(key), modes.CBC(init_vector))
     enc = cipher.encryptor()
     return (
@@ -254,7 +274,9 @@ def sm4_cbc_encrypt(key: bytes, plain_data: bytes, iv_data: Optional[bytes] = No
     )
 
 
-def sm4_cbc_decrypt(key: bytes, encrypted_data: bytes, iv_data: Optional[bytes] = None) -> bytes:
+def sm4_cbc_decrypt(
+    key: bytes, encrypted_data: bytes, iv_data: Optional[bytes] = None
+) -> bytes:
     """Decrypt encrypted data with SM4 in CBC mode.
 
     :param key: The key for data decryption
@@ -270,7 +292,9 @@ def sm4_cbc_decrypt(key: bytes, encrypted_data: bytes, iv_data: Optional[bytes] 
         )
     init_vector = iv_data or bytes(algorithms.SM4.block_size)
     if len(init_vector) * 8 != algorithms.SM4.block_size:
-        raise SPSDKError(f"The initial vector length must be {algorithms.SM4.block_size}")
+        raise SPSDKError(
+            f"The initial vector length must be {algorithms.SM4.block_size}"
+        )
     cipher = Cipher(algorithms.SM4(key), modes.CBC(init_vector))
     dec = cipher.decryptor()
     return dec.update(encrypted_data) + dec.finalize()

@@ -268,7 +268,9 @@ def get_abs_path(file_path: str, base_dir: Optional[str] = None) -> str:
     if os.path.isabs(file_path):
         return file_path.replace("\\", "/")
 
-    return os.path.abspath(os.path.join(base_dir or os.getcwd(), file_path)).replace("\\", "/")
+    return os.path.abspath(os.path.join(base_dir or os.getcwd(), file_path)).replace(
+        "\\", "/"
+    )
 
 
 def _find_path(
@@ -391,7 +393,9 @@ def use_working_directory(path: str) -> Iterator[None]:
         assert os.getcwd() == current_dir
 
 
-def format_value(value: int, size: int, delimiter: str = "_", use_prefix: bool = True) -> str:
+def format_value(
+    value: int, size: int, delimiter: str = "_", use_prefix: bool = True
+) -> str:
     """Convert the 'value' into either BIN or HEX string, depending on 'size'.
 
     if 'size' is divisible by 8, function returns HEX, BIN otherwise
@@ -438,7 +442,9 @@ def get_bytes_cnt_of_int(
     return cnt
 
 
-def value_to_int(value: Union[bytes, bytearray, int, str], default: Optional[int] = None) -> int:
+def value_to_int(
+    value: Union[bytes, bytearray, int, str], default: Optional[int] = None
+) -> int:
     """Function loads value from lot of formats to integer.
 
     :param value: Input value.
@@ -458,7 +464,9 @@ def value_to_int(value: Union[bytes, bytearray, int, str], default: Optional[int
             value.strip().lower(),
         )
         if match:
-            base = {"0b": 2, "0o": 8, "0": 10, "0x": 16, None: 10}[match.group("prefix")]
+            base = {"0b": 2, "0o": 8, "0": 10, "0x": 16, None: 10}[
+                match.group("prefix")
+            ]
             try:
                 return int(match.group("number"), base=base)
             except ValueError:
@@ -703,7 +711,11 @@ class Timeout:
             raise SPSDKTimeoutError("Timeout of operation.")
 
         # pylint: disable=superfluous-parens     # because PEP20: Readability counts
-        return ((self.end_time - self._get_current_time_us()) // 1000) if self.enabled else 0
+        return (
+            ((self.end_time - self._get_current_time_us()) // 1000)
+            if self.enabled
+            else 0
+        )
 
     def overflow(self, raise_exc: bool = False) -> bool:
         """Check the the timer has been overflowed.
@@ -730,7 +742,9 @@ def size_fmt(num: Union[float, int], use_kibibyte: bool = True) -> str:
     return f"{int(num)} {i}" if i == "B" else f"{num:3.1f} {i}"
 
 
-def numberify_version(version: str, separator: str = ".", valid_numbers: int = 3) -> int:
+def numberify_version(
+    version: str, separator: str = ".", valid_numbers: int = 3
+) -> int:
     """Turn version string into a number.
 
     Each group is weighted by a multiple of 1000
@@ -853,7 +867,9 @@ def load_configuration(path: str, search_paths: Optional[List[str]] = None) -> D
     raise SPSDKError(f"Unable to load '{path}'.")
 
 
-def split_data(data: Union[bytearray, bytes], size: int) -> Generator[bytes, None, None]:
+def split_data(
+    data: Union[bytearray, bytes], size: int
+) -> Generator[bytes, None, None]:
     """Split data into chunks of size.
 
     :param bytearray data: array of bytes to be split

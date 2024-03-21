@@ -199,5 +199,7 @@ def unpack_timestamp(value: int) -> datetime:
     assert isinstance(value, int)
     if value < 0 or value > 0xFFFFFFFFFFFFFFFF:
         raise SPSDKError("Incorrect result of conversion")
-    start = int(datetime(2000, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc).timestamp() * 1000000)
+    start = int(
+        datetime(2000, 1, 1, 0, 0, 0, 0, tzinfo=timezone.utc).timestamp() * 1000000
+    )
     return datetime.fromtimestamp((start + value) / 1000000)

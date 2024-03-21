@@ -72,7 +72,9 @@ class Header(BaseClass):
         """Header size in bytes."""
         return self.SIZE
 
-    def __init__(self, tag: int = 0, param: int = 0, length: Optional[int] = None) -> None:
+    def __init__(
+        self, tag: int = 0, param: int = 0, length: Optional[int] = None
+    ) -> None:
         """Constructor.
 
         :param tag: section tag
@@ -97,7 +99,9 @@ class Header(BaseClass):
         return SegTag.get_label(self.tag)
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self.tag_name}, {self.param}, {self.length})"
+        return (
+            f"{self.__class__.__name__}({self.tag_name}, {self.param}, {self.length})"
+        )
 
     def __str__(self) -> str:
         return (

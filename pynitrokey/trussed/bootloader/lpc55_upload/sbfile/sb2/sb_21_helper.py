@@ -213,7 +213,9 @@ class SB21Helper:
         else:
             raise SPSDKError("Unsupported program command arguments")
 
-        return CmdProg(address=address, data_word1=data_word1, data_word2=data_word2, mem_id=mem_id)
+        return CmdProg(
+            address=address, data_word1=data_word1, data_word2=data_word2, mem_id=mem_id
+        )
 
     def _erase_cmd_handler(self, cmd_args: dict) -> CmdErase:
         """Returns a CmdErase object initialized based on cmd_args.
@@ -317,10 +319,14 @@ class SB21Helper:
         counter = bytes.fromhex(valid_keyblob["keyblob_content"][0]["counter"])
         byte_swap = valid_keyblob["keyblob_content"][0].get("byte_swap", False)
 
-        keyblob = KeyBlob(start_addr=start_addr, end_addr=end_addr, key=key, counter_iv=counter)
+        keyblob = KeyBlob(
+            start_addr=start_addr, end_addr=end_addr, key=key, counter_iv=counter
+        )
 
         # Encrypt only if the ADE and VLD flags are set
-        if bool(end_addr & keyblob.KEY_FLAG_ADE) and bool(end_addr & keyblob.KEY_FLAG_VLD):
+        if bool(end_addr & keyblob.KEY_FLAG_ADE) and bool(
+            end_addr & keyblob.KEY_FLAG_VLD
+        ):
             encoded_data = keyblob.encrypt_image(
                 base_address=address, data=align_block(data, 512), byte_swap=byte_swap
             )
@@ -363,7 +369,9 @@ class SB21Helper:
         key = bytes.fromhex(valid_keyblob["keyblob_content"][0]["key"])
         counter = bytes.fromhex(valid_keyblob["keyblob_content"][0]["counter"])
 
-        blob = KeyBlob(start_addr=start_addr, end_addr=end_addr, key=key, counter_iv=counter)
+        blob = KeyBlob(
+            start_addr=start_addr, end_addr=end_addr, key=key, counter_iv=counter
+        )
 
         encoded_keyblob = blob.export(kek=otfad_key)
         logger.info(f"Creating wrapped keyblob: \n{str(blob)}")
@@ -446,7 +454,9 @@ class SB21Helper:
 
                 for key in ["start", "end", "key", "counter"]:
                     if key not in kb_content[0]:
-                        raise SPSDKError(f"Keyblob {keyblob_id} is missing '{key}' definition!")
+                        raise SPSDKError(
+                            f"Keyblob {keyblob_id} is missing '{key}' definition!"
+                        )
 
                 return keyblob
 

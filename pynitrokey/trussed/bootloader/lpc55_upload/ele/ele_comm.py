@@ -40,7 +40,9 @@ class EleMessageHandler:
         self.database = get_db(device=family, revision=revision)
         self.family = family
         self.revision = revision
-        self.comm_buff_addr = self.database.get_int(DatabaseManager.COMM_BUFFER, "address")
+        self.comm_buff_addr = self.database.get_int(
+            DatabaseManager.COMM_BUFFER, "address"
+        )
         self.comm_buff_size = self.database.get_int(DatabaseManager.COMM_BUFFER, "size")
         logger.info(
             f"ELE communicator is using {self.comm_buff_size} B size buffer at "
@@ -128,12 +130,18 @@ class EleMessageHandlerMBoot(EleMessageHandler):
             if msg.response_words_count == 0:
                 return
             # 3. Read back the response
-            response = self.device.read_memory(msg.response_address, 4 * msg.response_words_count)
+            response = self.device.read_memory(
+                msg.response_address, 4 * msg.response_words_count
+            )
         except SPSDKError as exc:
-            raise SPSDKError(f"ELE Communication failed with mBoot: {str(exc)}") from exc
+            raise SPSDKError(
+                f"ELE Communication failed with mBoot: {str(exc)}"
+            ) from exc
 
         if not response or len(response) != 4 * msg.response_words_count:
-            raise SPSDKLengthError("ELE Message - Invalid response read-back operation.")
+            raise SPSDKLengthError(
+                "ELE Message - Invalid response read-back operation."
+            )
         # 4. Decode the response
         msg.decode_response(response)
 
@@ -148,10 +156,14 @@ class EleMessageHandlerMBoot(EleMessageHandler):
                     msg.response_data_address, msg.response_data_size
                 )
             except SPSDKError as exc:
-                raise SPSDKError(f"ELE Communication failed with mBoot: {str(exc)}") from exc
+                raise SPSDKError(
+                    f"ELE Communication failed with mBoot: {str(exc)}"
+                ) from exc
 
             if not response_data or len(response_data) != msg.response_data_size:
-                raise SPSDKLengthError("ELE Message - Invalid response data read-back operation.")
+                raise SPSDKLengthError(
+                    "ELE Message - Invalid response data read-back operation."
+                )
 
             msg.decode_response_data(response_data)
 
@@ -213,7 +225,9 @@ class EleMessageHandlerUBoot(EleMessageHandler):
         msg.set_buffer_params(self.comm_buff_addr, self.comm_buff_size)
 
         try:
-            logger.debug(f"ELE msg {hex(msg.buff_addr)} {hex(msg.buff_size)} {msg.export().hex()}")
+            logger.debug(
+                f"ELE msg {hex(msg.buff_addr)} {hex(msg.buff_size)} {msg.export().hex()}"
+            )
 
             # 0. Prepare command data in target memory if required
             if msg.has_command_data:
@@ -230,18 +244,24 @@ class EleMessageHandlerUBoot(EleMessageHandler):
                 return
 
             if "Error" in output:
-                msg.abort_code, msg.status, msg.indication = self.extract_error_values(output)
+                msg.abort_code, msg.status, msg.indication = self.extract_error_values(
+                    output
+                )
             else:
                 # 2. Read back the response
                 stripped_output = output.splitlines()[-1].replace("u-boot=> ", "")
                 logger.debug(f"Stripped output {stripped_output}")
                 response = value_to_bytes("0x" + stripped_output)
         except (SPSDKError, IndexError) as exc:
-            raise SPSDKError(f"ELE Communication failed with UBoot: {str(exc)}") from exc
+            raise SPSDKError(
+                f"ELE Communication failed with UBoot: {str(exc)}"
+            ) from exc
 
         if not "Error" in output:
             if not response or len(response) != 4 * msg.response_words_count:
-                raise SPSDKLengthError("ELE Message - Invalid response read-back operation.")
+                raise SPSDKLengthError(
+                    "ELE Message - Invalid response read-back operation."
+                )
             # 3. Decode the response
             msg.decode_response(response)
 
@@ -257,10 +277,14 @@ class EleMessageHandlerUBoot(EleMessageHandler):
                 )
                 self.device.read_output()
             except SPSDKError as exc:
-                raise SPSDKError(f"ELE Communication failed with mBoot: {str(exc)}") from exc
+                raise SPSDKError(
+                    f"ELE Communication failed with mBoot: {str(exc)}"
+                ) from exc
 
             if not response_data or len(response_data) != msg.response_data_size:
-                raise SPSDKLengthError("ELE Message - Invalid response data read-back operation.")
+                raise SPSDKLengthError(
+                    "ELE Message - Invalid response data read-back operation."
+                )
 
             msg.decode_response_data(response_data)
 

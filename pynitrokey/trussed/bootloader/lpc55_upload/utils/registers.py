@@ -40,7 +40,9 @@ logger = logging.getLogger(__name__)
 class RegsEnum:
     """Storage for register enumerations."""
 
-    def __init__(self, name: str, value: Any, description: str, max_width: int = 0) -> None:
+    def __init__(
+        self, name: str, value: Any, description: str, max_width: int = 0
+    ) -> None:
         """Constructor of RegsEnum class. Used to store enumeration information of bitfield.
 
         :param name: Name of enumeration.
@@ -76,7 +78,9 @@ class RegsEnum:
         except (TypeError, ValueError, SPSDKError) as exc:
             raise SPSDKRegsError(f"Invalid Enum Value: {raw_val}") from exc
 
-        description = xml_element.attrib.get("description", "N/A").replace("&#10;", "\n")
+        description = xml_element.attrib.get("description", "N/A").replace(
+            "&#10;", "\n"
+        )
 
         return cls(name, value, description, maxwidth)
 
@@ -202,7 +206,8 @@ class ShiftRightConfigProcessor(ConfigProcessor):
         :param description: Extra description for config processor, defaults to ""
         """
         super().__init__(
-            description=description or f"Actual binary value is shifted by {count} bits to right."
+            description=description
+            or f"Actual binary value is shifted by {count} bits to right."
         )
         self.count = count
 
@@ -271,7 +276,9 @@ class RegsBitField:
         self.set_value(self.reset_value, raw=True)
 
     @classmethod
-    def from_xml_element(cls, xml_element: ET.Element, parent: "RegsRegister") -> "RegsBitField":
+    def from_xml_element(
+        cls, xml_element: ET.Element, parent: "RegsRegister"
+    ) -> "RegsBitField":
         """Initialization register by XML ET element.
 
         :param xml_element: Input XML subelement with register data.
@@ -281,14 +288,24 @@ class RegsBitField:
         name = xml_element.attrib.get("name", "N/A")
         offset = value_to_int(xml_element.attrib.get("offset", 0))
         width = value_to_int(xml_element.attrib.get("width", 0))
-        description = xml_element.attrib.get("description", "N/A").replace("&#10;", "\n")
+        description = xml_element.attrib.get("description", "N/A").replace(
+            "&#10;", "\n"
+        )
         access = xml_element.attrib.get("access", "R/W")
         reset_value = value_to_int(xml_element.attrib.get("reset_value", 0))
         hidden = xml_element.tag != "bit_field"
         config_processor = ConfigProcessor.from_xml(xml_element)
 
         bitfield = cls(
-            parent, name, offset, width, description, reset_value, access, hidden, config_processor
+            parent,
+            name,
+            offset,
+            width,
+            description,
+            reset_value,
+            access,
+            hidden,
+            config_processor,
         )
 
         for xml_enum in xml_element.findall("bit_field_value"):
@@ -403,7 +420,9 @@ class RegsBitField:
             if enum.name == enum_name:
                 return enum.get_value_int()
 
-        raise SPSDKRegsErrorEnumNotFound(f"The enum for {enum_name} has not been found.")
+        raise SPSDKRegsErrorEnumNotFound(
+            f"The enum for {enum_name} has not been found."
+        )
 
     def get_enum_names(self) -> List[str]:
         """Returns list of the enum strings.
@@ -417,7 +436,9 @@ class RegsBitField:
 
         :param parent: The parent object of ElementTree.
         """
-        element = ET.SubElement(parent, "reserved_bit_field" if self.hidden else "bit_field")
+        element = ET.SubElement(
+            parent, "reserved_bit_field" if self.hidden else "bit_field"
+        )
         element.set("offset", hex(self.offset))
         element.set("width", str(self.width))
         element.set("name", self.name)
@@ -482,7 +503,9 @@ class RegsRegister:
         :param alt_widths: List of alternative widths.
         """
         if width % 8 != 0:
-            raise SPSDKValueError("SPSDK Register supports only widths in multiply 8 bits.")
+            raise SPSDKValueError(
+                "SPSDK Register supports only widths in multiply 8 bits."
+            )
         self.name = name
         self.offset = offset
         self.width = width
@@ -531,7 +554,9 @@ class RegsRegister:
         name = xml_element.attrib.get("name", "N/A")
         offset = value_to_int(xml_element.attrib.get("offset", 0))
         width = value_to_int(xml_element.attrib.get("width", 0))
-        description = xml_element.attrib.get("description", "N/A").replace("&#10;", "\n")
+        description = xml_element.attrib.get("description", "N/A").replace(
+            "&#10;", "\n"
+        )
         reverse = (xml_element.attrib.get("reversed", "False")) == "True"
         access = xml_element.attrib.get("access", "N/A")
         otp_index_raw = xml_element.attrib.get("otp_index")
@@ -691,7 +716,9 @@ class RegsRegister:
                     else:
                         bit_pos = (index - 1) * subreg_width
 
-                    sub_reg.set_value((value >> bit_pos) & ((1 << subreg_width) - 1), raw=raw)
+                    sub_reg.set_value(
+                        (value >> bit_pos) & ((1 << subreg_width) - 1), raw=raw
+                    )
             else:
                 self._value = value
 
@@ -841,7 +868,9 @@ class RegsRegister:
             if name == bitfield.name:
                 return bitfield
 
-        raise SPSDKRegsErrorBitfieldNotFound(f" The {name} is not found in register {self.name}.")
+        raise SPSDKRegsErrorBitfieldNotFound(
+            f" The {name} is not found in register {self.name}."
+        )
 
     def add_setvalue_hook(self, hook: Callable, context: Optional[Any] = None) -> None:
         """Set the value hook for write operation.
@@ -881,7 +910,9 @@ class Registers:
         "Instead of bitfields: ... field, the value: ... definition works as well."
     )
 
-    def __init__(self, device_name: str, base_endianness: Endianness = Endianness.BIG) -> None:
+    def __init__(
+        self, device_name: str, base_endianness: Endianness = Endianness.BIG
+    ) -> None:
         """Initialization of Registers class."""
         self._registers: List[RegsRegister] = []
         self.dev_name = device_name
@@ -1044,7 +1075,9 @@ class Registers:
 
         return image
 
-    def export(self, size: int = 0, pattern: BinaryPattern = BinaryPattern("zeros")) -> bytes:
+    def export(
+        self, size: int = 0, pattern: BinaryPattern = BinaryPattern("zeros")
+    ) -> bytes:
         """Export Registers into binary.
 
         :param size: Result size of Image, 0 means automatic minimal size.
@@ -1083,7 +1116,9 @@ class Registers:
             for enum in bitfield.get_enums():
                 descr = enum.description if enum.description != "." else enum.name
                 enum_description = descr.replace("&#10;", "\n")
-                description += f"\n- {enum.name}, ({enum.get_value_int()}): {enum_description}"
+                description += (
+                    f"\n- {enum.name}, ({enum.get_value_int()}): {enum_description}"
+                )
         return description
 
     def get_validation_schema(self) -> Dict:
@@ -1123,14 +1158,18 @@ class Registers:
                         bitfields_schema[bitfield.name] = {
                             "type": ["string", "number"],
                             "title": f"{bitfield.name}",
-                            "description": self._get_bitfield_yaml_description(bitfield),
+                            "description": self._get_bitfield_yaml_description(
+                                bitfield
+                            ),
                             "template_value": bitfield.get_value(),
                         }
                     else:
                         bitfields_schema[bitfield.name] = {
                             "type": ["string", "number"],
                             "title": f"{bitfield.name}",
-                            "description": self._get_bitfield_yaml_description(bitfield),
+                            "description": self._get_bitfield_yaml_description(
+                                bitfield
+                            ),
                             "enum_template": bitfield.get_enum_names(),
                             "minimum": 0,
                             "maximum": (1 << bitfield.width) - 1,
@@ -1144,7 +1183,10 @@ class Registers:
                         "skip_in_template": True,
                         "additionalProperties": False,
                         "properties": {
-                            "bitfields": {"type": "object", "properties": bitfields_schema}
+                            "bitfields": {
+                                "type": "object",
+                                "properties": bitfields_schema,
+                            }
                         },
                     }
                 )
@@ -1168,14 +1210,18 @@ class Registers:
         return {"type": "object", "title": self.dev_name, "properties": properties}
 
     # pylint: disable=no-self-use   #It's better to have this function visually close to callies
-    def _filter_by_names(self, items: List[ET.Element], names: List[str]) -> List[ET.Element]:
+    def _filter_by_names(
+        self, items: List[ET.Element], names: List[str]
+    ) -> List[ET.Element]:
         """Filter out all items in the "items" tree,whose name starts with one of the strings in "names" list.
 
         :param items: Items to be filtered out.
         :param names: Names to filter out.
         :return: Filtered item elements list.
         """
-        return [item for item in items if not item.attrib["name"].startswith(tuple(names))]
+        return [
+            item for item in items if not item.attrib["name"].startswith(tuple(names))
+        ]
 
     # pylint: disable=dangerous-default-value
     def load_registers_from_xml(
@@ -1252,7 +1298,9 @@ class Registers:
                     register.set_value(val, False)
                 else:
                     bitfields = (
-                        reg_value["bitfields"] if "bitfields" in reg_value.keys() else reg_value
+                        reg_value["bitfields"]
+                        if "bitfields" in reg_value.keys()
+                        else reg_value
                     )
                     for bitfield_name in bitfields:
                         bitfield_val = bitfields[bitfield_name]
@@ -1273,11 +1321,13 @@ class Registers:
                         except SPSDKError:
                             # New versions of register data do not contain register and bitfield value in enum
                             old_bitfield = bitfield_val
-                            bitfield_val = bitfield_val.replace(bitfield.name + "_", "").replace(
-                                register.name + "_", ""
-                            )
+                            bitfield_val = bitfield_val.replace(
+                                bitfield.name + "_", ""
+                            ).replace(register.name + "_", "")
                             # Some bitfield were renamed from ENABLE to ALLOW
-                            bitfield_val = "ALLOW" if bitfield_val == "ENABLE" else bitfield_val
+                            bitfield_val = (
+                                "ALLOW" if bitfield_val == "ENABLE" else bitfield_val
+                            )
                             logger.warning(
                                 f"Bitfield {old_bitfield} not found, trying backward"
                                 " compatibility mode with {bitfield_val}"

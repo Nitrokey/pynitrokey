@@ -33,7 +33,13 @@ from ...image.ahab.ahab_container import (
 )
 from ...utils.database import DatabaseManager
 from ...utils.images import BinaryImage
-from ...utils.misc import Endianness, align_block, check_range, load_hex_string, value_to_int
+from ...utils.misc import (
+    Endianness,
+    align_block,
+    check_range,
+    load_hex_string,
+    value_to_int,
+)
 from ...utils.schema_validator import CommentedConfig
 from ...utils.spsdk_enum import SpsdkEnum
 
@@ -175,12 +181,16 @@ class Message(Container):
                 f"Message: Invalid certificate version: {hex(self.cert_ver) if self.cert_ver else 'None'}"
             )
 
-        if self.permissions is None or not check_range(self.permissions, end=(1 << 8) - 1):
+        if self.permissions is None or not check_range(
+            self.permissions, end=(1 << 8) - 1
+        ):
             raise SPSDKValueError(
                 f"Message: Invalid certificate permission: {hex(self.permissions) if self.permissions else 'None'}"
             )
 
-        if self.issue_date is None or not check_range(self.issue_date, start=1, end=(1 << 16) - 1):
+        if self.issue_date is None or not check_range(
+            self.issue_date, start=1, end=(1 << 16) - 1
+        ):
             raise SPSDKValueError(
                 f"Message: Invalid issue date: {hex(self.issue_date) if self.issue_date else 'None'}"
             )
@@ -239,7 +249,9 @@ class Message(Container):
         return msg_cls.load_from_config(config, search_paths=search_paths)
 
     @staticmethod
-    def load_from_config_generic(config: Dict[str, Any]) -> Tuple[int, int, Optional[int], bytes]:
+    def load_from_config_generic(
+        config: Dict[str, Any]
+    ) -> Tuple[int, int, Optional[int], bytes]:
         """Converts the general configuration option into an message object.
 
         "config" content of container configurations.
@@ -400,9 +412,13 @@ class MessageReturnLifeCycle(Message):
             raise SPSDKError(f"Invalid config field command: {command}")
         command_name = list(command.keys())[0]
         if MessageCommands.from_label(command_name) != MessageReturnLifeCycle.TAG:
-            raise SPSDKError("Invalid configuration for Return Life Cycle Request command.")
+            raise SPSDKError(
+                "Invalid configuration for Return Life Cycle Request command."
+            )
 
-        cert_ver, permission, issue_date, uuid = Message.load_from_config_generic(config)
+        cert_ver, permission, issue_date, uuid = Message.load_from_config_generic(
+            config
+        )
 
         life_cycle = command.get("RETURN_LIFECYCLE_UPDATE_REQ")
         assert isinstance(life_cycle, int)
@@ -431,7 +447,9 @@ class MessageReturnLifeCycle(Message):
         """Validate general message properties."""
         super().validate()
         if self.life_cycle is None:
-            raise SPSDKValueError("Message Return Life Cycle request: Invalid life cycle")
+            raise SPSDKValueError(
+                "Message Return Life Cycle request: Invalid life cycle"
+            )
 
 
 class MessageWriteSecureFuse(Message):
@@ -530,9 +548,13 @@ class MessageWriteSecureFuse(Message):
             raise SPSDKError(f"Invalid config field command: {command}")
         command_name = list(command.keys())[0]
         if MessageCommands.from_label(command_name) != MessageWriteSecureFuse.TAG:
-            raise SPSDKError("Invalid configuration for Write secure fuse Request command.")
+            raise SPSDKError(
+                "Invalid configuration for Write secure fuse Request command."
+            )
 
-        cert_ver, permission, issue_date, uuid = Message.load_from_config_generic(config)
+        cert_ver, permission, issue_date, uuid = Message.load_from_config_generic(
+            config
+        )
 
         secure_fuse = command.get("WRITE_SEC_FUSE_REQ")
         assert isinstance(secure_fuse, dict)
@@ -576,7 +598,9 @@ class MessageWriteSecureFuse(Message):
         """Validate general message properties."""
         super().validate()
         if self.fuse_data is None:
-            raise SPSDKValueError("Message Write secure fuse request: Missing fuse data")
+            raise SPSDKValueError(
+                "Message Write secure fuse request: Missing fuse data"
+            )
         if len(self.fuse_data) != self.length:
             raise SPSDKValueError(
                 "Message Write secure fuse request: The fuse value list "
@@ -652,9 +676,13 @@ class MessageKeyStoreReprovisioningEnable(Message):
 
         :param data: Binary data with Payload to parse.
         """
-        self.flags, self.target, self.reserved, self.monotonic_counter, self.user_sab_id = unpack(
-            self.PAYLOAD_FORMAT, data[: self.PAYLOAD_LENGTH]
-        )
+        (
+            self.flags,
+            self.target,
+            self.reserved,
+            self.monotonic_counter,
+            self.user_sab_id,
+        ) = unpack(self.PAYLOAD_FORMAT, data[: self.PAYLOAD_LENGTH])
 
     def validate(self) -> None:
         """Validate general message properties."""
@@ -685,10 +713,10 @@ class MessageKeyStoreReprovisioningEnable(Message):
 
     def __str__(self) -> str:
         ret = super().__str__()
+        ret += f"  Monotonic counter value: 0x{self.monotonic_counter:08X}, {self.monotonic_counter}\n"
         ret += (
-            f"  Monotonic counter value: 0x{self.monotonic_counter:08X}, {self.monotonic_counter}\n"
+            f"  User SAB id:             0x{self.user_sab_id:08X}, {self.user_sab_id}"
         )
-        ret += f"  User SAB id:             0x{self.user_sab_id:08X}, {self.user_sab_id}"
         return ret
 
     @staticmethod
@@ -708,10 +736,17 @@ class MessageKeyStoreReprovisioningEnable(Message):
         if not isinstance(command, dict) or len(command) != 1:
             raise SPSDKError(f"Invalid config field command: {command}")
         command_name = list(command.keys())[0]
-        if MessageCommands.from_label(command_name) != MessageKeyStoreReprovisioningEnable.TAG:
-            raise SPSDKError("Invalid configuration for Write secure fuse Request command.")
+        if (
+            MessageCommands.from_label(command_name)
+            != MessageKeyStoreReprovisioningEnable.TAG
+        ):
+            raise SPSDKError(
+                "Invalid configuration for Write secure fuse Request command."
+            )
 
-        cert_ver, permission, issue_date, uuid = Message.load_from_config_generic(config)
+        cert_ver, permission, issue_date, uuid = Message.load_from_config_generic(
+            config
+        )
 
         keystore_repr_en = command.get("KEYSTORE_REPROVISIONING_ENABLE_REQ")
         assert isinstance(keystore_repr_en, dict)
@@ -787,7 +822,11 @@ class MessageKeyExchange(Message):
 
         AES = (0x2400, "AES SHA256", "Possible bit widths: 128/192/256")
         HMAC = (0x1100, "HMAC SHA384", "Possible bit widths: 224/256/384/512")
-        OEM_IMPORT_MK_SK = (0x9200, "OEM_IMPORT_MK_SK", "Possible bit widths: 128/192/256")
+        OEM_IMPORT_MK_SK = (
+            0x9200,
+            "OEM_IMPORT_MK_SK",
+            "Possible bit widths: 128/192/256",
+        )
 
     class LifeCycle(SpsdkEnum):
         """Chip life cycle valid values."""
@@ -863,7 +902,11 @@ class MessageKeyExchange(Message):
                 "signature verification operation. Setting this permission automatically sets the Verify Message usage."
             ),
         )
-        DERIVE = (0x00004000, "Derive", "Permission to derive other keys from this key.")
+        DERIVE = (
+            0x00004000,
+            "Derive",
+            "Permission to derive other keys from this key.",
+        )
 
     def __init__(
         self,
@@ -1065,7 +1108,9 @@ class MessageKeyExchange(Message):
         ) = unpack(self.PAYLOAD_FORMAT, data[: self.PAYLOAD_LENGTH])
 
         # Do some post process
-        self.key_exchange_algorithm = self.KeyExchangeAlgorithm.from_tag(key_exchange_algorithm)
+        self.key_exchange_algorithm = self.KeyExchangeAlgorithm.from_tag(
+            key_exchange_algorithm
+        )
         self.derived_key_type = self.DerivedKeyType.from_tag(derived_key_type)
         self.derived_key_lifetime = self.LifeTime.from_tag(derived_key_lifetime)
         self.derived_key_permitted_algorithm = self.KeyDerivationAlgorithm.from_tag(
@@ -1105,7 +1150,9 @@ class MessageKeyExchange(Message):
         ret += f"  Derived key bit size value: 0x{self.derived_key_size_bits:08X}, {self.derived_key_size_bits}\n"
         ret += f"  Derived key type value: {self.derived_key_type.label}\n"
         ret += f"  Derived key life time value: {self.derived_key_lifetime.label}\n"
-        ret += f"  Derived key usage value: {[x.label for x in self.derived_key_usage]}\n"
+        ret += (
+            f"  Derived key usage value: {[x.label for x in self.derived_key_usage]}\n"
+        )
         ret += f"  Derived key permitted algorithm value: {self.derived_key_permitted_algorithm.label}\n"
         ret += f"  Derived key life cycle value: {self.derived_key_lifecycle.label}\n"
         ret += f"  Derived key ID value: 0x{self.derived_key_id:08X}, {self.derived_key_id}\n"
@@ -1134,7 +1181,9 @@ class MessageKeyExchange(Message):
         if MessageCommands.from_label(command_name) != MessageKeyExchange.TAG:
             raise SPSDKError("Invalid configuration forKey Exchange Request command.")
 
-        cert_ver, permission, issue_date, uuid = Message.load_from_config_generic(config)
+        cert_ver, permission, issue_date, uuid = Message.load_from_config_generic(
+            config
+        )
 
         key_exchange = command.get("KEY_EXCHANGE_REQ")
         assert isinstance(key_exchange, dict)
@@ -1145,7 +1194,9 @@ class MessageKeyExchange(Message):
         )
         salt_flags = value_to_int(key_exchange.get("salt_flags", 0))
         derived_key_grp = value_to_int(key_exchange.get("derived_key_grp", 0))
-        derived_key_size_bits = value_to_int(key_exchange.get("derived_key_size_bits", 128))
+        derived_key_size_bits = value_to_int(
+            key_exchange.get("derived_key_size_bits", 128)
+        )
         derived_key_type = MessageKeyExchange.DerivedKeyType.from_attr(
             key_exchange.get("derived_key_type", "AES SHA256")
         )
@@ -1156,8 +1207,10 @@ class MessageKeyExchange(Message):
             MessageKeyExchange.DerivedKeyUsage.from_attr(x)
             for x in key_exchange.get("derived_key_usage", [])
         ]
-        derived_key_permitted_algorithm = MessageKeyExchange.KeyDerivationAlgorithm.from_attr(
-            key_exchange.get("derived_key_permitted_algorithm", "HKDF SHA256")
+        derived_key_permitted_algorithm = (
+            MessageKeyExchange.KeyDerivationAlgorithm.from_attr(
+                key_exchange.get("derived_key_permitted_algorithm", "HKDF SHA256")
+            )
         )
         derived_key_lifecycle = MessageKeyExchange.LifeCycle.from_attr(
             key_exchange.get("derived_key_lifecycle", "OPEN")
@@ -1211,14 +1264,18 @@ class MessageKeyExchange(Message):
         key_exchange_cfg["derived_key_size_bits"] = self.derived_key_size_bits
         key_exchange_cfg["derived_key_type"] = self.derived_key_type.label
         key_exchange_cfg["derived_key_lifetime"] = self.derived_key_lifetime.label
-        key_exchange_cfg["derived_key_usage"] = [x.label for x in self.derived_key_usage]
+        key_exchange_cfg["derived_key_usage"] = [
+            x.label for x in self.derived_key_usage
+        ]
         key_exchange_cfg[
             "derived_key_permitted_algorithm"
         ] = self.derived_key_permitted_algorithm.label
         key_exchange_cfg["derived_key_lifecycle"] = self.derived_key_lifecycle.label
         key_exchange_cfg["derived_key_id"] = self.derived_key_id
         key_exchange_cfg["private_key_id"] = self.private_key_id
-        key_exchange_cfg["input_peer_public_key_digest"] = self.input_peer_public_key_digest.hex()
+        key_exchange_cfg[
+            "input_peer_public_key_digest"
+        ] = self.input_peer_public_key_digest.hex()
         key_exchange_cfg["input_user_fixed_info_digest"] = (
             self.input_user_fixed_info_digest.hex()
             if self.input_user_fixed_info_digest
@@ -1384,7 +1441,9 @@ class SignedMessage(AHABContainerBase):
         assert self.message
         signed_message += self.message.export()
         # Add Signature Block
-        signed_message += align_block(self.signature_block.export(), CONTAINER_ALIGNMENT)
+        signed_message += align_block(
+            self.signature_block.export(), CONTAINER_ALIGNMENT
+        )
         return signed_message
 
     def export(self) -> bytes:
@@ -1451,7 +1510,9 @@ class SignedMessage(AHABContainerBase):
             sw_version=sw_version,
             encrypt_iv=iv if bool(descriptor_flags & 0x01) else None,
         )
-        parsed_signed_msg.signature_block = SignatureBlock.parse(data[signature_block_offset:])
+        parsed_signed_msg.signature_block = SignatureBlock.parse(
+            data[signature_block_offset:]
+        )
 
         # Parse also Message itself
         parsed_signed_msg.message = Message.parse(
@@ -1495,7 +1556,9 @@ class SignedMessage(AHABContainerBase):
         message = config.get("message")
         assert isinstance(message, dict)
 
-        signed_msg.message = Message.load_from_config(message, search_paths=search_paths)
+        signed_msg.message = Message.load_from_config(
+            message, search_paths=search_paths
+        )
 
         return signed_msg
 
@@ -1511,7 +1574,9 @@ class SignedMessage(AHABContainerBase):
             size=len(self),
             offset=0,
             binary=self.export(),
-            description=(f"Signed Message for {MessageCommands.get_label(self.message.TAG)}"),
+            description=(
+                f"Signed Message for {MessageCommands.get_label(self.message.TAG)}"
+            ),
         )
         return ret
 
@@ -1544,10 +1609,12 @@ class SignedMessage(AHABContainerBase):
             )
 
         if message:
-            for cmd_sch in val_schemas[0]["properties"]["message"]["properties"]["command"][
-                "oneOf"
-            ]:
-                cmd_sch["skip_in_template"] = bool(message.label not in cmd_sch["properties"])
+            for cmd_sch in val_schemas[0]["properties"]["message"]["properties"][
+                "command"
+            ]["oneOf"]:
+                cmd_sch["skip_in_template"] = bool(
+                    message.label not in cmd_sch["properties"]
+                )
 
         yaml_data = CommentedConfig(
             f"Signed message Configuration template for {family}.", val_schemas

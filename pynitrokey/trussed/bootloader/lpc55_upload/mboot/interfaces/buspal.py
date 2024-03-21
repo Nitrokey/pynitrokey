@@ -56,10 +56,16 @@ class SpiModeCommand(Enum):
     version = 0x01  # 00000001 - Enter raw SPI mode, display version string
     chip_select = 0x02  # 0000001x - CS high (1) or low (0)
     sniff = 0x0C  # 000011XX - Sniff SPI traffic when CS low(10)/all(01)
-    bulk_transfer = 0x10  # 0001xxxx - Bulk SPI transfer, send/read 1-16 bytes (0=1byte!)
-    config_periph = 0x40  # 0100wxyz - Configure peripherals w=power, x=pull-ups, y=AUX, z=CS
+    bulk_transfer = (
+        0x10  # 0001xxxx - Bulk SPI transfer, send/read 1-16 bytes (0=1byte!)
+    )
+    config_periph = (
+        0x40  # 0100wxyz - Configure peripherals w=power, x=pull-ups, y=AUX, z=CS
+    )
     set_speed = 0x60  # 01100xxx - SPI speed
-    config_spi = 0x80  # 1000wxyz - SPI config, w=HiZ/3.3v, x=CKP idle, y=CKE edge, z=SMP sample
+    config_spi = (
+        0x80  # 1000wxyz - SPI config, w=HiZ/3.3v, x=CKP idle, y=CKE edge, z=SMP sample
+    )
     write_then_read = 0x04  # 00000100 - Write then read extended command
 
 
@@ -206,7 +212,9 @@ class MbootBuspalProtocol(MbootSerialProtocol):
         """
         props = props if props is not None else []
         try:
-            device = SerialDevice(port=port, timeout=timeout, baudrate=cls.default_baudrate)
+            device = SerialDevice(
+                port=port, timeout=timeout, baudrate=cls.default_baudrate
+            )
             interface = cls(device)
             interface.open()
             interface._configure(props)
@@ -255,7 +263,9 @@ class MbootBuspalProtocol(MbootSerialProtocol):
             format_received == format_expected
         ), f"Received data '{format_received}' but expected '{format_expected}'"
 
-    def _read_frame_header(self, expected_frame_type: Optional[FPType] = None) -> Tuple[int, int]:
+    def _read_frame_header(
+        self, expected_frame_type: Optional[FPType] = None
+    ) -> Tuple[int, int]:
         """Read frame header and frame type. Return them as tuple of integers.
 
         :param expected_frame_type: Check if the frame_type is exactly as expected
@@ -333,9 +343,13 @@ class MbootBuspalSPIInterface(MbootBuspalProtocol):
         spi_props: Dict[str, Any] = dict(zip(self.TARGET_SETTINGS, props))
 
         speed = int(spi_props.get("speed", 100))
-        polarity = SpiClockPolarity(spi_props.get("polarity", SpiClockPolarity.active_low))
+        polarity = SpiClockPolarity(
+            spi_props.get("polarity", SpiClockPolarity.active_low)
+        )
         phase = SpiClockPhase(spi_props.get("phase", SpiClockPhase.second_edge))
-        direction = SpiShiftDirection(spi_props.get("direction", SpiShiftDirection.msb_first))
+        direction = SpiShiftDirection(
+            spi_props.get("direction", SpiShiftDirection.msb_first)
+        )
 
         # set SPI config
         logger.debug("Set SPI config")
@@ -343,12 +357,16 @@ class MbootBuspalSPIInterface(MbootBuspalProtocol):
         spi_data |= phase.value << SpiConfigShift.phase.value
         spi_data |= direction.value << SpiConfigShift.direction.value
         spi_data |= SpiModeCommand.config_spi.value
-        self._send_command_check_response(bytes([spi_data]), bytes([BBConstants.response_ok.value]))
+        self._send_command_check_response(
+            bytes([spi_data]), bytes([BBConstants.response_ok.value])
+        )
 
         # set SPI speed
         logger.debug(f"Set SPI speed to {speed}bps")
         spi_speed = struct.pack("<BI", SpiModeCommand.set_speed.value, speed)
-        self._send_command_check_response(spi_speed, bytes([BBConstants.response_ok.value]))
+        self._send_command_check_response(
+            spi_speed, bytes([BBConstants.response_ok.value])
+        )
 
     def _send_frame(self, data: bytes, wait_for_ack: bool = True) -> None:
         """Send data to BUSPAL I2C device.
@@ -358,7 +376,10 @@ class MbootBuspalSPIInterface(MbootBuspalProtocol):
         self._send_frame_retry(data, wait_for_ack, self.HDR_FRAME_RETRY_CNT)
 
     def _send_frame_retry(
-        self, data: bytes, wait_for_ack: bool = True, retry_cnt: int = HDR_FRAME_RETRY_CNT
+        self,
+        data: bytes,
+        wait_for_ack: bool = True,
+        retry_cnt: int = HDR_FRAME_RETRY_CNT,
     ) -> None:
         """Send a frame to BUSPAL SPI device.
 
@@ -385,7 +406,9 @@ class MbootBuspalSPIInterface(MbootBuspalProtocol):
                     retry_cnt -= 1
                     self._send_frame_retry(data, wait_for_ack, retry_cnt)
                 else:
-                    raise SPSDKError("Failed retrying reading the SPI header frame") from error
+                    raise SPSDKError(
+                        "Failed retrying reading the SPI header frame"
+                    ) from error
 
     def _read(self, size: int, timeout: Optional[int] = None) -> bytes:
         """Read 'length' amount of bytes from BUSPAL SPI device.
@@ -394,7 +417,9 @@ class MbootBuspalSPIInterface(MbootBuspalProtocol):
         """
         size = min(size, BBConstants.bulk_transfer_max.value)
         command = struct.pack("<BHH", SpiModeCommand.write_then_read.value, 0, size)
-        self._send_command_check_response(command, bytes([BBConstants.response_ok.value]))
+        self._send_command_check_response(
+            command, bytes([BBConstants.response_ok.value])
+        )
         return self.device.read(size, timeout)
 
 
@@ -410,7 +435,9 @@ class I2cModeCommand(Enum):
     nack_bit = 0x07  # 00000111 - NACK bit
     bus_sniff = 0x0F  # 00001111 - Start bus sniffer
     bulk_write = 0x10  # 0001xxxx - Bulk I2C write, send 1-16 bytes (0=1byte!)
-    configure_periph = 0x40  # 0100wxyz - Configure peripherals w=power, x=pullups, y=AUX, z=CS
+    configure_periph = (
+        0x40  # 0100wxyz - Configure peripherals w=power, x=pullups, y=AUX, z=CS
+    )
     pull_up_select = 0x50  # 010100xy - Pull up voltage select (BPV4 only)- x=5v y=3.3v
     set_speed = 0x60  # 011000xx - Set I2C speed, 3=~400kHz, 2=~100kHz, 1=~50kHz, 0=~5kHz (updated in v4.2 firmware)
     set_address = 0x70  # 11100000 - Set I2C address
@@ -470,12 +497,16 @@ class MbootBuspalI2CInterface(MbootBuspalProtocol):
         # set I2C address
         logger.debug(f"Set I2C address to {address}")
         i2c_data = struct.pack("<BB", I2cModeCommand.set_address.value, address)
-        self._send_command_check_response(i2c_data, bytes([BBConstants.response_ok.value]))
+        self._send_command_check_response(
+            i2c_data, bytes([BBConstants.response_ok.value])
+        )
 
         # set I2C speed."""
         logger.debug(f"Set I2C speed to {speed}bps")
         i2c_data = struct.pack("<BI", I2cModeCommand.set_speed.value, speed)
-        self._send_command_check_response(i2c_data, bytes([BBConstants.response_ok.value]))
+        self._send_command_check_response(
+            i2c_data, bytes([BBConstants.response_ok.value])
+        )
 
     def _send_frame(
         self,
@@ -489,7 +520,10 @@ class MbootBuspalI2CInterface(MbootBuspalProtocol):
         self._send_frame_retry(data, wait_for_ack, self.HDR_FRAME_RETRY_CNT)
 
     def _send_frame_retry(
-        self, data: bytes, wait_for_ack: bool = True, retry_cnt: int = HDR_FRAME_RETRY_CNT
+        self,
+        data: bytes,
+        wait_for_ack: bool = True,
+        retry_cnt: int = HDR_FRAME_RETRY_CNT,
     ) -> None:
         """Send data to BUSPAL I2C device.
 
@@ -515,7 +549,9 @@ class MbootBuspalI2CInterface(MbootBuspalProtocol):
                     retry_cnt -= 1
                     self._send_frame_retry(data, wait_for_ack, retry_cnt)
                 else:
-                    raise SPSDKError("Failed retrying reading the I2C header frame") from error
+                    raise SPSDKError(
+                        "Failed retrying reading the I2C header frame"
+                    ) from error
 
     def _read(self, size: int, timeout: Optional[int] = None) -> bytes:
         """Read 'length' amount of bytes from BUSPAL I2C device.
@@ -524,5 +560,7 @@ class MbootBuspalI2CInterface(MbootBuspalProtocol):
         """
         size = min(size, BBConstants.bulk_transfer_max.value)
         command = struct.pack("<BHH", I2cModeCommand.write_then_read.value, 0, size)
-        self._send_command_check_response(command, bytes([BBConstants.response_ok.value]))
+        self._send_command_check_response(
+            command, bytes([BBConstants.response_ok.value])
+        )
         return self.device.read(size, timeout)

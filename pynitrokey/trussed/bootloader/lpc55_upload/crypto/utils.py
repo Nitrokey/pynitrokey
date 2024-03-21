@@ -16,7 +16,9 @@ from ..exceptions import SPSDKError, SPSDKValueError
 from ..utils.misc import load_binary
 
 
-def get_matching_key_id(public_keys: List[PublicKey], signature_provider: SignatureProvider) -> int:
+def get_matching_key_id(
+    public_keys: List[PublicKey], signature_provider: SignatureProvider
+) -> int:
     """Get index of public key that match to given private key.
 
     :param public_keys: List of public key used to find the match for the private key.
@@ -31,7 +33,9 @@ def get_matching_key_id(public_keys: List[PublicKey], signature_provider: Signat
     raise SPSDKValueError("There is no match of private key in given list.")
 
 
-def extract_public_key_from_data(object_data: bytes, password: Optional[str] = None) -> PublicKey:
+def extract_public_key_from_data(
+    object_data: bytes, password: Optional[str] = None
+) -> PublicKey:
     """Extract any kind of public key from a data that contains Certificate, Private Key or Public Key.
 
     :raises SPSDKError: Raised when file can not be loaded
@@ -56,7 +60,9 @@ def extract_public_key_from_data(object_data: bytes, password: Optional[str] = N
 
 
 def extract_public_key(
-    file_path: str, password: Optional[str] = None, search_paths: Optional[List[str]] = None
+    file_path: str,
+    password: Optional[str] = None,
+    search_paths: Optional[List[str]] = None,
 ) -> PublicKey:
     """Extract any kind of public key from a file that contains Certificate, Private Key or Public Key.
 
@@ -86,6 +92,8 @@ def extract_public_keys(
     :return: List of public keys of any type
     """
     return [
-        extract_public_key(file_path=source, password=password, search_paths=search_paths)
+        extract_public_key(
+            file_path=source, password=password, search_paths=search_paths
+        )
         for source in secret_files
     ]

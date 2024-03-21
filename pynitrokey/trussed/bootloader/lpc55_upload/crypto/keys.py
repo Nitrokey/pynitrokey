@@ -37,7 +37,6 @@ from typing_extensions import Self
 from ..exceptions import SPSDKError, SPSDKNotImplementedError, SPSDKValueError
 from ..utils.abstract import BaseClass
 from ..utils.misc import Endianness, load_binary, write_file
-
 from .hash import EnumHashAlgorithm, get_hash, get_hash_algorithm
 from .oscca import IS_OSCCA_SUPPORTED
 from .rng import rand_below, random_hex
@@ -226,7 +225,10 @@ class PrivateKey(BaseClass, abc.ABC):
 
     def __eq__(self, obj: Any) -> bool:
         """Check object equality."""
-        return isinstance(obj, self.__class__) and self.get_public_key() == obj.get_public_key()
+        return (
+            isinstance(obj, self.__class__)
+            and self.get_public_key() == obj.get_public_key()
+        )
 
     def save(
         self,
@@ -240,7 +242,9 @@ class PrivateKey(BaseClass, abc.ABC):
         :param password: password to private key; None to store without password
         :param encoding: encoding type, default is PEM
         """
-        write_file(self.export(password=password, encoding=encoding), file_path, mode="wb")
+        write_file(
+            self.export(password=password, encoding=encoding), file_path, mode="wb"
+        )
 
     @classmethod
     def load(cls, file_path: str, password: Optional[str] = None) -> Self:
@@ -393,7 +397,9 @@ class PublicKey(BaseClass, abc.ABC):
             raise SPSDKError(f"Cannot load public key: ({str(exc)})") from exc
         raise SPSDKError(f"Unsupported public key: ({str(public_key)})")
 
-    def key_hash(self, algorithm: EnumHashAlgorithm = EnumHashAlgorithm.SHA256) -> bytes:
+    def key_hash(
+        self, algorithm: EnumHashAlgorithm = EnumHashAlgorithm.SHA256
+    ) -> bytes:
         """Get key hash.
 
         :param algorithm: Used hash algorithm, defaults to sha256
@@ -403,7 +409,10 @@ class PublicKey(BaseClass, abc.ABC):
 
     def __eq__(self, obj: Any) -> bool:
         """Check object equality."""
-        return isinstance(obj, self.__class__) and self.public_numbers == obj.public_numbers
+        return (
+            isinstance(obj, self.__class__)
+            and self.public_numbers == obj.public_numbers
+        )
 
     @classmethod
     def create(cls, key: Any) -> Self:
@@ -513,7 +522,9 @@ class PrivateKeyRsa(PrivateKey):
             SPSDKEncoding.get_cryptography_encodings(encoding), PrivateFormat.PKCS8, enc
         )
 
-    def sign(self, data: bytes, algorithm: EnumHashAlgorithm = EnumHashAlgorithm.SHA256) -> bytes:
+    def sign(
+        self, data: bytes, algorithm: EnumHashAlgorithm = EnumHashAlgorithm.SHA256
+    ) -> bytes:
         """Sign input data.
 
         :param data: Input data
@@ -546,7 +557,9 @@ class PrivateKeyRsa(PrivateKey):
 
     def __str__(self) -> str:
         """Object description in string format."""
-        ret = f"RSA{self.key_size} Private key: \nd({hex(self.key.private_numbers().d)})"
+        ret = (
+            f"RSA{self.key_size} Private key: \nd({hex(self.key.private_numbers().d)})"
+        )
         return ret
 
 
@@ -652,7 +665,10 @@ class PublicKeyRsa(PublicKey):
 
     def __eq__(self, obj: Any) -> bool:
         """Check object equality."""
-        return isinstance(obj, self.__class__) and self.public_numbers == obj.public_numbers
+        return (
+            isinstance(obj, self.__class__)
+            and self.public_numbers == obj.public_numbers
+        )
 
     def __repr__(self) -> str:
         return f"RSA{self.key_size} Public Key"
@@ -810,7 +826,9 @@ class PrivateKeyEcc(KeyEccCommon, PrivateKey):
         :param peer_public_key: Peer public key
         :return: Shared key
         """
-        return self.key.exchange(algorithm=ec.ECDH(), peer_public_key=peer_public_key.key)
+        return self.key.exchange(
+            algorithm=ec.ECDH(), peer_public_key=peer_public_key.key
+        )
 
     def get_public_key(self) -> "PublicKeyEcc":
         """Generate public key.
@@ -870,7 +888,9 @@ class PrivateKeyEcc(KeyEccCommon, PrivateKey):
             }[self.key.key_size]
         )
         if prehashed:
-            signature_algorithm = ec.ECDSA(utils.Prehashed(get_hash_algorithm(hash_name)))
+            signature_algorithm = ec.ECDSA(
+                utils.Prehashed(get_hash_algorithm(hash_name))
+            )
         else:
             signature_algorithm = ec.ECDSA(get_hash_algorithm(hash_name))
         signature = self.key.sign(data, signature_algorithm)
@@ -973,14 +993,20 @@ class PublicKeyEcc(KeyEccCommon, PublicKey):
         )
 
         if prehashed:
-            signature_algorithm = ec.ECDSA(utils.Prehashed(get_hash_algorithm(hash_name)))
+            signature_algorithm = ec.ECDSA(
+                utils.Prehashed(get_hash_algorithm(hash_name))
+            )
         else:
             signature_algorithm = ec.ECDSA(get_hash_algorithm(hash_name))
 
         if len(signature) == self.signature_size:
             der_signature = utils.encode_dss_signature(
-                int.from_bytes(signature[:coordinate_size], byteorder=Endianness.BIG.value),
-                int.from_bytes(signature[coordinate_size:], byteorder=Endianness.BIG.value),
+                int.from_bytes(
+                    signature[:coordinate_size], byteorder=Endianness.BIG.value
+                ),
+                int.from_bytes(
+                    signature[coordinate_size:], byteorder=Endianness.BIG.value
+                ),
             )
         else:
             der_signature = signature
@@ -1039,7 +1065,9 @@ class PublicKeyEcc(KeyEccCommon, PublicKey):
         :return: ECC public key.
         """
 
-        def get_curve(data_length: int, curve: Optional[EccCurve] = None) -> Tuple[EccCurve, bool]:
+        def get_curve(
+            data_length: int, curve: Optional[EccCurve] = None
+        ) -> Tuple[EccCurve, bool]:
             curve_list = [curve] if curve else list(EccCurve)
             for cur in curve_list:
                 curve_obj = KeyEccCommon._get_ec_curve_object(EccCurve(cur))
@@ -1051,7 +1079,9 @@ class PublicKeyEcc(KeyEccCommon, PublicKey):
                 curve_sign_size += 7
                 if curve_sign_size <= data_length <= curve_sign_size + 2:
                     return (cur, True)
-            raise SPSDKUnsupportedEccCurve(f"Cannot recreate ECC curve with {data_length} length")
+            raise SPSDKUnsupportedEccCurve(
+                f"Cannot recreate ECC curve with {data_length} length"
+            )
 
         data_length = len(data)
         (curve, der_format) = get_curve(data_length, curve)
@@ -1062,8 +1092,12 @@ class PublicKeyEcc(KeyEccCommon, PublicKey):
             return cls(der)
 
         coordinate_length = data_length // 2
-        coor_x = int.from_bytes(data[:coordinate_length], byteorder=Endianness.BIG.value)
-        coor_y = int.from_bytes(data[coordinate_length:], byteorder=Endianness.BIG.value)
+        coor_x = int.from_bytes(
+            data[:coordinate_length], byteorder=Endianness.BIG.value
+        )
+        coor_y = int.from_bytes(
+            data[coordinate_length:], byteorder=Endianness.BIG.value
+        )
         return cls.recreate(coor_x=coor_x, coor_y=coor_y, curve=curve)
 
     @classmethod
@@ -1137,7 +1171,9 @@ if IS_OSCCA_SUPPORTED:
 
             :return: Public key
             """
-            return PublicKeySM2(sm2.CryptSM2(private_key=None, public_key=self.key.public_key))
+            return PublicKeySM2(
+                sm2.CryptSM2(private_key=None, public_key=self.key.public_key)
+            )
 
         def verify_public_key(self, public_key: PublicKey) -> bool:
             """Verify public key.
@@ -1147,7 +1183,9 @@ if IS_OSCCA_SUPPORTED:
             """
             return self.get_public_key() == public_key
 
-        def sign(self, data: bytes, salt: Optional[str] = None, use_ber: bool = False) -> bytes:
+        def sign(
+            self, data: bytes, salt: Optional[str] = None, use_ber: bool = False
+        ) -> bytes:
             """Sign data using SM2 algorithm with SM3 hash.
 
             :param data: Data to sign.
@@ -1175,7 +1213,9 @@ if IS_OSCCA_SUPPORTED:
         ) -> bytes:
             """Convert key into bytes supported by NXP."""
             if encoding != SPSDKEncoding.DER:
-                raise SPSDKNotImplementedError("Only DER enocding is supported for SM2 keys export")
+                raise SPSDKNotImplementedError(
+                    "Only DER enocding is supported for SM2 keys export"
+                )
             keys = SM2KeySet(self.key.private_key, self.key.public_key)
             return SM2Encoder().encode_private_key(keys)
 
@@ -1211,7 +1251,10 @@ if IS_OSCCA_SUPPORTED:
             self.key = key
 
         def verify_signature(
-            self, signature: bytes, data: bytes, algorithm: Optional[EnumHashAlgorithm] = None
+            self,
+            signature: bytes,
+            data: bytes,
+            algorithm: Optional[EnumHashAlgorithm] = None,
         ) -> bool:
             """Verify signature.
 
@@ -1233,7 +1276,9 @@ if IS_OSCCA_SUPPORTED:
             :return: Byte representation of key
             """
             if encoding != SPSDKEncoding.DER:
-                raise SPSDKNotImplementedError("Only DER enocding is supported for SM2 keys export")
+                raise SPSDKNotImplementedError(
+                    "Only DER enocding is supported for SM2 keys export"
+                )
             keys = SM2PublicKey(self.key.public_key)
             return SM2Encoder().encode_public_key(keys)
 
@@ -1287,7 +1332,11 @@ else:
 class ECDSASignature:
     """ECDSA Signature."""
 
-    COORDINATE_LENGTHS = {EccCurve.SECP256R1: 32, EccCurve.SECP384R1: 48, EccCurve.SECP521R1: 66}
+    COORDINATE_LENGTHS = {
+        EccCurve.SECP256R1: 32,
+        EccCurve.SECP384R1: 48,
+        EccCurve.SECP521R1: 66,
+    }
 
     def __init__(self, r: int, s: int, ecc_curve: EccCurve) -> None:
         """ECDSA Signature constructor.
@@ -1325,8 +1374,12 @@ class ECDSASignature:
         :return: Signature as bytes
         """
         if encoding == SPSDKEncoding.NXP:
-            r_bytes = self.r.to_bytes(self.COORDINATE_LENGTHS[self.ecc_curve], Endianness.BIG.value)
-            s_bytes = self.s.to_bytes(self.COORDINATE_LENGTHS[self.ecc_curve], Endianness.BIG.value)
+            r_bytes = self.r.to_bytes(
+                self.COORDINATE_LENGTHS[self.ecc_curve], Endianness.BIG.value
+            )
+            s_bytes = self.s.to_bytes(
+                self.COORDINATE_LENGTHS[self.ecc_curve], Endianness.BIG.value
+            )
             return r_bytes + s_bytes
         if encoding == SPSDKEncoding.DER:
             return utils.encode_dss_signature(self.r, self.s)
@@ -1417,5 +1470,7 @@ def get_ecc_curve(key_length: int) -> EccCurve:
 
 def prompt_for_passphrase() -> str:
     """Prompt interactively for private key passphrase."""
-    password = getpass.getpass(prompt="Private key is encrypted. Enter password: ", stream=None)
+    password = getpass.getpass(
+        prompt="Private key is encrypted. Enter password: ", stream=None
+    )
     return password

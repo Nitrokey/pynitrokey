@@ -10,7 +10,12 @@ import logging
 from typing import Optional
 
 from ...apps.utils.utils import SPSDKError
-from ...image.ahab.ahab_container import AHABContainerBase, AHABImage, Blob, SignatureBlock
+from ...image.ahab.ahab_container import (
+    AHABContainerBase,
+    AHABImage,
+    Blob,
+    SignatureBlock,
+)
 from ...utils.database import DatabaseManager, get_db
 from ...utils.misc import load_binary
 
@@ -52,7 +57,9 @@ def ahab_update_keyblob(
         raise SPSDKError(f"No container ID {container_id}") from exc
 
     with open(binary, "r+b") as f:
-        logger.debug(f"Trying to find AHAB container header at offset {hex(address + offset)}")
+        logger.debug(
+            f"Trying to find AHAB container header at offset {hex(address + offset)}"
+        )
         f.seek(address + offset)
         data = f.read(DATA_READ)
         (
