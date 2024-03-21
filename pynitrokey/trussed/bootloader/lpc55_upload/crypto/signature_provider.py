@@ -29,10 +29,8 @@ from ..crypto.keys import (
     PrivateKey,
     PrivateKeyEcc,
     PrivateKeyRsa,
-    PrivateKeySM2,
     PublicKeyEcc,
     PublicKeyRsa,
-    PublicKeySM2,
     SPSDKKeyPassphraseMissing,
     prompt_for_passphrase,
 )
@@ -218,8 +216,6 @@ class PlainFileSP(SignatureProvider):
                     hash_size = 512
                 hash_alg_name = EnumHashAlgorithm.from_label(f"sha{hash_size}")
 
-            elif isinstance(self.private_key, PrivateKeySM2):
-                hash_alg_name = EnumHashAlgorithm.SM3
             else:
                 raise SPSDKError(
                     f"Unsupported private key by signature provider: {str(self.private_key)}"
@@ -239,10 +235,6 @@ class PlainFileSP(SignatureProvider):
             pass
         try:
             return self.private_key.verify_public_key(PublicKeyRsa.parse(public_key))
-        except SPSDKError:
-            pass
-        try:
-            return self.private_key.verify_public_key(PublicKeySM2.parse(public_key))
         except SPSDKError:
             pass
         raise SPSDKError("Unsupported public key")
