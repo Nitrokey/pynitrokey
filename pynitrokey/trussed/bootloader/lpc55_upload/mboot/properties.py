@@ -17,7 +17,6 @@ from ..exceptions import SPSDKKeyError
 from ..mboot.exceptions import McuBootError
 from ..utils.misc import Endianness
 from ..utils.spsdk_enum import SpsdkEnum
-
 from .commands import CommandTag
 from .error_codes import StatusCode
 from .memories import ExtMemPropTags, MemoryRegion
@@ -227,7 +226,9 @@ class PropertyValueBase:
 
     __slots__ = ("tag", "name", "desc")
 
-    def __init__(self, tag: int, name: Optional[str] = None, desc: Optional[str] = None) -> None:
+    def __init__(
+        self, tag: int, name: Optional[str] = None, desc: Optional[str] = None
+    ) -> None:
         """Initialize the base of property.
 
         :param tag: Property tag, see: `PropertyTag`
@@ -260,7 +261,9 @@ class IntValue(PropertyValueBase):
         "_fmt",
     )
 
-    def __init__(self, tag: int, raw_values: List[int], str_format: str = "dec") -> None:
+    def __init__(
+        self, tag: int, raw_values: List[int], str_format: str = "dec"
+    ) -> None:
         """Initialize the integer-based property object.
 
         :param tag: Property tag, see: `PropertyTag`
@@ -335,7 +338,9 @@ class BoolValue(PropertyValueBase):
 
     def to_str(self) -> str:
         """Get stringified property representation."""
-        return self._true_string if self.value in self._true_values else self._false_string
+        return (
+            self._true_string if self.value in self._true_values else self._false_string
+        )
 
 
 class EnumValue(PropertyValueBase):
@@ -410,7 +415,10 @@ class DeviceUidValue(PropertyValueBase):
         """
         super().__init__(tag)
         self.value = b"".join(
-            [int.to_bytes(val, length=4, byteorder=Endianness.LITTLE.value) for val in raw_values]
+            [
+                int.to_bytes(val, length=4, byteorder=Endianness.LITTLE.value)
+                for val in raw_values
+            ]
         )
 
     def to_int(self) -> int:
@@ -445,7 +453,9 @@ class ReservedRegionsValue(PropertyValueBase):
 
     def to_str(self) -> str:
         """Get stringified property representation."""
-        return "\n".join([f"    Region {i}: {region}" for i, region in enumerate(self.regions)])
+        return "\n".join(
+            [f"    Region {i}: {region}" for i, region in enumerate(self.regions)]
+        )
 
 
 class AvailablePeripheralsValue(PropertyValueBase):
@@ -546,9 +556,7 @@ class IrqNotifierPinValue(PropertyValueBase):
 
     def to_str(self) -> str:
         """Get stringified property representation."""
-        return (
-            f"IRQ Port[{self.port}], Pin[{self.pin}] is {'enabled' if self.enabled else 'disabled'}"
-        )
+        return f"IRQ Port[{self.port}], Pin[{self.pin}] is {'enabled' if self.enabled else 'disabled'}"
 
 
 class ExternalMemoryAttributesValue(PropertyValueBase):
@@ -577,11 +585,19 @@ class ExternalMemoryAttributesValue(PropertyValueBase):
             raw_values[1] if raw_values[0] & ExtMemPropTags.START_ADDRESS.tag else None
         )
         self.total_size = (
-            raw_values[2] * 1024 if raw_values[0] & ExtMemPropTags.SIZE_IN_KBYTES.tag else None
+            raw_values[2] * 1024
+            if raw_values[0] & ExtMemPropTags.SIZE_IN_KBYTES.tag
+            else None
         )
-        self.page_size = raw_values[3] if raw_values[0] & ExtMemPropTags.PAGE_SIZE.tag else None
-        self.sector_size = raw_values[4] if raw_values[0] & ExtMemPropTags.SECTOR_SIZE.tag else None
-        self.block_size = raw_values[5] if raw_values[0] & ExtMemPropTags.BLOCK_SIZE.tag else None
+        self.page_size = (
+            raw_values[3] if raw_values[0] & ExtMemPropTags.PAGE_SIZE.tag else None
+        )
+        self.sector_size = (
+            raw_values[4] if raw_values[0] & ExtMemPropTags.SECTOR_SIZE.tag else None
+        )
+        self.block_size = (
+            raw_values[5] if raw_values[0] & ExtMemPropTags.BLOCK_SIZE.tag else None
+        )
         self.value = raw_values[0]
 
     def to_str(self) -> str:

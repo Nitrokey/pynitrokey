@@ -16,7 +16,6 @@ from sly.lex import Token
 from sly.yacc import YaccProduction
 
 from ...exceptions import SPSDKError
-
 from . import sly_bd_lexer as bd_lexer
 
 
@@ -26,7 +25,7 @@ from . import sly_bd_lexer as bd_lexer
 #   is disabled.
 # too-many-lines : the class can't be shortened, as all the methods represent
 #   rules.
-class BDParser(Parser): # type: ignore
+class BDParser(Parser):  # type: ignore
     """Command (BD) file parser.
 
     The parser is based on SLY framework (python implementation of Lex/YACC)
@@ -198,7 +197,9 @@ class BDParser(Parser): # type: ignore
         #     column = BDParser._find_column(self._input, token)
         #     print(f"Unknown option in options block at {token.lineno}/{column}: {token.IDENT}")
         #     self.error(token)
-        self._variables.append(bd_lexer.Variable(token.IDENT, "option", token.const_expr))
+        self._variables.append(
+            bd_lexer.Variable(token.IDENT, "option", token.const_expr)
+        )
         token.option_def["options"].update({token.IDENT: token.const_expr})
         return token.option_def
 
@@ -229,7 +230,9 @@ class BDParser(Parser): # type: ignore
 
         :param token: object holding the content defined in decorator.
         """
-        self._variables.append(bd_lexer.Variable(token.IDENT, "constant", token.bool_expr))
+        self._variables.append(
+            bd_lexer.Variable(token.IDENT, "constant", token.bool_expr)
+        )
 
     @_("empty")  # type: ignore
     def constant_def(self, token: YaccProduction) -> Dict:
@@ -352,7 +355,10 @@ class BDParser(Parser): # type: ignore
         :param token: object holding the content defined in decorator.
         :return: dictionary holding the content of keyblob block.
         """
-        dictionary = {"keyblob_id": token.int_const_expr, "keyblob_content": token.keyblob_contents}
+        dictionary = {
+            "keyblob_id": token.int_const_expr,
+            "keyblob_content": token.keyblob_contents,
+        }
         dictionary["keyblob_id"] = token.int_const_expr
         dictionary["keyblob_content"] = token.keyblob_contents
         self._keyblobs.append(dictionary)
@@ -660,7 +666,10 @@ class BDParser(Parser): # type: ignore
         :return: dictionary holding the content of a load statement.
         """
         # pattern with load options means load -> program command
-        if token.load_data.get("pattern") is not None and token.load_opt.get("load_opt") is None:
+        if (
+            token.load_data.get("pattern") is not None
+            and token.load_opt.get("load_opt") is None
+        ):
             cmd = "fill"
         else:
             cmd = "load"
@@ -705,7 +714,10 @@ class BDParser(Parser): # type: ignore
         :return: dictionary holding the content of load data.
         """
         if isinstance(token.int_const_expr, str):
-            self.error(token, f": identifier '{token.int_const_expr}' is not a source identifier.")
+            self.error(
+                token,
+                f": identifier '{token.int_const_expr}' is not a source identifier.",
+            )
             retval = {"N/A": "N/A"}
         else:
             retval = {"pattern": token.int_const_expr}

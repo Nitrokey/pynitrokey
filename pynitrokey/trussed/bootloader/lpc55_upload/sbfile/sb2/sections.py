@@ -16,8 +16,13 @@ from ...exceptions import SPSDKError
 from ...sbfile.misc import SecBootBlckSize
 from ...utils.abstract import BaseClass
 from ...utils.crypto.cert_blocks import CertBlockV1
-
-from .commands import CmdBaseClass, CmdHeader, EnumCmdTag, EnumSectionFlag, parse_command
+from .commands import (
+    CmdBaseClass,
+    CmdHeader,
+    EnumCmdTag,
+    EnumSectionFlag,
+    parse_command,
+)
 
 ########################################################################################################################
 # Boot Image Sections
@@ -59,7 +64,9 @@ class BootSectionV2(BaseClass):
             raw_size += cmd.raw_size
         if raw_size > 0:
             block_count = (raw_size + 15) // 16
-            hmac_count = self._hmac_count if block_count >= self._hmac_count else block_count
+            hmac_count = (
+                self._hmac_count if block_count >= self._hmac_count else block_count
+            )
         return hmac_count
 
     @property
@@ -158,7 +165,9 @@ class BootSectionV2(BaseClass):
         # Encrypt commands
         encrypted_commands = b""
         for index in range(0, len(commands_data), 16):
-            encrypted_block = aes_ctr_encrypt(dek, commands_data[index : index + 16], counter.value)
+            encrypted_block = aes_ctr_encrypt(
+                dek, commands_data[index : index + 16], counter.value
+            )
             encrypted_commands += encrypted_block
             counter.increment()
         # Calculate HMAC of commands
@@ -206,7 +215,9 @@ class BootSectionV2(BaseClass):
             raise SPSDKError("Invalid type of counter")
         # Get Header specific data
         header_encrypted = data[offset : offset + CmdHeader.SIZE]
-        header_hmac_data = data[offset + CmdHeader.SIZE : offset + CmdHeader.SIZE + cls.HMAC_SIZE]
+        header_hmac_data = data[
+            offset + CmdHeader.SIZE : offset + CmdHeader.SIZE + cls.HMAC_SIZE
+        ]
         offset += CmdHeader.SIZE + cls.HMAC_SIZE
         # Check header HMAC
         if header_hmac_data != hmac(mac, header_encrypted):
@@ -241,7 +252,9 @@ class BootSectionV2(BaseClass):
         for hmac_index in range(0, len(encrypted_commands), 16):
             encr_block = encrypted_commands[hmac_index : hmac_index + 16]
             decrypted_block = (
-                encr_block if plain_sect else aes_ctr_decrypt(dek, encr_block, counter.value)
+                encr_block
+                if plain_sect
+                else aes_ctr_decrypt(dek, encr_block, counter.value)
             )
             decrypted_commands += decrypted_block
             counter.increment()
@@ -281,7 +294,8 @@ class CertSectionV2(BaseClass):
         """Initialize CertBlockV1."""
         assert isinstance(cert_block, CertBlockV1)
         self._header = CmdHeader(
-            EnumCmdTag.TAG.tag, EnumSectionFlag.CLEARTEXT.tag | EnumSectionFlag.LAST_SECT.tag
+            EnumCmdTag.TAG.tag,
+            EnumSectionFlag.CLEARTEXT.tag | EnumSectionFlag.LAST_SECT.tag,
         )
         self._header.address = self.SECT_MARK
         self._header.count = cert_block.raw_size // 16
@@ -367,7 +381,9 @@ class CertSectionV2(BaseClass):
         header = CmdHeader.parse(header_encrypted)
         if header.tag != EnumCmdTag.TAG:
             raise SPSDKError(f"Invalid Header TAG: 0x{header.tag:02X}")
-        if header.flags != (EnumSectionFlag.CLEARTEXT.tag | EnumSectionFlag.LAST_SECT.tag):
+        if header.flags != (
+            EnumSectionFlag.CLEARTEXT.tag | EnumSectionFlag.LAST_SECT.tag
+        ):
             raise SPSDKError(f"Invalid Header FLAGS: 0x{header.flags:02X}")
         if header.address != cls.SECT_MARK:
             raise SPSDKError(f"Invalid Section Mark: 0x{header.address:08X}")

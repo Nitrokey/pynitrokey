@@ -42,7 +42,9 @@ class ScanArgs:
 class UsbSioDevice(DeviceBase):
     """USBSIO device class."""
 
-    def __init__(self, dev: int = 0, config: Optional[str] = None, timeout: int = 5000) -> None:
+    def __init__(
+        self, dev: int = 0, config: Optional[str] = None, timeout: int = 5000
+    ) -> None:
         """Initialize the Interface object.
 
         :param dev: device index to be used, default is set to 0
@@ -164,7 +166,9 @@ class UsbSioDevice(DeviceBase):
             if i2c_ports:
                 if i2c is not None:
                     devices.append(
-                        UsbSioI2CDevice(dev=port, port=i2c, config=config, timeout=timeout)
+                        UsbSioI2CDevice(
+                            dev=port, port=i2c, config=config, timeout=timeout
+                        )
                     )
                 elif not intf_specified:
                     devices.extend(
@@ -177,7 +181,9 @@ class UsbSioDevice(DeviceBase):
             if spi_ports:
                 if spi is not None:
                     devices.append(
-                        UsbSioSPIDevice(dev=port, port=spi, config=config, timeout=timeout)
+                        UsbSioSPIDevice(
+                            dev=port, port=spi, config=config, timeout=timeout
+                        )
                     )
                 elif not intf_specified:
                     devices.extend(
@@ -216,7 +222,9 @@ class UsbSioDevice(DeviceBase):
             for port in ports:
                 info = sio.GetDeviceInfo(port)
                 if not info:
-                    raise SPSDKError(f"Cannot retrive information from LIBUSBSIO device {port}.")
+                    raise SPSDKError(
+                        f"Cannot retrive information from LIBUSBSIO device {port}."
+                    )
                 dev_info = {
                     "vendor_id": info.vendor_id,
                     "product_id": info.product_id,
@@ -350,7 +358,9 @@ class UsbSioSPIDevice(UsbSioDevice):
         logger.debug(f"[{' '.join(f'{b:02x}' for b in data)}]")
         try:
             (dummy, result) = self.port.Transfer(
-                devSelectPort=self.spi_sselport, devSelectPin=self.spi_sselpin, txData=data
+                devSelectPort=self.spi_sselport,
+                devSelectPin=self.spi_sselpin,
+                txData=data,
             )
         except Exception as e:
             raise SPSDKConnectionError(str(e)) from e
@@ -423,7 +433,9 @@ class UsbSioI2CDevice(UsbSioDevice):
         :raises SPSDKTimeoutError: When no data received
         """
         try:
-            (data, result) = self.port.DeviceRead(devAddr=self.i2c_address, rxSize=length)
+            (data, result) = self.port.DeviceRead(
+                devAddr=self.i2c_address, rxSize=length
+            )
         except Exception as e:
             raise SPSDKConnectionError(str(e)) from e
         if result < 0 or not data:

@@ -196,7 +196,9 @@ class SerialDevice(DeviceBase):
         :return: None if device doesn't respond to PING, instance of Interface if it does
         """
         try:
-            logger.debug(f"Checking port: {port}, baudrate: {baudrate}, timeout: {timeout}")
+            logger.debug(
+                f"Checking port: {port}, baudrate: {baudrate}, timeout: {timeout}"
+            )
             device = cls(port=port, baudrate=baudrate, timeout=timeout)
             device.open()
             device.close()

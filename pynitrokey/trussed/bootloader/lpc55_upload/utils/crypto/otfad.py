@@ -166,7 +166,9 @@ class KeyBlob:
         result += pack("<I", self.start_addr)
         if self.end_addr or self.key_flags:
             end_addr_with_flags = (
-                ((self.end_addr - 1) & ~self._KEY_FLAG_MASK) | self.key_flags | self._END_ADDR_MASK
+                ((self.end_addr - 1) & ~self._KEY_FLAG_MASK)
+                | self.key_flags
+                | self._END_ADDR_MASK
             )
         else:
             end_addr_with_flags = 0
@@ -292,7 +294,9 @@ class KeyBlob:
         :raises SPSDKError: If start address is not valid
         """
         if base_address % 16 != 0:
-            raise SPSDKError("Invalid start address")  # Start address has to be 16 byte aligned
+            raise SPSDKError(
+                "Invalid start address"
+            )  # Start address has to be 16 byte aligned
         data = align_block(data, self._ENCRYPTION_BLOCK_SIZE)  # align data length
         data_len = len(data)
 
@@ -310,7 +314,9 @@ class KeyBlob:
             counter_value = self.start_addr
 
         counter = Counter(
-            self._get_ctr_nonce(), ctr_value=counter_value, ctr_byteorder_encoding=Endianness.BIG
+            self._get_ctr_nonce(),
+            ctr_value=counter_value,
+            ctr_byteorder_encoding=Endianness.BIG,
         )
 
         for index in range(0, data_len, 16):
@@ -327,7 +333,9 @@ class KeyBlob:
             encr_data = aes_ctr_encrypt(self.key, data_2_encr, counter.value)
             # fix byte order in result
             if byte_swap:
-                result += encr_data[-9:-17:-1] + encr_data[-1:-9:-1]  # swap 8 bytes + swap 8 bytes
+                result += (
+                    encr_data[-9:-17:-1] + encr_data[-1:-9:-1]
+                )  # swap 8 bytes + swap 8 bytes
             else:
                 result += encr_data
             # update counter for encryption
@@ -395,7 +403,9 @@ class Otfad:
                     )
                     encrypted_data[
                         addr - base_addr : len(block) + addr - base_addr
-                    ] = key_blob.encrypt_image(addr, block, byte_swap, counter_value=addr)
+                    ] = key_blob.encrypt_image(
+                        addr, block, byte_swap, counter_value=addr
+                    )
             addr += len(block)
 
         return bytes(encrypted_data)
@@ -430,7 +440,9 @@ class Otfad:
         """
         if isinstance(kek, str):
             kek = bytes.fromhex(kek)
-        scramble_enabled = key_scramble_mask is not None and key_scramble_align is not None
+        scramble_enabled = (
+            key_scramble_mask is not None and key_scramble_align is not None
+        )
         if scramble_enabled:
             assert key_scramble_mask and key_scramble_align
             if key_scramble_mask >= 1 << 32:
@@ -517,8 +529,12 @@ class OtfadNxp(Otfad):
         self.blobs_min_cnt = self.db.get_int(DatabaseManager.OTFAD, "key_blob_min_cnt")
         self.blobs_max_cnt = self.db.get_int(DatabaseManager.OTFAD, "key_blob_max_cnt")
         self.byte_swap = self.db.get_bool(DatabaseManager.OTFAD, "byte_swap")
-        self.key_blob_rec_size = self.db.get_int(DatabaseManager.OTFAD, "key_blob_rec_size")
-        self.keyblob_byte_swap_cnt = self.db.get_int(DatabaseManager.OTFAD, "keyblob_byte_swap_cnt")
+        self.key_blob_rec_size = self.db.get_int(
+            DatabaseManager.OTFAD, "key_blob_rec_size"
+        )
+        self.keyblob_byte_swap_cnt = self.db.get_int(
+            DatabaseManager.OTFAD, "keyblob_byte_swap_cnt"
+        )
         assert self.keyblob_byte_swap_cnt in [0, 2, 4, 8, 16]
         self.binaries = binaries
 
@@ -551,13 +567,17 @@ class OtfadNxp(Otfad):
         :return: BLHOST script that loads the keys into fuses.
         """
         database = get_db(family, "latest")
-        xml_fuses = database.get_file_path(DatabaseManager.OTFAD, "reg_fuses", default=None)
+        xml_fuses = database.get_file_path(
+            DatabaseManager.OTFAD, "reg_fuses", default=None
+        )
         if not xml_fuses:
             logger.debug(f"The {family} has no OTFAD fuses definition")
             return ""
 
         fuses = Registers(family, base_endianness=Endianness.LITTLE)
-        grouped_regs = database.get_list(DatabaseManager.OTFAD, "grouped_registers", default=None)
+        grouped_regs = database.get_list(
+            DatabaseManager.OTFAD, "grouped_registers", default=None
+        )
         fuses.load_registers_from_xml(xml_fuses, grouped_regs=grouped_regs)
         reg_omk = fuses.find_reg("OTP_MASTER_KEY")
         reg_oks = fuses.find_reg("OTFAD_KEK_SEED")
@@ -607,14 +627,18 @@ class OtfadNxp(Otfad):
             return ""
 
         filter_out_list = [f"OTFAD{i}" for i in peripheral_list if str(index) != i]
-        xml_fuses = self.db.get_file_path(DatabaseManager.OTFAD, "reg_fuses", default=None)
+        xml_fuses = self.db.get_file_path(
+            DatabaseManager.OTFAD, "reg_fuses", default=None
+        )
         if not xml_fuses:
             logger.debug(f"The {self.family} has no OTFAD fuses definition")
             return ""
 
         fuses = Registers(self.family, base_endianness=Endianness.LITTLE)
 
-        grouped_regs = self.db.get_list(DatabaseManager.OTFAD, "grouped_registers", default=None)
+        grouped_regs = self.db.get_list(
+            DatabaseManager.OTFAD, "grouped_registers", default=None
+        )
 
         fuses.load_registers_from_xml(xml_fuses, filter_out_list, grouped_regs)
 
@@ -652,14 +676,18 @@ class OtfadNxp(Otfad):
             )
             otfad_cfg.find_bitfield(
                 self._replace_idx_value(
-                    self.db.get_str(DatabaseManager.OTFAD, "otfad_scramble_enable_bitfield"),
+                    self.db.get_str(
+                        DatabaseManager.OTFAD, "otfad_scramble_enable_bitfield"
+                    ),
                     index,
                 )
             ).set_value(1)
             if scramble_align_standalone:
                 fuses.find_reg(scramble_align).set_value(self.key_scramble_align)
             else:
-                otfad_cfg.find_bitfield(scramble_align).set_value(self.key_scramble_align)
+                otfad_cfg.find_bitfield(scramble_align).set_value(
+                    self.key_scramble_align
+                )
             fuses.find_reg(scramble_key).set_value(self.key_scramble_mask)
 
         ret = (
@@ -712,10 +740,14 @@ class OtfadNxp(Otfad):
         binaries: BinaryImage = deepcopy(self.binaries)
         for binary in binaries.sub_images:
             if binary.binary:
-                binary.binary = align_block(binary.binary, KeyBlob._ENCRYPTION_BLOCK_SIZE)
+                binary.binary = align_block(
+                    binary.binary, KeyBlob._ENCRYPTION_BLOCK_SIZE
+                )
             for segment in binary.sub_images:
                 if segment.binary:
-                    segment.binary = align_block(segment.binary, KeyBlob._ENCRYPTION_BLOCK_SIZE)
+                    segment.binary = align_block(
+                        segment.binary, KeyBlob._ENCRYPTION_BLOCK_SIZE
+                    )
 
         binaries.validate()
 
@@ -841,7 +873,9 @@ class OtfadNxp(Otfad):
             )
             title = f"On-The-Fly AES decryption Configuration template for {family}."
 
-            yaml_data = CommentedConfig(title, val_schemas, note=template_note).get_template()
+            yaml_data = CommentedConfig(
+                title, val_schemas, note=template_note
+            ).get_template()
 
             return {f"{family}_otfad": yaml_data}
 
@@ -849,7 +883,9 @@ class OtfadNxp(Otfad):
 
     @staticmethod
     def load_from_config(
-        config: Dict[str, Any], config_dir: str, search_paths: Optional[List[str]] = None
+        config: Dict[str, Any],
+        config_dir: str,
+        search_paths: Optional[List[str]] = None,
     ) -> "OtfadNxp":
         """Converts the configuration option into an OTFAD image object.
 
@@ -863,14 +899,20 @@ class OtfadNxp(Otfad):
         otfad_config: List[Dict[str, Any]] = config["key_blobs"]
         family = config["family"]
         database = get_db(family, "latest")
-        kek = load_hex_string(config["kek"], expected_size=16, search_paths=search_paths)
+        kek = load_hex_string(
+            config["kek"], expected_size=16, search_paths=search_paths
+        )
         logger.debug(f"Loaded KEK: {kek.hex()}")
         table_address = value_to_int(config["otfad_table_address"])
-        start_address = min([value_to_int(addr["start_address"]) for addr in otfad_config])
+        start_address = min(
+            [value_to_int(addr["start_address"]) for addr in otfad_config]
+        )
 
         key_scramble_mask = None
         key_scramble_align = None
-        if database.get_bool(DatabaseManager.OTFAD, "supports_key_scrambling", default=False):
+        if database.get_bool(
+            DatabaseManager.OTFAD, "supports_key_scrambling", default=False
+        ):
             if "key_scramble" in config.keys():
                 key_scramble = config["key_scramble"]
                 key_scramble_mask = value_to_int(key_scramble["key_scramble_mask"])
@@ -886,7 +928,11 @@ class OtfadNxp(Otfad):
             )
             binaries = BinaryImage(
                 filepath_from_config(
-                    config, "encrypted_name", "encrypted_blobs", config_dir, config["output_folder"]
+                    config,
+                    "encrypted_name",
+                    "encrypted_blobs",
+                    config_dir,
+                    config["output_folder"],
                 ),
                 offset=start_address - table_address,
             )

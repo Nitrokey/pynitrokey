@@ -47,7 +47,9 @@ def cms_sign(
     if not (signing_key or signature_provider):
         raise SPSDKValueError("Private key or signature provider is not present")
     if signing_key and signature_provider:
-        raise SPSDKValueError("Only one of private key and signature provider must be specified")
+        raise SPSDKValueError(
+            "Only one of private key and signature provider must be specified"
+        )
     if signing_key and not isinstance(signing_key, (PrivateKeyEcc, PrivateKeyRsa)):
         raise SPSDKTypeError(f"Unsupported private key type {type(signing_key)}.")
 
@@ -102,7 +104,9 @@ def cms_sign(
         cms.CMSAttribute(
             {
                 "type": "signing_time",
-                "values": [cms.Time(name="utc_time", value=zulu.strftime("%y%m%d%H%M%SZ"))],
+                "values": [
+                    cms.Time(name="utc_time", value=zulu.strftime("%y%m%d%H%M%SZ"))
+                ],
             }
         )
     )
@@ -145,10 +149,14 @@ def sign_data(
     """
     assert signing_key or signature_provider
     if signing_key and signature_provider:
-        raise SPSDKValueError("Only one of private key and signature provider must be specified")
+        raise SPSDKValueError(
+            "Only one of private key and signature provider must be specified"
+        )
     if signing_key:
         return (
-            signing_key.sign(data_to_sign, algorithm=EnumHashAlgorithm.SHA256, der_format=True)
+            signing_key.sign(
+                data_to_sign, algorithm=EnumHashAlgorithm.SHA256, der_format=True
+            )
             if isinstance(signing_key, PrivateKeyEcc)
             else signing_key.sign(data_to_sign)
         )

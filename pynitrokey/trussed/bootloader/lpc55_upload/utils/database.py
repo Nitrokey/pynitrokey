@@ -17,7 +17,7 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 import platformdirs
 from typing_extensions import Self
 
-from .. import SPSDK_DATA_FOLDER, SPSDK_CACHE_DISABLED
+from .. import SPSDK_CACHE_DISABLED, SPSDK_DATA_FOLDER
 from ..crypto.hash import EnumHashAlgorithm, Hash, get_hash
 from ..exceptions import SPSDKError, SPSDKValueError
 from ..utils.misc import (
@@ -39,7 +39,11 @@ class Features:
     """Features dataclass represents a single device revision."""
 
     def __init__(
-        self, name: str, is_latest: bool, device: "Device", features: Dict[str, Dict[str, Any]]
+        self,
+        name: str,
+        is_latest: bool,
+        device: "Device",
+        features: Dict[str, Dict[str, Any]],
     ) -> None:
         """Constructor of revision.
 
@@ -76,7 +80,9 @@ class Features:
         assert isinstance(key, str)
         return key in db_dict
 
-    def get_value(self, feature: str, key: Union[List[str], str], default: Any = None) -> Any:
+    def get_value(
+        self, feature: str, key: Union[List[str], str], default: Any = None
+    ) -> Any:
         """Get value.
 
         :param feature: Feature name
@@ -270,7 +276,10 @@ class DeviceInfo:
         data = deepcopy(defaults)
         deep_update(data, config)
         return DeviceInfo(
-            purpose=data["purpose"], web=data["web"], memory_map=data["memory_map"], isp=data["isp"]
+            purpose=data["purpose"],
+            web=data["web"],
+            memory_map=data["memory_map"],
+            isp=data["isp"],
         )
 
     def update(self, config: Dict[str, Any]) -> None:
@@ -371,7 +380,9 @@ class Device:
         return ret
 
     @staticmethod
-    def load(name: str, path: str, defaults: Dict[str, Any], other_devices: "Devices") -> "Device":
+    def load(
+        name: str, path: str, defaults: Dict[str, Any], other_devices: "Devices"
+    ) -> "Device":
         """Loads the device from folder.
 
         :param name: The name of device.
@@ -405,7 +416,9 @@ class Device:
                 f"The latest revision defined in database for {name} is not in supported revisions"
             )
 
-        ret = Device(name=name, path=path, info=dev_info, latest_rev=latest, device_alias=None)
+        ret = Device(
+            name=name, path=path, info=dev_info, latest_rev=latest, device_alias=None
+        )
 
         for rev, rev_updates in dev_revisions.items():
             features = deepcopy(dev_features)
@@ -413,7 +426,12 @@ class Device:
             if rev_specific_features:
                 deep_update(features, rev_specific_features)
             revisions.append(
-                Features(name=rev, is_latest=bool(rev == latest), features=features, device=ret)
+                Features(
+                    name=rev,
+                    is_latest=bool(rev == latest),
+                    features=features,
+                    device=ret,
+                )
             )
 
         ret.revisions = revisions
@@ -447,7 +465,9 @@ class Devices(List[Device]):
         """
         dev = find_first(self, lambda dev: dev.name == name)
         if not dev:
-            raise SPSDKErrorMissingDevice(f"The device with name {name} is not in the database.")
+            raise SPSDKErrorMissingDevice(
+                f"The device with name {name} is not in the database."
+            )
         return dev
 
     @property
@@ -466,7 +486,9 @@ class Devices(List[Device]):
             for rev in device.revisions:
                 value = rev.features[feature].get(key)
                 if value is None:
-                    raise SPSDKValueError(f"Missing item '{key}' in feature '{feature}'!")
+                    raise SPSDKValueError(
+                        f"Missing item '{key}' in feature '{feature}'!"
+                    )
                 yield (device.name, rev.name, value)
 
     @staticmethod
@@ -503,7 +525,10 @@ class Devices(List[Device]):
                 try:
                     devices.append(
                         Device.load(
-                            name=dev.name, path=dev.path, defaults=defaults, other_devices=devices
+                            name=dev.name,
+                            path=dev.path,
+                            defaults=defaults,
+                            other_devices=devices,
                         )
                     )
                     uncompleted_aliases.remove(dev)
@@ -529,7 +554,9 @@ class Database:
         self._defaults = load_configuration(
             os.path.join(self.common_folder_path, "database_defaults.yaml")
         )
-        self._devices = Devices.load(devices_path=self.devices_folder_path, defaults=self._defaults)
+        self._devices = Devices.load(
+            devices_path=self.devices_folder_path, defaults=self._defaults
+        )
 
         # optional Database hash that could be used for identification of consistency
         self.db_hash = bytes()
@@ -690,10 +717,14 @@ class DatabaseManager:
                     loaded_db = pickle.load(f)
                     assert isinstance(loaded_db, Database)
                     if db_hash == loaded_db.db_hash:
-                        logger.debug(f"Loaded database from cache: {cls._db_cache_file_name}")
+                        logger.debug(
+                            f"Loaded database from cache: {cls._db_cache_file_name}"
+                        )
                         return loaded_db
                     # if the hash is not same clear cache and make a new one
-                    logger.debug(f"Existing cached DB ({cls._db_cache_file_name}) has invalid hash")
+                    logger.debug(
+                        f"Existing cached DB ({cls._db_cache_file_name}) has invalid hash"
+                    )
                     DatabaseManager.clear_cache()
             except Exception as exc:
                 logger.debug(f"Cannot load database cache: {str(exc)}")
@@ -717,7 +748,10 @@ class DatabaseManager:
         if cls._instance:
             return cls._instance
         cls._instance = super(DatabaseManager, cls).__new__(cls)
-        cls._db_cache_folder_name, cls._db_cache_file_name = DatabaseManager.get_cache_filename()
+        (
+            cls._db_cache_folder_name,
+            cls._db_cache_file_name,
+        ) = DatabaseManager.get_cache_filename()
         cls._db = cls._instance._get_database()
         cls._db_hash = hash(cls._db)
         return cls._instance

@@ -39,7 +39,9 @@ class RKHT:
     @classmethod
     def from_keys(
         cls,
-        keys: Sequence[Union[str, bytes, bytearray, PublicKey, PrivateKey, Certificate]],
+        keys: Sequence[
+            Union[str, bytes, bytearray, PublicKey, PrivateKey, Certificate]
+        ],
         password: Optional[str] = None,
         search_paths: Optional[List[str]] = None,
     ) -> Self:
@@ -50,7 +52,9 @@ class RKHT:
         :param search_paths: List of paths where to search for the file, defaults to None
         """
         public_keys = (
-            [cls.convert_key(x, password, search_paths=search_paths) for x in keys] if keys else []
+            [cls.convert_key(x, password, search_paths=search_paths) for x in keys]
+            if keys
+            else []
         )
         if not all(isinstance(x, type(public_keys[0])) for x in public_keys):
             raise SPSDKError("RKHT must contains all keys of a same instances.")

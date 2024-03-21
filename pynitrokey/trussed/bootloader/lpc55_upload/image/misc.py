@@ -13,7 +13,6 @@ from typing import Optional, Union
 
 from ..exceptions import SPSDKError
 from ..utils.registers import value_to_int
-
 from .header import Header
 
 
@@ -63,7 +62,9 @@ def read_raw_data(
     try:
         data = stream.read(length)
     except Exception as exc:
-        raise StreamReadFailed(f" stream.read() failed, requested {length} bytes") from exc
+        raise StreamReadFailed(
+            f" stream.read() failed, requested {length} bytes"
+        ) from exc
 
     if len(data) != length:
         raise NotEnoughBytesException(
@@ -77,7 +78,9 @@ def read_raw_data(
 
 
 def read_raw_segment(
-    buffer: Union[io.BufferedReader, io.BytesIO], segment_tag: int, index: Optional[int] = None
+    buffer: Union[io.BufferedReader, io.BytesIO],
+    segment_tag: int,
+    index: Optional[int] = None,
 ) -> bytes:
     """Read raw segment."""
     hrdata = read_raw_data(buffer, Header.SIZE, index)

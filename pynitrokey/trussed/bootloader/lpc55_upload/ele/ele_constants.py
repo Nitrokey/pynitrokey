@@ -16,11 +16,23 @@ class MessageIDs(SpsdkSoftEnum):
     PING_REQ = (0x01, "PING_REQ", "Ping request.")
     ELE_FW_AUTH_REQ = (0x02, "ELE_FW_AUTH_REQ", "ELE firmware authenticate request.")
     ELE_DUMP_DEBUG_BUFFER_REQ = (0x21, "ELE_DUMP_DEBUG_BUFFER_REQ", "Dump the ELE logs")
-    ELE_OEM_CNTN_AUTH_REQ = (0x87, "ELE_OEM_CNTN_AUTH_REQ", "OEM Container authenticate")
+    ELE_OEM_CNTN_AUTH_REQ = (
+        0x87,
+        "ELE_OEM_CNTN_AUTH_REQ",
+        "OEM Container authenticate",
+    )
     ELE_VERIFY_IMAGE_REQ = (0x88, "ELE_VERIFY_IMAGE_REQ", "Verify Image")
-    ELE_RELEASE_CONTAINER_REQ = (0x89, "ELE_RELEASE_CONTAINER_REQ", "Release Container.")
+    ELE_RELEASE_CONTAINER_REQ = (
+        0x89,
+        "ELE_RELEASE_CONTAINER_REQ",
+        "Release Container.",
+    )
     WRITE_SEC_FUSE_REQ = (0x91, "WRITE_SEC_FUSE_REQ", "Write secure fuse request.")
-    ELE_FWD_LIFECYCLE_UP_REQ = (0x95, "ELE_FWD_LIFECYCLE_UP_REQ", "Forward Lifecycle update")
+    ELE_FWD_LIFECYCLE_UP_REQ = (
+        0x95,
+        "ELE_FWD_LIFECYCLE_UP_REQ",
+        "Forward Lifecycle update",
+    )
     READ_COMMON_FUSE = (0x97, "READ_COMMON_FUSE", "Read common fuse request.")
     GET_FW_VERSION_REQ = (0x9D, "GET_FW_VERSION_REQ", "Get firmware version request.")
     RETURN_LIFECYCLE_UPDATE_REQ = (
@@ -34,12 +46,20 @@ class MessageIDs(SpsdkSoftEnum):
     ELE_DERIVE_KEY_REQ = (0xA9, "ELE_DERIVE_KEY_REQ", "Derive key")
     GENERATE_KEY_BLOB_REQ = (0xAF, "GENERATE_KEY_BLOB_REQ", "Generate KeyBlob request.")
     GET_FW_STATUS_REQ = (0xC5, "GET_FW_STATUS_REQ", "Get ELE FW status request.")
-    ELE_ENABLE_APC_REQ = (0xD2, "ELE_ENABLE_APC_REQ", "Enable APC (Application processor)")
+    ELE_ENABLE_APC_REQ = (
+        0xD2,
+        "ELE_ENABLE_APC_REQ",
+        "Enable APC (Application processor)",
+    )
     ELE_ENABLE_RTC_REQ = (0xD3, "ELE_ENABLE_RTC_REQ", "Enable RTC (Runtime processor)")
     GET_INFO_REQ = (0xDA, "GET_INFO_REQ", "Get ELE Information request.")
     ELE_RESET_APC_CTX_REQ = (0xD8, "ELE_RESET_APC_CTX_REQ", "Reset APC Context")
     START_RNG_REQ = (0xA3, "START_RNG_REQ", "Start True Random Generator request.")
-    GET_TRNG_STATE_REQ = (0xA3, "GET_TRNG_STATE_REQ", "Get True Random Generator state request.")
+    GET_TRNG_STATE_REQ = (
+        0xA3,
+        "GET_TRNG_STATE_REQ",
+        "Get True Random Generator state request.",
+    )
     RESET_REQ = (0xC7, "RESET_REQ", "System reset request.")
     WRITE_FUSE = (0xD6, "WRITE_FUSE", "Write fuse")
     WRITE_SHADOW_FUSE = (0xF2, "WRITE_SHADOW_FUSE", "Write shadow fuse")
@@ -92,22 +112,42 @@ class ResponseIndication(SpsdkSoftEnum):
         "ELE_UNALIGNED_PAYLOAD_FAILURE_IND",
         "Un-aligned payload failure",
     )
-    ELE_WRONG_SIZE_FAILURE_IND = (0xA7, "ELE_WRONG_SIZE_FAILURE_IND", "Wrong size failure")
-    ELE_ENCRYPTION_FAILURE_IND = (0xA8, "ELE_ENCRYPTION_FAILURE_IND", "Encryption failure")
-    ELE_DECRYPTION_FAILURE_IND = (0xA9, "ELE_DECRYPTION_FAILURE_IND", "Decryption failure")
+    ELE_WRONG_SIZE_FAILURE_IND = (
+        0xA7,
+        "ELE_WRONG_SIZE_FAILURE_IND",
+        "Wrong size failure",
+    )
+    ELE_ENCRYPTION_FAILURE_IND = (
+        0xA8,
+        "ELE_ENCRYPTION_FAILURE_IND",
+        "Encryption failure",
+    )
+    ELE_DECRYPTION_FAILURE_IND = (
+        0xA9,
+        "ELE_DECRYPTION_FAILURE_IND",
+        "Decryption failure",
+    )
     ELE_OTP_PROGFAIL_FAILURE_IND = (
         0xAA,
         "ELE_OTP_PROGFAIL_FAILURE_IND",
         "OTP program fail failure",
     )
-    ELE_OTP_LOCKED_FAILURE_IND = (0xAB, "ELE_OTP_LOCKED_FAILURE_IND", "OTP locked failure")
+    ELE_OTP_LOCKED_FAILURE_IND = (
+        0xAB,
+        "ELE_OTP_LOCKED_FAILURE_IND",
+        "OTP locked failure",
+    )
     ELE_OTP_INVALID_IDX_FAILURE_IND = (
         0xAD,
         "ELE_OTP_INVALID_IDX_FAILURE_IND",
         "OTP Invalid IDX failure",
     )
     ELE_TIME_OUT_FAILURE_IND = (0xB0, "ELE_TIME_OUT_FAILURE_IND", "Timeout  failure")
-    ELE_BAD_PAYLOAD_FAILURE_IND = (0xB1, "ELE_BAD_PAYLOAD_FAILURE_IND", "Bad payload failure")
+    ELE_BAD_PAYLOAD_FAILURE_IND = (
+        0xB1,
+        "ELE_BAD_PAYLOAD_FAILURE_IND",
+        "Bad payload failure",
+    )
     ELE_WRONG_ADDRESS_FAILURE_IND = (
         0xB4,
         "ELE_WRONG_ADDRESS_FAILURE_IND",
@@ -119,7 +159,11 @@ class ResponseIndication(SpsdkSoftEnum):
         "ELE_DISABLED_FEATURE_FAILURE_IND",
         "Disabled feature failure",
     )
-    ELE_MUST_ATTEST_FAILURE_IND = (0xB7, "ELE_MUST_ATTEST_FAILURE_IND", "Must attest failure")
+    ELE_MUST_ATTEST_FAILURE_IND = (
+        0xB7,
+        "ELE_MUST_ATTEST_FAILURE_IND",
+        "Must attest failure",
+    )
     ELE_RNG_NOT_STARTED_FAILURE_IND = (
         0xB8,
         "ELE_RNG_NOT_STARTED_FAILURE_IND",
@@ -141,7 +185,11 @@ class ResponseIndication(SpsdkSoftEnum):
         "ELE_RNG_INST_FAILURE_IND",
         "Random number generator instantiation failure",
     )
-    ELE_LOCKED_REG_FAILURE_IND = (0xBE, "ELE_LOCKED_REG_FAILURE_IND", "Locked register failure")
+    ELE_LOCKED_REG_FAILURE_IND = (
+        0xBE,
+        "ELE_LOCKED_REG_FAILURE_IND",
+        "Locked register failure",
+    )
     ELE_BAD_ID_FAILURE_IND = (0xBF, "ELE_BAD_ID_FAILURE_IND", "Bad ID failure")
     ELE_INVALID_OPERATION_FAILURE_IND = (
         0xC0,
@@ -189,7 +237,11 @@ class ResponseIndication(SpsdkSoftEnum):
         "ELE_WRONG_BOOT_MODE_FAILURE_IND",
         "Wrong boot mode failure",
     )
-    ELE_OLD_VERSION_FAILURE_IND = (0xCE, "ELE_OLD_VERSION_FAILURE_IND", "Old version failure")
+    ELE_OLD_VERSION_FAILURE_IND = (
+        0xCE,
+        "ELE_OLD_VERSION_FAILURE_IND",
+        "Old version failure",
+    )
     ELE_CSTM_FAILURE_IND = (0xCF, "ELE_CSTM_FAILURE_IND", "CSTM failure")
     ELE_CORRUPTED_SRK_FAILURE_IND = (
         0xD0,
@@ -208,7 +260,11 @@ class ResponseIndication(SpsdkSoftEnum):
         "ELE_NO_AUTHENTICATION_FAILURE_IND",
         "No authentication failure",
     )
-    ELE_BAD_SRK_SET_FAILURE_IND = (0xEF, "ELE_BAD_SRK_SET_FAILURE_IND", "Bad SRK set failure")
+    ELE_BAD_SRK_SET_FAILURE_IND = (
+        0xEF,
+        "ELE_BAD_SRK_SET_FAILURE_IND",
+        "Bad SRK set failure",
+    )
     ELE_BAD_SIGNATURE_FAILURE_IND = (
         0xF0,
         "ELE_BAD_SIGNATURE_FAILURE_IND",
@@ -227,13 +283,21 @@ class ResponseIndication(SpsdkSoftEnum):
         "Invalid message failure",
     )
     ELE_BAD_VALUE_FAILURE_IND = (0xF5, "ELE_BAD_VALUE_FAILURE_IND", "Bad value failure")
-    ELE_BAD_FUSE_ID_FAILURE_IND = (0xF6, "ELE_BAD_FUSE_ID_FAILURE_IND", "Bad fuse ID failure")
+    ELE_BAD_FUSE_ID_FAILURE_IND = (
+        0xF6,
+        "ELE_BAD_FUSE_ID_FAILURE_IND",
+        "Bad fuse ID failure",
+    )
     ELE_BAD_CONTAINER_FAILURE_IND = (
         0xF7,
         "ELE_BAD_CONTAINER_FAILURE_IND",
         "Bad container failure",
     )
-    ELE_BAD_VERSION_FAILURE_IND = (0xF8, "ELE_BAD_VERSION_FAILURE_IND", "Bad version failure")
+    ELE_BAD_VERSION_FAILURE_IND = (
+        0xF8,
+        "ELE_BAD_VERSION_FAILURE_IND",
+        "Bad version failure",
+    )
     ELE_INVALID_KEY_FAILURE_IND = (
         0xF9,
         "ELE_INVALID_KEY_FAILURE_IND",
@@ -267,15 +331,27 @@ class EleFwStatus(SpsdkSoftEnum):
     """ELE Firmware status."""
 
     ELE_FW_STATUS_NOT_IN_PLACE = (0, "ELE_FW_STATUS_NOT_IN_PLACE", "Not in place")
-    ELE_FW_STATUS_IN_PLACE = (1, "ELE_FW_STATUS_IN_PLACE", "Authenticated and operational")
+    ELE_FW_STATUS_IN_PLACE = (
+        1,
+        "ELE_FW_STATUS_IN_PLACE",
+        "Authenticated and operational",
+    )
 
 
 class EleInfo2Commit(SpsdkSoftEnum):
     """ELE Information type to be committed."""
 
-    NXP_SRK_REVOCATION = (0x1 << 0, "NXP_SRK_REVOCATION", "SRK revocation of the NXP container")
+    NXP_SRK_REVOCATION = (
+        0x1 << 0,
+        "NXP_SRK_REVOCATION",
+        "SRK revocation of the NXP container",
+    )
     NXP_FW_FUSE = (0x1 << 1, "NXP_FW_FUSE", "FW fuse version of the NXP container")
-    OEM_SRK_REVOCATION = (0x1 << 4, "OEM_SRK_REVOCATION", "SRK revocation of the OEM container")
+    OEM_SRK_REVOCATION = (
+        0x1 << 4,
+        "OEM_SRK_REVOCATION",
+        "SRK revocation of the OEM container",
+    )
     OEM_FW_FUSE = (0x1 << 5, "OEM_FW_FUSE", "FW fuse version of the OEM container")
 
 
@@ -310,8 +386,16 @@ class EleTrngState(SpsdkSoftEnum):
         "ELE_TRNG_GENERATING_ENTROPY",
         "TRNG is still generating entropy",
     )
-    ELE_TRNG_READY = (0x3, "ELE_TRNG_READY", "TRNG entropy is valid and ready to be read")
-    ELE_TRNG_ERROR = (0x4, "ELE_TRNG_ERROR", "TRNG encounter an error while generating entropy")
+    ELE_TRNG_READY = (
+        0x3,
+        "ELE_TRNG_READY",
+        "TRNG entropy is valid and ready to be read",
+    )
+    ELE_TRNG_ERROR = (
+        0x4,
+        "ELE_TRNG_ERROR",
+        "TRNG encounter an error while generating entropy",
+    )
 
 
 class EleCsalState(SpsdkSoftEnum):
@@ -327,8 +411,16 @@ class EleCsalState(SpsdkSoftEnum):
         "ELE_CSAL_ON_GOING",
         "Crypto Lib random context initialization is on-going",
     )
-    ELE_CSAL_READY = (0x2, "ELE_CSAL_READY", "Crypto Lib random context initialization succeed")
-    ELE_CSAL_ERROR = (0x3, "ELE_CSAL_ERROR", "Crypto Lib random context initialization failed")
+    ELE_CSAL_READY = (
+        0x2,
+        "ELE_CSAL_READY",
+        "Crypto Lib random context initialization succeed",
+    )
+    ELE_CSAL_ERROR = (
+        0x3,
+        "ELE_CSAL_ERROR",
+        "Crypto Lib random context initialization failed",
+    )
     ELE_CSAL_PAUSE = (
         0x4,
         "ELE_CSAL_PAUSE",

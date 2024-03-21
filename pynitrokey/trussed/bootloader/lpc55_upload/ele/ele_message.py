@@ -90,12 +90,16 @@ class EleMessage:
     @property
     def command_data_address(self) -> int:
         """Command data address in target memory space."""
-        return align(self.command_address + self.command_words_count * 4, self.ELE_MSG_ALIGN)
+        return align(
+            self.command_address + self.command_words_count * 4, self.ELE_MSG_ALIGN
+        )
 
     @property
     def command_data_size(self) -> int:
         """Command data address in target memory space."""
-        return align(len(self.command_data) or self.MAX_COMMAND_DATA_SIZE, self.ELE_MSG_ALIGN)
+        return align(
+            len(self.command_data) or self.MAX_COMMAND_DATA_SIZE, self.ELE_MSG_ALIGN
+        )
 
     @property
     def command_data(self) -> bytes:
@@ -124,7 +128,9 @@ class EleMessage:
     @property
     def response_data_address(self) -> int:
         """Response data address in target memory space."""
-        return align(self.response_address + self.response_words_count * 4, self.ELE_MSG_ALIGN)
+        return align(
+            self.response_address + self.response_words_count * 4, self.ELE_MSG_ALIGN
+        )
 
     @property
     def response_data_size(self) -> int:
@@ -134,13 +140,16 @@ class EleMessage:
     @property
     def free_space_address(self) -> int:
         """First free address after ele message in target memory space."""
-        return align(self.response_data_address + self._response_data_size, self.ELE_MSG_ALIGN)
+        return align(
+            self.response_data_address + self._response_data_size, self.ELE_MSG_ALIGN
+        )
 
     @property
     def free_space_size(self) -> int:
         """Free space size after ele message in target memory space."""
         return align(
-            self.buff_size - (self.free_space_address - self.buff_addr), self.ELE_MSG_ALIGN
+            self.buff_size - (self.free_space_address - self.buff_addr),
+            self.ELE_MSG_ALIGN,
         )
 
     @property
@@ -195,7 +204,11 @@ class EleMessage:
         :return: Bytes representation of message header.
         """
         return pack(
-            self.HEADER_FORMAT, self.VERSION, self.command_words_count, self.command, self.TAG
+            self.HEADER_FORMAT,
+            self.VERSION,
+            self.command_words_count,
+            self.command,
+            self.TAG,
         )
 
     def export(
@@ -218,11 +231,15 @@ class EleMessage:
         if tag != self.RSP_TAG:
             raise SPSDKParsingError(f"Message TAG in response is invalid: {hex(tag)}")
         if command != self.command:
-            raise SPSDKParsingError(f"Message COMMAND in response is invalid: {hex(command)}")
+            raise SPSDKParsingError(
+                f"Message COMMAND in response is invalid: {hex(command)}"
+            )
         if size not in [self.response_words_count, self.RESPONSE_HEADER_WORDS_COUNT]:
             raise SPSDKParsingError(f"Message SIZE in response is invalid: {hex(size)}")
         if version != self.VERSION:
-            raise SPSDKParsingError(f"Message VERSION in response is invalid: {hex(version)}")
+            raise SPSDKParsingError(
+                f"Message VERSION in response is invalid: {hex(version)}"
+            )
 
         # Decode status word
         (
@@ -362,7 +379,10 @@ class EleMessageEleFwAuthenticate(EleMessage):
         """
         ret = self.header_export()
         ret += pack(
-            LITTLE_ENDIAN + UINT32 + UINT32 + UINT32, self.ele_fw_address, 0, self.ele_fw_address
+            LITTLE_ENDIAN + UINT32 + UINT32 + UINT32,
+            self.ele_fw_address,
+            0,
+            self.ele_fw_address,
         )
         return ret
 
@@ -478,7 +498,9 @@ class EleMessageForwardLifeCycleUpdate(EleMessage):
         :return: Bytes representation of message object.
         """
         ret = self.header_export()
-        ret += pack(LITTLE_ENDIAN + UINT16 + UINT8 + UINT8, self.lifecycle_update.tag, 0, 0)
+        ret += pack(
+            LITTLE_ENDIAN + UINT16 + UINT8 + UINT8, self.lifecycle_update.tag, 0, 0
+        )
         return ret
 
 
@@ -525,7 +547,9 @@ class EleMessageGetEvents(EleMessage):
             LITTLE_ENDIAN + UINT16 + UINT16 + "8L4s", response[8:48]
         )
         if max_events != self.MAX_EVENT_CNT:
-            logger.error(f"Invalid maximal events count: {max_events}!={self.MAX_EVENT_CNT}")
+            logger.error(
+                f"Invalid maximal events count: {max_events}!={self.MAX_EVENT_CNT}"
+            )
 
         crc_computed = self.get_msg_crc(response[0:44])
         if crc != crc_computed:
@@ -547,18 +571,25 @@ class EleMessageGetEvents(EleMessage):
     def get_ind(event: int) -> str:
         """Get Indication in string from event."""
         ind = (event >> 8) & 0xFF
-        return ResponseIndication.get_description(ind, f"Unknown Indication: (0x{ind:02})") or ""
+        return (
+            ResponseIndication.get_description(ind, f"Unknown Indication: (0x{ind:02})")
+            or ""
+        )
 
     @staticmethod
     def get_sts(event: int) -> str:
         """Get Status in string from event."""
         sts = event & 0xFF
-        return ResponseStatus.get_description(sts, f"Unknown Status: (0x{sts:02})") or ""
+        return (
+            ResponseStatus.get_description(sts, f"Unknown Status: (0x{sts:02})") or ""
+        )
 
     def response_info(self) -> str:
         """Print events info."""
         ret = f"Event count:     {self.event_cnt}"
-        for i, event in enumerate(self.events[: min(self.event_cnt, self.MAX_EVENT_CNT)]):
+        for i, event in enumerate(
+            self.events[: min(self.event_cnt, self.MAX_EVENT_CNT)]
+        ):
             ret += f"\nEvent[{i}]:      0x{event:08X}"
             ret += f"\n  IPC ID:        {self.get_ipc_id(event)}"
             ret += f"\n  Command:       {self.get_cmd(event)}"
@@ -710,8 +741,12 @@ class EleMessageGetFwVersion(EleMessage):
         :raises SPSDKParsingError: Response parse detect some error.
         """
         super().decode_response(response)
-        self.ele_fw_version_raw = int.from_bytes(response[8:12], Endianness.LITTLE.value)
-        self.ele_fw_version_sha1 = int.from_bytes(response[12:16], Endianness.LITTLE.value)
+        self.ele_fw_version_raw = int.from_bytes(
+            response[8:12], Endianness.LITTLE.value
+        )
+        self.ele_fw_version_sha1 = int.from_bytes(
+            response[12:16], Endianness.LITTLE.value
+        )
 
     def response_info(self) -> str:
         """Print specific information of ELE.
@@ -849,7 +884,12 @@ class EleMessageGetInfo(EleMessage):
         if self.info_version == 0x02:
             self.info_oem_srkh = response_data[92:156]
             self.info_oem_srkh = response_data[92:156]
-            (self.info_trng_state, self.info_csal_state, self.info_imem_state, _) = unpack(
+            (
+                self.info_trng_state,
+                self.info_csal_state,
+                self.info_imem_state,
+                _,
+            ) = unpack(
                 LITTLE_ENDIAN + UINT8 + UINT8 + UINT8 + UINT8, response_data[156:160]
             )
 
@@ -1031,7 +1071,14 @@ class EleMessageGenerateKeyBlob(EleMessage):
         :return: Bytes representation of message object.
         """
         payload = pack(
-            LITTLE_ENDIAN + UINT32 + UINT32 + UINT32 + UINT32 + UINT32 + UINT16 + UINT16,
+            LITTLE_ENDIAN
+            + UINT32
+            + UINT32
+            + UINT32
+            + UINT32
+            + UINT32
+            + UINT16
+            + UINT16,
             self.key_id,
             0,
             self.command_data_address,
@@ -1099,7 +1146,9 @@ class EleMessageGenerateKeyBlob(EleMessage):
         :param response_data: Data of response.
         :raises SPSDKParsingError: Invalid response detected.
         """
-        ver, length, tag = unpack(LITTLE_ENDIAN + UINT8 + UINT16 + UINT8, response_data[:4])
+        ver, length, tag = unpack(
+            LITTLE_ENDIAN + UINT8 + UINT16 + UINT8, response_data[:4]
+        )
         if tag != self.KEYBLOB_TAG:
             raise SPSDKParsingError("Invalid TAG in generated KeyBlob")
         if ver != self.KEYBLOB_VERSION:
@@ -1198,14 +1247,18 @@ class EleMessageGenerateKeyBLobOtfad(EleMessageGenerateKeyBlob):
             )
 
         if reserved != 0:
-            raise SPSDKValueError("Invalid OTFAD Key Identifier. Byte 2-3 must be set to 0.")
+            raise SPSDKValueError(
+                "Invalid OTFAD Key Identifier. Byte 2-3 must be set to 0."
+            )
 
         # 2. validate AES counter
         if len(self.aes_counter) != 8:
             raise SPSDKValueError("Invalid AES counter length. It must be 64 bits.")
 
         # 3. start address
-        if self.start_address != 0 and self.start_address != align(self.start_address, 1024):
+        if self.start_address != 0 and self.start_address != align(
+            self.start_address, 1024
+        ):
             raise SPSDKValueError(
                 "Invalid OTFAD start address. Start address has to be aligned to 1024 bytes."
             )
@@ -1250,7 +1303,9 @@ class EleMessageGenerateKeyBLobOtfad(EleMessageGenerateKeyBlob):
         )
         crc32_function = mkPredefinedCrcFun("crc-32-mpeg")
         crc: int = crc32_function(otfad_config)
-        return header + options + otfad_config + crc.to_bytes(4, Endianness.LITTLE.value)
+        return (
+            header + options + otfad_config + crc.to_bytes(4, Endianness.LITTLE.value)
+        )
 
     def info(self) -> str:
         """Print information including live data.
@@ -1413,7 +1468,10 @@ class EleMessageLoadKeyBLob(EleMessage):
         :return: Bytes representation of message object.
         """
         payload = pack(
-            LITTLE_ENDIAN + UINT32 + UINT32 + UINT32, self.key_id, 0, self.command_data_address
+            LITTLE_ENDIAN + UINT32 + UINT32 + UINT32,
+            self.key_id,
+            0,
+            self.command_data_address,
         )
         payload = self.header_export() + payload
         return payload
@@ -1441,7 +1499,9 @@ class EleMessageWriteFuse(EleMessage):
     CMD = MessageIDs.WRITE_FUSE.tag
     COMMAND_PAYLOAD_WORDS_COUNT = 2
 
-    def __init__(self, bit_position: int, bit_length: int, lock: bool, payload: int) -> None:
+    def __init__(
+        self, bit_position: int, bit_length: int, lock: bool, payload: int
+    ) -> None:
         """Constructor.
 
         This command allows to write to the fuses.
