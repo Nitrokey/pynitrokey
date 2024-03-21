@@ -124,6 +124,11 @@ ignore_errors = true
 module = "pynitrokey.trussed.bootloader.nrf52"
 disallow_untyped_calls = false
 
+# pynitrokey.nk3.bootloader.lpc55_upload is only temporary in this package
+[[tool.mypy.overrides]]
+module = "pynitrokey.trussed.bootloader.lpc55_upload.*"
+ignore_errors = true
+
 # libraries without annotations
 [[tool.mypy.overrides]]
 module = [
