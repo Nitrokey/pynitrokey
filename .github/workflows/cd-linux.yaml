@@ -33,13 +33,19 @@ jobs:
       - name: Install required packages
         run: |
           apt update
-          apt install -y binutils gcc libpcsclite-dev libusb-1.0-0 make swig
+          apt install -y binutils gcc git libpcsclite-dev libusb-1.0-0 make swig
       - name: Create virtual environment
         run: |
           python -m venv venv
           . venv/bin/activate
           pip install flit
           flit install --symlink
+      - name: Patch oscrypto
+        run: |
+          . venv/bin/activate
+          pip uninstall -y oscrypto
+          : # This uses an oscrypto version to avoid issue #431
+          pip install "oscrypto @ git+https://github.com/wbond/oscrypto.git@1547f535001ba568b239b8797465536759c742a3"
       - name: Build
         run: |
           . venv/bin/activate
