@@ -38,15 +38,8 @@ from ..exceptions import SPSDKError, SPSDKNotImplementedError, SPSDKValueError
 from ..utils.abstract import BaseClass
 from ..utils.misc import Endianness, load_binary, write_file
 from .hash import EnumHashAlgorithm, get_hash, get_hash_algorithm
-from .oscca import IS_OSCCA_SUPPORTED
 from .rng import rand_below, random_hex
 from .types import SPSDKEncoding
-
-if IS_OSCCA_SUPPORTED:
-    from asn1tools import DecodeError  # pylint: disable=import-error
-    from gmssl import sm2  # pylint: disable=import-error
-
-    from .oscca import SM2Encoder, sanitize_pem
 
 
 def _load_pem_private_key(data: bytes, password: Optional[bytes]) -> Any:
@@ -62,13 +55,6 @@ def _load_pem_private_key(data: bytes, password: Optional[bytes]) -> Any:
         return _crypto_load_private_key(SPSDKEncoding.PEM, data, password)
     except (UnsupportedAlgorithm, ValueError) as exc:
         last_error = exc
-    if IS_OSCCA_SUPPORTED:
-        try:
-            key_data = sanitize_pem(data)
-            key_set = SM2Encoder().decode_private_key(data=key_data)
-            return sm2.CryptSM2(private_key=key_set.private, public_key=key_set.public)
-        except (SPSDKError, DecodeError) as exc:
-            last_error = exc
     raise SPSDKError(f"Cannot load PEM private key: {last_error}")
 
 
@@ -85,12 +71,6 @@ def _load_der_private_key(data: bytes, password: Optional[bytes]) -> Any:
         return _crypto_load_private_key(SPSDKEncoding.DER, data, password)
     except (UnsupportedAlgorithm, ValueError) as exc:
         last_error = exc
-    if IS_OSCCA_SUPPORTED:
-        try:
-            key_set = SM2Encoder().decode_private_key(data=data)
-            return sm2.CryptSM2(private_key=key_set.private, public_key=key_set.public)
-        except (SPSDKError, DecodeError) as exc:
-            last_error = exc
     raise SPSDKError(f"Cannot load DER private key: {last_error}")
 
 
@@ -139,13 +119,6 @@ def _load_pem_public_key(data: bytes) -> Any:
         return crypto_load_pem_public_key(data)
     except (UnsupportedAlgorithm, ValueError) as exc:
         last_error = exc
-    if IS_OSCCA_SUPPORTED:
-        try:
-            key_data = sanitize_pem(data)
-            public_key = SM2Encoder().decode_public_key(data=key_data)
-            return sm2.CryptSM2(private_key=None, public_key=public_key.public)
-        except (SPSDKError, DecodeError) as exc:
-            last_error = exc
     raise SPSDKError(f"Cannot load PEM public key: {last_error}")
 
 
@@ -161,12 +134,6 @@ def _load_der_public_key(data: bytes) -> Any:
         return crypto_load_der_public_key(data)
     except (UnsupportedAlgorithm, ValueError) as exc:
         last_error = exc
-    if IS_OSCCA_SUPPORTED:
-        try:
-            public_key = SM2Encoder().decode_public_key(data=data)
-            return sm2.CryptSM2(private_key=None, public_key=public_key.public)
-        except (SPSDKError, DecodeError) as exc:
-            last_error = exc
     raise SPSDKError(f"Cannot load DER private key: {last_error}")
 
 
@@ -294,8 +261,6 @@ class PrivateKey(BaseClass, abc.ABC):
             )
             if isinstance(private_key, (ec.EllipticCurvePrivateKey, rsa.RSAPrivateKey)):
                 return cls.create(private_key)
-            if IS_OSCCA_SUPPORTED and isinstance(private_key, sm2.CryptSM2):
-                return cls.create(private_key)
         except (ValueError, SPSDKInvalidKeyType) as exc:
             raise SPSDKError(f"Cannot load private key: ({str(exc)})") from exc
         raise SPSDKError(f"Unsupported private key: ({str(private_key)})")
@@ -312,9 +277,6 @@ class PrivateKey(BaseClass, abc.ABC):
             PrivateKeyEcc: ec.EllipticCurvePrivateKey,
             PrivateKeyRsa: rsa.RSAPrivateKey,
         }
-        if IS_OSCCA_SUPPORTED:
-            SUPPORTED_KEYS[PrivateKeySM2] = sm2.CryptSM2
-
         for k, v in SUPPORTED_KEYS.items():
             if isinstance(key, v):
                 return k(key)
@@ -391,8 +353,6 @@ class PublicKey(BaseClass, abc.ABC):
             }[SPSDKEncoding.get_file_encodings(data)](data)
             if isinstance(public_key, (ec.EllipticCurvePublicKey, rsa.RSAPublicKey)):
                 return cls.create(public_key)
-            if IS_OSCCA_SUPPORTED and isinstance(public_key, sm2.CryptSM2):
-                return cls.create(public_key)
         except (ValueError, SPSDKInvalidKeyType) as exc:
             raise SPSDKError(f"Cannot load public key: ({str(exc)})") from exc
         raise SPSDKError(f"Unsupported public key: ({str(public_key)})")
@@ -426,9 +386,6 @@ class PublicKey(BaseClass, abc.ABC):
             PublicKeyEcc: ec.EllipticCurvePublicKey,
             PublicKeyRsa: rsa.RSAPublicKey,
         }
-        if IS_OSCCA_SUPPORTED:
-            SUPPORTED_KEYS[PublicKeySM2] = sm2.CryptSM2
-
         for k, v in SUPPORTED_KEYS.items():
             if isinstance(key, v):
                 return k(key)
@@ -1124,211 +1081,6 @@ class PublicKeyEcc(KeyEccCommon, PublicKey):
         return f"ECC ({self.curve}) Public key: \nx({hex(self.x)}) \ny({hex(self.y)})"
 
 
-# ===================================================================================================
-# ===================================================================================================
-#
-#                                      SM2 Key
-#
-# ===================================================================================================
-# ===================================================================================================
-if IS_OSCCA_SUPPORTED:
-    from .oscca import SM2Encoder, SM2KeySet, SM2PublicKey, sanitize_pem
-
-    class PrivateKeySM2(PrivateKey):
-        """SPSDK SM2 Private Key."""
-
-        key: sm2.CryptSM2
-
-        def __init__(self, key: sm2.CryptSM2) -> None:
-            """Create SPSDK Key.
-
-            :param key: Only SM2 key is accepted
-            """
-            if not isinstance(key, sm2.CryptSM2):
-                raise SPSDKInvalidKeyType("The input key is not SM2 type")
-            self.key = key
-
-        @classmethod
-        def generate_key(cls) -> Self:
-            """Generate SM2 Key (private key).
-
-            :return: SM2 private key
-            """
-            key = sm2.CryptSM2(None, "None")
-            n = int(key.ecc_table["n"], base=16)
-            prk = rand_below(n)
-            while True:
-                puk = key._kg(prk, key.ecc_table["g"])
-                if puk[:2] != "04":  # PUK cannot start with 04
-                    break
-            key.private_key = f"{prk:064x}"
-            key.public_key = puk
-
-            return cls(key)
-
-        def get_public_key(self) -> "PublicKeySM2":
-            """Generate public key.
-
-            :return: Public key
-            """
-            return PublicKeySM2(
-                sm2.CryptSM2(private_key=None, public_key=self.key.public_key)
-            )
-
-        def verify_public_key(self, public_key: PublicKey) -> bool:
-            """Verify public key.
-
-            :param public_key: Public key to verify
-            :return: True if is in pair, False otherwise
-            """
-            return self.get_public_key() == public_key
-
-        def sign(
-            self, data: bytes, salt: Optional[str] = None, use_ber: bool = False
-        ) -> bytes:
-            """Sign data using SM2 algorithm with SM3 hash.
-
-            :param data: Data to sign.
-            :param salt: Salt for signature generation, defaults to None. If not specified a random string will be used.
-            :param use_ber: Encode signature into BER format, defaults to True
-            :raises SPSDKError: Signature can't be created.
-            :return: SM2 signature.
-            """
-            data_hash = bytes.fromhex(self.key._sm3_z(data))
-            if salt is None:
-                salt = random_hex(self.key.para_len // 2)
-            signature_str = self.key.sign(data=data_hash, K=salt)
-            if not signature_str:
-                raise SPSDKError("Can't sign data")
-            signature = bytes.fromhex(signature_str)
-            if use_ber:
-                ber_signature = SM2Encoder().encode_signature(signature)
-                return ber_signature
-            return signature
-
-        def export(
-            self,
-            password: Optional[str] = None,
-            encoding: SPSDKEncoding = SPSDKEncoding.DER,
-        ) -> bytes:
-            """Convert key into bytes supported by NXP."""
-            if encoding != SPSDKEncoding.DER:
-                raise SPSDKNotImplementedError(
-                    "Only DER enocding is supported for SM2 keys export"
-                )
-            keys = SM2KeySet(self.key.private_key, self.key.public_key)
-            return SM2Encoder().encode_private_key(keys)
-
-        def __repr__(self) -> str:
-            return "SM2 Private Key"
-
-        def __str__(self) -> str:
-            """Object description in string format."""
-            return f"SM2Key(private_key={self.key.private_key}, public_key='{self.key.public_key}')"
-
-        @property
-        def key_size(self) -> int:
-            """Size of the key in bits."""
-            return self.key.para_len
-
-        @property
-        def signature_size(self) -> int:
-            """Signature size."""
-            return 64
-
-    class PublicKeySM2(PublicKey):
-        """SM2 Public Key."""
-
-        key: sm2.CryptSM2
-
-        def __init__(self, key: sm2.CryptSM2) -> None:
-            """Create SPSDK Public Key.
-
-            :param key: SPSDK Public Key data or file path
-            """
-            if not isinstance(key, sm2.CryptSM2):
-                raise SPSDKInvalidKeyType("The input key is not SM2 type")
-            self.key = key
-
-        def verify_signature(
-            self,
-            signature: bytes,
-            data: bytes,
-            algorithm: Optional[EnumHashAlgorithm] = None,
-        ) -> bool:
-            """Verify signature.
-
-            :param signature: SM2 signature to verify
-            :param data: Signed data
-            :param algorithm: Just to keep compatibility with abstract class
-            :raises SPSDKError: Invalid signature
-            """
-            # Check if the signature is BER formatted
-            if len(signature) > 64 and signature[0] == 0x30:
-                signature = SM2Encoder().decode_signature(signature)
-            # Otherwise the signature is in raw format r || s
-            data_hash = bytes.fromhex(self.key._sm3_z(data))
-            return self.key.verify(Sign=signature.hex(), data=data_hash)
-
-        def export(self, encoding: SPSDKEncoding = SPSDKEncoding.DER) -> bytes:
-            """Convert key into bytes supported by NXP.
-
-            :return: Byte representation of key
-            """
-            if encoding != SPSDKEncoding.DER:
-                raise SPSDKNotImplementedError(
-                    "Only DER enocding is supported for SM2 keys export"
-                )
-            keys = SM2PublicKey(self.key.public_key)
-            return SM2Encoder().encode_public_key(keys)
-
-        @property
-        def signature_size(self) -> int:
-            """Signature size."""
-            return 64
-
-        @property
-        def public_numbers(self) -> str:
-            """Public numbers of key.
-
-            :return: Public numbers
-            """
-            return self.key.public_key
-
-        @classmethod
-        def recreate(cls, data: bytes) -> Self:
-            """Recreate SM2 public key from data.
-
-            :param data: public key data
-            :return: SPSDK public key.
-            """
-            return cls(sm2.CryptSM2(private_key=None, public_key=data.hex()))
-
-        @classmethod
-        def recreate_from_data(cls, data: bytes) -> Self:
-            """Recreate SM2 public key from data.
-
-            :param data: PEM or DER encoded key.
-            :return: SM2 public key.
-            """
-            key_data = sanitize_pem(data)
-            public_key = SM2Encoder().decode_public_key(data=key_data)
-            return cls(sm2.CryptSM2(private_key=None, public_key=public_key.public))
-
-        def __repr__(self) -> str:
-            return "SM2 Public Key"
-
-        def __str__(self) -> str:
-            """Object description in string format."""
-            ret = f"SM2 Public Key <{self.public_numbers}>"
-            return ret
-
-else:
-    # In case the OSCCA is not installed, do this to avoid import errors
-    PrivateKeySM2 = PrivateKey  # type: ignore
-    PublicKeySM2 = PublicKey  # type: ignore
-
-
 class ECDSASignature:
     """ECDSA Signature."""
 
@@ -1448,8 +1200,6 @@ def get_supported_keys_generators() -> KeyGeneratorInfo:
         "secp384r1": (PrivateKeyEcc.generate_key, {"curve_name": "secp384r1"}),
         "secp521r1": (PrivateKeyEcc.generate_key, {"curve_name": "secp521r1"}),
     }
-    if IS_OSCCA_SUPPORTED:
-        ret["sm2"] = (PrivateKeySM2.generate_key, {})
 
     return ret
 
