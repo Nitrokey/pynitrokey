@@ -20,6 +20,7 @@ from .lpc55_upload.mboot.error_codes import StatusCode
 from .lpc55_upload.mboot.interfaces.usb import MbootUSBInterface
 from .lpc55_upload.mboot.mcuboot import McuBoot
 from .lpc55_upload.mboot.properties import PropertyTag
+from .lpc55_upload.sbfile.misc import BcdVersion3
 from .lpc55_upload.sbfile.sb2.images import BootImageV21
 from .lpc55_upload.utils.interfaces.device.usb_device import UsbDevice
 from .lpc55_upload.utils.usbfilter import USBDeviceFilter
@@ -57,8 +58,10 @@ class NitrokeyTrussedBootloaderLpc55(NitrokeyTrussedBootloader):
         return self._path
 
     @property
-    def status(self) -> str:
-        return self.device.status_string
+    def status(self) -> Tuple[int, str]:
+        code = self.device.status_code
+        message = StatusCode.get_label(code)
+        return (code, message)
 
     def close(self) -> None:
         self.device.close()
@@ -135,9 +138,13 @@ class NitrokeyTrussedBootloaderLpc55(NitrokeyTrussedBootloader):
             return None
 
 
+def parse_bcd_version(version: BcdVersion3) -> Version:
+    return Version(major=version.major, minor=version.minor, patch=version.service)
+
+
 def parse_firmware_image(data: bytes) -> FirmwareMetadata:
     image = BootImageV21.parse(data, kek=KEK)
-    version = Version.from_bcd_version(image.header.product_version)
+    version = parse_bcd_version(image.header.product_version)
     metadata = FirmwareMetadata(version=version)
     if image.cert_block:
         if image.cert_block.rkth == RKTH:
