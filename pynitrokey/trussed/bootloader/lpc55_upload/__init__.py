@@ -11,7 +11,6 @@ version = "2.1.0"
 import os
 
 __author__ = "NXP"
-__contact__ = "michal.starecek@nxp.com"
 __license__ = "BSD-3-Clause"
 __version__ = version
 __release__ = "beta"
