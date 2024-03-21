@@ -94,7 +94,9 @@ class ImageHeaderV2(BaseClass):
         nfo += f" Header Blocks:        {self.header_blocks}\n"
         nfo += f" Sections MAC Count:   {self.max_section_mac_count}\n"
         nfo += f" Key Blob Block Count: {self.key_blob_block_count}\n"
-        nfo += f" Timestamp:            {self.timestamp.strftime('%H:%M:%S (%d.%m.%Y)')}\n"
+        nfo += (
+            f" Timestamp:            {self.timestamp.strftime('%H:%M:%S (%d.%m.%Y)')}\n"
+        )
         nfo += f" Product Version:      {self.product_version}\n"
         nfo += f" Component Version:    {self.component_version}\n"
         nfo += f" Build Number:         {self.build_number}\n"

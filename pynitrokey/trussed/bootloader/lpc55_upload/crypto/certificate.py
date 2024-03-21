@@ -68,7 +68,11 @@ class Certificate(BaseClass):
         :return: certificate
         """
         before = datetime.utcnow() if duration else datetime(2000, 1, 1)
-        after = datetime.utcnow() + timedelta(days=duration) if duration else datetime(9999, 12, 31)
+        after = (
+            datetime.utcnow() + timedelta(days=duration)
+            if duration
+            else datetime(9999, 12, 31)
+        )
         crt = x509.CertificateBuilder(
             subject_name=subject,
             issuer_name=issuer,
@@ -116,7 +120,9 @@ class Certificate(BaseClass):
         if encoding == SPSDKEncoding.NXP:
             return align_block(self.export(SPSDKEncoding.DER), 4, "zeros")
 
-        return self.cert.public_bytes(SPSDKEncoding.get_cryptography_encodings(encoding))
+        return self.cert.public_bytes(
+            SPSDKEncoding.get_cryptography_encodings(encoding)
+        )
 
     def get_public_key(self) -> PublicKey:
         """Get public keys from certificate.
@@ -189,7 +195,9 @@ class Certificate(BaseClass):
         return self.get_public_key().verify_signature(
             subject_certificate.signature,
             subject_certificate.tbs_certificate_bytes,
-            EnumHashAlgorithm.from_label(subject_certificate.signature_hash_algorithm.name),
+            EnumHashAlgorithm.from_label(
+                subject_certificate.signature_hash_algorithm.name
+            ),
         )
 
     def validate(self, issuer_certificate: "Certificate") -> bool:
@@ -212,7 +220,9 @@ class Certificate(BaseClass):
 
         :return: true/false depending whether ca flag is set or not
         """
-        extension = self.extensions.get_extension_for_oid(SPSDKExtensionOID.BASIC_CONSTRAINTS)
+        extension = self.extensions.get_extension_for_oid(
+            SPSDKExtensionOID.BASIC_CONSTRAINTS
+        )
         return extension.value.ca  # type: ignore # mypy can not handle property definition in cryptography
 
     @property
@@ -225,7 +235,9 @@ class Certificate(BaseClass):
         """Raw size of the certificate."""
         return len(self.export())
 
-    def public_key_hash(self, algorithm: EnumHashAlgorithm = EnumHashAlgorithm.SHA256) -> bytes:
+    def public_key_hash(
+        self, algorithm: EnumHashAlgorithm = EnumHashAlgorithm.SHA256
+    ) -> bytes:
         """Get key hash.
 
         :param algorithm: Used hash algorithm, defaults to sha256
@@ -246,7 +258,9 @@ class Certificate(BaseClass):
         nfo += f"  Serial Number:              {hex(self.cert.serial_number)}\n"
         nfo += f"  Validity Range:             {not_valid_before} - {not_valid_after}\n"
         if self.signature_hash_algorithm:
-            nfo += f"  Signature Algorithm:        {self.signature_hash_algorithm.name}\n"
+            nfo += (
+                f"  Signature Algorithm:        {self.signature_hash_algorithm.name}\n"
+            )
         nfo += f"  Self Issued:                {'YES' if self.self_signed else 'NO'}\n"
 
         return nfo
@@ -273,7 +287,11 @@ class Certificate(BaseClass):
                 try:
                     return x509.load_der_x509_certificate(data)
                 except ValueError as exc:
-                    if len(exc.args) and "kind: ExtraData" in exc.args[0] and data[-1:] == b"\00":
+                    if (
+                        len(exc.args)
+                        and "kind: ExtraData" in exc.args[0]
+                        and data[-1:] == b"\00"
+                    ):
                         data = data[:-1]
                     else:
                         raise SPSDKValueError(str(exc)) from exc
@@ -357,7 +375,9 @@ def generate_extensions(config: dict) -> List[x509.ExtensionType]:
         if key == "BASIC_CONSTRAINTS":
             ca = bool(val["ca"])
             extensions.append(
-                x509.BasicConstraints(ca=ca, path_length=val.get("path_length") if ca else None)
+                x509.BasicConstraints(
+                    ca=ca, path_length=val.get("path_length") if ca else None
+                )
             )
         if key == "WPC_QIAUTH_POLICY":
             extensions.append(WPCQiAuthPolicy(value=val["value"]))

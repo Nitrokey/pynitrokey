@@ -29,7 +29,9 @@ class Rot:
     def __init__(
         self,
         family: str,
-        keys_or_certs: Sequence[Union[str, bytes, bytearray, PublicKey, PrivateKey, Certificate]],
+        keys_or_certs: Sequence[
+            Union[str, bytes, bytearray, PublicKey, PrivateKey, Certificate]
+        ],
         password: Optional[str] = None,
         search_paths: Optional[List[str]] = None,
     ) -> None:
@@ -69,7 +71,9 @@ class RotBase:
 
     def __init__(
         self,
-        keys_or_certs: Sequence[Union[str, bytes, bytearray, PublicKey, PrivateKey, Certificate]],
+        keys_or_certs: Sequence[
+            Union[str, bytes, bytearray, PublicKey, PrivateKey, Certificate]
+        ],
         password: Optional[str] = None,
         search_paths: Optional[List[str]] = None,
     ) -> None:
@@ -96,13 +100,17 @@ class RotCertBlockv1(RotBase):
 
     def __init__(
         self,
-        keys_or_certs: Sequence[Union[str, bytes, bytearray, PublicKey, PrivateKey, Certificate]],
+        keys_or_certs: Sequence[
+            Union[str, bytes, bytearray, PublicKey, PrivateKey, Certificate]
+        ],
         password: Optional[str] = None,
         search_paths: Optional[List[str]] = None,
     ) -> None:
         """Rot cert block v1 initialization."""
         super().__init__(keys_or_certs, password, search_paths)
-        self.rkht = RKHTv1.from_keys(self.keys_or_certs, self.password, self.search_paths)
+        self.rkht = RKHTv1.from_keys(
+            self.keys_or_certs, self.password, self.search_paths
+        )
 
     def calculate_hash(
         self,
@@ -122,13 +130,17 @@ class RotCertBlockv21(RotBase):
 
     def __init__(
         self,
-        keys_or_certs: Sequence[Union[str, bytes, bytearray, PublicKey, PrivateKey, Certificate]],
+        keys_or_certs: Sequence[
+            Union[str, bytes, bytearray, PublicKey, PrivateKey, Certificate]
+        ],
         password: Optional[str] = None,
         search_paths: Optional[List[str]] = None,
     ) -> None:
         """Rot cert block v21 initialization."""
         super().__init__(keys_or_certs, password, search_paths)
-        self.rkht = RKHTv21.from_keys(self.keys_or_certs, self.password, self.search_paths)
+        self.rkht = RKHTv21.from_keys(
+            self.keys_or_certs, self.password, self.search_paths
+        )
 
     def calculate_hash(
         self,
@@ -148,14 +160,19 @@ class RotSrkTableAhab(RotBase):
 
     def __init__(
         self,
-        keys_or_certs: Sequence[Union[str, bytes, bytearray, PublicKey, PrivateKey, Certificate]],
+        keys_or_certs: Sequence[
+            Union[str, bytes, bytearray, PublicKey, PrivateKey, Certificate]
+        ],
         password: Optional[str] = None,
         search_paths: Optional[List[str]] = None,
     ) -> None:
         """AHAB SRK table initialization."""
         super().__init__(keys_or_certs, password, search_paths)
         self.srk = AhabSrkTable(
-            [SRKRecord(RKHT.convert_key(key, password, search_paths)) for key in keys_or_certs]
+            [
+                SRKRecord(RKHT.convert_key(key, password, search_paths))
+                for key in keys_or_certs
+            ]
         )
         self.srk.update_fields()
 
@@ -175,7 +192,9 @@ class RotSrkTableHab(RotBase):
 
     def __init__(
         self,
-        keys_or_certs: Sequence[Union[str, bytes, bytearray, PublicKey, PrivateKey, Certificate]],
+        keys_or_certs: Sequence[
+            Union[str, bytes, bytearray, PublicKey, PrivateKey, Certificate]
+        ],
         password: Optional[str] = None,
         search_paths: Optional[List[str]] = None,
     ) -> None:
@@ -191,7 +210,9 @@ class RotSrkTableHab(RotBase):
                         "Unable to load certificate. Certificate must be provided for HAB RoT calculation."
                     ) from exc
             if not isinstance(certificate, Certificate):
-                raise SPSDKError("Certificate must be provided for HAB RoT calculation.")
+                raise SPSDKError(
+                    "Certificate must be provided for HAB RoT calculation."
+                )
             item = SrkItem.from_certificate(certificate)
             self.srk.append(item)
 

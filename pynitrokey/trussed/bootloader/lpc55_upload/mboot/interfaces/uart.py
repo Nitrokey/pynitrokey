@@ -34,7 +34,8 @@ class ScanArgs:
         """
         port_parts = params.split(",")
         return cls(
-            port=port_parts.pop(0), baudrate=int(port_parts.pop(), 0) if port_parts else None
+            port=port_parts.pop(0),
+            baudrate=int(port_parts.pop(), 0) if port_parts else None,
         )
 
 

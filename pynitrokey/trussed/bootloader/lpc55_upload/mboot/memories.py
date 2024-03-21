@@ -81,7 +81,11 @@ class ExtMemId(MemIdEnum):
 class MemId(MemIdEnum):
     """McuBoot Internal/External Memory Property Tags."""
 
-    INTERNAL_MEMORY = (0, "RAM/FLASH", "Internal RAM/FLASH (Used for the PRINCE configuration)")
+    INTERNAL_MEMORY = (
+        0,
+        "RAM/FLASH",
+        "Internal RAM/FLASH (Used for the PRINCE configuration)",
+    )
     QUAD_SPI0 = (1, "QSPI", "Quad SPI Memory 0")
     IFR = (4, "IFR0", "Nonvolatile information register 0 (only used by SB loader)")
     FUSE = (4, "FUSE", "Nonvolatile information register 0 (only used by SB loader)")
@@ -131,7 +135,9 @@ class MemoryRegion:
         return f"Memory region, start: {hex(self.start)}"
 
     def __str__(self) -> str:
-        return f"0x{self.start:08X} - 0x{self.end:08X}; Total Size: {size_fmt(self.size)}"
+        return (
+            f"0x{self.start:08X} - 0x{self.end:08X}; Total Size: {size_fmt(self.size)}"
+        )
 
 
 class RamRegion(MemoryRegion):
@@ -198,11 +204,19 @@ class ExtMemRegion(MemoryRegion):
             raw_values[1] if raw_values[0] & ExtMemPropTags.START_ADDRESS.tag else None
         )
         self.total_size = (
-            raw_values[2] * 1024 if raw_values[0] & ExtMemPropTags.SIZE_IN_KBYTES.tag else None
+            raw_values[2] * 1024
+            if raw_values[0] & ExtMemPropTags.SIZE_IN_KBYTES.tag
+            else None
         )
-        self.page_size = raw_values[3] if raw_values[0] & ExtMemPropTags.PAGE_SIZE.tag else None
-        self.sector_size = raw_values[4] if raw_values[0] & ExtMemPropTags.SECTOR_SIZE.tag else None
-        self.block_size = raw_values[5] if raw_values[0] & ExtMemPropTags.BLOCK_SIZE.tag else None
+        self.page_size = (
+            raw_values[3] if raw_values[0] & ExtMemPropTags.PAGE_SIZE.tag else None
+        )
+        self.sector_size = (
+            raw_values[4] if raw_values[0] & ExtMemPropTags.SECTOR_SIZE.tag else None
+        )
+        self.block_size = (
+            raw_values[5] if raw_values[0] & ExtMemPropTags.BLOCK_SIZE.tag else None
+        )
         self.value = raw_values[0]
 
     @property

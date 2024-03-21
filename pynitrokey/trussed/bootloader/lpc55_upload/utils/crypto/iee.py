@@ -140,7 +140,9 @@ class IeeKeyBlobAttribute:
 
         :return: serialized binary data
         """
-        return pack(self._FORMAT, self.lock.tag, self.key_attribute.tag, self.aes_mode.tag, 0)
+        return pack(
+            self._FORMAT, self.lock.tag, self.key_attribute.tag, self.aes_mode.tag, 0
+        )
 
 
 class IeeKeyBlob:
@@ -252,7 +254,9 @@ class IeeKeyBlob:
         result += align_block(self.key1, 32)
         result += align_block(self.key2, 32)
         result += pack("<III", self.start_addr, self.end_addr, 0)
-        crc: bytes = mkPredefinedCrcFun("crc-32-mpeg")(result).to_bytes(4, Endianness.LITTLE.value)
+        crc: bytes = mkPredefinedCrcFun("crc-32-mpeg")(result).to_bytes(
+            4, Endianness.LITTLE.value
+        )
         result += crc
 
         return result
@@ -310,7 +314,9 @@ class IeeKeyBlob:
         key = reverse_bytes_in_longs(self.key1)
         nonce = reverse_bytes_in_longs(self.key2)
 
-        counter = Counter(nonce, ctr_value=base_address >> 4, ctr_byteorder_encoding=Endianness.BIG)
+        counter = Counter(
+            nonce, ctr_value=base_address >> 4, ctr_byteorder_encoding=Endianness.BIG
+        )
 
         for block in split_data(bytearray(data), self._ENCRYPTION_BLOCK_SIZE):
             encrypted_block = aes_ctr_encrypt(
@@ -333,7 +339,9 @@ class IeeKeyBlob:
         :raises NotImplementedError: AES-CTR is not implemented yet
         """
         if base_address % 16 != 0:
-            raise SPSDKError("Invalid start address")  # Start address has to be 16 byte aligned
+            raise SPSDKError(
+                "Invalid start address"
+            )  # Start address has to be 16 byte aligned
         data = align_block(data, self._ENCRYPTION_BLOCK_SIZE)  # align data length
         data_len = len(data)
 
@@ -483,7 +491,9 @@ class IeeNxp(Iee):
         self.db = get_db(family, "latest")
         self.blobs_min_cnt = self.db.get_int(DatabaseManager.IEE, "key_blob_min_cnt")
         self.blobs_max_cnt = self.db.get_int(DatabaseManager.IEE, "key_blob_max_cnt")
-        self.generate_keyblob = self.db.get_bool(DatabaseManager.IEE, "generate_keyblob")
+        self.generate_keyblob = self.db.get_bool(
+            DatabaseManager.IEE, "generate_keyblob"
+        )
 
         if key_blobs:
             for key_blob in key_blobs:
@@ -531,13 +541,17 @@ class IeeNxp(Iee):
             logger.debug(f"The {self.family} has no IEE KEK fuses")
             return ""
 
-        xml_fuses = self.db.get_file_path(DatabaseManager.IEE, "reg_fuses", default=None)
+        xml_fuses = self.db.get_file_path(
+            DatabaseManager.IEE, "reg_fuses", default=None
+        )
         if not xml_fuses:
             logger.debug(f"The {self.family} has no IEE fuses definition")
             return ""
 
         fuses = Registers(self.family, base_endianness=Endianness.LITTLE)
-        grouped_regs = self.db.get_list(DatabaseManager.IEE, "grouped_registers", default=None)
+        grouped_regs = self.db.get_list(
+            DatabaseManager.IEE, "grouped_registers", default=None
+        )
 
         fuses.load_registers_from_xml(xml_fuses, grouped_regs=grouped_regs)
         fuses.find_reg("USER_KEY1").set_value(self.ibkek1)
@@ -591,7 +605,9 @@ class IeeNxp(Iee):
         ret += f"efuse-program-once {hex(ibkek_lock.offset)} 0x{ibkek_lock.get_hex_value(raw=True)} --no-verify\n"
 
         ret += f"\n\n# {boot_cfg.name} fuse.\n"
-        ret += "WARNING!! Check SRM and set all desired bitfields for boot configuration"
+        ret += (
+            "WARNING!! Check SRM and set all desired bitfields for boot configuration"
+        )
         for bitfield in boot_cfg.get_bitfields():
             ret += f"#   {bitfield.name}: {bitfield.get_enum_value()}\n"
         ret += (
@@ -619,7 +635,9 @@ class IeeNxp(Iee):
         iee = BinaryImage(image_name, offset=self.keyblob_address)
         if self.generate_keyblob:
             # Add mandatory IEE keyblob
-            iee_keyblobs = self.get_key_blobs() if plain_data else self.export_key_blobs()
+            iee_keyblobs = (
+                self.get_key_blobs() if plain_data else self.export_key_blobs()
+            )
             iee.add_image(
                 BinaryImage(
                     keyblob_name,
@@ -692,9 +710,13 @@ class IeeNxp(Iee):
             template_note = database.get_str(
                 DatabaseManager.IEE, "additional_template_text", default=""
             )
-            title = f"IEE: Inline Encryption Engine Configuration template for {family}."
+            title = (
+                f"IEE: Inline Encryption Engine Configuration template for {family}."
+            )
 
-            yaml_data = CommentedConfig(title, val_schemas, note=template_note).get_template()
+            yaml_data = CommentedConfig(
+                title, val_schemas, note=template_note
+            ).get_template()
 
             return {f"{family}_iee": yaml_data}
 
@@ -702,7 +724,9 @@ class IeeNxp(Iee):
 
     @staticmethod
     def load_from_config(
-        config: Dict[str, Any], config_dir: str, search_paths: Optional[List[str]] = None
+        config: Dict[str, Any],
+        config_dir: str,
+        search_paths: Optional[List[str]] = None,
     ) -> "IeeNxp":
         """Converts the configuration option into an IEE image object.
 
@@ -713,7 +737,9 @@ class IeeNxp(Iee):
         :param search_paths: List of paths where to search for the file, defaults to None
         :return: initialized IEE object.
         """
-        iee_config: List[Dict[str, Any]] = config.get("key_blobs", [config.get("key_blob")])
+        iee_config: List[Dict[str, Any]] = config.get(
+            "key_blobs", [config.get("key_blob")]
+        )
         family = config["family"]
         ibkek1 = load_hex_string(
             config.get(
@@ -744,12 +770,21 @@ class IeeNxp(Iee):
             # start address to calculate offset from keyblob, min from keyblob or data blob address
             # pylint: disable-next=nested-min-max
             start_address = min(
-                min([value_to_int(addr.get("address", 0xFFFFFFFF)) for addr in data_blobs]),
+                min(
+                    [
+                        value_to_int(addr.get("address", 0xFFFFFFFF))
+                        for addr in data_blobs
+                    ]
+                ),
                 start_address,
             )
             binaries = BinaryImage(
                 filepath_from_config(
-                    config, "encrypted_name", "encrypted_blobs", config_dir, config["output_folder"]
+                    config,
+                    "encrypted_name",
+                    "encrypted_blobs",
+                    config_dir,
+                    config["output_folder"],
                 ),
                 offset=start_address - keyblob_address,
                 alignment=IeeKeyBlob._ENCRYPTION_BLOCK_SIZE,

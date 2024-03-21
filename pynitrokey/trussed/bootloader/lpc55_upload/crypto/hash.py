@@ -36,7 +36,9 @@ def get_hash_algorithm(algorithm: EnumHashAlgorithm) -> hashes.HashAlgorithm:
     :return: instance of algorithm class
     :raises SPSDKError: If algorithm not found
     """
-    algo_cls = getattr(hashes, algorithm.label.upper(), None)  # hack: get class object by name
+    algo_cls = getattr(
+        hashes, algorithm.label.upper(), None
+    )  # hack: get class object by name
     if algo_cls is None:
         raise SPSDKError(f"Unsupported algorithm: hashes.{algorithm.label.upper()}")
 
@@ -75,7 +77,9 @@ class Hash:
 
         :param value: Integer value to be hashed
         """
-        data = value.to_bytes(length=ceil(value.bit_length() / 8), byteorder=Endianness.BIG.value)
+        data = value.to_bytes(
+            length=ceil(value.bit_length() / 8), byteorder=Endianness.BIG.value
+        )
         self.update(data)
 
     def finalize(self) -> bytes:
@@ -86,7 +90,9 @@ class Hash:
         return self.hash_obj.finalize()
 
 
-def get_hash(data: bytes, algorithm: EnumHashAlgorithm = EnumHashAlgorithm.SHA256) -> bytes:
+def get_hash(
+    data: bytes, algorithm: EnumHashAlgorithm = EnumHashAlgorithm.SHA256
+) -> bytes:
     """Return a HASH from input data with specified algorithm.
 
     :param data: Input data in bytes

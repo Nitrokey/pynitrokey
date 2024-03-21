@@ -39,7 +39,6 @@ from ...utils.misc import (
     write_file,
 )
 from ...utils.schema_validator import CommentedConfig, check_config
-
 from . import sly_bd_parser as bd_parser
 from .commands import CmdHeader
 from .headers import ImageHeaderV2
@@ -155,7 +154,8 @@ class BootImageV20(BaseClass):
         self._dek: bytes = advanced_params.dek
         self._mac: bytes = advanced_params.mac
         if (
-            len(self._dek) != self.HEADER_MAC_SIZE and len(self._mac) != self.HEADER_MAC_SIZE
+            len(self._dek) != self.HEADER_MAC_SIZE
+            and len(self._mac) != self.HEADER_MAC_SIZE
         ):  # pragma: no cover # condition checked in SBV2xAdvancedParams constructor
             raise SPSDKError("Invalid dek or mac")
         self._header = ImageHeaderV2(
@@ -223,7 +223,9 @@ class BootImageV20(BaseClass):
         """
         if value is not None:
             if not self.signed:
-                raise SPSDKError("Certificate block cannot be used unless SB file is signed")
+                raise SPSDKError(
+                    "Certificate block cannot be used unless SB file is signed"
+                )
         self._cert_section = CertSectionV2(value) if value else None
 
     @property
@@ -258,7 +260,9 @@ class BootImageV20(BaseClass):
 
         if self.signed:
             cert_block = self.cert_block
-            if not cert_block:  # pragma: no cover # already checked in raw_size_without_signature
+            if (
+                not cert_block
+            ):  # pragma: no cover # already checked in raw_size_without_signature
                 raise SPSDKError("Certificate block not present")
             size += cert_block.signature_size
 
@@ -287,14 +291,18 @@ class BootImageV20(BaseClass):
             self._header.first_boot_tag_block = SecBootBlckSize.to_num_blocks(data_size)
         # ...
         self._header.flags = 0x08 if self.signed else 0x04
-        self._header.image_blocks = SecBootBlckSize.to_num_blocks(self.raw_size_without_signature)
+        self._header.image_blocks = SecBootBlckSize.to_num_blocks(
+            self.raw_size_without_signature
+        )
         self._header.header_blocks = SecBootBlckSize.to_num_blocks(self._header.SIZE)
         self._header.max_section_mac_count = 0
         if self.signed:
             self._header.offset_to_certificate_block = (
                 self._header.SIZE + self.HEADER_MAC_SIZE + self.KEY_BLOB_SIZE
             )
-            self._header.offset_to_certificate_block += CmdHeader.SIZE + CertSectionV2.HMAC_SIZE * 2
+            self._header.offset_to_certificate_block += (
+                CmdHeader.SIZE + CertSectionV2.HMAC_SIZE * 2
+            )
             self._header.max_section_mac_count = 1
         for boot_sect in self._boot_sections:
             boot_sect.is_last = True  # this is unified with elftosb
@@ -332,7 +340,9 @@ class BootImageV20(BaseClass):
         """
         if not isinstance(section, BootSectionV2):
             raise SPSDKError("Section is not instance of BootSectionV2 class")
-        duplicate_uid = find_first(self._boot_sections, lambda bs: bs.uid == section.uid)
+        duplicate_uid = find_first(
+            self._boot_sections, lambda bs: bs.uid == section.uid
+        )
         if duplicate_uid is not None:
             raise SPSDKError(f"Boot section with duplicate UID: {str(section.uid)}")
         self._boot_sections.append(section)
@@ -371,7 +381,9 @@ class BootImageV20(BaseClass):
         counter = Counter(self._header.nonce)
         counter.increment(SecBootBlckSize.to_num_blocks(len(data)))
         if self._cert_section is not None:
-            cert_sect_bin = self._cert_section.export(dek=self.dek, mac=self.mac, counter=counter)
+            cert_sect_bin = self._cert_section.export(
+                dek=self.dek, mac=self.mac, counter=counter
+            )
             counter.increment(SecBootBlckSize.to_num_blocks(len(cert_sect_bin)))
             data += cert_sect_bin
         # Add Boot Sections data
@@ -380,7 +392,9 @@ class BootImageV20(BaseClass):
         # Add Signature data
         if self.signed:
             if self.signature_provider is None:
-                raise SPSDKError("Signature provider is not assigned, cannot sign the image.")
+                raise SPSDKError(
+                    "Signature provider is not assigned, cannot sign the image."
+                )
             if self.cert_block is None:
                 raise SPSDKError("Certificate block is not assigned.")
 
@@ -446,15 +460,21 @@ class BootImageV20(BaseClass):
         )
         # Parse Certificate section
         if header.flags == 0x08:
-            cert_sect = CertSectionV2.parse(data, index, dek=dek, mac=mac, counter=counter)
+            cert_sect = CertSectionV2.parse(
+                data, index, dek=dek, mac=mac, counter=counter
+            )
             obj._cert_section = cert_sect
             index += cert_sect.raw_size
             # Check Signature
-            if not cert_sect.cert_block.verify_data(data[image_size:], data[:image_size]):
+            if not cert_sect.cert_block.verify_data(
+                data[image_size:], data[:image_size]
+            ):
                 raise SPSDKError("Parsing Certification section failed")
         # Parse Boot Sections
         while index < (image_size):
-            boot_section = BootSectionV2.parse(data, index, dek=dek, mac=mac, counter=counter)
+            boot_section = BootSectionV2.parse(
+                data, index, dek=dek, mac=mac, counter=counter
+            )
             obj.add_boot_section(boot_section)
             index += boot_section.raw_size
         return obj
@@ -676,7 +696,9 @@ class BootImageV21(BaseClass):
         if self.cert_block is None:
             raise SPSDKError("Certificate is not assigned")
         if self.signature_provider is None:
-            raise SPSDKError("Signature provider is not assigned, cannot sign the image")
+            raise SPSDKError(
+                "Signature provider is not assigned, cannot sign the image"
+            )
         # Update internals
         self.update()
         # Export Boot Sections
@@ -700,7 +722,9 @@ class BootImageV21(BaseClass):
         signed_data = self._header.export(padding=padding)
         #  Add HMAC data
         first_bs_hmac_count = self.boot_sections[0].hmac_count
-        hmac_data = bs_data[CmdHeader.SIZE : CmdHeader.SIZE + (first_bs_hmac_count * 32) + 32]
+        hmac_data = bs_data[
+            CmdHeader.SIZE : CmdHeader.SIZE + (first_bs_hmac_count * 32) + 32
+        ]
         hmac_bytes = hmac(self.mac, hmac_data)
         signed_data += hmac_bytes
         # Add KeyBlob data
@@ -826,7 +850,9 @@ class BootImageV21(BaseClass):
         return get_families(DatabaseManager.SB21)
 
     @classmethod
-    def get_commands_validation_schemas(cls, family: Optional[str] = None) -> List[Dict[str, Any]]:
+    def get_commands_validation_schemas(
+        cls, family: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         """Create the list of validation schemas.
 
         :param family: Device family filter, if None all commands are returned.
@@ -839,13 +865,13 @@ class BootImageV21(BaseClass):
             db = get_db(family, "latest")
             # remove unused command for current family
             supported_commands = db.get_list(DatabaseManager.SB21, "supported_commands")
-            list_of_commands: List[Dict] = schemas[0]["properties"]["sections"]["items"][
-                "properties"
-            ]["commands"]["items"]["oneOf"]
+            list_of_commands: List[Dict] = schemas[0]["properties"]["sections"][
+                "items"
+            ]["properties"]["commands"]["items"]["oneOf"]
 
-            schemas[0]["properties"]["sections"]["items"]["properties"]["commands"]["items"][
-                "oneOf"
-            ] = [
+            schemas[0]["properties"]["sections"]["items"]["properties"]["commands"][
+                "items"
+            ]["oneOf"] = [
                 command
                 for command in list_of_commands
                 if list(command["properties"].keys())[0] in supported_commands
@@ -854,7 +880,9 @@ class BootImageV21(BaseClass):
         return schemas
 
     @classmethod
-    def get_validation_schemas(cls, family: Optional[str] = None) -> List[Dict[str, Any]]:
+    def get_validation_schemas(
+        cls, family: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         """Create the list of validation schemas.
 
         :param family: Device family
@@ -865,7 +893,9 @@ class BootImageV21(BaseClass):
 
         schemas: List[Dict[str, Any]] = []
         schemas.extend([mbi_schema[x] for x in ["signature_provider", "cert_block_v1"]])
-        schemas.extend([sb2_schema[x] for x in ["sb2_output", "sb2_family", "common", "sb2"]])
+        schemas.extend(
+            [sb2_schema[x] for x in ["sb2_output", "sb2_family", "common", "sb2"]]
+        )
 
         add_keyblob = True
 
@@ -922,7 +952,9 @@ class BootImageV21(BaseClass):
             parser = bd_parser.BDParser()
             parsed_conf = parser.parse(text=bd_file_content, extern=external_files)
             if parsed_conf is None:
-                raise SPSDKError("Invalid bd file, secure binary file generation terminated")
+                raise SPSDKError(
+                    "Invalid bd file, secure binary file generation terminated"
+                )
         except SPSDKError:
             parsed_conf = load_configuration(config_path)
             config_dir = os.path.dirname(config_path)
@@ -959,7 +991,9 @@ class BootImageV21(BaseClass):
         :return: Instance of Secure Binary V2.1 class
         """
         flags = config["options"].get(
-            "flags", BootImageV21.FLAGS_SHA_PRESENT_BIT | BootImageV21.FLAGS_ENCRYPTED_SIGNED_BIT
+            "flags",
+            BootImageV21.FLAGS_SHA_PRESENT_BIT
+            | BootImageV21.FLAGS_ENCRYPTED_SIGNED_BIT,
         )
         # Flags may be a hex string
         flags = value_to_int(flags)
@@ -1024,7 +1058,9 @@ class BootImageV21(BaseClass):
         secure_binary.cert_block = cert_block
 
         if not signature_provider:
-            signing_key_path = config.get("signPrivateKey", config.get("mainCertPrivateKeyFile"))
+            signing_key_path = config.get(
+                "signPrivateKey", config.get("mainCertPrivateKeyFile")
+            )
             signature_provider = get_signature_provider(
                 sp_cfg=config.get("signProvider"),
                 local_file_key=signing_key_path,
@@ -1034,7 +1070,9 @@ class BootImageV21(BaseClass):
         secure_binary.signature_provider = signature_provider
 
         if not rkth_out_path:
-            rkth_out_path = config.get("RKTHOutputPath", os.path.join(os.getcwd(), "hash.bin"))
+            rkth_out_path = config.get(
+                "RKTHOutputPath", os.path.join(os.getcwd(), "hash.bin")
+            )
         assert isinstance(rkth_out_path, str), "Hash of hashes path must be string"
         write_file(secure_binary.cert_block.rkth, rkth_out_path, mode="wb")
 

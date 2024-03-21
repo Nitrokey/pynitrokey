@@ -9,7 +9,6 @@
 """Exceptions used in the MBoot module."""
 
 from ..exceptions import SPSDKError
-
 from .error_codes import StatusCode
 
 ########################################################################################################################

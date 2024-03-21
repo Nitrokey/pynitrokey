@@ -78,7 +78,9 @@ class SdioDevice(DeviceBase):
                     raise SPSDKConnectionError("No device available")
                 if not self.is_blocking:
                     if not hasattr(os, "set_blocking"):
-                        raise SPSDKError("Opening in non-blocking mode is available only on Linux")
+                        raise SPSDKError(
+                            "Opening in non-blocking mode is available only on Linux"
+                        )
                     # pylint: disable=no-member     # this is available only on Unix
                     os.set_blocking(self.device.fileno(), False)
                 self._opened = True

@@ -47,16 +47,22 @@ class Container(BaseClass):
         return "Base AHAB Container class: " + self.__class__.__name__
 
     def __str__(self) -> str:
-        raise NotImplementedError("__str__() is not implemented in base AHAB container class")
+        raise NotImplementedError(
+            "__str__() is not implemented in base AHAB container class"
+        )
 
     def export(self) -> bytes:
         """Serialize object into bytes array."""
-        raise NotImplementedError("export() is not implemented in base AHAB container class")
+        raise NotImplementedError(
+            "export() is not implemented in base AHAB container class"
+        )
 
     @classmethod
     def parse(cls, data: bytes) -> Self:
         """Deserialize object from bytes array."""
-        raise NotImplementedError("parse() is not implemented in base AHAB container class")
+        raise NotImplementedError(
+            "parse() is not implemented in base AHAB container class"
+        )
 
     @classmethod
     def format(cls) -> str:
@@ -132,11 +138,17 @@ class HeaderContainer(Container):
         :raises SPSDKValueError: Any MAndatory field has invalid value.
         """
         if self.tag is None or not check_range(self.tag, end=0xFF):
-            raise SPSDKValueError(f"AHAB: Head of Container: Invalid TAG Value: {self.tag}")
+            raise SPSDKValueError(
+                f"AHAB: Head of Container: Invalid TAG Value: {self.tag}"
+            )
         if self.length is None or not check_range(self.length, end=0xFFFF):
-            raise SPSDKValueError(f"AHAB: Head of Container: Invalid Length Value: {self.length}")
+            raise SPSDKValueError(
+                f"AHAB: Head of Container: Invalid Length Value: {self.length}"
+            )
         if self.version is None or not check_range(self.version, end=0xFF):
-            raise SPSDKValueError(f"AHAB: Head of Container: Invalid Version Value: {self.version}")
+            raise SPSDKValueError(
+                f"AHAB: Head of Container: Invalid Version Value: {self.version}"
+            )
 
     @classmethod
     def parse_head(cls, binary: bytes) -> Tuple[int, int, int]:
@@ -166,7 +178,9 @@ class HeaderContainer(Container):
         """
         cls._check_fixed_input_length(binary)
         data_len = len(binary)
-        (tag, length, version) = cls.parse_head(binary[: HeaderContainer.fixed_length()])
+        (tag, length, version) = cls.parse_head(
+            binary[: HeaderContainer.fixed_length()]
+        )
 
         if (
             isinstance(cls.TAG, int)

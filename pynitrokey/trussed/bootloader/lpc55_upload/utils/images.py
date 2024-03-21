@@ -204,7 +204,9 @@ class BinaryImage:
                 f"Image offset of {self.image_name} cannot be in negative numbers."
             )
         if len(self) < 0:
-            raise SPSDKValueError(f"Image size of {self.image_name} cannot be in negative numbers.")
+            raise SPSDKValueError(
+                f"Image size of {self.image_name} cannot be in negative numbers."
+            )
         for image in self.sub_images:
             image.validate()
             begin = image.offset
@@ -254,7 +256,9 @@ class BinaryImage:
         ]
         if include_sub_images:
             for child in self.sub_images:
-                widths.append(child.get_min_draw_width() + 2)  # +2 means add vertical borders
+                widths.append(
+                    child.get_min_draw_width() + 2
+                )  # +2 means add vertical borders
         return max(widths)
 
     def draw(
@@ -333,7 +337,9 @@ class BinaryImage:
         block += _get_centered_line(self._get_size_line(len(self)))
         # - Description
         if self.description:
-            for line in textwrap.wrap(self.description, width=width - 2, fix_sentence_endings=True):
+            for line in textwrap.wrap(
+                self.description, width=width - 2, fix_sentence_endings=True
+            ):
                 block += _get_centered_line(line)
         # - Pattern
         if self.pattern:
@@ -442,7 +448,9 @@ class BinaryImage:
             for i, region in enumerate(regions):
                 binary_file: Dict = region.get("binary_file")
                 if binary_file:
-                    offset = binary_file.get("offset", ret.aligned_length(ret.alignment))
+                    offset = binary_file.get(
+                        "offset", ret.aligned_length(ret.alignment)
+                    )
                     name = binary_file.get("name", binary_file["path"])
                     ret.add_image(
                         BinaryImage.load_binary_image(
@@ -456,7 +464,9 @@ class BinaryImage:
                 binary_block: Dict = region.get("binary_block")
                 if binary_block:
                     size = binary_block["size"]
-                    offset = binary_block.get("offset", ret.aligned_length(ret.alignment))
+                    offset = binary_block.get(
+                        "offset", ret.aligned_length(ret.alignment)
+                    )
                     name = binary_block.get("name", f"Binary block(#{i})")
                     pattern = BinaryPattern(binary_block["pattern"])
                     ret.add_image(BinaryImage(name, size, offset, pattern=pattern))

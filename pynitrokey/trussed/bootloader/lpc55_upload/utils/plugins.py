@@ -71,7 +71,9 @@ class PluginsManager(metaclass=SingletonMeta):
             count += 1
         return count
 
-    def load_from_source_file(self, source_file: str, module_name: Optional[str] = None) -> None:
+    def load_from_source_file(
+        self, source_file: str, module_name: Optional[str] = None
+    ) -> None:
         """Import Python source file directly.
 
         :param source_file: Path to python source file: absolute or relative to cwd

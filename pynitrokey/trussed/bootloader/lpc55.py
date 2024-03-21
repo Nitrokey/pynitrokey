@@ -13,6 +13,9 @@ import re
 import sys
 from typing import List, Optional, Tuple, TypeVar
 
+from pynitrokey.trussed.utils import Uuid, Version
+
+from . import FirmwareMetadata, NitrokeyTrussedBootloader, ProgressCallback, Variant
 from .lpc55_upload.mboot.error_codes import StatusCode
 from .lpc55_upload.mboot.interfaces.usb import MbootUSBInterface
 from .lpc55_upload.mboot.mcuboot import McuBoot
@@ -20,10 +23,6 @@ from .lpc55_upload.mboot.properties import PropertyTag
 from .lpc55_upload.sbfile.sb2.images import BootImageV21
 from .lpc55_upload.utils.interfaces.device.usb_device import UsbDevice
 from .lpc55_upload.utils.usbfilter import USBDeviceFilter
-
-from pynitrokey.trussed.utils import Uuid, Version
-
-from . import FirmwareMetadata, NitrokeyTrussedBootloader, ProgressCallback, Variant
 
 RKTH = bytes.fromhex("050aad3e77791a81e59c5b2ba5a158937e9460ee325d8ccba09734b8fdebb171")
 KEK = bytes([0xAA] * 32)

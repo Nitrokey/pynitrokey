@@ -15,7 +15,9 @@ from cryptography.hazmat.primitives import hmac as hmac_cls
 from .hash import EnumHashAlgorithm, get_hash_algorithm
 
 
-def hmac(key: bytes, data: bytes, algorithm: EnumHashAlgorithm = EnumHashAlgorithm.SHA256) -> bytes:
+def hmac(
+    key: bytes, data: bytes, algorithm: EnumHashAlgorithm = EnumHashAlgorithm.SHA256
+) -> bytes:
     """Return a HMAC from data with specified key and algorithm.
 
     :param key: The key in bytes format

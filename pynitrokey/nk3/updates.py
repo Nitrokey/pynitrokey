@@ -16,8 +16,6 @@ from contextlib import contextmanager
 from io import BytesIO
 from typing import Any, Callable, Iterator, List, Optional
 
-from ..trussed.bootloader.lpc55_upload.mboot.exceptions import McuBootConnectionError
-
 import pynitrokey
 from pynitrokey.helpers import Retries
 from pynitrokey.nk3 import NK3_DATA
@@ -34,6 +32,8 @@ from pynitrokey.trussed.bootloader import (
 from pynitrokey.trussed.exceptions import TimeoutException
 from pynitrokey.trussed.utils import Version
 from pynitrokey.updates import Asset, Release
+
+from ..trussed.bootloader.lpc55_upload.mboot.exceptions import McuBootConnectionError
 
 logger = logging.getLogger(__name__)
 

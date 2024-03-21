@@ -132,7 +132,9 @@ class MbootSdioInterface(MbootSerialProtocol):
             return parse_cmd_response(data)
         return data
 
-    def _read_frame_header(self, expected_frame_type: Optional[FPType] = None) -> Tuple[int, int]:
+    def _read_frame_header(
+        self, expected_frame_type: Optional[FPType] = None
+    ) -> Tuple[int, int]:
         """Read frame header and frame type. Return them as tuple of integers.
 
         :param expected_frame_type: Check if the frame_type is exactly as expected

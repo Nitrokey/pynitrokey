@@ -157,7 +157,9 @@ def _print_validation_fail_reason(
     elif exc.rule == "format":
         if exc.rule_definition == "file":
             message += f"; Non-existing file: {exc.value}"
-            message += "; The file must exists even if the key is NOT used in configuration."
+            message += (
+                "; The file must exists even if the key is NOT used in configuration."
+            )
     elif exc.rule == "anyOf":
         message += process_nested_rule(exc, extra_formatters=extra_formatters)
     elif exc.rule == "oneOf":
@@ -181,7 +183,9 @@ def check_config(
     """
     custom_formatters: Dict[str, Callable[[str], bool]] = {
         "dir": lambda x: bool(find_dir(x, search_paths=search_paths, raise_exc=False)),
-        "file": lambda x: bool(find_file(x, search_paths=search_paths, raise_exc=False)),
+        "file": lambda x: bool(
+            find_file(x, search_paths=search_paths, raise_exc=False)
+        ),
         "file_name": lambda x: os.path.basename(x.replace("\\", "/")) not in ("", None),
         "optional_file": lambda x: not x
         or bool(find_file(x, search_paths=search_paths, raise_exc=False)),
@@ -210,10 +214,12 @@ def check_config(
         else:
             validator = fastjsonschema.compile(schema, formats=formats)
     except (TypeError, fastjsonschema.JsonSchemaDefinitionException) as exc:
-        raise SPSDKError(f"Invalid validation schema to check config: {str(exc)}") from exc
+        raise SPSDKError(
+            f"Invalid validation schema to check config: {str(exc)}"
+        ) from exc
     try:
         if ENABLE_DEBUG:
-            import validator_file # type: ignore
+            import validator_file  # type: ignore
 
             validator_file.validate(config_to_check, formats)
         else:
@@ -273,7 +279,9 @@ class CommentedConfig:
         return ret
 
     @staticmethod
-    def get_property_optional_required(key: str, block: Dict[str, Any]) -> PropertyRequired:
+    def get_property_optional_required(
+        key: str, block: Dict[str, Any]
+    ) -> PropertyRequired:
         """Function to determine if the config property is required or not.
 
         :param key: Name of config record
@@ -293,7 +301,9 @@ class CommentedConfig:
                         return ret
             return None
 
-        def _find_required_in_schema_kws(schema_node: Union[List, Dict[str, Any]]) -> List[str]:
+        def _find_required_in_schema_kws(
+            schema_node: Union[List, Dict[str, Any]]
+        ) -> List[str]:
             """Find all required properties in structure composed of nested properties."""
             all_props: List[str] = []
             if isinstance(schema_node, dict):
@@ -492,7 +502,9 @@ class CommentedConfig:
             key = list(value.keys())[0]
             comment = ""
             if i == 0:
-                comment = self._get_title_block(title, f"Options [{option_types}]") + "\n"
+                comment = (
+                    self._get_title_block(title, f"Options [{option_types}]") + "\n"
+                )
             comment += "\n " + (
                 f" [Example of possible configuration #{i}] ".center(self.max_line, "=")
             )
@@ -595,7 +607,9 @@ class CommentedConfig:
             #     )
 
         if template_title:
-            self._update_before_comment(cfg, key, "\n" + self._get_title_block(template_title))
+            self._update_before_comment(
+                cfg, key, "\n" + self._get_title_block(template_title)
+            )
 
     @staticmethod
     def _get_schema_block_keys(schema: Dict[str, Dict[str, Any]]) -> List[str]:

@@ -104,7 +104,9 @@ class MbootSerialProtocol(MbootProtocolBase):
                 logger.debug(f"Opening interface failed with: {repr(e)}")
             except Exception as exc:
                 self.close()
-                raise McuBootConnectionError("UART Interface open operation fails.") from exc
+                raise McuBootConnectionError(
+                    "UART Interface open operation fails."
+                ) from exc
         raise McuBootConnectionError(
             f"Cannot open UART interface after {self.MAX_UART_OPEN_ATTEMPTS} attempts."
         )
@@ -213,7 +215,9 @@ class MbootSerialProtocol(MbootProtocolBase):
         crc_function = mkPredefinedCrcFun("xmodem")
         return crc_function(data)
 
-    def _read_frame_header(self, expected_frame_type: Optional[FPType] = None) -> Tuple[int, int]:
+    def _read_frame_header(
+        self, expected_frame_type: Optional[FPType] = None
+    ) -> Tuple[int, int]:
         """Read frame header and frame type. Return them as tuple of integers.
 
         :param expected_frame_type: Check if the frame_type is exactly as expected
@@ -307,7 +311,9 @@ class MbootSerialProtocol(MbootProtocolBase):
             self.options = response.options
 
     @contextmanager
-    def ping_timeout(self, timeout: int = PING_TIMEOUT_MS) -> Generator[None, None, None]:
+    def ping_timeout(
+        self, timeout: int = PING_TIMEOUT_MS
+    ) -> Generator[None, None, None]:
         """Context manager for changing UART's timeout.
 
         :param timeout: New temporary timeout in milliseconds, defaults to PING_TIMEOUT_MS (500ms)
