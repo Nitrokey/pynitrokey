@@ -43,7 +43,6 @@ dependencies = [
   "libusbsio",
   "nethsm >= 1.0.0,<2",
   "asn1tools >= 0.166.0",
-  "gmssl >= 3.2, < 4",
 ]
 dynamic = ["version", "description"]
 
