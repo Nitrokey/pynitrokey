@@ -43,6 +43,7 @@ dependencies = [
   "libusbsio",
   "nethsm >= 1.0.0,<2",
   "asn1tools >= 0.166.0",
+  "pyyaml >= 6.0.1",
 ]
 dynamic = ["version", "description"]
 
@@ -53,7 +54,7 @@ dev = [
   "flit >=3.2,<4",
   "ipython",
   "isort",
-  "mypy >=1.4,<1.5",
+  "mypy >=1.9,<1.10",
   "pyinstaller ~=6.5.0",
   "pyinstaller-versionfile ==2.1.1; sys_platform=='win32'",
   "types-requests",
@@ -98,6 +99,7 @@ module = [
     "pynitrokey.libnk",
     "pynitrokey.start.*",
     "pynitrokey.test_secrets_app",
+    "pynitrokey.trussed.bootloader.lpc55_upload.*",
 ]
 check_untyped_defs = false
 disallow_any_generics = false
@@ -123,11 +125,6 @@ ignore_errors = true
 module = "pynitrokey.trussed.bootloader.nrf52"
 disallow_untyped_calls = false
 
-# pynitrokey.nk3.bootloader.lpc55_upload is only temporary in this package
-[[tool.mypy.overrides]]
-module = "pynitrokey.trussed.bootloader.lpc55_upload.*"
-ignore_errors = true
-
 # libraries without annotations
 [[tool.mypy.overrides]]
 module = [
@@ -149,6 +146,7 @@ module = [
     "libusbsio.*",
     "fastjsonschema",
     "deepmerge.*",
+    "crcmod.*",
 ]
 ignore_missing_imports = true
 

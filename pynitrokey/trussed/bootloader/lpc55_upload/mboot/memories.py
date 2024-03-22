@@ -43,7 +43,7 @@ class MemIdEnum(SpsdkEnum):
         :return: new enum value
         """
         new_key = LEGACY_MEM_ID.get(key)
-        return cast(int, cls.get_tag(new_key)) if new_key else None
+        return cls.get_tag(new_key) if new_key else None
 
     @classmethod
     def get_legacy_int(cls, key: int) -> Optional[str]:
