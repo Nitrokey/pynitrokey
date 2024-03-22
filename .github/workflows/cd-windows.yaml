@@ -91,7 +91,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Download artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: pynitrokey-onedir
           path: dist/nitropy
@@ -139,7 +139,7 @@ jobs:
       contents: write
     steps:
       - name: Download artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: pynitrokey-onefile
       - name: Rename binary
@@ -164,7 +164,7 @@ jobs:
       contents: write
     steps:
       - name: Download artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: nitropy-installer
       - name: Rename installer
