@@ -153,7 +153,7 @@ jobs:
             nitropy-${{ github.event.release.tag_name }}-x64-windows-binary.zip `
             nitropy-${{ github.event.release.tag_name }}-x64-windows-binary.exe
       - name: Publish release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: nitropy-${{ github.event.release.tag_name }}-x64-windows-binary.zip
   publish-msi-installer:
@@ -173,6 +173,6 @@ jobs:
             nitropy.msi `
             nitropy-${{ github.event.release.tag_name }}-x64-windows-installer.msi
       - name: Publish release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: nitropy-${{ github.event.release.tag_name }}-x64-windows-installer.msi

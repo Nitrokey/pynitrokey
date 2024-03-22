@@ -80,6 +80,6 @@ jobs:
           nitropy-${{ github.event.release.tag_name }}-x64-linux-binary.tar.gz \
           nitropy-${{ github.event.release.tag_name }}-x64-linux-binary
       - name: Publish release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: nitropy-${{ github.event.release.tag_name }}-x64-linux-binary.tar.gz
