@@ -11,8 +11,9 @@ from typing import Dict
 from cryptography import utils
 from cryptography.hazmat.primitives.serialization import Encoding
 from cryptography.x509.base import Version
-from cryptography.x509.extensions import ExtensionOID, Extensions, KeyUsage
-from cryptography.x509.name import Name, NameOID, ObjectIdentifier
+from cryptography.x509.extensions import Extensions, KeyUsage
+from cryptography.x509.name import Name
+from cryptography.x509.oid import ExtensionOID, NameOID, ObjectIdentifier
 
 from ..exceptions import SPSDKError
 
