@@ -39,7 +39,8 @@ dependencies = [
   "protobuf >=3.17.3, < 4.0.0",
   "click-aliases",
   "semver",
-  "libusbsio",
+  "importlib_metadata",
+  "hidapi",
   "nethsm >= 1.0.0,<2",
   "asn1tools >= 0.166.0",
   "pyyaml >= 6.0.1",
@@ -147,6 +148,8 @@ module = [
     "fastjsonschema",
     "deepmerge.*",
     "crcmod.*",
+    "hid.*",
+    "importlib_metadata.*",
 ]
 ignore_missing_imports = true
 
