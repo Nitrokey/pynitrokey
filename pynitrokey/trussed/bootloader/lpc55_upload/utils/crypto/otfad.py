@@ -7,7 +7,18 @@
 
 """The module provides support for On-The-Fly encoding for RTxxx devices."""
 
+import logging
+from struct import pack
 from typing import Any, Dict, List, Optional, Union
+
+from crcmod.predefined import mkPredefinedCrcFun
+
+from ...crypto.rng import random_bytes
+from ...crypto.symmetric import Counter, aes_ctr_encrypt, aes_key_wrap
+from ...exceptions import SPSDKError, SPSDKValueError
+from ...utils.misc import Endianness, align_block
+
+logger = logging.getLogger(__name__)
 
 
 class KeyBlob:

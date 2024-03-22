@@ -786,7 +786,7 @@ def version(serial: Optional[str], udp: bool) -> None:
         locked = ""
         # @todo:
         if len(res) > 3:
-            if res[3]:  # type: ignore
+            if res[3]:
                 locked = "locked"
             else:
                 locked = "unlocked"
