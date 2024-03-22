@@ -740,7 +740,7 @@ class KeyEccCommon:
         for key_object in ec._CURVE_TYPES:
             if key_object.lower() == name.lower():
                 # pylint: disable=protected-access
-                return ec._CURVE_TYPES[key_object]()
+                return ec._CURVE_TYPES[key_object]
 
         raise SPSDKValueError(f"The EC curve with name '{name}' is not supported.")
 
