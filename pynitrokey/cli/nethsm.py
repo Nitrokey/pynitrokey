@@ -1391,6 +1391,14 @@ def system_info(ctx: Context) -> None:
         print(f"Software version: {info.software_version}")
         print(f"Hardware version: {info.hardware_version}")
         print(f"Build tag:        {info.build_tag}")
+        if info.tpm.attestation_keys:
+            print("Attestation keys")
+            for key, value in info.tpm.attestation_keys.items():
+                print(f"  {key}:           {value}")
+        if info.tpm.platform_configuration_registers:
+            print("Platform Configuration Registers")
+            for key, value in info.tpm.platform_configuration_registers.items():
+                print(f"  {key}:              {value}")
 
 
 @nethsm.command()
