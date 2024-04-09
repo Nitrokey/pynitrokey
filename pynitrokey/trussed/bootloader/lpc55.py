@@ -58,10 +58,8 @@ class NitrokeyTrussedBootloaderLpc55(NitrokeyTrussedBootloader):
         return self._path
 
     @property
-    def status(self) -> Tuple[int, str]:
-        code = self.device.status_code
-        message = StatusCode.desc(code)
-        return (code, message)
+    def status(self) -> str:
+        return self.device.status_string
 
     def close(self) -> None:
         self.device.close()
@@ -103,10 +101,7 @@ class NitrokeyTrussedBootloaderLpc55(NitrokeyTrussedBootloader):
         if success:
             self.reboot()
         else:
-            (code, message) = self.status
-            raise Exception(
-                f"Firmware update failed with status code {code}: {message}"
-            )
+            raise Exception(f"Firmware update failed with status {self.status}")
 
     @classmethod
     def list_vid_pid(cls: type[T], vid: int, pid: int) -> list[T]:
