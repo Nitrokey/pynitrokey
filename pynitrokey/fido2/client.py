@@ -11,6 +11,7 @@ import base64
 import binascii
 import hashlib
 import json
+import logging
 import secrets
 import struct
 import sys
@@ -38,12 +39,34 @@ from fido2.webauthn import (
     UserVerificationRequirement,
 )
 from intelhex import IntelHex
+from threading import Event
+from typing import Callable, Optional
 
 import pynitrokey.exceptions
 import pynitrokey.fido2 as nkfido2
 from pynitrokey import helpers
 from pynitrokey.fido2.commands import SoloBootloader, SoloExtension
 from pynitrokey.helpers import local_critical, local_print
+
+
+logger = logging.getLogger(__name__)
+
+
+class LoggingCtapHidDevice(CtapHidDevice):
+    def __init__(self, dev: CtapHidDevice):
+        super().__init__(dev.descriptor, dev._connection)
+
+    def call(
+        self,
+        cmd: int,
+        data: bytes = b"",
+        event: Optional[Event] = None,
+        on_keepalive: Optional[Callable[[int], None]] = None,
+    ) -> bytes:
+        logger.debug(f">>> {cmd}: {data.hex()}")
+        reply = super().call(cmd, data, event, on_keepalive)
+        logger.debug(f"<<< {reply.hex()}")
+        return reply
 
 
 class CliOrProvidedInteraction(UserInteraction):
@@ -119,6 +142,7 @@ class NKFido2Client:
 
         self.dev = found_dev if found_dev else dev
         assert isinstance(self.dev, CtapHidDevice)
+        self.dev = LoggingCtapHidDevice(self.dev)
         self.ctap1 = Ctap1(self.dev)
 
         try:
