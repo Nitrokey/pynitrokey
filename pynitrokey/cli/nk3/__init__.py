@@ -15,7 +15,7 @@ import click
 from pynitrokey.cli import trussed
 from pynitrokey.cli.exceptions import CliException
 from pynitrokey.cli.trussed.test import TestCase
-from pynitrokey.helpers import check_experimental_flag
+from pynitrokey.helpers import local_print
 from pynitrokey.nk3 import NK3_DATA
 from pynitrokey.nk3.bootloader import Nitrokey3Bootloader
 from pynitrokey.nk3.device import Nitrokey3Device
@@ -112,7 +112,9 @@ def update(
     """
 
     if experimental:
-        "The --experimental switch is not required to run this command anymore and can be safely removed."
+        local_print(
+            "The --experimental switch is not required to run this command anymore and can be safely removed."
+        )
 
     from .update import update as exec_update
 
@@ -243,7 +245,12 @@ def set_config(ctx: Context, key: str, value: str, force: bool, dry_run: bool) -
 )
 def factory_reset(ctx: Context, experimental: bool) -> None:
     """Factory reset all functionality of the device"""
-    check_experimental_flag(experimental)
+
+    if experimental:
+        local_print(
+            "The --experimental switch is not required to run this command anymore and can be safely removed."
+        )
+
     with ctx.connect_device() as device:
         device.admin.factory_reset()
 
@@ -264,7 +271,12 @@ APPLICATIONS_CHOICE = click.Choice(["fido", "opcard", "secrets", "piv", "webcryp
 )
 def factory_reset_app(ctx: Context, application: str, experimental: bool) -> None:
     """Factory reset all functionality of an application"""
-    check_experimental_flag(experimental)
+
+    if experimental:
+        local_print(
+            "The --experimental switch is not required to run this command anymore and can be safely removed."
+        )
+
     with ctx.connect_device() as device:
         device.admin.factory_reset_app(application)
 
