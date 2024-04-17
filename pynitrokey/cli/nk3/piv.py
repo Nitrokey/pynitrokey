@@ -5,6 +5,7 @@ from typing import Optional, Sequence
 import click
 import cryptography
 from asn1crypto import x509
+from asn1crypto.core import ParsableOctetString
 from asn1crypto.csr import CertificationRequest, CertificationRequestInfo
 from asn1crypto.keys import PublicKeyInfo
 from click_aliases import ClickAliasedGroup
@@ -404,6 +405,37 @@ def generate_key(
             for subject in subject_name
         ]
 
+    # SEQUENCE
+    # SEQUENCE
+    # OBJECT            :aes-256-cbc
+    # SEQUENCE
+    # OBJECT            :id-aes256-wrap
+    # SEQUENCE
+    # OBJECT            :aes-192-cbc
+    # SEQUENCE
+    # OBJECT            :id-aes192-wrap
+    # SEQUENCE
+    # OBJECT            :aes-128-cbc
+    # SEQUENCE
+    # OBJECT            :id-aes128-wrap
+    # SEQUENCE
+    # OBJECT            :des-ede3-cbc
+    # SEQUENCE
+    # OBJECT            :des-cbc
+    # SEQUENCE
+    # OBJECT            :rc2-cbc
+    # INTEGER           :80
+    # SEQUENCE
+    # OBJECT            :rc4
+    # INTEGER           :0200
+    smime_extension = ParsableOctetString(
+        value=bytes(
+            bytearray.fromhex(
+                "308183300B060960864801650304012A300B060960864801650304012D300B0609608648016503040116300B0609608648016503040119300B0609608648016503040102300B0609608648016503040105300A06082A864886F70D0307300706052B0E030207300E06082A864886F70D030202020080300E06082A864886F70D030402020200"
+            )
+        )
+    )
+
     extensions = [
         {
             "extn_id": "basic_constraints",
@@ -421,6 +453,11 @@ def generate_key(
             "extn_value": x509.ExtKeyUsageSyntax(
                 ["client_auth", "microsoft_smart_card_logon"]
             ),
+        },
+        {
+            "extn_id": "1.2.840.113549.1.9.15",
+            "critical": False,
+            "extn_value": smime_extension,
         },
     ]
 
