@@ -784,7 +784,6 @@ def version(serial: Optional[str], udp: bool) -> None:
         res = nkfido2.find(serial, udp=udp).solo_version()
         major, minor, patch = res[:3]
         locked = ""
-        # @todo:
         if len(res) > 3:
             if res[3]:
                 locked = "locked"
