@@ -32,7 +32,7 @@ dependencies = [
   "python-dateutil ~= 2.7.0",
   "pyusb",
   "requests",
-  "spsdk >=2.0,<2.1",
+  "spsdk >=2.0,<2.2",
   "tqdm",
   "tlv8",
   "typing_extensions ~= 4.3.0",
