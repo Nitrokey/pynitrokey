@@ -210,12 +210,12 @@ class NKFido2Client:
             return (data[0], data[1], data[2])
         return (0, 0, data[0])
 
-    def solo_version(self) -> Union[bytes, Tuple[int, int, int]]:
+    def solo_version(self) -> bytes:
         try:
             return self.send_data_hid(0x61, b"")
         except CtapError:
             data = self.exchange(SoloExtension.version)
-            return (data[0], data[1], data[2])
+            return data[:3]
 
     def write_flash(self, addr: int, data: bytes) -> None:
         self.exchange(SoloBootloader.write, addr, data)
