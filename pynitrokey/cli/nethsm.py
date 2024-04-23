@@ -277,8 +277,8 @@ def get_user(ctx: Context, user_id: str) -> None:
         print(f"Real name:  {user.real_name}")
         print(f"Role:       {user.role.value}")
         namespace = nethsm.get_user_namespace(user_id=user_id)
-        namespace_str = namespace if namespace is not None else "[not set]"
-        print(f"Namespace:  {namespace_str}")
+        namespace = namespace if namespace else "[empty]"
+        print(f"Namespace:  {namespace}")
 
 
 @nethsm.command()
