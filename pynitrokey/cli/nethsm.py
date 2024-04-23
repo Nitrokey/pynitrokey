@@ -276,6 +276,9 @@ def get_user(ctx: Context, user_id: str) -> None:
         print(f"User {user_id} on NetHSM {nethsm.host}")
         print(f"Real name:  {user.real_name}")
         print(f"Role:       {user.role.value}")
+        namespace = nethsm.get_user_namespace(user_id=user_id)
+        namespace = namespace if namespace else "[empty]"
+        print(f"Namespace:  {namespace}")
 
 
 @nethsm.command()
@@ -292,9 +295,15 @@ def get_user(ctx: Context, user_id: str) -> None:
     help="The passphrase of the new user",
 )
 @click.option("-u", "--user-id", help="The user ID of the new user")
+@click.option("-N", "--namespace", help="The namespace of the new user")
 @click.pass_context
 def add_user(
-    ctx: Context, real_name: str, role: str, passphrase: str, user_id: Optional[str]
+    ctx: Context,
+    real_name: str,
+    role: str,
+    passphrase: str,
+    user_id: Optional[str],
+    namespace: Optional[str],
 ) -> None:
     """Create a new user on the NetHSM.
 
@@ -306,7 +315,7 @@ def add_user(
     role."""
     with connect(ctx) as nethsm:
         user_id = nethsm.add_user(
-            real_name, nethsm_sdk.Role.from_string(role), passphrase, user_id
+            real_name, nethsm_sdk.Role.from_string(role), passphrase, user_id, namespace
         )
         print(f"User {user_id} added to NetHSM {nethsm.host}")
 

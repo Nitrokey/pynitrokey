@@ -40,7 +40,7 @@ dependencies = [
   "protobuf >=3.17.3, < 4.0.0",
   "click-aliases",
   "semver",
-  "nethsm >= 1.0.0,<2",
+  "nethsm @ git+https://github.com/Nitrokey/nethsm-sdk-py.git@namespaces"
 ]
 dynamic = ["version", "description"]
 
