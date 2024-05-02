@@ -24,6 +24,7 @@ from fido2.cose import ES256, EdDSA
 from fido2.ctap import CtapError
 from fido2.ctap1 import Ctap1
 from fido2.ctap2.base import Ctap2
+from fido2.ctap2.blob import LargeBlobs
 from fido2.ctap2.credman import CredentialManagement
 from fido2.ctap2.pin import ClientPin
 from fido2.hid import CTAPHID, CtapHidDevice, open_device
@@ -383,6 +384,13 @@ class NKFido2Client:
             raise
 
         return CredentialManagement(device.ctap2, client_pin.protocol, client_token)
+
+    def large_blobs(self) -> Optional[LargeBlobs]:
+        if not self.ctap2:
+            return None
+        if not LargeBlobs.is_supported(self.ctap2.info):
+            return None
+        return LargeBlobs(self.ctap2)
 
     def enter_bootloader(self) -> None:
         """
