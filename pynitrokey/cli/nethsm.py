@@ -37,6 +37,10 @@ def make_enum_type(enum_cls: EnumMeta) -> click.Choice:
     return click.Choice([variant.value for variant in enum_cls], case_sensitive=False)
 
 
+def base64_input(s: str) -> Base64:
+    return Base64.from_encoded(s, ignore_whitespace=True)
+
+
 API_CERTIFICATE_MIME_TYPE = "application/x-pem-file"
 KEY_CERTIFICATE_MIME_TYPES = [
     "application/x-pem-file",
@@ -688,9 +692,9 @@ def add_key(
         if not public_exponent:
             public_exponent = prompt_str("Public exponent")
         private_key = nethsm_sdk.RsaPrivateKey(
-            prime_p=Base64.from_encoded(prime_p),
-            prime_q=Base64.from_encoded(prime_q),
-            public_exponent=Base64.from_encoded(public_exponent),
+            prime_p=base64_input(prime_p),
+            prime_q=base64_input(prime_q),
+            public_exponent=base64_input(public_exponent),
         )
     else:
         if prime_p:
@@ -703,7 +707,7 @@ def add_key(
             )
         if not data:
             data = prompt_str("Key data")
-        private_key = nethsm_sdk.GenericPrivateKey(data=Base64.from_encoded(data))
+        private_key = nethsm_sdk.GenericPrivateKey(data=base64_input(data))
 
     with connect(ctx) as nethsm:
         key_id = nethsm.add_key(
@@ -1543,9 +1547,9 @@ def encrypt(ctx: Context, key_id: str, data: str, mode: str, iv: Optional[str]) 
     with connect(ctx) as nethsm:
         encrypted = nethsm.encrypt(
             key_id,
-            Base64.from_encoded(data),
+            base64_input(data),
             nethsm_sdk.EncryptMode.from_string(mode),
-            iv=Base64.from_encoded(iv) if iv else None,
+            iv=base64_input(iv) if iv else None,
         )
         print(f"Encrypted: {encrypted.encrypted.data}")
         print(f"Initialization vector: {encrypted.iv.data}")
@@ -1586,9 +1590,9 @@ def decrypt(ctx: Context, key_id: str, data: str, mode: str, iv: Optional[str]) 
     with connect(ctx) as nethsm:
         decrypted = nethsm.decrypt(
             key_id,
-            Base64.from_encoded(data),
+            base64_input(data),
             nethsm_sdk.DecryptMode.from_string(mode),
-            Base64.from_encoded(iv) if iv else None,
+            base64_input(iv) if iv else None,
         )
         print(decrypted.data)
 
@@ -1620,6 +1624,6 @@ def sign(ctx: Context, key_id: str, data: str, mode: str) -> None:
     This command requires authentication as a user with the Operator role."""
     with connect(ctx) as nethsm:
         signature = nethsm.sign(
-            key_id, Base64.from_encoded(data), nethsm_sdk.SignMode.from_string(mode)
+            key_id, base64_input(data), nethsm_sdk.SignMode.from_string(mode)
         )
         print(signature.data)
