@@ -334,6 +334,47 @@ def delete_user(ctx: Context, user_id: str) -> None:
 
 
 @nethsm.command()
+@click.pass_context
+def list_namespaces(ctx: Context) -> None:
+    """List all namespaces on the NetHSM.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    with connect(ctx) as nethsm:
+        namespaces = nethsm.list_namespaces()
+
+        print(f"Namespaces on NetHSM {nethsm.host}:")
+        for namespace in namespaces:
+            print(f"- {namespace}")
+
+
+@nethsm.command()
+@click.argument("namespace")
+@click.pass_context
+def add_namespace(ctx: Context, namespace: str) -> None:
+    """Add a new namespace on the NetHSM.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    with connect(ctx) as nethsm:
+        nethsm.add_namespace(namespace)
+        print(f"Namespace {namespace} added to NetHSM {nethsm.host}")
+
+
+@nethsm.command()
+@click.argument("namespace")
+@click.pass_context
+def delete_namespace(ctx: Context, namespace: str) -> None:
+    """Delete a namespace on the NetHSM.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    with connect(ctx) as nethsm:
+        nethsm.delete_namespace(namespace)
+        print(f"Namespace {namespace} deleted on NetHSM {nethsm.host}")
+
+
+@nethsm.command()
 @click.option("-u", "--user-id", help="The user ID of the user")
 @click.option(
     "-p",
