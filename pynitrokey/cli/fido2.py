@@ -12,6 +12,7 @@ import os
 import platform
 import struct
 import sys
+from dataclasses import fields
 from time import sleep, time
 from typing import List, Literal, Optional
 
@@ -25,10 +26,11 @@ from fido2.cbor import dump_dict
 from fido2.client import ClientError as Fido2ClientError
 from fido2.ctap import CtapError
 from fido2.ctap1 import ApduError
-from fido2.ctap2.base import Ctap2
+from fido2.ctap2.base import Ctap2, Info
 from fido2.ctap2.credman import CredentialManagement
 from fido2.ctap2.pin import ClientPin, PinProtocol
 from fido2.hid import CtapHidDevice
+from fido2.webauthn import Aaguid
 
 import pynitrokey
 import pynitrokey.fido2 as nkfido2
@@ -198,6 +200,35 @@ def list() -> None:
             id_ = descr.path
 
         local_print(f"{id_}: {name}")
+
+
+@click.command()
+@click.option(
+    "-s",
+    "--serial",
+    help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
+)
+def get_info(serial: Optional[str]) -> None:
+    """Execute the CTAP2 GET_INFO command and print the response."""
+    p = nkfido2.find(serial)
+    if p.ctap2 is None:
+        print("CTAP2 not supported")
+        return
+
+    info = p.ctap2.send_cbor(Ctap2.CMD.GET_INFO)
+    for i, field in enumerate(fields(Info)):
+        key = i + 1
+        if key in info:
+            value = info[i + 1]
+
+            if field.name == "aaguid":
+                if isinstance(value, bytes):
+                    try:
+                        value = Aaguid(value)
+                    except:
+                        value = value.hex()
+
+            print(f"{field.name}: {value}")
 
 
 @click.command()
@@ -850,6 +881,7 @@ fido2.add_command(rng)
 fido2.add_command(reboot)
 fido2.add_command(list)
 
+fido2.add_command(get_info)
 fido2.add_command(list_credentials)
 fido2.add_command(delete_credential)
 
