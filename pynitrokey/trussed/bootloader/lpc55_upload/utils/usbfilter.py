@@ -214,9 +214,11 @@ class USBDeviceFilter:
             linux_path_parts = linux_path.split(":")
 
             if len(linux_path_parts) > 1:
-                linux_path = str.format(
-                    "{}#{}", int(linux_path_parts[0], 16), int(linux_path_parts[1], 16)
-                )
+                bus_num, port_chain = linux_path.split('-')
+                fs_path = linux_path.split(":")[0]
+                path = f"/sys/bus/usb/devices/{fs_path}/devnum"
+                devid = open(path).read()
+                linux_path = f"{bus_num}#{devid}"
 
             return linux_path
 
