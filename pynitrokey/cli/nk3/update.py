@@ -95,6 +95,9 @@ class UpdateCli(UpdateUi):
         )
         return Abort()
 
+    def pre_bootloader_hint(self) -> None:
+        pass
+
     def request_bootloader_confirmation(self) -> None:
         local_print("")
         local_print(
