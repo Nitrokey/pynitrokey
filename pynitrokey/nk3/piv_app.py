@@ -2,11 +2,11 @@ import logging
 import os
 from typing import Any, Callable, Optional, Sequence, Union
 
+import smartcard
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from smartcard.CardRequest import CardRequest
-from smartcard.CardService import CardService
-from smartcard.CardType import ATRCardType
+from smartcard.CardConnection import CardConnection
+from smartcard.Exceptions import NoCardException
 
 from pynitrokey.helpers import local_critical
 from pynitrokey.start.gnuk_token import iso7816_compose
@@ -49,60 +49,49 @@ class StatusError(Exception):
 class PivApp:
     log: logging.Logger
     logfn: LogFn
-    card: CardService
+    connection: CardConnection
 
     def __init__(self, logfn: Optional[LogFn] = None):
         self.log = logging.getLogger("pivapp")
-        atr = bytes(
-            [
-                0x3B,
-                0x8F,
+        readers = smartcard.System.readers()
+        chosen_connection = None
+        self.connection = None
+        for r in readers:
+            print(r)
+            connection = r.createConnection()
+            try:
+                connection.connect()
+            except NoCardException:
+                continue
+            select = [
+                0x00,
+                0xA4,
+                0x04,
+                0x00,
+                0x0C,
+                0xA0,
+                0x00,
+                0x00,
+                0x03,
+                0x08,
+                0x00,
+                0x00,
+                0x10,
+                0x00,
                 0x01,
-                0x80,
-                0x5D,
-                0x4E,
-                0x69,
-                0x74,
-                0x72,
-                0x6F,
-                0x6B,
-                0x65,
-                0x79,
                 0x00,
                 0x00,
                 0x00,
-                0x00,
-                0x00,
-                0x6A,
             ]
-        )
-        cardrequest = CardRequest(timeout=1, cardType=ATRCardType(atr))
-        self.cardservice = cardrequest.waitforcard()
-        self.cardservice.connection.connect()
-        self.cardservice.connection.transmit(
-            list(
-                iso7816_compose(
-                    0xA4,
-                    0x04,
-                    0x00,
-                    bytes(
-                        [
-                            0xA0,
-                            0x00,
-                            0x00,
-                            0x03,
-                            0x08,
-                            0x00,
-                            0x00,
-                            0x10,
-                            0x00,
-                            0x01,
-                            0x00,
-                        ]
-                    ),
-                )
-            )
-        )
+            data, sw1, sw2 = connection.transmit(select)
+            if sw1 != 0x90 or sw2 != 0x00:
+                continue
+            chosen_connection = connection
+        if not chosen_connection:
+            raise NoCardException("No PIV card found", -1)
+
+        self.connection = chosen_connection
+
         if logfn is not None:
             self.logfn = logfn
         else:
@@ -124,7 +113,7 @@ class PivApp:
         )
 
         try:
-            result, sw1, sw2 = self.cardservice.connection.transmit(list(data))
+            result, sw1, sw2 = self.connection.transmit(list(data))
         except Exception as e:
             self.logfn(f"Got exception: {e}")
             raise
@@ -148,9 +137,7 @@ class PivApp:
             le = sw2 if sw2 != 0 else 0xFF
             bytes_data = iso7816_compose(ins, p1, p2, le=le)
             try:
-                result, sw1, sw2 = self.cardservice.connection.transmit(
-                    list(bytes_data)
-                )
+                result, sw1, sw2 = self.connection.transmit(list(bytes_data))
             except Exception as e:
                 self.logfn(f"Got exception: {e}")
                 raise
@@ -372,7 +359,7 @@ class PivApp:
         return int.from_bytes(response, byteorder="big")
 
     def reader(self) -> str:
-        reader: str = self.cardservice.connection.getReader()
+        reader: str = self.connection.getReader()
         return reader
 
     def guid(self) -> bytes:
