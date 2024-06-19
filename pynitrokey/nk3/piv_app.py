@@ -54,8 +54,7 @@ class PivApp:
     def __init__(self, logfn: Optional[LogFn] = None):
         self.log = logging.getLogger("pivapp")
         readers = smartcard.System.readers()
-        chosen_connection = None
-        self.connection = None
+        chosen_connection: Optional[CardConnection] = None
         for r in readers:
             print(r)
             connection = r.createConnection()
@@ -87,6 +86,7 @@ class PivApp:
             if sw1 != 0x90 or sw2 != 0x00:
                 continue
             chosen_connection = connection
+
         if not chosen_connection:
             raise NoCardException("No PIV card found", -1)
 
@@ -113,12 +113,12 @@ class PivApp:
         )
 
         try:
-            result, sw1, sw2 = self.connection.transmit(list(data))
+            result_list, sw1, sw2 = self.connection.transmit(list(data))
         except Exception as e:
             self.logfn(f"Got exception: {e}")
             raise
 
-        result = bytes(result)
+        result = bytes(result_list)
         status_bytes = bytes([sw1, sw2])
         self.logfn(f"Received [{status_bytes.hex()}] {result.hex()}")
 
@@ -137,12 +137,12 @@ class PivApp:
             le = sw2 if sw2 != 0 else 0xFF
             bytes_data = iso7816_compose(ins, p1, p2, le=le)
             try:
-                result, sw1, sw2 = self.connection.transmit(list(bytes_data))
+                result_list, sw1, sw2 = self.connection.transmit(list(bytes_data))
             except Exception as e:
                 self.logfn(f"Got exception: {e}")
                 raise
             # Data order is different here than in APDU - SW is first, then the data if any
-            result = bytes(result)
+            result = bytes(result_list)
             status_bytes = bytes([sw1, sw2])
             self.logfn(f"Received [{status_bytes.hex()}] {bytes(result).hex()}")
             if status_bytes[0] in [0x90, MORE_DATA_STATUS_BYTE]:
@@ -359,7 +359,7 @@ class PivApp:
         return int.from_bytes(response, byteorder="big")
 
     def reader(self) -> str:
-        reader: str = self.connection.getReader()
+        reader: str = self.connection.getReader()  # type: ignore
         return reader
 
     def guid(self) -> bytes:
