@@ -126,7 +126,11 @@ class UpdateUi(ABC):
         pass
 
     @abstractmethod
-    def request_repeated_update(self) -> Exception:
+    def request_repeated_update(self) -> Optional[Exception]:
+        pass
+
+    @abstractmethod
+    def pre_bootloader_hint(self) -> None:
         pass
 
     @abstractmethod
@@ -329,11 +333,14 @@ class Updater:
             # needed for udev to properly handle new device
             time.sleep(1)
 
-            if platform.system() == "Darwin":
+            maybe_exc = self.ui.request_repeated_update()
+            if platform.system() == "Darwin" and maybe_exc is not None:
                 # Currently there is an issue with device enumeration after reboot on macOS, see
                 # <https://github.com/Nitrokey/pynitrokey/issues/145>.  To avoid this issue, we
                 # cancel the command now and ask the user to run it again.
-                raise self.ui.request_repeated_update()
+                raise maybe_exc
+
+            self.ui.pre_bootloader_hint()
 
             exc = None
             for t in Retries(3):
