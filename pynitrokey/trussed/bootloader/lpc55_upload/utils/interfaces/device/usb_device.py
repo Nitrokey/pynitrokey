@@ -75,7 +75,7 @@ class UsbDevice(DeviceBase):
             # This would get HID_DEVICE into broken state
             raise SPSDKError("Can't open already opened device")
         try:
-            self._device = hid.device.open_path(self.path)
+            self._device = hid.Device(path=self.path)
         except Exception as error:
             raise SPSDKConnectionError(
                 f"Unable to open device '{str(self)}'"
@@ -109,7 +109,7 @@ class UsbDevice(DeviceBase):
         if not self._device:
             raise SPSDKConnectionError("Device is not opened for reading")
         try:
-            data = self._device.read(length, timeout_ms=timeout)
+            data = self._device.read(length, timeout=timeout)
         except Exception as e:
             raise SPSDKConnectionError(str(e)) from e
         if not data:
@@ -128,7 +128,7 @@ class UsbDevice(DeviceBase):
         if not self._device:
             raise SPSDKConnectionError("Device is not opened for writing")
         try:
-            bytes_written = self._device.write(data, timeout_ms=timeout)
+            bytes_written = self._device.write(data)
         except Exception as e:
             raise SPSDKConnectionError(str(e)) from e
         if bytes_written < 0 or bytes_written < len(data):
