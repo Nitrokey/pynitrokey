@@ -11,9 +11,8 @@ import logging
 import platform
 import re
 import sys
-from typing import List, Optional, Tuple, TypeVar
+from typing import Optional, TypeVar
 
-from spsdk.mboot.error_codes import StatusCode
 from spsdk.mboot.interfaces.usb import MbootUSBInterface
 from spsdk.mboot.mcuboot import McuBoot
 from spsdk.mboot.properties import PropertyTag

@@ -11,7 +11,6 @@ import logging
 import os.path
 from abc import ABC, abstractmethod
 from hashlib import sha256
-from re import Pattern
 from typing import BinaryIO, Callable, Generic, Optional, Sequence, TypeVar
 
 import click
@@ -39,7 +38,7 @@ from pynitrokey.trussed.bootloader import (
 from pynitrokey.trussed.device import NitrokeyTrussedDevice
 from pynitrokey.trussed.exceptions import TimeoutException
 from pynitrokey.trussed.provisioner_app import ProvisionerApp
-from pynitrokey.updates import OverwriteError, Repository
+from pynitrokey.updates import OverwriteError
 
 from .test import TestCase
 

@@ -20,7 +20,7 @@ from fido2.hid import CtapHidDevice, open_device
 from pynitrokey.fido2 import device_path_to_str
 
 from .base import NitrokeyTrussedBase
-from .utils import Fido2Certs, Uuid, Version
+from .utils import Fido2Certs, Uuid
 
 T = TypeVar("T", bound="NitrokeyTrussedDevice")
 

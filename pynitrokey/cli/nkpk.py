@@ -7,18 +7,14 @@
 # http://opensource.org/licenses/MIT>, at your option. This file may not be
 # copied, modified, or distributed except according to those terms.
 
-import re
-from typing import Optional, Sequence
+from typing import Optional
 
 import click
 
 from pynitrokey.cli.trussed.test import TestCase
-from pynitrokey.helpers import local_print
 from pynitrokey.nkpk import NKPK_DATA, NitrokeyPasskeyBootloader, NitrokeyPasskeyDevice
 from pynitrokey.trussed.base import NitrokeyTrussedBase
 from pynitrokey.trussed.bootloader import Device
-from pynitrokey.trussed.device import NitrokeyTrussedDevice
-from pynitrokey.updates import Repository
 
 from . import trussed
 

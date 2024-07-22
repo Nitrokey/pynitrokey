@@ -16,7 +16,7 @@ from abc import abstractmethod
 from dataclasses import dataclass
 from io import BytesIO
 from re import Pattern
-from typing import Callable, Dict, List, Optional, Tuple, Union
+from typing import Callable, Dict, Optional, Tuple, Union
 from zipfile import ZipFile
 
 from .. import DeviceData

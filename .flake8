@@ -1,10 +1,7 @@
-# template suggested by `black`
-
 [flake8]
-ignore = E203, E266, E501, W503
-max-line-length = 80
-# max-complexity = 18
-# temporary increase due to solo.key.update complexity
-max-complexity = 30
-select = B,C,E,F,W,T4,B9
-extend-exclude = pynitrokey/nethsm/client,pynitrokey/nk3/bootloader/nrf52_upload
+# E203,E701 suggested by black, see:
+# https://black.readthedocs.io/en/stable/guides/using_black_with_other_tools.html#flake8
+# E501 (line length) disabled as this is handled by black which takes better care of edge cases
+extend-ignore = E203,E501,E701
+max-complexity = 18
+extend-exclude = pynitrokey/trussed/bootloader/nrf52_upload

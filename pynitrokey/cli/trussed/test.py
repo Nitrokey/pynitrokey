@@ -13,13 +13,13 @@ import sys
 from dataclasses import dataclass
 from enum import Enum, auto, unique
 from types import TracebackType
-from typing import Any, Callable, Iterable, Optional, Sequence, Tuple, Type, Union
+from typing import Callable, Iterable, Optional, Sequence, Tuple, Type, Union
 
 from pynitrokey.cli.exceptions import CliException
 from pynitrokey.fido2 import device_path_to_str
 from pynitrokey.helpers import local_print
 from pynitrokey.trussed.base import NitrokeyTrussedBase
-from pynitrokey.trussed.utils import Uuid, Version
+from pynitrokey.trussed.utils import Version
 
 logger = logging.getLogger(__name__)
 
