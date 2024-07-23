@@ -29,15 +29,13 @@ dependencies = [
   "fido2 >=1.1.2,<2",
   "intelhex",
   "nkdfu",
+  "nitrokey ~= 0.2.0rc1",
   "python-dateutil ~= 2.7.0",
   "pyusb",
   "requests",
-  "spsdk >=2.0,<2.2",
   "tqdm",
   "tlv8",
   "typing_extensions ~= 4.3.0",
-  "pyserial",
-  "protobuf >=3.17.3, < 4.0.0",
   "click-aliases",
   "semver",
   "nethsm >=1.2.1, <2",
@@ -109,17 +107,6 @@ strict_concatenate = false
 strict_equality = false
 warn_unused_ignores = false
 warn_return_any = false
-
-
-# pynitrokey.nk3.bootloader.nrf52_upload is only temporary in this package
-[[tool.mypy.overrides]]
-module = "pynitrokey.trussed.bootloader.nrf52_upload.*"
-ignore_errors = true
-
-# nrf52 has to use the untyped nrf52_upload module
-[[tool.mypy.overrides]]
-module = "pynitrokey.trussed.bootloader.nrf52"
-disallow_untyped_calls = false
 
 # libraries without annotations
 [[tool.mypy.overrides]]

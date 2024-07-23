@@ -18,6 +18,18 @@ from typing import Any, Callable, List, Optional, Tuple
 import fido2
 import pytest
 import tlv8
+from nitrokey.nk3.secrets_app import (
+    Algorithm,
+    CCIDInstruction,
+    Instruction,
+    Kind,
+    PasswordSafeEntry,
+    RawBytes,
+    SecretsApp,
+    SecretsAppException,
+    Tag,
+)
+from nitrokey.trussed import App
 
 from pynitrokey.conftest import (
     CALCULATE_ALL_COMMANDS,
@@ -36,18 +48,6 @@ from pynitrokey.conftest import (
     SECRET,
     CredEncryptionType,
 )
-from pynitrokey.nk3.secrets_app import (
-    Algorithm,
-    CCIDInstruction,
-    Instruction,
-    Kind,
-    PasswordSafeEntry,
-    RawBytes,
-    SecretsApp,
-    SecretsAppException,
-    Tag,
-)
-from pynitrokey.trussed.device import App
 
 CREDENTIAL_LABEL_MAX_SIZE = 127
 

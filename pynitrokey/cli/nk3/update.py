@@ -12,12 +12,12 @@ from contextlib import contextmanager
 from typing import Any, Callable, Iterator, List, Optional
 
 from click import Abort
+from nitrokey.nk3.updates import Updater, UpdateUi
+from nitrokey.trussed import Version
 
 from pynitrokey.cli.exceptions import CliException
 from pynitrokey.cli.nk3 import Context
 from pynitrokey.helpers import DownloadProgressBar, ProgressBar, confirm, local_print
-from pynitrokey.nk3.updates import Updater, UpdateUi
-from pynitrokey.trussed.utils import Version
 
 logger = logging.getLogger(__name__)
 

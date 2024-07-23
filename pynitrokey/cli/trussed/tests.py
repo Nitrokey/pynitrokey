@@ -14,14 +14,12 @@ from struct import unpack
 from threading import Thread
 from typing import Any, Optional
 
+from nitrokey.trussed import Fido2Certs, TrussedBase, TrussedDevice, Uuid, Version
 from tqdm import tqdm
 
 from pynitrokey.cli.trussed.test import TestContext, TestResult, TestStatus, test_case
 from pynitrokey.fido2.client import NKFido2Client
 from pynitrokey.helpers import local_print
-from pynitrokey.trussed.base import NitrokeyTrussedBase
-from pynitrokey.trussed.device import NitrokeyTrussedDevice
-from pynitrokey.trussed.utils import Fido2Certs, Uuid, Version
 
 logger = logging.getLogger(__name__)
 
@@ -31,17 +29,15 @@ AID_PROVISIONER = [0xA0, 0x00, 0x00, 0x08, 0x47, 0x01, 0x00, 0x00, 0x01]
 
 
 @test_case("uuid", "UUID query")
-def test_uuid_query(ctx: TestContext, device: NitrokeyTrussedBase) -> TestResult:
+def test_uuid_query(ctx: TestContext, device: TrussedBase) -> TestResult:
     uuid = device.uuid()
     uuid_str = str(uuid) if uuid else "[not supported]"
     return TestResult(TestStatus.SUCCESS, uuid_str)
 
 
 @test_case("version", "Firmware version query")
-def test_firmware_version_query(
-    ctx: TestContext, device: NitrokeyTrussedBase
-) -> TestResult:
-    if not isinstance(device, NitrokeyTrussedDevice):
+def test_firmware_version_query(ctx: TestContext, device: TrussedBase) -> TestResult:
+    if not isinstance(device, TrussedDevice):
         return TestResult(TestStatus.SKIPPED)
     version = device.admin.version()
     ctx.firmware_version = version
@@ -49,9 +45,9 @@ def test_firmware_version_query(
 
 
 def test_device_status_internal(
-    ctx: TestContext, device: NitrokeyTrussedBase, skip_if_version: Optional[Version]
+    ctx: TestContext, device: TrussedBase, skip_if_version: Optional[Version]
 ) -> TestResult:
-    if not isinstance(device, NitrokeyTrussedDevice):
+    if not isinstance(device, TrussedDevice):
         return TestResult(TestStatus.SKIPPED)
     firmware_version = ctx.firmware_version or device.admin.version()
 
@@ -83,22 +79,18 @@ def test_device_status_internal(
 
 
 @test_case("status", "Device status")
-def test_nk3_device_status(ctx: TestContext, device: NitrokeyTrussedBase) -> TestResult:
+def test_nk3_device_status(ctx: TestContext, device: TrussedBase) -> TestResult:
     return test_device_status_internal(ctx, device, skip_if_version=Version(1, 3, 0))
 
 
 @test_case("status", "Device status")
-def test_nkpk_device_status(
-    ctx: TestContext, device: NitrokeyTrussedBase
-) -> TestResult:
+def test_nkpk_device_status(ctx: TestContext, device: TrussedBase) -> TestResult:
     return test_device_status_internal(ctx, device, skip_if_version=None)
 
 
 @test_case("bootloader", "Bootloader configuration")
-def test_bootloader_configuration(
-    ctx: TestContext, device: NitrokeyTrussedBase
-) -> TestResult:
-    if not isinstance(device, NitrokeyTrussedDevice):
+def test_bootloader_configuration(ctx: TestContext, device: TrussedBase) -> TestResult:
+    if not isinstance(device, TrussedDevice):
         return TestResult(TestStatus.SKIPPED)
     if device.admin.is_locked():
         return TestResult(TestStatus.SUCCESS)
@@ -107,7 +99,7 @@ def test_bootloader_configuration(
 
 
 @test_case("provisioner", "Firmware mode")
-def test_firmware_mode(ctx: TestContext, device: NitrokeyTrussedBase) -> TestResult:
+def test_firmware_mode(ctx: TestContext, device: TrussedBase) -> TestResult:
     try:
         from smartcard import System
         from smartcard.CardConnection import CardConnection
@@ -269,10 +261,10 @@ SE050_STEPS = [
 
 
 @test_case("se050", "SE050")
-def test_se050(ctx: TestContext, device: NitrokeyTrussedBase) -> TestResult:
+def test_se050(ctx: TestContext, device: TrussedBase) -> TestResult:
     from queue import Queue
 
-    if not isinstance(device, NitrokeyTrussedDevice):
+    if not isinstance(device, TrussedDevice):
         return TestResult(TestStatus.SKIPPED)
 
     que: Queue[Optional[bytes]] = Queue()
@@ -342,8 +334,8 @@ def test_se050(ctx: TestContext, device: NitrokeyTrussedBase) -> TestResult:
 
 
 @test_case("fido2", "FIDO2")
-def test_fido2(ctx: TestContext, device: NitrokeyTrussedBase) -> TestResult:
-    if not isinstance(device, NitrokeyTrussedDevice):
+def test_fido2(ctx: TestContext, device: TrussedBase) -> TestResult:
+    if not isinstance(device, TrussedDevice):
         return TestResult(TestStatus.SKIPPED)
 
     # drop out early, if pin is needed, but not provided

@@ -22,6 +22,7 @@ from threading import Event, Timer
 from typing import Any, Callable, Dict, List, NoReturn, Optional, Tuple, TypeVar, Union
 
 import click
+from nitrokey.updates import Repository
 from semver.version import Version
 from tqdm import tqdm
 
@@ -34,7 +35,6 @@ from pynitrokey.confconsts import (
     VERBOSE,
     Verbosity,
 )
-from pynitrokey.updates import Repository
 
 STDOUT_PRINT = True
 
