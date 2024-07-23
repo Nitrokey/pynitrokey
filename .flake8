@@ -4,4 +4,3 @@
 # E501 (line length) disabled as this is handled by black which takes better care of edge cases
 extend-ignore = E203,E501,E701
 max-complexity = 18
-extend-exclude = pynitrokey/trussed/bootloader/nrf52_upload

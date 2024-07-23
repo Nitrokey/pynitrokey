@@ -7,26 +7,24 @@
 # http://opensource.org/licenses/MIT>, at your option. This file may not be
 # copied, modified, or distributed except according to those terms.
 
-from typing import Optional
+from typing import Optional, Sequence
 
 import click
+from nitrokey.nkpk import NKPK, NKPKBootloader
+from nitrokey.trussed import Model, TrussedBase
 
 from pynitrokey.cli.trussed.test import TestCase
-from pynitrokey.nkpk import NKPK_DATA, NitrokeyPasskeyBootloader, NitrokeyPasskeyDevice
-from pynitrokey.trussed.base import NitrokeyTrussedBase
-from pynitrokey.trussed.bootloader import Device
 
 from . import trussed
 
 
-class Context(trussed.Context[NitrokeyPasskeyBootloader, NitrokeyPasskeyDevice]):
+class Context(trussed.Context[NKPKBootloader, NKPK]):
     def __init__(self, path: Optional[str]) -> None:
         super().__init__(
             path,
-            NitrokeyPasskeyBootloader,
-            NitrokeyPasskeyDevice,
-            Device.NITROKEY_PASSKEY,
-            NKPK_DATA,
+            NKPKBootloader,
+            NKPK,
+            Model.NKPK,
         )
 
     @property
@@ -46,13 +44,13 @@ class Context(trussed.Context[NitrokeyPasskeyBootloader, NitrokeyPasskeyDevice])
     def device_name(self) -> str:
         return "Nitrokey Passkey"
 
-    def open(self, path: str) -> Optional[NitrokeyTrussedBase]:
-        from pynitrokey.nkpk import open
+    def open(self, path: str) -> Optional[TrussedBase]:
+        from nitrokey.nkpk import open
 
         return open(path)
 
-    def list_all(self) -> list[NitrokeyTrussedBase]:
-        from pynitrokey.nkpk import list
+    def list_all(self) -> Sequence[TrussedBase]:
+        from nitrokey.nkpk import list
 
         return list()
 

@@ -7,10 +7,10 @@ from functools import partial
 
 import pytest
 from _pytest.fixtures import FixtureRequest
+from nitrokey.nk3.secrets_app import Instruction, SecretsApp
 
 from pynitrokey.cli import CliException
 from pynitrokey.cli.nk3 import Context
-from pynitrokey.nk3.secrets_app import Instruction, SecretsApp
 
 CORPUS_PATH = "/tmp/corpus"
 

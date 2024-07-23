@@ -8,10 +8,7 @@ from typing import Callable, List, Optional
 
 import click
 from click_aliases import ClickAliasedGroup
-
-from pynitrokey.cli.nk3 import Context, nk3
-from pynitrokey.helpers import AskUser, local_critical, local_print
-from pynitrokey.nk3.secrets_app import (
+from nitrokey.nk3.secrets_app import (
     ALGORITHM_TO_KIND,
     STRING_TO_KIND,
     SecretsApp,
@@ -19,6 +16,9 @@ from pynitrokey.nk3.secrets_app import (
     SecretsAppExceptionID,
     SecretsAppHealthCheckException,
 )
+
+from pynitrokey.cli.nk3 import Context, nk3
+from pynitrokey.helpers import AskUser, local_critical, local_print
 
 
 @nk3.group(cls=ClickAliasedGroup)

@@ -67,6 +67,19 @@ Usage:
 
 Checks configured in ``.pre-commit-config.yaml`` will be executed before each commit, and on-demand when calling ``pre-commit`` from the command line.
 
+Patching the Nitrokey SDK
+-------------------------
+
+To use an unreleased version of the Nitrokey Python SDK, replace the ``nitrokey`` dependency in ``pyproject.toml`` with::
+
+  "nitrokey @ git+https://github.com/Nitrokey/nitrokey-sdk-py.git@rev",
+
+``rev`` can be a branch name, a tag or a commit hash.
+
+It is also possible to use a local path::
+
+  "nitrokey @ file:../nitrokey-sdk-py",
+
 
 Design Patterns
 ---------------
