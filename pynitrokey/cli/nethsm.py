@@ -21,7 +21,7 @@ from typing import Any, Iterable, Iterator, Optional, Protocol, Sequence
 import click
 import nethsm as nethsm_sdk
 from click import Context
-from nethsm import Authentication, Base64, NetHSM
+from nethsm import Authentication, Base64, NetHSM, State
 from nethsm.backup import EncryptedBackup
 
 from pynitrokey.cli.exceptions import CliException
@@ -1446,7 +1446,13 @@ def restore(
                 support_hint=False,
             )
 
+    require_auth = False
     with connect(ctx, require_auth=False) as nethsm:
+        state = nethsm.get_state()
+        if state == State.OPERATIONAL:
+            require_auth = True
+
+    with connect(ctx, require_auth=require_auth) as nethsm:
         with open(filename, "rb") as f:
             nethsm.restore(data, backup_passphrase, system_time)
         print(f"Backup restored on NetHSM {nethsm.host}")
