@@ -65,6 +65,8 @@ class InitStatus(IntFlag):
     EXTERNAL_FLASH_ERROR = 0b0100
     MIGRATION_ERROR = 0b1000
     SE050_ERROR = 0b00010000
+    CONFIG_ERROR = 0b00100000
+    RNG_ERROR = 0b01000000
 
     def is_error(self) -> bool:
         return self.value != 0
