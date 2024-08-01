@@ -18,6 +18,18 @@ from cryptography import x509
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey
 from ecdsa import NIST256p, SigningKey
+from nitrokey.trussed import (
+    FirmwareContainer,
+    Model,
+    TimeoutException,
+    TrussedBase,
+    TrussedBootloader,
+    TrussedDevice,
+    parse_firmware_image,
+)
+from nitrokey.trussed.admin_app import BootMode
+from nitrokey.trussed.provisioner_app import ProvisionerApp
+from nitrokey.updates import OverwriteError
 
 from pynitrokey.cli.exceptions import CliException
 from pynitrokey.helpers import (
@@ -26,25 +38,12 @@ from pynitrokey.helpers import (
     local_print,
     require_windows_admin,
 )
-from pynitrokey.trussed import DeviceData
-from pynitrokey.trussed.admin_app import BootMode
-from pynitrokey.trussed.base import NitrokeyTrussedBase
-from pynitrokey.trussed.bootloader import Device as BootloaderDevice
-from pynitrokey.trussed.bootloader import (
-    FirmwareContainer,
-    NitrokeyTrussedBootloader,
-    parse_firmware_image,
-)
-from pynitrokey.trussed.device import NitrokeyTrussedDevice
-from pynitrokey.trussed.exceptions import TimeoutException
-from pynitrokey.trussed.provisioner_app import ProvisionerApp
-from pynitrokey.updates import OverwriteError
 
 from .test import TestCase
 
-T = TypeVar("T", bound=NitrokeyTrussedBase)
-Bootloader = TypeVar("Bootloader", bound=NitrokeyTrussedBootloader)
-Device = TypeVar("Device", bound=NitrokeyTrussedDevice)
+T = TypeVar("T", bound=TrussedBase)
+Bootloader = TypeVar("Bootloader", bound=TrussedBootloader)
+Device = TypeVar("Device", bound=TrussedDevice)
 
 logger = logging.getLogger(__name__)
 
@@ -55,14 +54,12 @@ class Context(ABC, Generic[Bootloader, Device]):
         path: Optional[str],
         bootloader_type: type[Bootloader],
         device_type: type[Device],
-        bootloader_device: BootloaderDevice,
-        data: DeviceData,
+        model: Model,
     ) -> None:
         self.path = path
         self.bootloader_type = bootloader_type
         self.device_type = device_type
-        self.bootloader_device = bootloader_device
-        self.data = data
+        self.model = model
 
     @property
     @abstractmethod
@@ -70,14 +67,14 @@ class Context(ABC, Generic[Bootloader, Device]):
         ...
 
     @abstractmethod
-    def open(self, path: str) -> Optional[NitrokeyTrussedBase]:
+    def open(self, path: str) -> Optional[TrussedBase]:
         ...
 
     @abstractmethod
-    def list_all(self) -> Sequence[NitrokeyTrussedBase]:
+    def list_all(self) -> Sequence[TrussedBase]:
         ...
 
-    def list(self) -> Sequence[NitrokeyTrussedBase]:
+    def list(self) -> Sequence[TrussedBase]:
         if self.path:
             device = self.open(self.path)
             if device:
@@ -87,30 +84,29 @@ class Context(ABC, Generic[Bootloader, Device]):
         else:
             return self.list_all()
 
-    def connect(self) -> NitrokeyTrussedBase:
-        return self._select_unique(self.data.name, self.list())
+    def connect(self) -> TrussedBase:
+        return self._select_unique(self.model.name, self.list())
 
     def connect_device(self) -> Device:
         devices = [
             device for device in self.list() if isinstance(device, self.device_type)
         ]
-        return self._select_unique(self.data.name, devices)
+        return self._select_unique(self.model.name, devices)
 
     def await_device(
         self,
         retries: Optional[int] = None,
         callback: Optional[Callable[[int, int], None]] = None,
     ) -> Device:
-        return self._await(self.data.name, self.device_type, retries, callback)
+        return self._await(self.model.name, self.device_type, retries, callback)
 
     def await_bootloader(
         self,
         retries: Optional[int] = None,
         callback: Optional[Callable[[int, int], None]] = None,
     ) -> Bootloader:
-        # mypy does not allow abstract types here, but this is still valid
         return self._await(
-            f"{self.data.name} bootloader", self.bootloader_type, retries, callback
+            f"{self.model.name} bootloader", self.bootloader_type, retries, callback
         )
 
     def _select_unique(self, name: str, devices: Sequence[T]) -> T:
@@ -195,8 +191,8 @@ def fetch_update(
     download a specific version, use the --version option.
     """
     try:
-        release = ctx.data.firmware_repository.get_release_or_latest(version)
-        update = release.require_asset(ctx.data.firmware_pattern)
+        release = ctx.model.firmware_repository.get_release_or_latest(version)
+        update = release.require_asset(ctx.model.firmware_pattern)
     except Exception as e:
         if version:
             raise CliException(f"Failed to find firmware update {version}", e)
@@ -234,7 +230,7 @@ def list(ctx: Context[Bootloader, Device]) -> None:
 
 
 def _list(ctx: Context[Bootloader, Device]) -> None:
-    local_print(f":: '{ctx.data.name}' keys")
+    local_print(f":: '{ctx.model.name}' keys")
     for device in ctx.list_all():
         with device as device:
             uuid = device.uuid()
@@ -354,7 +350,7 @@ def reboot(ctx: Context[Bootloader, Device], bootloader: bool) -> None:
     """
     with ctx.connect() as device:
         if bootloader:
-            if isinstance(device, NitrokeyTrussedDevice):
+            if isinstance(device, TrussedDevice):
                 success = reboot_to_bootloader(device)
             else:
                 raise CliException(
@@ -372,7 +368,7 @@ def reboot(ctx: Context[Bootloader, Device], bootloader: bool) -> None:
         )
 
 
-def reboot_to_bootloader(device: NitrokeyTrussedDevice) -> bool:
+def reboot_to_bootloader(device: TrussedDevice) -> bool:
     local_print(
         "Please press the touch button to reboot the device into bootloader mode ..."
     )
@@ -503,9 +499,9 @@ def test(
 
     if len(devices) == 0:
         log_devices()
-        raise CliException(f"No connected {ctx.data.name} devices found")
+        raise CliException(f"No connected {ctx.model.name} devices found")
 
-    local_print(f"Found {len(devices)} {ctx.data.name} device(s):")
+    local_print(f"Found {len(devices)} {ctx.model.name} device(s):")
     for device in devices:
         local_print(f"- {device.name} at {device.path}")
 
@@ -543,7 +539,7 @@ def validate_update(ctx: Context[Bootloader, Device], image: str) -> None:
     available variants.
     """
     try:
-        container = FirmwareContainer.parse(image, ctx.bootloader_device)
+        container = FirmwareContainer.parse(image, ctx.model)
     except ValueError as e:
         raise CliException("Failed to validate firmware image", e, support_hint=False)
 
@@ -554,7 +550,7 @@ def validate_update(ctx: Context[Bootloader, Device], image: str) -> None:
     for variant in container.images:
         data = container.images[variant]
         try:
-            metadata = parse_firmware_image(variant, data, ctx.data)
+            metadata = parse_firmware_image(variant, data, ctx.model)
         except Exception as e:
             raise CliException("Failed to parse and validate firmware image", e)
 

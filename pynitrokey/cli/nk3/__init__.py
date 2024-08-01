@@ -8,24 +8,21 @@
 # copied, modified, or distributed except according to those terms.
 
 import sys
-from typing import List, Optional
+from typing import Optional, Sequence
 
 import click
+from nitrokey.nk3 import NK3, NK3Bootloader
+from nitrokey.trussed import Model, TrussedBase
 
 from pynitrokey.cli import trussed
 from pynitrokey.cli.exceptions import CliException
 from pynitrokey.cli.trussed.test import TestCase
-from pynitrokey.helpers import local_print
-from pynitrokey.nk3 import NK3_DATA
-from pynitrokey.nk3.bootloader import Nitrokey3Bootloader
-from pynitrokey.nk3.device import Nitrokey3Device
-from pynitrokey.trussed.base import NitrokeyTrussedBase
-from pynitrokey.trussed.bootloader import Device
+from pynitrokey.helpers import local_critical, local_print
 
 
-class Context(trussed.Context[Nitrokey3Bootloader, Nitrokey3Device]):
+class Context(trussed.Context[NK3Bootloader, NK3]):
     def __init__(self, path: Optional[str]) -> None:
-        super().__init__(path, Nitrokey3Bootloader, Nitrokey3Device, Device.NITROKEY3, NK3_DATA)  # type: ignore[type-abstract]
+        super().__init__(path, NK3Bootloader, NK3, Model.NK3)  # type: ignore[type-abstract]
 
     @property
     def test_cases(self) -> list[TestCase]:
@@ -41,13 +38,13 @@ class Context(trussed.Context[Nitrokey3Bootloader, Nitrokey3Device]):
             tests.test_fido2,
         ]
 
-    def open(self, path: str) -> Optional[NitrokeyTrussedBase]:
-        from pynitrokey.nk3 import open
+    def open(self, path: str) -> Optional[TrussedBase]:
+        from nitrokey.nk3 import open
 
         return open(path)
 
-    def list_all(self) -> List[NitrokeyTrussedBase]:
-        from pynitrokey.nk3 import list
+    def list_all(self) -> Sequence[TrussedBase]:
+        from nitrokey.nk3 import list
 
         return list()
 
@@ -252,7 +249,12 @@ def factory_reset(ctx: Context, experimental: bool) -> None:
         )
 
     with ctx.connect_device() as device:
-        device.admin.factory_reset()
+        local_print("Please touch the device to confirm the operation", file=sys.stderr)
+        if not device.admin.factory_reset():
+            local_critical(
+                "Factory reset is not supported by the firmware version on the device",
+                support_hint=False,
+            )
 
 
 # We consciously do not allow resetting the admin app
@@ -278,7 +280,12 @@ def factory_reset_app(ctx: Context, application: str, experimental: bool) -> Non
         )
 
     with ctx.connect_device() as device:
-        device.admin.factory_reset_app(application)
+        local_print("Please touch the device to confirm the operation", file=sys.stderr)
+        if not device.admin.factory_reset_app(application):
+            local_critical(
+                "Application Factory reset is not supported by the firmware version on the device",
+                support_hint=False,
+            )
 
 
 @nk3.command()

@@ -15,11 +15,11 @@ from enum import Enum, auto, unique
 from types import TracebackType
 from typing import Callable, Iterable, Optional, Sequence, Tuple, Type, Union
 
+from nitrokey.trussed import TrussedBase, Version
+
 from pynitrokey.cli.exceptions import CliException
 from pynitrokey.fido2 import device_path_to_str
 from pynitrokey.helpers import local_print
-from pynitrokey.trussed.base import NitrokeyTrussedBase
-from pynitrokey.trussed.utils import Version
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +54,7 @@ class TestResult:
         self.exc_info = exc_info
 
 
-TestCaseFn = Callable[[TestContext, NitrokeyTrussedBase], TestResult]
+TestCaseFn = Callable[[TestContext, TrussedBase], TestResult]
 
 
 class TestCase:
@@ -128,7 +128,7 @@ def list_tests(
 
 def run_tests(
     ctx: TestContext,
-    device: NitrokeyTrussedBase,
+    device: TrussedBase,
     selector: TestSelector,
     test_cases: Sequence[TestCase],
 ) -> bool:
