@@ -282,7 +282,7 @@ KEY_TO_CERT_OBJ_ID_MAP = {
     hide_input=True,
 )
 @click.option(
-    "--out-file",
+    "--path",
     type=click.Path(allow_dash=True),
     default="-",
 )
@@ -294,7 +294,7 @@ def generate_key(
     subject_name: Optional[Sequence[str]],
     subject_alt_name_upn: Optional[str],
     pin: str,
-    out_file: str,
+    path: str,
 ) -> None:
     try:
         admin_key_bytes = bytearray.fromhex(admin_key)
@@ -509,7 +509,7 @@ def generate_key(
         }
     )
 
-    with click.open_file(out_file, mode="wb") as file:
+    with click.open_file(path, mode="wb") as file:
         file.write(csr.dump())
 
     cert_info = x509.TbsCertificate(
