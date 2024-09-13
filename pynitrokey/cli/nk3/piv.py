@@ -645,7 +645,7 @@ def write_certificate(admin_key: str, format: str, key: str, path: str) -> None:
 
 @piv.command()
 @click.option(
-    "--out-format",
+    "--format",
     type=click.Choice(["DER", "PEM"], case_sensitive=False),
     default="PEM",
 )
@@ -683,7 +683,7 @@ def write_certificate(admin_key: str, format: str, key: str, path: str) -> None:
     default="9A",
 )
 @click.option("--path", type=click.Path(allow_dash=True), default="-")
-def read_certificate(out_format: str, key: str, path: str) -> None:
+def read_certificate(format: str, key: str, path: str) -> None:
     device = PivApp()
 
     value = device.cert(bytes(bytearray.fromhex(KEY_TO_CERT_OBJ_ID_MAP[key.upper()])))
@@ -692,11 +692,11 @@ def read_certificate(out_format: str, key: str, path: str) -> None:
         print("Certificate not found", file=sys.stderr)
         return
 
-    out_format = out_format.upper()
-    if out_format == "DER":
+    format = format.upper()
+    if format == "DER":
         cert_serialized = value
         cryptography.x509.load_der_x509_certificate(value)
-    elif out_format == "PEM":
+    elif format == "PEM":
         cert = cryptography.x509.load_der_x509_certificate(value)
         cert_serialized = cert.public_bytes(Encoding.PEM)
 
