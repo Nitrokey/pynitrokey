@@ -99,6 +99,7 @@ def info() -> None:
     "--current-admin-key",
     type=click.STRING,
     default="010203040506070801020304050607080102030405060708",
+    help="Current admin key.",
 )
 @click.argument(
     "new-admin-key",
@@ -126,12 +127,14 @@ def change_admin_key(current_admin_key: str, new_admin_key: str) -> None:
     type=click.STRING,
     prompt="Enter the PIN",
     hide_input=True,
+    help="Current PIN.",
 )
 @click.option(
     "--new-pin",
     type=click.STRING,
     prompt="Enter the PIN",
     hide_input=True,
+    help="New PIN.",
 )
 def change_pin(current_pin: str, new_pin: str) -> None:
     device = PivApp()
@@ -145,12 +148,14 @@ def change_pin(current_pin: str, new_pin: str) -> None:
     type=click.STRING,
     prompt="Enter the current PUK",
     hide_input=True,
+    help="Current PUK.",
 )
 @click.option(
     "--new-puk",
     type=click.STRING,
     prompt="Enter the new PUK",
     hide_input=True,
+    help="New PUK.",
 )
 def change_puk(current_puk: str, new_puk: str) -> None:
     device = PivApp()
@@ -164,12 +169,14 @@ def change_puk(current_puk: str, new_puk: str) -> None:
     type=click.STRING,
     prompt="Enter the PUK",
     hide_input=True,
+    help="Current PUK.",
 )
 @click.option(
     "--new-pin",
     type=click.STRING,
     prompt="Enter the new PIN",
     hide_input=True,
+    help="New PIN.",
 )
 def reset_retry_counter(puk: str, new_pin: str) -> None:
     device = PivApp()
@@ -223,6 +230,7 @@ KEY_TO_CERT_OBJ_ID_MAP = {
     "--admin-key",
     type=click.STRING,
     default="010203040506070801020304050607080102030405060708",
+    help="Current admin key",
 )
 @click.option(
     "--key",
@@ -256,36 +264,43 @@ KEY_TO_CERT_OBJ_ID_MAP = {
         case_sensitive=False,
     ),
     default="9A",
+    help="Key slot for operation.",
 )
 @click.option(
     "--algo",
     type=click.Choice(["rsa2048", "nistp256"], case_sensitive=False),
     default="nistp256",
+    help="Algorithm for the key.",
 )
 @click.option(
     "--domain-component",
     type=click.STRING,
     multiple=True,
+    help="Domain component for the certificate signing request.",
 )
 @click.option(
     "--subject-name",
     type=click.STRING,
     multiple=True,
+    help="Subject name for the certificate signing request.",
 )
 @click.option(
     "--subject-alt-name-upn",
     type=click.STRING,
+    help="Subject alternative name (UPN) for the certificate signing request.",
 )
 @click.option(
     "--pin",
     type=click.STRING,
     prompt="Enter the PIN",
     hide_input=True,
+    help="Current PIN.",
 )
 @click.option(
     "--path",
     type=click.Path(allow_dash=True),
     default="-",
+    help="Write certificate signing request to path.",
 )
 def generate_key(
     admin_key: str,
@@ -572,7 +587,10 @@ def generate_key(
     default="010203040506070801020304050607080102030405060708",
 )
 @click.option(
-    "--format", type=click.Choice(["DER", "PEM"], case_sensitive=False), default="PEM"
+    "--format",
+    type=click.Choice(["DER", "PEM"], case_sensitive=False),
+    default="PEM",
+    help="Format of certificate.",
 )
 @click.option(
     "--key",
@@ -606,11 +624,13 @@ def generate_key(
         case_sensitive=False,
     ),
     default="9A",
+    help="Key slot for operation.",
 )
 @click.option(
     "--path",
     type=click.Path(allow_dash=True),
     default="-",
+    help="Write certificate to path.",
 )
 def write_certificate(admin_key: str, format: str, key: str, path: str) -> None:
     try:
@@ -649,6 +669,7 @@ def write_certificate(admin_key: str, format: str, key: str, path: str) -> None:
     "--format",
     type=click.Choice(["DER", "PEM"], case_sensitive=False),
     default="PEM",
+    help="Format of certificate.",
 )
 @click.option(
     "--key",
@@ -682,8 +703,14 @@ def write_certificate(admin_key: str, format: str, key: str, path: str) -> None:
         case_sensitive=False,
     ),
     default="9A",
+    help="Key slot for operation.",
 )
-@click.option("--path", type=click.Path(allow_dash=True), default="-")
+@click.option(
+    "--path",
+    type=click.Path(allow_dash=True),
+    default="-",
+    help="Read certificate from path.",
+)
 def read_certificate(format: str, key: str, path: str) -> None:
     device = PivApp()
 
