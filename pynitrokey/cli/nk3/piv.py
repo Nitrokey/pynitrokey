@@ -252,13 +252,14 @@ KEY_TO_CERT_OBJ_ID_MAP = {
             "93",
             "94",
             "95",
-        ]
+        ],
+        case_sensitive=False,
     ),
     default="9A",
 )
 @click.option(
     "--algo",
-    type=click.Choice(["rsa2048", "nistp256"]),
+    type=click.Choice(["rsa2048", "nistp256"], case_sensitive=False),
     default="nistp256",
 )
 @click.option(
@@ -303,13 +304,14 @@ def generate_key(
             "Key is expected to be an hexadecimal string",
             support_hint=False,
         )
-    key_hex = key
+    key_hex = key.upper()
     key_ref = int(key_hex, 16)
 
     device = PivApp()
     device.authenticate_admin(admin_key_bytes)
     device.login(pin)
 
+    algo = algo.lower()
     if algo == "rsa2048":
         algo_id = b"\x07"
         signature_algorithm = "sha256_rsa"
@@ -569,7 +571,9 @@ def generate_key(
     type=click.STRING,
     default="010203040506070801020304050607080102030405060708",
 )
-@click.option("--format", type=click.Choice(["DER", "PEM"]), default="PEM")
+@click.option(
+    "--format", type=click.Choice(["DER", "PEM"], case_sensitive=False), default="PEM"
+)
 @click.option(
     "--key",
     type=click.Choice(
@@ -598,7 +602,8 @@ def generate_key(
             "93",
             "94",
             "95",
-        ]
+        ],
+        case_sensitive=False,
     ),
     default="9A",
 )
@@ -621,6 +626,7 @@ def write_certificate(admin_key: str, format: str, key: str, path: str) -> None:
 
     with click.open_file(path, mode="rb") as f:
         cert_bytes = f.read()
+    format = format.upper()
     if format == "DER":
         cert_serialized = cert_bytes
         cert = cryptography.x509.load_der_x509_certificate(cert_bytes)
@@ -630,7 +636,7 @@ def write_certificate(admin_key: str, format: str, key: str, path: str) -> None:
 
     payload = Tlv.build(
         [
-            (0x5C, bytes(bytearray.fromhex(KEY_TO_CERT_OBJ_ID_MAP[key]))),
+            (0x5C, bytes(bytearray.fromhex(KEY_TO_CERT_OBJ_ID_MAP[key.upper()]))),
             (0x53, Tlv.build([(0x70, cert_serialized), (0x71, bytes([0]))])),
         ]
     )
@@ -639,7 +645,11 @@ def write_certificate(admin_key: str, format: str, key: str, path: str) -> None:
 
 
 @piv.command()
-@click.option("--out-format", type=click.Choice(["DER", "PEM"]), default="PEM")
+@click.option(
+    "--out-format",
+    type=click.Choice(["DER", "PEM"], case_sensitive=False),
+    default="PEM",
+)
 @click.option(
     "--key",
     type=click.Choice(
@@ -668,7 +678,8 @@ def write_certificate(admin_key: str, format: str, key: str, path: str) -> None:
             "93",
             "94",
             "95",
-        ]
+        ],
+        case_sensitive=False,
     ),
     default="9A",
 )
@@ -676,12 +687,13 @@ def write_certificate(admin_key: str, format: str, key: str, path: str) -> None:
 def read_certificate(out_format: str, key: str, path: str) -> None:
     device = PivApp()
 
-    value = device.cert(bytes(bytearray.fromhex(KEY_TO_CERT_OBJ_ID_MAP[key])))
+    value = device.cert(bytes(bytearray.fromhex(KEY_TO_CERT_OBJ_ID_MAP[key.upper()])))
 
     if value is None:
         print("Certificate not found", file=sys.stderr)
         return
 
+    out_format = out_format.upper()
     if out_format == "DER":
         cert_serialized = value
         cryptography.x509.load_der_x509_certificate(value)
