@@ -24,7 +24,7 @@ def piv() -> None:
     pass
 
 
-@piv.command()
+@piv.command(help="Authenticate with the admin key.")
 @click.argument(
     "admin-key",
     type=click.STRING,
@@ -44,7 +44,7 @@ def admin_auth(admin_key: str) -> None:
     local_print("Authenticated successfully")
 
 
-@piv.command()
+@piv.command(help="Initialize the PIV application.")
 @click.argument(
     "admin-key",
     type=click.STRING,
@@ -66,7 +66,7 @@ def init(admin_key: str) -> None:
     local_print(f"GUID: {guid.hex().upper()}")
 
 
-@piv.command()
+@piv.command(help="Print information about the PIV application.")
 def info() -> None:
     device = PivApp()
     serial_number = device.serial()
@@ -93,7 +93,7 @@ def info() -> None:
     pass
 
 
-@piv.command()
+@piv.command(help="Change the admin key.")
 @click.option(
     "--current-admin-key",
     type=click.STRING,
@@ -119,7 +119,7 @@ def change_admin_key(current_admin_key: str, new_admin_key: str) -> None:
     local_print("Changed key successfully")
 
 
-@piv.command()
+@piv.command(help="Change the PIN.")
 @click.option(
     "--current-pin",
     type=click.STRING,
@@ -138,7 +138,7 @@ def change_pin(current_pin: str, new_pin: str) -> None:
     local_print("Changed pin successfully")
 
 
-@piv.command()
+@piv.command(help="Change the PUK.")
 @click.option(
     "--current-puk",
     type=click.STRING,
@@ -157,7 +157,7 @@ def change_puk(current_puk: str, new_puk: str) -> None:
     local_print("Changed puk successfully")
 
 
-@piv.command()
+@piv.command(help="Reset the retry counter.")
 @click.option(
     "--puk",
     type=click.STRING,
@@ -176,7 +176,7 @@ def reset_retry_counter(puk: str, new_pin: str) -> None:
     local_print("Unlocked PIN successfully")
 
 
-@piv.command()
+@piv.command(help="Reset the PIV application.")
 def factory_reset() -> None:
     device = PivApp()
     try:
@@ -217,7 +217,7 @@ KEY_TO_CERT_OBJ_ID_MAP = {
 }
 
 
-@piv.command()
+@piv.command(help="Generate a new key and certificate signing request.")
 @click.option(
     "--admin-key",
     type=click.STRING,
@@ -564,7 +564,7 @@ def generate_key(
     device.send_receive(0xDB, 0x3F, 0xFF, payload)
 
 
-@piv.command()
+@piv.command(help="Write a certificate to a key slot.")
 @click.argument(
     "admin-key",
     type=click.STRING,
@@ -643,7 +643,7 @@ def write_certificate(admin_key: str, format: str, key: str, path: str) -> None:
     device.send_receive(0xDB, 0x3F, 0xFF, payload)
 
 
-@piv.command()
+@piv.command(help="Read a certificate from a key slot.")
 @click.option(
     "--format",
     type=click.Choice(["DER", "PEM"], case_sensitive=False),
