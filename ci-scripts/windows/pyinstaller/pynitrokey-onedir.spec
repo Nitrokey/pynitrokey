@@ -11,7 +11,6 @@ datas += copy_metadata('pynitrokey')
 datas += copy_metadata('ecdsa')
 datas += copy_metadata('fido2')
 datas += copy_metadata('pyusb')
-datas += copy_metadata('spsdk')
 
 
 block_cipher = None
@@ -21,7 +20,6 @@ a = Analysis(
     ['..\\..\\..\\nitropy.py'],
     pathex=[],
     binaries=[
-        ('..\\..\\..\\venv\\Lib\\site-packages\\libusbsio\\bin\\x64\\libusbsio.dll', 'libusbsio'),
         ('..\\..\\..\\venv\\Lib\\site-packages\\usb1\\libusb-1.0.dll', '.')
     ],
     datas=datas,
