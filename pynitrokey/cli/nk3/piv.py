@@ -13,14 +13,21 @@ from cryptography.hazmat.primitives.asymmetric import ec, rsa
 from cryptography.hazmat.primitives.serialization import Encoding
 
 from pynitrokey.cli.nk3 import nk3
-from pynitrokey.helpers import local_critical, local_print
+from pynitrokey.helpers import check_experimental_flag, local_critical, local_print
 from pynitrokey.nk3.piv_app import PivApp, find_by_id
 from pynitrokey.tlv import Tlv
 
 
 @nk3.group()
-def piv() -> None:
+@click.option(
+    "--experimental",
+    default=False,
+    is_flag=True,
+    help="Allow to execute experimental features",
+)
+def piv(experimental: bool) -> None:
     """Nitrokey PIV App"""
+    check_experimental_flag(experimental)
     pass
 
 
