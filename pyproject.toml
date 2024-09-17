@@ -40,7 +40,7 @@ dependencies = [
   "semver",
   "nethsm >=1.2.1, <2",
   "pyscard",
-  "asn1crypto",
+  "asn1crypto", # FIXME: replace by cryptography. Blocked by https://github.com/pyca/cryptography/issues/11616
 ]
 dynamic = ["version", "description"]
 
