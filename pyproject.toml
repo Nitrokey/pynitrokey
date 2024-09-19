@@ -39,6 +39,8 @@ dependencies = [
   "click-aliases",
   "semver",
   "nethsm >=1.2.1, <2",
+  "pyscard",
+  "asn1crypto", # FIXME: replace by cryptography. Blocked by https://github.com/pyca/cryptography/issues/11616
 ]
 dynamic = ["version", "description"]
 
@@ -125,6 +127,8 @@ module = [
     "tlv8.*",
     "pytest.*",
     "click_aliases.*",
+    "smartcard.*",
+    "asn1crypto.*",
 ]
 ignore_missing_imports = true
 
