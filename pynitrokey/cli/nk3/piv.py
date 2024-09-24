@@ -131,14 +131,14 @@ def change_admin_key(current_admin_key: str, new_admin_key: str) -> None:
 @click.option(
     "--current-pin",
     type=click.STRING,
-    prompt="Enter the PIN",
+    prompt="Enter the current PIN",
     hide_input=True,
     help="Current PIN.",
 )
 @click.option(
     "--new-pin",
     type=click.STRING,
-    prompt="Enter the PIN",
+    prompt="Enter the new PIN",
     hide_input=True,
     help="New PIN.",
 )
