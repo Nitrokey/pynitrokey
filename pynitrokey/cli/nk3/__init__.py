@@ -79,6 +79,12 @@ def _list() -> None:
     help="Allow updates with an outdated pynitrokey version (dangerous)",
 )
 @click.option(
+    "--confirm",
+    default=False,
+    is_flag=True,
+    help="Confirm all questions to allow running non-interactively",
+)
+@click.option(
     "--experimental",
     default=False,
     is_flag=True,
@@ -91,15 +97,17 @@ def update(
     image: Optional[str],
     version: Optional[str],
     ignore_pynitrokey_version: bool,
+    confirm: bool,
     experimental: bool,
 ) -> None:
     """
     Update the firmware of the device using the given image.
 
     This command requires that exactly one Nitrokey 3 in bootloader or firmware mode is connected.
-    The user is asked to confirm the operation before the update is started.  The Nitrokey 3 may
-    not be removed during the update.  Also, additional Nitrokey 3 devices may not be connected
-    during the update.
+    The user is asked to confirm the operation before the update is started.  If the --confirm
+    option is provided, this is the confirmation.  This option may be used to automate an update.
+    The Nitrokey 3 may not be removed during the update.  Also, additional Nitrokey 3 devices may
+    not be connected during the update.
 
     If no firmware image is given, the latest firmware release is downloaded automatically.  If
     the --version option is set, the given version is downloaded instead.
@@ -115,7 +123,7 @@ def update(
 
     from .update import update as exec_update
 
-    exec_update(ctx, image, version, ignore_pynitrokey_version)
+    exec_update(ctx, image, version, ignore_pynitrokey_version, confirm)
 
 
 @nk3.command()
