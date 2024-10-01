@@ -23,8 +23,9 @@ logger = logging.getLogger(__name__)
 
 
 class UpdateCli(UpdateUi):
-    def __init__(self) -> None:
+    def __init__(self, confirm_continue: bool = False) -> None:
         self._version_printed = False
+        self._confirm_continue = confirm_continue
 
     def error(self, *msgs: Any) -> Exception:
         return CliException(*msgs)
@@ -47,6 +48,9 @@ class UpdateCli(UpdateUi):
         )
 
     def confirm_download(self, current: Optional[Version], new: Version) -> None:
+        if self._confirm_continue:
+            return
+
         confirm(
             f"Do you want to download the firmware version {new}?",
             default=True,
@@ -71,6 +75,10 @@ class UpdateCli(UpdateUi):
             "Please do not remove the Nitrokey 3 or insert any other Nitrokey 3 devices "
             "during the update. Doing so may damage the Nitrokey 3."
         )
+
+        if self._confirm_continue:
+            return
+
         if not confirm("Do you want to perform the firmware update now?"):
             logger.info("Update cancelled by user")
             raise Abort()
@@ -137,7 +145,10 @@ def update(
     image: Optional[str],
     version: Optional[str],
     ignore_pynitrokey_version: bool,
+    confirm_continue: bool,
 ) -> Version:
     with ctx.connect() as device:
-        updater = Updater(UpdateCli(), ctx.await_bootloader, ctx.await_device)
+        updater = Updater(
+            UpdateCli(confirm_continue), ctx.await_bootloader, ctx.await_device
+        )
         return updater.update(device, image, version, ignore_pynitrokey_version)
