@@ -172,23 +172,36 @@ def set_config(ctx: Context, key: str, value: str, force: bool, dry_run: bool) -
     """
 
     with ctx.connect_device() as device:
-        # before the confirmation prompt, check if the config value is supported
-        if not device.admin.has_config(key):
+        config_fields = device.admin.list_available_fields()
+
+        field_metadata = None
+        for field in config_fields:
+            if field.name == key:
+                field_metadata = field
+
+
+        if field_metadata is None:
+            print(
+                "Changing configuration values can have unexpected side effects, including data loss.",
+                file=sys.stderr,
+            )
+            print(
+                "This should only be used for development and testing.",
+                file=sys.stderr,
+            )
+            if not force:
+                raise CliException(
+                    "Unknown config values can only be set if the --force/-f flag is set.  Aborting.",
+                    support_hint=False,
+                )
+
+        if not force and not field_metadata.ty.is_valid(value):
             raise CliException(
-                f"The configuration option '{key}' is not supported by the device.",
+                f'Unknown config value. Expected {field_metadata.ty}, got `{value}`. Unknown config values can only be set if the --force/-f flag is set.  Aborting.',
                 support_hint=False,
             )
 
-        # config fields that don’t have side effects
-        whitelist = [
-            "fido.disable_skip_up_timeout",
-        ]
-        requires_touch = False
-        requires_reboot = False
-
         if key == "opcard.use_se050_backend":
-            requires_touch = True
-            requires_reboot = True
             print(
                 "This configuration values determines whether the OpenPGP Card "
                 "application uses a software implementation or the secure element.",
@@ -200,31 +213,20 @@ def set_config(ctx: Context, key: str, value: str, force: bool, dry_run: bool) -
                 "user data currently stored on the device.",
                 file=sys.stderr,
             )
-        elif key not in whitelist:
-            pass
+        elif field_metadata.destructive:
             print(
-                "Changing configuration values can have unexpected side effects, including data loss.",
-                file=sys.stderr,
-            )
-            print(
-                "This should only be used for development and testing.",
+                "This configuration value may delete data on your device",
                 file=sys.stderr,
             )
 
-            if not force:
-                raise CliException(
-                    "Unknown config values can only be set if the --force/-f flag is set.  Aborting.",
-                    support_hint=False,
-                )
-
-        if key not in whitelist:
+        if field_metadata.destructive:
             click.confirm("Do you want to continue anyway?", abort=True)
 
         if dry_run:
             print("Stopping dry run.", file=sys.stderr)
             raise click.Abort()
 
-        if requires_touch:
+        if field_metadata.requires_touch_confirmation:
             print(
                 "Press the touch button to confirm the configuration change.",
                 file=sys.stderr,
@@ -232,7 +234,7 @@ def set_config(ctx: Context, key: str, value: str, force: bool, dry_run: bool) -
 
         device.admin.set_config(key, value)
 
-        if requires_reboot:
+        if field_metadata.requires_reboot:
             print("Rebooting device to apply config change.")
             device.reboot()
 
