@@ -29,7 +29,7 @@ dependencies = [
   "fido2 >=1.1.2,<2",
   "intelhex",
   "nkdfu",
-  "nitrokey ~= 0.2.0rc1",
+  "nitrokey ~=0.2.1",
   "python-dateutil ~= 2.7.0",
   "pyusb",
   "requests",
