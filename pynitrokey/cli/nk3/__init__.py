@@ -194,7 +194,11 @@ def set_config(ctx: Context, key: str, value: str, force: bool, dry_run: bool) -
                     support_hint=False,
                 )
 
-        if not force and not field_metadata.ty.is_valid(value):
+        if (
+            not force
+            and field_metadata is not None
+            and not field_metadata.ty.is_valid(value)
+        ):
             raise CliException(
                 f"Invalid config value for {field}: expected {field_metadata.ty}, got `{value}`. Unknown config values can only be set if the --force/-f flag is set.  Aborting.",
                 support_hint=False,
@@ -212,20 +216,20 @@ def set_config(ctx: Context, key: str, value: str, force: bool, dry_run: bool) -
                 "user data currently stored on the device.",
                 file=sys.stderr,
             )
-        elif field_metadata.destructive:
+        elif field_metadata is not None and field_metadata.destructive:
             print(
                 "This configuration value may delete data on your device",
                 file=sys.stderr,
             )
 
-        if field_metadata.destructive:
+        if field_metadata is not None and field_metadata.destructive:
             click.confirm("Do you want to continue anyway?", abort=True)
 
         if dry_run:
             print("Stopping dry run.", file=sys.stderr)
             raise click.Abort()
 
-        if field_metadata.requires_touch_confirmation:
+        if field_metadata is not None and field_metadata.requires_touch_confirmation:
             print(
                 "Press the touch button to confirm the configuration change.",
                 file=sys.stderr,
@@ -233,7 +237,7 @@ def set_config(ctx: Context, key: str, value: str, force: bool, dry_run: bool) -
 
         device.admin.set_config(key, value)
 
-        if field_metadata.requires_reboot:
+        if field_metadata is not None and field_metadata.requires_reboot:
             print("Rebooting device to apply config change.")
             device.reboot()
 
