@@ -197,7 +197,7 @@ def set_config(ctx: Context, key: str, value: str, force: bool, dry_run: bool) -
 
         if not force and not field_metadata.ty.is_valid(value):
             raise CliException(
-                f'Unknown config value. Expected {field_metadata.ty}, got `{value}`. Unknown config values can only be set if the --force/-f flag is set.  Aborting.',
+                f'Invalid config value for {field}: expected {field_metadata.ty}, got `{value}`. Unknown config values can only be set if the --force/-f flag is set.  Aborting.',
                 support_hint=False,
             )
 
