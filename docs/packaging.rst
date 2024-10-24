@@ -16,3 +16,9 @@ For more information, see the `click documentation`_.
 .. _click documentation: https://click.palletsprojects.com/en/8.1.x/shell-completion/
 
 Unfortunately, man pages for ``nitropy`` are currently not available and cannot be generated automatically.
+
+Optional dependencies
+--------------------
+
+To limit the need to install pyscard, it is made optional.
+If you make it an optional dependency of your package, please patch ``pynitrokey/cli/nk3/pcsc_absent.py`` to indicate users how they can install it.
