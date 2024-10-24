@@ -744,4 +744,4 @@ except ImportError:
     @click.argument("args", nargs=-1, type=click.UNPROCESSED)
     def piv(args: list[str]) -> None:
         """Nitrokey PIV App"""
-        local_critical(PCSC_ABSENT)
+        local_critical(PCSC_ABSENT, support_hint=False)
