@@ -64,6 +64,52 @@ class RsaPivSigner(rsa.RSAPrivateKey):
         raise NotImplementedError()
 
 
+class P256PivSigner(ec.EllipticCurvePrivateKey):
+    _device: PivApp
+    _key_reference: int
+    _public_key: ec.EllipticCurvePublicKey
+
+    def __init__(
+        self, device: PivApp, key_reference: int, public_key: ec.EllipticCurvePublicKey
+    ):
+        self._device = device
+        self._key_reference = key_reference
+        self._public_key = public_key
+
+    def exchange(
+        self, algorithm: ec.ECDH, peer_public_key: ec.EllipticCurvePublicKey
+    ) -> bytes:
+        raise NotImplementedError()
+
+    def public_key(self) -> ec.EllipticCurvePublicKey:
+        return self._public_key
+
+    def curve(self) -> ec.EllipticCurve:  # type: ignore
+        return self._public_key.curve
+
+    def private_numbers(self) -> ec.EllipticCurvePrivateNumbers:
+        raise NotImplementedError()
+
+    def key_size(self) -> int:  # type: ignore
+        return self._public_key.key_size
+
+    def private_bytes(
+        self,
+        encoding: serialization.Encoding,
+        format: serialization.PrivateFormat,
+        encryption_algorithm: serialization.KeySerializationEncryption,
+    ) -> bytes:
+        raise NotImplementedError()
+
+    def sign(
+        self, data: bytes, signature_algorithm: ec.EllipticCurveSignatureAlgorithm
+    ) -> bytes:
+        assert isinstance(signature_algorithm, ec.ECDSA)
+        assert isinstance(signature_algorithm.algorithm, hashes.SHA256)
+
+        return self._device.sign_p256(data, self._key_reference)
+
+
 @nk3.group()
 @click.option(
     "--experimental",
@@ -551,7 +597,12 @@ def generate_key(
         csr_builder = csr_builder.add_extension(crypto_sujbect_alt_name, False)
 
     if algo == "nistp256":
-        local_critical("Unimplemented algorithm")
+        csr = csr_builder.sign(
+            P256PivSigner(device, key_ref, public_key_ecc), hashes.SHA256()
+        )
+        certificate = certificate_builder.public_key(public_key_ecc).sign(
+            P256PivSigner(device, key_ref, public_key_ecc), hashes.SHA256()
+        )
     elif algo == "rsa2048":
         csr = csr_builder.sign(
             RsaPivSigner(device, key_ref, public_key_rsa), hashes.SHA256()
