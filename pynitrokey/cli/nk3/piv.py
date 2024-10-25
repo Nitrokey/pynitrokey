@@ -1,21 +1,67 @@
 import datetime
 import sys
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Tuple, Union
 
 import click
 import cryptography
-from asn1crypto import x509
-from asn1crypto.core import ParsableOctetString
-from asn1crypto.csr import CertificationRequest, CertificationRequestInfo
-from asn1crypto.keys import PublicKeyInfo
-from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives._asymmetric import AsymmetricPadding
 from cryptography.hazmat.primitives.asymmetric import ec, rsa
+from cryptography.hazmat.primitives.asymmetric import utils as asym_utils
+from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
 from cryptography.hazmat.primitives.serialization import Encoding
 
 from pynitrokey.cli.nk3 import nk3
 from pynitrokey.helpers import check_experimental_flag, local_critical, local_print
 from pynitrokey.nk3.piv_app import PivApp, find_by_id
 from pynitrokey.tlv import Tlv
+
+
+class RsaPivSigner(rsa.RSAPrivateKey):
+    _device: PivApp
+    _key_reference: int
+    _public_key: rsa.RSAPublicKey
+    _key_size: int
+
+    def __init__(
+        self, device: PivApp, key_reference: int, public_key: rsa.RSAPublicKey
+    ):
+        self._device = device
+        self._key_reference = key_reference
+        self._public_key = public_key
+        self._key_size = public_key.key_size
+
+    def public_key(self) -> rsa.RSAPublicKey:
+        return self._public_key
+
+    def key_size(self) -> int:  # type: ignore
+        return self._key_size
+
+    def sign(
+        self,
+        data: bytes,
+        padding: AsymmetricPadding,
+        algorithm: Union[asym_utils.Prehashed, hashes.HashAlgorithm],
+    ) -> bytes:
+        assert not isinstance(algorithm, asym_utils.Prehashed)
+        assert isinstance(padding, PKCS1v15)
+        assert isinstance(algorithm, hashes.SHA256)
+
+        return self._device.sign_rsa2048(data, self._key_reference)
+
+    def decrypt(self, ciphertext: bytes, padding: AsymmetricPadding) -> bytes:
+        raise NotImplementedError()
+
+    def private_numbers(self) -> rsa.RSAPrivateNumbers:
+        raise NotImplementedError()
+
+    def private_bytes(
+        self,
+        encoding: serialization.Encoding,
+        format: serialization.PrivateFormat,
+        encryption_algorithm: serialization.KeySerializationEncryption,
+    ) -> bytes:
+        raise NotImplementedError()
 
 
 @nk3.group()
@@ -370,10 +416,6 @@ def generate_key(
             cryptography.hazmat.primitives.asymmetric.ec.SECP256R1(),
         )
         public_key_ecc = public_numbers_ecc.public_key()
-        public_key_der = public_key_ecc.public_bytes(
-            serialization.Encoding.DER,
-            serialization.PublicFormat.SubjectPublicKeyInfo,
-        )
     elif algo == "rsa2048":
         modulus_data = find_by_id(0x81, data)
         exponent_data = find_by_id(0x82, data)
@@ -385,48 +427,47 @@ def generate_key(
         exponent = int.from_bytes(exponent_data, byteorder="big", signed=False)
         public_numbers_rsa = rsa.RSAPublicNumbers(exponent, modulus)
         public_key_rsa = public_numbers_rsa.public_key()
-        public_key_der = public_key_rsa.public_bytes(
-            serialization.Encoding.DER,
-            serialization.PublicFormat.SubjectPublicKeyInfo,
-        )
     else:
         local_critical("Unimplemented algorithm")
 
-    public_key_info = PublicKeyInfo.load(public_key_der, strict=True)
+    certificate_builder = cryptography.x509.CertificateBuilder()
+    csr_builder = cryptography.x509.CertificateSigningRequestBuilder()
 
     if domain_component is None:
         domain_component = []
 
     if subject_name is None:
-        rdns = []
+        crypto_rdns = cryptography.x509.Name([])
     else:
-        rdns = [
-            x509.RelativeDistinguishedName(
-                [
-                    x509.NameTypeAndValue(
-                        {
-                            "type": x509.NameType.map("domain_component"),
-                            "value": x509.DNSName(subject),
-                        }
-                    )
-                ]
-            )
-            for subject in domain_component
-        ] + [
-            x509.RelativeDistinguishedName(
-                [
-                    x509.NameTypeAndValue(
-                        {
-                            "type": x509.NameType.map("common_name"),
-                            "value": x509.DirectoryString(
-                                name="utf8_string", value=subject
-                            ),
-                        }
-                    )
-                ]
-            )
-            for subject in subject_name
-        ]
+        crypto_rdns = cryptography.x509.Name(
+            [
+                cryptography.x509.RelativeDistinguishedName(
+                    [
+                        cryptography.x509.NameAttribute(
+                            cryptography.x509.NameOID.DOMAIN_COMPONENT, subject
+                        )
+                        for subject in domain_component
+                    ]
+                ),
+                cryptography.x509.RelativeDistinguishedName(
+                    [
+                        cryptography.x509.NameAttribute(
+                            cryptography.x509.NameOID.COMMON_NAME, subject
+                        )
+                        for subject in subject_name
+                    ]
+                ),
+            ]
+        )
+
+    certificate_builder = (
+        certificate_builder.subject_name(crypto_rdns)
+        .issuer_name(crypto_rdns)
+        .not_valid_before(datetime.datetime(2000, 1, 1, 0, 0))
+        .not_valid_after(datetime.datetime(2099, 1, 1, 0, 0))
+        .serial_number(cryptography.x509.random_serial_number())
+    )
+    csr_builder = csr_builder.subject_name(crypto_rdns)
 
     # SEQUENCE
     # SEQUENCE
@@ -451,135 +492,88 @@ def generate_key(
     # SEQUENCE
     # OBJECT            :rc4
     # INTEGER           :0200
-    smime_extension = ParsableOctetString(
-        value=bytes(
-            bytearray.fromhex(
-                "308183300B060960864801650304012A300B060960864801650304012D300B0609608648016503040116300B0609608648016503040119300B0609608648016503040102300B0609608648016503040105300A06082A864886F70D0307300706052B0E030207300E06082A864886F70D030202020080300E06082A864886F70D030402020200"
-            )
+    smime_extension = bytes(
+        bytearray.fromhex(
+            "308183300B060960864801650304012A300B060960864801650304012D300B0609608648016503040116300B0609608648016503040119300B0609608648016503040102300B0609608648016503040105300A06082A864886F70D0307300706052B0E030207300E06082A864886F70D030202020080300E06082A864886F70D030402020200"
         )
     )
 
-    extensions = [
-        {
-            "extn_id": "basic_constraints",
-            "critical": True,
-            "extn_value": x509.BasicConstraints({"ca": False}),
-        },
-        {
-            "extn_id": "key_usage",
-            "critical": True,
-            "extn_value": x509.KeyUsage({"digital_signature", "non_repudiation"}),
-        },
-        {
-            "extn_id": "extended_key_usage",
-            "critical": False,
-            "extn_value": x509.ExtKeyUsageSyntax(
-                ["client_auth", "microsoft_smart_card_logon"]
+    crypto_extensions: Sequence[Tuple[cryptography.x509.ExtensionType, bool]] = [
+        (cryptography.x509.BasicConstraints(ca=False, path_length=None), True),
+        (
+            cryptography.x509.KeyUsage(
+                digital_signature=True,
+                content_commitment=True,
+                key_encipherment=False,
+                data_encipherment=False,
+                key_agreement=False,
+                key_cert_sign=False,
+                crl_sign=False,
+                encipher_only=False,
+                decipher_only=False,
             ),
-        },
-        {
-            "extn_id": "1.2.840.113549.1.9.15",
-            "critical": False,
-            "extn_value": smime_extension,
-        },
+            True,
+        ),
+        (
+            cryptography.x509.ExtendedKeyUsage(
+                [
+                    cryptography.x509.oid.ExtendedKeyUsageOID.CLIENT_AUTH,
+                    cryptography.x509.oid.ExtendedKeyUsageOID.SMARTCARD_LOGON,
+                ]
+            ),
+            False,
+        ),
+        (
+            cryptography.x509.UnrecognizedExtension(
+                oid=cryptography.x509.oid.ObjectIdentifier("1.2.840.113549.1.9.15"),
+                value=smime_extension,
+            ),
+            False,
+        ),
     ]
 
+    for ext, critical in crypto_extensions:
+        certificate_builder = certificate_builder.add_extension(ext, critical)
+        csr_builder = csr_builder.add_extension(ext, critical)
+
     if subject_alt_name_upn is not None:
-        extensions.append(
-            {
-                "extn_id": "subject_alt_name",
-                "critical": False,
-                "extn_value": [
-                    x509.GeneralName(
-                        "other_name",
-                        {
-                            "type_id": "1.3.6.1.4.1.311.20.2.3",
-                            "value": x509.UTF8String(subject_alt_name_upn).retag(
-                                {"explicit": 0}
-                            ),
-                        },
-                    )
-                ],
-            }
+        crypto_sujbect_alt_name = cryptography.x509.SubjectAlternativeName(
+            [
+                cryptography.x509.OtherName(
+                    cryptography.x509.ObjectIdentifier("1.3.6.1.4.1.311.20.2.3"),
+                    bytes(Tlv.build([(0x0C, subject_alt_name_upn.encode("utf-8"))])),
+                )
+            ]
         )
-
-    csr_info = CertificationRequestInfo(
-        {
-            "version": "v1",
-            "subject": x509.Name(name="", value=x509.RDNSequence(rdns)),
-            "subject_pk_info": public_key_info,
-            "attributes": [{"type": "extension_request", "values": [extensions]}],
-        }
-    )
-
-    # To Be Signed
-    tbs = csr_info.dump()
+        certificate_builder = certificate_builder.add_extension(
+            crypto_sujbect_alt_name, False
+        )
+        csr_builder = csr_builder.add_extension(crypto_sujbect_alt_name, False)
 
     if algo == "nistp256":
-        signature = device.sign_p256(tbs, key_ref)
+        local_critical("Unimplemented algorithm")
     elif algo == "rsa2048":
-        signature = device.sign_rsa2048(tbs, key_ref)
+        csr = csr_builder.sign(
+            RsaPivSigner(device, key_ref, public_key_rsa), hashes.SHA256()
+        )
+        certificate = certificate_builder.public_key(public_key_rsa).sign(
+            RsaPivSigner(device, key_ref, public_key_rsa), hashes.SHA256()
+        )
     else:
         local_critical("Unimplemented algorithm")
-
-    csr = CertificationRequest(
-        {
-            "certification_request_info": csr_info,
-            "signature_algorithm": {
-                "algorithm": signature_algorithm,
-            },
-            "signature": signature,
-        }
-    )
 
     with click.open_file(path, mode="wb") as file:
-        file.write(csr.dump())
+        file.write(csr.public_bytes(Encoding.DER))
 
-    cert_info = x509.TbsCertificate(
-        {
-            "version": "v3",
-            "subject": x509.Name(name="", value=x509.RDNSequence(rdns)),
-            "issuer": x509.Name(name="", value=x509.RDNSequence(rdns)),
-            "serial_number": 0,
-            "signature": {
-                "algorithm": signature_algorithm,
-            },
-            "validity": {
-                "not_before": x509.GeneralizedTime(
-                    datetime.datetime(
-                        2000, 1, 1, tzinfo=datetime.timezone(datetime.timedelta())
-                    )
-                ),
-                "not_after": x509.GeneralizedTime(
-                    datetime.datetime(
-                        2099, 1, 1, tzinfo=datetime.timezone(datetime.timedelta())
-                    )
-                ),
-            },
-            "subject_public_key_info": public_key_info,
-            "extensions": extensions,
-        }
-    )
-
-    tbs = cert_info.dump()
-    if algo == "nistp256":
-        signature = device.sign_p256(tbs, key_ref)
-    elif algo == "rsa2048":
-        signature = device.sign_rsa2048(tbs, key_ref)
-    else:
-        local_critical("Unimplemented algorithm")
-
-    certificate = x509.Certificate(
-        {
-            "tbs_certificate": cert_info,
-            "signature_value": signature,
-            "signature_algorithm": {"algorithm": signature_algorithm},
-        }
-    ).dump()
     payload = Tlv.build(
         [
             (0x5C, bytes(bytearray.fromhex(KEY_TO_CERT_OBJ_ID_MAP[key_hex]))),
-            (0x53, Tlv.build([(0x70, certificate), (0x71, bytes([0]))])),
+            (
+                0x53,
+                Tlv.build(
+                    [(0x70, certificate.public_bytes(Encoding.DER)), (0x71, bytes([0]))]
+                ),
+            ),
         ]
     )
 
