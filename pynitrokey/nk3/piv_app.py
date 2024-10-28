@@ -290,7 +290,6 @@ class PivApp:
         self.send_receive(0xFB, 0, 0)
 
     def sign_p256(self, data: bytes, key: int) -> bytes:
-        prepare_for_pkcs1v15_sign_2048(data)
         digest = hashes.Hash(hashes.SHA256())
         digest.update(data)
         payload = digest.finalize()
