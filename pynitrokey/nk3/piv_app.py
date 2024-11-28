@@ -3,6 +3,7 @@ import os
 from typing import Any, Callable, Optional, Sequence, Union
 
 import smartcard
+from cryptography.hazmat.decrepit.ciphers.algorithms import TripleDES
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from smartcard.CardConnection import CardConnection
@@ -168,8 +169,8 @@ class PivApp:
 
         if len(admin_key) == 24:
             algorithm: Union[
-                algorithms.TripleDES, algorithms.AES128, algorithms.AES256
-            ] = algorithms.TripleDES(admin_key)
+                TripleDES, algorithms.AES128, algorithms.AES256
+            ] = TripleDES(admin_key)
             # algo = "tdes"
             algo_byte = 0x03
             expected_len = 8
