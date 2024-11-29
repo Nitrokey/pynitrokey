@@ -21,7 +21,6 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
-  "certifi >= 14.5.14",
   "cffi",
   "click >=8.0, <=8.1.3",
   "cryptography >=41.0.4,<44",
@@ -30,12 +29,10 @@ dependencies = [
   "intelhex",
   "nkdfu",
   "nitrokey ~=0.2.1",
-  "python-dateutil ~= 2.7.0",
   "pyusb",
   "requests",
   "tqdm",
   "tlv8",
-  "typing_extensions ~= 4.3.0",
   "click-aliases",
   "semver",
   "nethsm >=1.2.1, <2",
