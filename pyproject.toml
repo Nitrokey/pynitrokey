@@ -23,7 +23,7 @@ classifiers = [
 dependencies = [
   "cffi",
   "click >=8.1.6, <9",
-  "cryptography >=41.0.4,<44",
+  "cryptography >=43,<45",
   "ecdsa",
   "fido2 >=1.2.0,<2",
   # Limit hidapi to versions using the hidraw backend, see
