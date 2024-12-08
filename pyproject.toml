@@ -33,7 +33,7 @@ dependencies = [
   "requests",
   "tqdm",
   "tlv8",
-  "click-aliases",
+  "click-aliases >=1.0.5, <2",
   "semver",
   "nethsm >=1.2.1, <2",
 ]
@@ -120,7 +120,6 @@ module = [
     "usb1.*",
     "tlv8.*",
     "pytest.*",
-    "click_aliases.*",
     "smartcard.*",
 ]
 ignore_missing_imports = true
