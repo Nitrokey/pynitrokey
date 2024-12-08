@@ -906,7 +906,15 @@ def generate_key(
 @click.option("--public-key", is_flag=True, help="Query the public key")
 @click.option("--certificate", is_flag=True, help="Query the certificate")
 @click.pass_context
-def get_config(ctx: Context, **kwargs: bool) -> None:
+def get_config(
+    ctx: Context,
+    logging: bool,
+    network: bool,
+    time: bool,
+    unattended_boot: bool,
+    public_key: bool,
+    certificate: bool,
+) -> None:
     """Query the configuration of a NetHSM.
 
     Only the configuration items selected with the corresponding option are
@@ -916,40 +924,42 @@ def get_config(ctx: Context, **kwargs: bool) -> None:
     role."""
     with connect(ctx) as nethsm:
         print(f"Configuration for NetHSM {nethsm.host}:")
-        show_all = not any(kwargs.values())
+        show_all = not any(
+            [logging, network, time, unattended_boot, public_key, certificate]
+        )
 
-        if show_all or kwargs["logging"]:
-            logging = nethsm.get_config_logging()
+        if show_all or logging:
+            logging_config = nethsm.get_config_logging()
             print("  Logging:")
-            print("    IP address:   ", logging.ip_address)
-            print("    Port:         ", logging.port)
-            print("    Log level:    ", logging.log_level)
+            print("    IP address:   ", logging_config.ip_address)
+            print("    Port:         ", logging_config.port)
+            print("    Log level:    ", logging_config.log_level)
 
-        if show_all or kwargs["network"]:
-            network = nethsm.get_config_network()
+        if show_all or network:
+            network_config = nethsm.get_config_network()
             print("  Network:")
-            print("    IP address:   ", network.ip_address)
-            print("    Netmask:      ", network.netmask)
-            print("    Gateway:      ", network.gateway)
+            print("    IP address:   ", network_config.ip_address)
+            print("    Netmask:      ", network_config.netmask)
+            print("    Gateway:      ", network_config.gateway)
 
-        if show_all or kwargs["time"]:
-            time = nethsm.get_config_time()
-            print("  Time:           ", time)
+        if show_all or time:
+            time_config = nethsm.get_config_time()
+            print("  Time:           ", time_config)
 
-        if show_all or kwargs["unattended_boot"]:
-            unattended_boot = nethsm.get_config_unattended_boot()
-            print("  Unattended boot:", unattended_boot)
+        if show_all or unattended_boot:
+            unattended_boot_config = nethsm.get_config_unattended_boot()
+            print("  Unattended boot:", unattended_boot_config)
 
-        if show_all or kwargs["public_key"]:
-            public_key = nethsm.get_public_key()
+        if show_all or public_key:
+            public_key_config = nethsm.get_public_key()
             print("  Public key:")
-            for line in public_key.splitlines():
+            for line in public_key_config.splitlines():
                 print(f"    {line}")
 
-        if show_all or kwargs["certificate"]:
-            certificate = nethsm.get_certificate()
+        if show_all or certificate:
+            certificate_config = nethsm.get_certificate()
             print("  Certificate:")
-            for line in certificate.splitlines():
+            for line in certificate_config.splitlines():
                 print(f"    {line}")
 
 
