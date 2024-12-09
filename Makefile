@@ -6,7 +6,14 @@ PYTHON3=python3
 PYTHON3_VENV=venv/bin/python3
 
 # whitelist of directories for flake8
-FLAKE8_DIRS=pynitrokey/cli/fido2.py pynitrokey/cli/nk3 pynitrokey/cli/nkfido2.py pynitrokey/cli/nkpk.py pynitrokey/cli/trussed
+FLAKE8_DIRS=\
+	pynitrokey/cli/fido2.py \
+	pynitrokey/cli/nk3 \
+	pynitrokey/cli/nkfido2.py \
+	pynitrokey/cli/nkpk.py \
+	pynitrokey/cli/trussed \
+	pynitrokey/fido2/__init__.py \
+	pynitrokey/fido2/client.py
 
 all: init
 
