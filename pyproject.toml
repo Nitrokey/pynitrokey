@@ -113,7 +113,6 @@ module = [
     "click.*",
     "ecdsa.*",
     "intelhex.*",
-    "nacl.*",
     "nkdfu.*",
     "ruamel.*",
     "serial.*",
