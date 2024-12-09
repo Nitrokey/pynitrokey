@@ -48,10 +48,6 @@ from pynitrokey.helpers import (
     require_windows_admin,
 )
 
-# @todo: in version 0.4 UDP & anything earlier inside fido2.__init__ is broken/removed
-#        - check if/what is needed here
-#        - revive UDP support
-
 # https://pocoo-click.readthedocs.io/en/latest/commands/#nested-handling-and-contexts
 
 
@@ -491,9 +487,6 @@ def make_credential(
 @click.option("--host", help="Relying party's host", default="nitrokeys.dev")
 @click.option("--user", help="User ID", default="they")
 @click.option(
-    "--udp", is_flag=True, default=False, help="Communicate over UDP with software key"
-)
-@click.option(
     "--prompt",
     help="Prompt for user",
     default="Touch your authenticator to generate a response...",
@@ -508,7 +501,6 @@ def challenge_response(
     prompt: str,
     credential_id: str,
     challenge: str,
-    udp: bool,
 ) -> None:
     """Uses `hmac-secret` to implement a challenge-response mechanism.
 
@@ -532,7 +524,6 @@ def challenge_response(
         serial=serial,
         prompt=prompt,
         output=True,
-        udp=udp,
     )
 
 
@@ -546,14 +537,10 @@ def challenge_response(
     "--serial",
     help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
 )
-@click.option(
-    "--udp", is_flag=True, default=False, help="Communicate over UDP with software key"
-)
 @click.argument("hash-type")
 @click.argument("filename")
 def probe(
     serial: Optional[str],
-    udp: bool,
     hash_type: str,
     filename: str,
 ) -> None:
@@ -582,7 +569,7 @@ def probe(
     # @todo: proper error/exception + cut in chunks?
     assert len(data) <= 6 * 1024
 
-    p = nkfido2.find(serial, udp=udp)
+    p = nkfido2.find(serial)
 
     serialized_command = dump_dict({"subcommand": hash_type, "data": data})
     result = p.send_data_hid(SoloBootloader.HIDCommandProbe, serialized_command)
@@ -725,18 +712,13 @@ def set_pin(serial: Optional[str]) -> None:
     "--serial",
     help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
 )
-@click.option(
-    "--udp", is_flag=True, default=False, help="Communicate over UDP with software key"
-)
 @click.option("--pin", help="PIN for device access", default=None)
-def verify(serial: Optional[str], udp: bool, pin: Optional[str]) -> None:
+def verify(serial: Optional[str], pin: Optional[str]) -> None:
     """Verify if connected Nitrokey FIDO2 device is genuine."""
 
     cert = None
     try:
-        cert = nkfido2.find(serial, udp=udp, pin=pin).make_credential(
-            fingerprint_only=True
-        )
+        cert = nkfido2.find(serial, pin=pin).make_credential(fingerprint_only=True)
 
     except Fido2ClientError as e:
         cause = str(e.cause)
@@ -805,14 +787,11 @@ def verify(serial: Optional[str], udp: bool, pin: Optional[str]) -> None:
     "--serial",
     help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
 )
-@click.option(
-    "--udp", is_flag=True, default=False, help="Communicate over UDP with software key"
-)
-def version(serial: Optional[str], udp: bool) -> None:
+def version(serial: Optional[str]) -> None:
     """Version of firmware on device."""
 
     try:
-        res = nkfido2.find(serial, udp=udp).solo_version()
+        res = nkfido2.find(serial).solo_version()
         major, minor, patch = res[:3]
         locked = ""
         # @todo:
@@ -841,13 +820,10 @@ def version(serial: Optional[str], udp: bool) -> None:
     "--serial",
     help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
 )
-@click.option(
-    "--udp", is_flag=True, default=False, help="Communicate over UDP with software key"
-)
-def wink(serial: Optional[str], udp: bool) -> None:
+def wink(serial: Optional[str]) -> None:
     """Send wink command to device (blinks LED a few times)."""
 
-    nkfido2.find(serial, udp=udp).wink()
+    nkfido2.find(serial).wink()
 
 
 @click.command()
@@ -856,15 +832,12 @@ def wink(serial: Optional[str], udp: bool) -> None:
     "--serial",
     help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
 )
-@click.option(
-    "--udp", is_flag=True, default=False, help="Communicate over UDP with software key"
-)
-def reboot(serial: Optional[str], udp: bool) -> None:
+def reboot(serial: Optional[str]) -> None:
     """Send reboot command to device (development command)"""
     local_print("Reboot", "Press key to confirm!")
 
     CTAP_REBOOT = 0x53
-    dev = nkfido2.find(serial, udp=udp).dev
+    dev = nkfido2.find(serial).dev
     try:
         assert isinstance(dev, CtapHidDevice)
         dev.call(CTAP_REBOOT ^ 0x80, b"")

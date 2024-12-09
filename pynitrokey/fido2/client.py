@@ -311,7 +311,6 @@ class NKFido2Client:
         serial: Optional[str] = None,
         prompt: Optional[str] = "Touch your authenticator to generate a response...",
         output: bool = True,
-        udp: bool = False,
     ) -> bytes:
 
         _user_id = user_id.encode()
