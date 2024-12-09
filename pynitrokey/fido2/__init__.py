@@ -12,14 +12,8 @@ def find(
     solo_serial: Optional[str] = None,
     retries: int = 5,
     raw_device: Optional[CtapHidDevice] = None,
-    udp: bool = False,
     pin: Optional[str] = None,
 ) -> NKFido2Client:
-
-    # @todo: remove this, force_udp_backend is not available anymore!
-    if udp:
-        force_udp_backend()  # type: ignore
-
     p = NKFido2Client()
 
     # This... is not the right way to do it yet
@@ -32,7 +26,6 @@ def find(
         except RuntimeError:
             time.sleep(0.2)
 
-    # return None
     raise NoSoloFoundError("no Nitrokey FIDO2 found")
 
 
