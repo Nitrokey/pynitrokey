@@ -16,15 +16,13 @@ import struct
 import sys
 import tempfile
 import time
-from getpass import getpass
 from typing import Any, Callable, List, Optional, Tuple, Union
 
-from fido2.client import Fido2Client, UserInteraction
+from fido2.client import Fido2Client
 from fido2.cose import ES256, EdDSA
 from fido2.ctap import CtapError
 from fido2.ctap1 import Ctap1
 from fido2.ctap2.base import Ctap2
-from fido2.ctap2.credman import CredentialManagement
 from fido2.ctap2.pin import ClientPin
 from fido2.hid import CTAPHID, CtapHidDevice, open_device
 from fido2.webauthn import (
@@ -44,23 +42,6 @@ import pynitrokey.fido2 as nkfido2
 from pynitrokey import helpers
 from pynitrokey.fido2.commands import SoloBootloader, SoloExtension
 from pynitrokey.helpers import local_critical, local_print
-
-
-class CliOrProvidedInteraction(UserInteraction):
-    def __init__(self, pin: Optional[str]) -> None:
-        self.pin = pin
-
-    def prompt_up(self) -> None:
-        print("Touch your authenticator device now...")
-
-    def request_pin(self, permissions: Any, rd_id: Any) -> str:
-        if self.pin:
-            return self.pin
-        else:
-            return getpass("Enter PIN: ")
-
-    def request_uv(self, permissions: Any, rd_id: Any) -> bool:
-        return True
 
 
 class NKFido2Client:
@@ -125,14 +106,6 @@ class NKFido2Client:
             self.ctap2: Optional[Ctap2] = Ctap2(self.dev)
         except CtapError as e:
             self.ctap2 = None
-
-        try:
-            self.client: Optional[Fido2Client] = Fido2Client(
-                self.dev, self.origin, user_interaction=CliOrProvidedInteraction(pin)
-            )
-        except CtapError:
-            print("Not using FIDO2 interface.")
-            self.client = None
 
         if self.exchange == self.exchange_hid:
             self.send_data_hid(CTAPHID.INIT, b"\x11\x11\x11\x11\x11\x11\x11\x11")
@@ -246,142 +219,6 @@ class NKFido2Client:
     def reset(self) -> None:
         assert isinstance(self.ctap2, Ctap2)
         self.ctap2.reset()
-
-    def make_credential(
-        self,
-        host: str = "nitrokeys.dev",
-        user_id: str = "they",
-        resident_key: str = "",
-        user_verification: str = "",
-        output: bool = True,
-        fingerprint_only: bool = False,
-    ) -> str:
-
-        """
-        fingerprint_only bool Return sha256 digest of the certificate, in a hex string format. Useful for detecting
-            device's model and firmware.
-        """
-
-        assert self.client is not None
-
-        options = PublicKeyCredentialCreationOptions(
-            rp=PublicKeyCredentialRpEntity(name="Example RP", id=host),
-            user=PublicKeyCredentialUserEntity(name="A. User", id=user_id.encode()),
-            challenge=secrets.token_bytes(32),
-            pub_key_cred_params=[
-                PublicKeyCredentialParameters(
-                    type=PublicKeyCredentialType.PUBLIC_KEY, alg=EdDSA.ALGORITHM
-                ),
-                PublicKeyCredentialParameters(
-                    type=PublicKeyCredentialType.PUBLIC_KEY, alg=ES256.ALGORITHM
-                ),
-            ],
-            extensions={"hmacCreateSecret": True},
-            authenticator_selection=AuthenticatorSelectionCriteria(
-                resident_key=ResidentKeyRequirement(resident_key),
-                user_verification=UserVerificationRequirement(user_verification),
-            ),
-        )
-        self.client.origin = f"https://{host}"
-        attestation_object = self.client.make_credential(options).attestation_object
-
-        if fingerprint_only:
-            if "x5c" not in attestation_object.att_stmt:
-                raise ValueError("No x5c information available")
-            from hashlib import sha256
-
-            data = attestation_object.att_stmt["x5c"]
-            return sha256(data[0]).digest().hex()
-
-        credential = attestation_object.auth_data.credential_data
-        if not credential:
-            raise ValueError("No credential ID available")
-        credential_id = credential.credential_id
-        if output:
-            print(credential_id.hex())
-
-        return credential_id.hex()
-
-    def simple_secret(
-        self,
-        credential_id: str,
-        secret_input: str,
-        host: str = "nitrokeys.dev",
-        user_id: str = "they",
-        serial: Optional[str] = None,
-        prompt: Optional[str] = "Touch your authenticator to generate a response...",
-        output: bool = True,
-    ) -> bytes:
-
-        _user_id = user_id.encode()
-
-        assert isinstance(self.client, Fido2Client)
-        client = self.client
-
-        # @todo: rewrite with typing; use fido2.webauthn.PublicKeyCredentialCreationOptions
-        # rp = {"id": host, "name": "Example RP"}
-        client.host = host  # type: ignore
-        client.origin = f"https://{client.host}"  # type: ignore
-        client.user_id = _user_id  # type: ignore
-        # user = {"id": user_id, "name": "A. User"}
-        _credential_id = binascii.a2b_hex(credential_id)
-
-        allow_list = [{"type": "public-key", "id": _credential_id}]
-
-        challenge = secrets.token_bytes(32)
-
-        h = hashlib.sha256()
-        h.update(secret_input.encode())
-        salt = h.digest()
-
-        if prompt:
-            print(prompt)
-
-        assertion = client.get_assertion(
-            {
-                "rpId": host,
-                "challenge": challenge,
-                "allowCredentials": allow_list,
-                "extensions": {"hmacGetSecret": {"salt1": salt}},
-            },  # type: ignore
-        ).get_response(0)
-
-        # @todo: rewrite with typing
-        output = assertion.extension_results["hmacGetSecret"]["output1"]  # type: ignore
-        assert isinstance(output, bytes)
-        if output:
-            print(output.hex())
-
-        return output
-
-    def has_pin(self) -> bool:
-        assert self.client is not None
-        return self.client.info.options["clientPin"]
-
-    def cred_mgmt(self, serial: str, pin: str) -> CredentialManagement:
-        device = nkfido2.find(serial)
-        assert isinstance(device.ctap2, Ctap2)
-        client_pin = ClientPin(device.ctap2)
-
-        try:
-            client_token = client_pin.get_pin_token(
-                pin, permissions=ClientPin.PERMISSION.CREDENTIAL_MGMT
-            )
-        except CtapError as error:
-            if error.code == CtapError.ERR.PIN_NOT_SET:
-                local_critical("Please set a pin in order to manage credentials")
-            if error.code == CtapError.ERR.PIN_AUTH_BLOCKED:
-                local_critical(
-                    "Pin authentication has been blocked, try reinserting the key or setting a pin if none is set"
-                )
-            if error.code == CtapError.ERR.PIN_BLOCKED:
-                local_critical(
-                    "Your device has been blocked after too many failed unlock attempts, to fix this it "
-                    "will have to be reset. (If no pin is set, plugging it in again might fix this warning)"
-                )
-            raise
-
-        return CredentialManagement(device.ctap2, client_pin.protocol, client_token)
 
     def enter_bootloader(self) -> None:
         """

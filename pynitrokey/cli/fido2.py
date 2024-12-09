@@ -7,21 +7,44 @@
 # http://opensource.org/licenses/MIT>, at your option. This file may not be
 # copied, modified, or distributed except according to those terms.
 
+import hashlib
+import secrets
+import time
 from dataclasses import fields
-from typing import Optional
+from getpass import getpass
+from typing import Any, Optional
 
 import click
-
-# @fixme: 1st layer `nkfido2` lower layer `fido2` not to be used here !
 from fido2.client import ClientError as Fido2ClientError
+from fido2.client import Fido2Client, UserInteraction
+from fido2.cose import ES256, EdDSA
 from fido2.ctap import CtapError
 from fido2.ctap2.base import Ctap2, Info
 from fido2.ctap2.credman import CredentialManagement
+from fido2.ctap2.extensions import (
+    HMACGetSecretInput,
+    HMACGetSecretOutput,
+    HmacSecretExtension,
+)
 from fido2.ctap2.pin import ClientPin
-from fido2.webauthn import Aaguid
+from fido2.hid import CtapHidDevice, open_device
+from fido2.webauthn import (
+    Aaguid,
+    AttestationObject,
+    AuthenticatorSelectionCriteria,
+    PublicKeyCredentialCreationOptions,
+    PublicKeyCredentialDescriptor,
+    PublicKeyCredentialParameters,
+    PublicKeyCredentialRequestOptions,
+    PublicKeyCredentialRpEntity,
+    PublicKeyCredentialType,
+    PublicKeyCredentialUserEntity,
+    ResidentKeyRequirement,
+    UserVerificationRequirement,
+)
 
-import pynitrokey.fido2 as nkfido2
-from pynitrokey.fido2.client import NKFido2Client
+from pynitrokey.cli.exceptions import CliException
+from pynitrokey.exceptions import NonUniqueDeviceError, NoSoloFoundError
 from pynitrokey.helpers import (
     AskUser,
     local_critical,
@@ -30,6 +53,182 @@ from pynitrokey.helpers import (
 )
 
 # https://pocoo-click.readthedocs.io/en/latest/commands/#nested-handling-and-contexts
+
+
+class CliInteraction(UserInteraction):
+    def __init__(self, pin: Optional[str]) -> None:
+        self.pin = pin
+
+    def prompt_up(self) -> None:
+        print("Touch your authenticator device now...")
+
+    def request_pin(self, permissions: Any, rd_id: Any) -> str:
+        if self.pin:
+            return self.pin
+        else:
+            return getpass("Enter PIN: ")
+
+    def request_uv(self, permissions: Any, rd_id: Any) -> bool:
+        return True
+
+
+def _device(serial: Optional[str] = None) -> CtapHidDevice:
+    for i in range(5):
+        devices = []
+        if serial is not None:
+            if serial.startswith("device="):
+                serial = serial.split("=")[1]
+                devices = [open_device(serial)]
+            else:
+                devices = [
+                    d
+                    for d in CtapHidDevice.list_devices()
+                    if d.descriptor.serial_number == serial
+                ]
+        else:
+            devices = list(CtapHidDevice.list_devices())
+        if len(devices) > 1:
+            raise NonUniqueDeviceError
+        if len(devices) > 0:
+            return devices[0]
+
+        time.sleep(0.2)
+
+    raise NoSoloFoundError("no Nitrokey FIDO2 found")
+
+
+def _ctap2(device: CtapHidDevice) -> Ctap2:
+    try:
+        return Ctap2(device)
+    except CtapError:
+        raise CliException("Device does not support CTAP2", support_hint=False)
+
+
+def _credential_management(device: CtapHidDevice, pin: str) -> CredentialManagement:
+    ctap2 = _ctap2(device)
+
+    client_pin = ClientPin(ctap2)
+
+    try:
+        client_token = client_pin.get_pin_token(
+            pin, permissions=ClientPin.PERMISSION.CREDENTIAL_MGMT
+        )
+    except CtapError as error:
+        if error.code == CtapError.ERR.PIN_NOT_SET:
+            local_critical(
+                "Please set a pin in order to manage credentials", support_hint=False
+            )
+        if error.code == CtapError.ERR.PIN_AUTH_BLOCKED:
+            local_critical(
+                "Pin authentication has been blocked, try reinserting the key or setting a pin if none is set",
+                support_hint=False,
+            )
+        if error.code == CtapError.ERR.PIN_BLOCKED:
+            local_critical(
+                "Your device has been blocked after too many failed unlock attempts, to fix this it "
+                "will have to be reset. (If no pin is set, plugging it in again might fix this warning)",
+                support_hint=False,
+            )
+        raise
+
+    return CredentialManagement(ctap2, client_pin.protocol, client_token)
+
+
+def _fido2(
+    device: CtapHidDevice,
+    host: str,
+    hmac_secret: bool = False,
+    pin: Optional[str] = None,
+) -> Fido2Client:
+    # TODO: set user_interaction
+    origin = f"https://{host}"
+    extensions = []
+    if hmac_secret:
+        # there are no type annotations for HmacSecretExtension.__init__
+        extensions.append(HmacSecretExtension(allow_hmac_secret=True))  # type: ignore[no-untyped-call]
+    user_interaction = CliInteraction(pin)
+    return Fido2Client(
+        device=device,
+        origin=origin,
+        extensions=extensions,
+        user_interaction=user_interaction,
+    )
+
+
+def _make_credential(
+    client: Fido2Client,
+    host: str,
+    user_id: str,
+    resident_key: str = "",
+    user_verification: str = "",
+    hmac_secret: bool = False,
+) -> AttestationObject:
+    extensions = {}
+    if hmac_secret:
+        extensions["hmacCreateSecret"] = True
+
+    options = PublicKeyCredentialCreationOptions(
+        rp=PublicKeyCredentialRpEntity(name="Example RP", id=host),
+        user=PublicKeyCredentialUserEntity(name="A. User", id=user_id.encode()),
+        challenge=secrets.token_bytes(32),
+        pub_key_cred_params=[
+            PublicKeyCredentialParameters(
+                type=PublicKeyCredentialType.PUBLIC_KEY, alg=EdDSA.ALGORITHM
+            ),
+            PublicKeyCredentialParameters(
+                type=PublicKeyCredentialType.PUBLIC_KEY, alg=ES256.ALGORITHM
+            ),
+        ],
+        extensions=extensions,
+        authenticator_selection=AuthenticatorSelectionCriteria(
+            resident_key=ResidentKeyRequirement(resident_key),
+            user_verification=UserVerificationRequirement(user_verification),
+        ),
+    )
+
+    response = client.make_credential(options)
+
+    if hmac_secret:
+        assert response.extension_results is not None
+        assert "hmacCreateSecret" in response.extension_results
+        assert response.extension_results["hmacCreateSecret"] is True
+
+    return response.attestation_object
+
+
+def _simple_secret(
+    device: CtapHidDevice,
+    credential_id: str,
+    secret_input: str,
+    host: str,
+) -> bytes:
+    client = _fido2(device, host, hmac_secret=True)
+
+    allow_list = [
+        PublicKeyCredentialDescriptor(
+            type=PublicKeyCredentialType.PUBLIC_KEY,
+            id=bytes.fromhex(credential_id),
+        )
+    ]
+
+    challenge = secrets.token_bytes(32)
+    salt = hashlib.sha256(secret_input.encode()).digest()
+
+    assertion = client.get_assertion(
+        PublicKeyCredentialRequestOptions(
+            challenge=challenge,
+            rp_id=host,
+            allow_credentials=allow_list,
+            extensions={"hmacGetSecret": HMACGetSecretInput(salt1=salt)},
+        )
+    ).get_response(0)
+
+    assert assertion.extension_results is not None
+    assert "hmacGetSecret" in assertion.extension_results
+    # from_dict would be more suitable but does not have type annotations
+    output = HMACGetSecretOutput(**assertion.extension_results["hmacGetSecret"])
+
+    return output.output1
 
 
 @click.group()
@@ -46,12 +245,16 @@ def fido2() -> None:
 )
 def get_info(serial: Optional[str]) -> None:
     """Execute the CTAP2 GET_INFO command and print the response."""
-    p = nkfido2.find(serial)
-    if p.ctap2 is None:
+
+    device = _device(serial)
+
+    try:
+        ctap2 = Ctap2(device)
+    except CtapError:
         print("CTAP2 not supported")
         return
 
-    info = p.ctap2.send_cbor(Ctap2.CMD.GET_INFO)
+    info = ctap2.send_cbor(Ctap2.CMD.GET_INFO)
     for i, field in enumerate(fields(Info)):
         key = i + 1
         if key in info:
@@ -81,8 +284,8 @@ def list_credentials(serial: str, pin: str) -> None:
     if not pin:
         pin = AskUser.hidden("Please provide pin: ")
 
-    nk_client = NKFido2Client()
-    cred_manager = nk_client.cred_mgmt(serial, pin)
+    device = _device(serial)
+    cred_manager = _credential_management(device, pin)
 
     # Returns Sequence[Mapping[int, Any]]
     # Use this to get all existing creds
@@ -152,14 +355,15 @@ def delete_credential(serial: str, pin: str, cred_id: str) -> None:
     if not pin:
         pin = AskUser.hidden("Please provide pin: ")
 
-    nk_client = NKFido2Client()
-    cred_manager = nk_client.cred_mgmt(serial, pin)
+    device = _device(serial)
+    cred_manager = _credential_management(device, pin)
 
-    tmp_cred_id = {"id": bytes.fromhex(cred_id), "type": "public-key"}
+    cred_descriptor = PublicKeyCredentialDescriptor(
+        type=PublicKeyCredentialType.PUBLIC_KEY, id=bytes.fromhex(cred_id)
+    )
 
-    # @todo: proper typing
     try:
-        cred_manager.delete_cred(tmp_cred_id)  # type: ignore
+        cred_manager.delete_cred(cred_descriptor)
     except Exception:
         local_critical("Failed to delete credential, was the right cred_id given?")
         return
@@ -191,18 +395,25 @@ REQUIREMENT_CHOICE = click.Choice(["discouraged", "preferred", "required"])
 def make_credential(
     host: str, user: str, resident_key: str, user_verification: str
 ) -> None:
-    """Generate a credential.
+    """Generate a credential."""
 
-    Pass `--prompt ""` to output only the `credential_id` as hex.
-    """
+    # TODO: add flag for hmac-secret
 
-    nkfido2.find().make_credential(
+    device = _device()
+    client = _fido2(device, host, hmac_secret=True)
+    attestation_object = _make_credential(
+        client=client,
         host=host,
         user_id=user,
-        output=True,
         resident_key=resident_key,
         user_verification=user_verification,
+        hmac_secret=True,
     )
+
+    credential = attestation_object.auth_data.credential_data
+    if not credential:
+        raise ValueError("No credential ID available")
+    print(credential.credential_id.hex())
 
 
 @click.command()
@@ -212,20 +423,11 @@ def make_credential(
     help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
 )
 @click.option("--host", help="Relying party's host", default="nitrokeys.dev")
-@click.option("--user", help="User ID", default="they")
-@click.option(
-    "--prompt",
-    help="Prompt for user",
-    default="Touch your authenticator to generate a response...",
-    show_default=True,
-)
 @click.argument("credential-id")
 @click.argument("challenge")
 def challenge_response(
     serial: Optional[str],
     host: str,
-    user: str,
-    prompt: str,
     credential_id: str,
     challenge: str,
 ) -> None:
@@ -239,19 +441,16 @@ def challenge_response(
     specific authenticator used. To do this, use `nitropy fido2 make-credential`.
 
     If so desired, user and relying party can be changed from the defaults.
-
-    The prompt can be suppressed using `--prompt ""`.
     """
 
-    nkfido2.find().simple_secret(
+    device = _device(serial)
+    output = _simple_secret(
+        device,
         credential_id,
         challenge,
         host=host,
-        user_id=user,
-        serial=serial,
-        prompt=prompt,
-        output=True,
     )
+    print(output.hex())
 
 
 @click.command()
@@ -270,7 +469,9 @@ def reset(serial: Optional[str], yes: bool) -> None:
     if yes or AskUser.yes_no("Warning: Your credentials will be lost!!! continue?"):
         local_print("Press key to confirm -- again, your credentials will be lost!!!")
         try:
-            nkfido2.find(serial).reset()
+            device = _device(serial)
+            ctap2 = _ctap2(device)
+            ctap2.reset()
         except CtapError as e:
             local_critical(
                 f"Reset failed ({str(e)})",
@@ -301,10 +502,9 @@ def change_pin(serial: Optional[str]) -> None:
             support_hint=False,
         )
     try:
-        # @fixme: move this (function) into own fido2-client-class
-        dev = nkfido2.find(serial)
-        assert isinstance(dev.ctap2, Ctap2)
-        client_pin = ClientPin(dev.ctap2)
+        device = _device(serial)
+        ctap2 = _ctap2(device)
+        client_pin = ClientPin(ctap2)
         client_pin.change_pin(old_pin, new_pin)
         local_print("done - please use new pin to verify key")
 
@@ -338,10 +538,9 @@ def set_pin(serial: Optional[str]) -> None:
         confirm_pin = new_pin
 
     try:
-        # @fixme: move this (function) into own fido2-client-class
-        dev = nkfido2.find(serial)
-        assert isinstance(dev.ctap2, Ctap2)
-        client_pin = ClientPin(dev.ctap2)
+        device = _device(serial)
+        ctap2 = _ctap2(device)
+        client_pin = ClientPin(ctap2)
         client_pin.set_pin(new_pin)
         local_print("done - please use new pin to verify key")
 
@@ -364,21 +563,24 @@ def set_pin(serial: Optional[str]) -> None:
 def verify(serial: Optional[str], pin: Optional[str]) -> None:
     """Verify if connected Nitrokey FIDO2 device is genuine."""
 
-    cert = None
+    host = "nitrokey.dev"
+    device = _device(serial)
+
     try:
-        cert = nkfido2.find(serial, pin=pin).make_credential(fingerprint_only=True)
+        client = _fido2(device, host, pin=pin)
+        attestation_object = _make_credential(client=client, host=host, user_id="they")
 
     except Fido2ClientError as e:
         cause = str(e.cause)
         # error 0x31
         if "PIN_INVALID" in cause:
-            local_critical(
+            raise CliException(
                 "your key has a different PIN. Please try to remember it :)", e
             )
 
         # error 0x34 (power cycle helps)
         if "PIN_AUTH_BLOCKED" in cause:
-            local_critical(
+            raise CliException(
                 "your key's PIN auth is blocked due to too many incorrect attempts.",
                 "please plug it out and in again, then again!",
                 "please be careful, after too many incorrect attempts, ",
@@ -388,7 +590,7 @@ def verify(serial: Optional[str], pin: Optional[str]) -> None:
 
         # error 0x32 (only reset helps)
         if "PIN_BLOCKED" in cause:
-            local_critical(
+            raise CliException(
                 "your key's PIN is blocked. ",
                 "to use it again, you need to fully reset it.",
                 "you can do this using: `nitropy fido2 reset`",
@@ -397,20 +599,16 @@ def verify(serial: Optional[str], pin: Optional[str]) -> None:
 
         # error 0x01
         if "INVALID_COMMAND" in cause:
-            local_critical(
+            raise CliException(
                 "error getting credential, is your key in bootloader mode?",
                 "try: `nitropy fido2 util program aux leave-bootloader`",
                 e,
             )
 
-        # pin required error
-        if "PIN required" in str(e):
-            local_critical("your key has a PIN set - pass it using `--pin <PIN>`", e)
-
-        local_critical("unexpected Fido2Client (CTAP) error", e)
+        raise CliException("unexpected Fido2Client (CTAP) error", e)
 
     except Exception as e:
-        local_critical("unexpected error", e)
+        raise CliException("unexpected error", e)
 
     hashdb = {
         "d7a23679007fe799aeda4388890f33334aba4097bb33fee609c8998a1ba91bd3": "Nitrokey FIDO2 1.x",
@@ -422,11 +620,15 @@ def verify(serial: Optional[str], pin: Optional[str]) -> None:
         "4c331d7af869fd1d8217198b917a33d1fa503e9778da7638504a64a438661ae0": "Nitrokey 3 A Mini",
     }
 
-    a_hex = cert
-    if a_hex in hashdb:
-        local_print(f"found device: {hashdb[a_hex]} ({a_hex})")
+    if "x5c" not in attestation_object.att_stmt:
+        raise ValueError("No x5c information available")
+
+    data = attestation_object.att_stmt["x5c"]
+    cert = hashlib.sha256(data[0]).digest().hex()
+    if cert in hashdb:
+        local_print(f"found device: {hashdb[cert]} ({cert})")
     else:
-        local_print(f"unknown fingerprint! {a_hex}")
+        local_print(f"unknown fingerprint! {cert}")
 
 
 @click.command()
@@ -438,7 +640,7 @@ def verify(serial: Optional[str], pin: Optional[str]) -> None:
 def wink(serial: Optional[str]) -> None:
     """Send wink command to device (blinks LED a few times)."""
 
-    nkfido2.find(serial).wink()
+    _device(serial).wink()
 
 
 fido2.add_command(challenge_response)

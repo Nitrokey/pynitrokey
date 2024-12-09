@@ -18,7 +18,6 @@ from nitrokey.trussed import Fido2Certs, TrussedBase, TrussedDevice, Uuid, Versi
 from tqdm import tqdm
 
 from pynitrokey.cli.trussed.test import TestContext, TestResult, TestStatus, test_case
-from pynitrokey.fido2.client import NKFido2Client
 from pynitrokey.helpers import local_print
 
 logger = logging.getLogger(__name__)
@@ -339,10 +338,12 @@ def test_fido2(ctx: TestContext, device: TrussedBase) -> TestResult:
         return TestResult(TestStatus.SKIPPED)
 
     # drop out early, if pin is needed, but not provided
-    nk_client = NKFido2Client()
-    nk_client.find_device(device.device)
+    from fido2.client import Fido2Client
 
-    if nk_client.has_pin() and not ctx.pin:
+    fido2_client = Fido2Client(device=device.device, origin="https://example.org")
+    has_pin = fido2_client.info.options["clientPin"]
+
+    if has_pin and not ctx.pin:
         return TestResult(
             TestStatus.FAILURE,
             "FIDO2 pin is set, but not provided (use the --pin argument)",
@@ -350,7 +351,7 @@ def test_fido2(ctx: TestContext, device: TrussedBase) -> TestResult:
 
     # Based on https://github.com/Yubico/python-fido2/blob/142587b3e698ca0e253c78d75758fda635cac51a/examples/credential.py
 
-    from fido2.client import Fido2Client, PinRequiredError, UserInteraction
+    from fido2.client import PinRequiredError, UserInteraction
     from fido2.server import Fido2Server
     from fido2.webauthn import (
         AttestationConveyancePreference,

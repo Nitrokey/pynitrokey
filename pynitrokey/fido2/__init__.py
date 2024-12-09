@@ -2,9 +2,9 @@ import time
 from typing import Any, Callable, List, Optional, Union
 
 import usb
-from fido2.hid import CtapHidDevice
+from fido2.hid import CtapHidDevice, open_device
 
-from pynitrokey.exceptions import NoSoloFoundError
+from pynitrokey.exceptions import NonUniqueDeviceError, NoSoloFoundError
 
 # from pynitrokey.fido2 import hmac_secret
 from pynitrokey.fido2.client import NKFido2Client
