@@ -82,6 +82,10 @@ def nitropy():
     check_root()
 
 
+from . import nkfido2
+
+nkfido2.add_commands(fido2)
+
 nitropy.add_command(fido2)
 nitropy.add_command(nethsm)
 nitropy.add_command(nk3)
