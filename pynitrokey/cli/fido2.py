@@ -527,83 +527,6 @@ def challenge_response(
     )
 
 
-######
-# @fixme: - excluded 'probe' for now, as command:
-# SoloBootloader.HIDCommandProbe => 0x70 returns "INVALID_COMMAND"
-# - decide its future asap...
-@click.command()
-@click.option(
-    "-s",
-    "--serial",
-    help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
-)
-@click.argument("hash-type")
-@click.argument("filename")
-def probe(
-    serial: Optional[str],
-    hash_type: str,
-    filename: str,
-) -> None:
-    """Calculate HASH"""
-
-    # @todo: move to constsconf.py
-    # all_hash_types = ("SHA256", "SHA512", "RSA2048", "Ed25519")
-    all_hash_types = ("SHA256", "SHA512", "RSA2048")
-    # @fixme: Ed25519 needs `nacl` dependency, which is not available currently?!
-
-    if hash_type.upper() not in all_hash_types:
-        local_critical(
-            f"invalid [HASH_TYPE] provided: {hash_type}",
-            f"use one of: {', '.join(all_hash_types)}",
-        )
-
-    data = open(filename, "rb").read()
-
-    # < CTAPHID_BUFFER_SIZE
-    # https://fidoalliance.org/specs/fido-v2.0-id-20180227/
-    #             fido-client-to-authenticator-protocol-v2.0-id-20180227.html
-    #             #usb-message-and-packet-structure
-    # also account for padding (see data below....)
-    # so 6kb is conservative
-
-    # @todo: proper error/exception + cut in chunks?
-    assert len(data) <= 6 * 1024
-
-    p = nkfido2.find(serial)
-
-    serialized_command = dump_dict({"subcommand": hash_type, "data": data})
-    result = p.send_data_hid(SoloBootloader.HIDCommandProbe, serialized_command)
-    result_hex = result.hex()
-    local_print(result_hex)
-
-    # @todo: unreachable
-    if hash_type == "Ed25519":
-        # @fixme: mmmh, where to get `nacl` (python-libnacl? python-pynacl?)
-        import nacl.signing
-
-        # print(f"content from hex: {bytes.fromhex(result_hex[128:]).decode()}")
-        local_print(
-            f"content: {result[64:]!r}",
-            f"content from hex: {bytes.fromhex(result_hex[128:])!r}",
-            f"signature: {result[:128]!r}",
-        )
-
-        # verify_key = nacl.signing.VerifyKey(bytes.fromhex("c69995185efa20bf7a88139f5920335aa3d3e7f20464345a2c095c766dfa157a"))
-        # @fixme: where does this 'magic-number' come from!?
-        verify_key = nacl.signing.VerifyKey(
-            bytes.fromhex(
-                "c69995185efa20bf7a88139f5920335aa3d3e7f20464345a2c095c766dfa157a"
-            )
-        )
-        try:
-            verify_key.verify(result)
-            local_print("verified!")
-        except nacl.exceptions.BadSignatureError:
-            local_print("failed verification!")
-
-    # print(fido2.cbor.loads(result))
-
-
 @click.command()
 @click.option(
     "-s",
@@ -884,8 +807,3 @@ util.add_command(sign)
 util.add_command(genkey)
 util.add_command(mergehex)
 util.add_command(monitor)
-
-# see above -> @fixme: likely to be removed?!
-# fido2.add_command(probe)
-# key.add_command(sha256sum)
-# key.add_command(sha512sum)
