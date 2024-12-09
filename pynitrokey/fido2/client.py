@@ -8,40 +8,23 @@
 # copied, modified, or distributed except according to those terms.
 
 import base64
-import binascii
-import hashlib
 import json
-import secrets
 import struct
 import sys
 import tempfile
 import time
-from typing import Any, Callable, List, Optional, Tuple, Union
+from typing import Optional, Tuple, Union
 
-from fido2.client import Fido2Client
-from fido2.cose import ES256, EdDSA
 from fido2.ctap import CtapError
 from fido2.ctap1 import Ctap1
 from fido2.ctap2.base import Ctap2
-from fido2.ctap2.pin import ClientPin
 from fido2.hid import CTAPHID, CtapHidDevice, open_device
-from fido2.webauthn import (
-    AuthenticatorSelectionCriteria,
-    PublicKeyCredentialCreationOptions,
-    PublicKeyCredentialParameters,
-    PublicKeyCredentialRpEntity,
-    PublicKeyCredentialType,
-    PublicKeyCredentialUserEntity,
-    ResidentKeyRequirement,
-    UserVerificationRequirement,
-)
 from intelhex import IntelHex
 
 import pynitrokey.exceptions
-import pynitrokey.fido2 as nkfido2
 from pynitrokey import helpers
 from pynitrokey.fido2.commands import SoloBootloader, SoloExtension
-from pynitrokey.helpers import local_critical, local_print
+from pynitrokey.helpers import local_critical
 
 
 class NKFido2Client:
@@ -104,7 +87,7 @@ class NKFido2Client:
 
         try:
             self.ctap2: Optional[Ctap2] = Ctap2(self.dev)
-        except CtapError as e:
+        except CtapError:
             self.ctap2 = None
 
         if self.exchange == self.exchange_hid:
@@ -253,13 +236,13 @@ class NKFido2Client:
                 pass
             else:
                 raise (e)
-        except Exception as e:
+        except Exception:
             # exception during bootloader version check, assume no bootloader
             # local_print("could not get bootloader version")
             pass
         return False
 
-    def program_file(self, name: str) -> bytes:
+    def program_file(self, name: str) -> bytes:  # noqa: C901
         def parseField(f: str) -> bytes:
             return base64.b64decode(helpers.from_websafe(f).encode())
 
@@ -294,7 +277,7 @@ class NKFido2Client:
             if "versions" in firmware_file_data:
                 current = (0, 0, 0)
                 try:
-                    current = self.bootloader_version()
+                    current = self.bootloader_version()  # noqa: F841
                 except CtapError as e:
                     if e.code == CtapError.ERR.INVALID_COMMAND:
                         pass

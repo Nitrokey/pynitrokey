@@ -1,8 +1,7 @@
 import time
-from typing import Any, Callable, List, Optional, Union
+from typing import List, Optional, Union
 
-import usb
-from fido2.hid import CtapHidDevice, open_device
+from fido2.hid import CtapHidDevice
 
 from pynitrokey.exceptions import NoSoloFoundError
 from pynitrokey.fido2.client import NKFido2Client

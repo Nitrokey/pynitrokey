@@ -186,7 +186,7 @@ def mergehex(
 def sign_firmware(
     sk_name: str, hex_file: str, APPLICATION_END_PAGE: int = 20, PAGES: int = 128
 ) -> dict[str, Any]:
-    v1 = sign_firmware_for_version(sk_name, hex_file, 19)
+    v1 = sign_firmware_for_version(sk_name, hex_file, 19)  # noqa: F841
     v2 = sign_firmware_for_version(sk_name, hex_file, 20, PAGES=PAGES)
 
     # use fw from v2 since it's smaller.
