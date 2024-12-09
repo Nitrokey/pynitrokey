@@ -25,7 +25,7 @@ dependencies = [
   "click >=8.0, <=8.1.3",
   "cryptography >=41.0.4,<44",
   "ecdsa",
-  "fido2 >=1.1.2,<2",
+  "fido2 >=1.2.0,<2",
   # Limit hidapi to versions using the hidraw backend, see
   # https://github.com/Nitrokey/pynitrokey/issues/601
   "hidapi >=0.14.0.post1, <0.14.0.post4",
