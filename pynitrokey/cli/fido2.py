@@ -14,7 +14,7 @@ import struct
 import sys
 from dataclasses import fields
 from time import sleep, time
-from typing import List, Literal, Optional
+from typing import List, Optional
 
 import click
 
@@ -22,13 +22,12 @@ if "linux" in platform.platform().lower():
     import fcntl
 
 # @fixme: 1st layer `nkfido2` lower layer `fido2` not to be used here !
-from fido2.cbor import dump_dict
 from fido2.client import ClientError as Fido2ClientError
 from fido2.ctap import CtapError
 from fido2.ctap1 import ApduError
 from fido2.ctap2.base import Ctap2, Info
 from fido2.ctap2.credman import CredentialManagement
-from fido2.ctap2.pin import ClientPin, PinProtocol
+from fido2.ctap2.pin import ClientPin
 from fido2.hid import CtapHidDevice
 from fido2.webauthn import Aaguid
 
@@ -38,9 +37,7 @@ import pynitrokey.fido2.operations
 from pynitrokey.cli.monitor import monitor
 from pynitrokey.cli.program import program
 from pynitrokey.cli.update import update
-from pynitrokey.fido2 import client
 from pynitrokey.fido2.client import NKFido2Client
-from pynitrokey.fido2.commands import SoloBootloader
 from pynitrokey.helpers import (
     AskUser,
     local_critical,
@@ -221,7 +218,7 @@ def get_info(serial: Optional[str]) -> None:
                 if isinstance(value, bytes):
                     try:
                         value = Aaguid(value)
-                    except:
+                    except Exception:
                         value = value.hex()
 
             print(f"{field.name}: {value}")
@@ -320,7 +317,7 @@ def delete_credential(serial: str, pin: str, cred_id: str) -> None:
     # @todo: proper typing
     try:
         cred_manager.delete_cred(tmp_cred_id)  # type: ignore
-    except Exception as e:
+    except Exception:
         local_critical("Failed to delete credential, was the right cred_id given?")
         return
     local_print("Credential was successfully deleted")
@@ -576,7 +573,6 @@ def change_pin(serial: Optional[str]) -> None:
     try:
         # @fixme: move this (function) into own fido2-client-class
         dev = nkfido2.find(serial)
-        client = dev.client
         assert isinstance(dev.ctap2, Ctap2)
         client_pin = ClientPin(dev.ctap2)
         client_pin.change_pin(old_pin, new_pin)
@@ -614,7 +610,6 @@ def set_pin(serial: Optional[str]) -> None:
     try:
         # @fixme: move this (function) into own fido2-client-class
         dev = nkfido2.find(serial)
-        client = dev.client
         assert isinstance(dev.ctap2, Ctap2)
         client_pin = ClientPin(dev.ctap2)
         client_pin.set_pin(new_pin)
