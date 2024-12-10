@@ -423,20 +423,6 @@ class NKFido2Client:
             pass
         return False
 
-    def enter_st_dfu(self) -> None:
-        """
-        If Nitrokey is configured as Nitrokey hacker or something similar,
-        this command will tell the token to boot directly to the st DFU
-        so it can be reprogrammed.  Warning, you could brick your device.
-        """
-        boot = self.is_bootloader()
-
-        if boot or self.exchange == self.exchange_u2f:
-            req = NKFido2Client.format_request(SoloBootloader.st_dfu)
-            self.send_only_hid(SoloBootloader.HIDCommandBoot, req)
-        else:
-            self.send_only_hid(SoloBootloader.HIDCommandEnterSTBoot, b"")
-
     def program_file(self, name: str) -> bytes:
         def parseField(f: str) -> bytes:
             return base64.b64decode(helpers.from_websafe(f).encode())
