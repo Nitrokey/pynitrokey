@@ -31,8 +31,6 @@ from pynitrokey.cli.storage import storage
 from pynitrokey.confconsts import LOG_FN, LOG_FORMAT
 from pynitrokey.helpers import filter_sensitive_parameters, local_critical
 
-# from . import _patches  # noqa  (since otherwise "unused")
-
 logger = logging.getLogger(__name__)
 
 

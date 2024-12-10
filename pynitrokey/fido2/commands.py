@@ -8,12 +8,6 @@
 # copied, modified, or distributed except according to those terms.
 
 
-class STM32L4:
-    class options:
-        nBOOT0 = 1 << 27
-        nSWBOOT0 = 1 << 26
-
-
 class SoloExtension:
     version = 0x14
     rng = 0x15
@@ -38,38 +32,3 @@ class SoloBootloader:
     HIDCommandStatus = 0x71
 
     TAG = b"\x8C\x27\x90\xf6"
-
-
-class DFU:
-    class type:
-        SEND = 0x21
-        RECEIVE = 0xA1
-
-    class bmReq:
-        DETACH = 0x00
-        DNLOAD = 0x01
-        UPLOAD = 0x02
-        GETSTATUS = 0x03
-        CLRSTATUS = 0x04
-        GETSTATE = 0x05
-        ABORT = 0x06
-
-    class state:
-        APP_IDLE = 0x00
-        APP_DETACH = 0x01
-        IDLE = 0x02
-        DOWNLOAD_SYNC = 0x03
-        DOWNLOAD_BUSY = 0x04
-        DOWNLOAD_IDLE = 0x05
-        MANIFEST_SYNC = 0x06
-        MANIFEST = 0x07
-        MANIFEST_WAIT_RESET = 0x08
-        UPLOAD_IDLE = 0x09
-        ERROR = 0x0A
-
-    class status:
-        def __init__(self, s: bytes):
-            self.status = s[0]
-            self.timeout = s[1] + (s[2] << 8) + (s[3] << 16)
-            self.state = s[4]
-            self.istring = s[5]

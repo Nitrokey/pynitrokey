@@ -5,31 +5,7 @@ import usb
 from fido2.hid import CtapHidDevice
 
 from pynitrokey.exceptions import NoSoloFoundError
-
-# from pynitrokey.fido2 import hmac_secret
 from pynitrokey.fido2.client import NKFido2Client
-
-
-def hot_patch_windows_libusb() -> None:
-    # hot patch for windows libusb backend
-    olddel = usb._objfinalizer._AutoFinalizedObjectBase.__del__
-
-    def newdel(self):  # type: ignore
-        try:
-            olddel(self)
-        except OSError:
-            pass
-
-    usb._objfinalizer._AutoFinalizedObjectBase.__del__ = newdel
-
-
-# @todo: remove this, HidOverUDP is not available anymore!
-def _UDP_InternalPlatformSwitch(
-    funcname: str, *args: tuple[Any, Any], **kwargs: dict[Any, Any]
-) -> None:
-    if funcname == "__init__":
-        return HidOverUDP(*args, **kwargs)  # type: ignore
-    return getattr(HidOverUDP, funcname)(*args, **kwargs)  # type: ignore
 
 
 def find(
