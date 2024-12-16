@@ -618,6 +618,7 @@ def verify(serial: Optional[str], pin: Optional[str]) -> None:
         "44fa598fdc98681dc5c8659a804c40bd6e53f8e54a781608b0651d47a53e1c8a": "Nitrokey 3 Dev",
         "aa1cb760c2879530e7d7fed3da75345d25774be9cfdbbcbd36fdee767025f34b": "Nitrokey 3 A NFC",
         "4c331d7af869fd1d8217198b917a33d1fa503e9778da7638504a64a438661ae0": "Nitrokey 3 A Mini",
+        "c7512dfcd15ffc5a7b4000e4898e5956ee858027794c5086cc137a02cd15d123": "Nitrokey Passkey",
     }
 
     if "x5c" not in attestation_object.att_stmt:
