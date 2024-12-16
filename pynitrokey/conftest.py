@@ -9,7 +9,7 @@ import pytest
 from _pytest.fixtures import FixtureRequest
 from nitrokey.nk3.secrets_app import Instruction, SecretsApp
 
-from pynitrokey.cli import CliException
+from pynitrokey.cli.exceptions import CliException
 from pynitrokey.cli.nk3 import Context
 
 CORPUS_PATH = "/tmp/corpus"
@@ -107,22 +107,22 @@ def secretsAppRaw(corpus_func, dev) -> SecretsApp:
     ],
     ids=lambda x: f"Key{str(x).split('.')[-1]}",
 )
-def secretsApp(request, secretsAppRaw) -> SecretsApp:
+def secretsApp(request, secretsAppRaw: SecretsApp) -> SecretsApp:
     """
     Create Secrets App client in two forms, w/ or w/o PIN-based encryption
     """
     app = copy.deepcopy(secretsAppRaw)
 
     credentials_type: CredEncryptionType = request.param
-    app.verify_pin_raw_always = app.verify_pin_raw
+    app.verify_pin_raw_always = app.verify_pin_raw  # type: ignore[attr-defined]
     if credentials_type == CredEncryptionType.PinBased:
         # Make all credentials registered with the PIN-based encryption
         # Leave verify_pin_raw() working
-        app.register = partial(app.register, pin_based_encryption=True)
+        app.register = partial(app.register, pin_based_encryption=True)  # type: ignore[method-assign]
     elif credentials_type == CredEncryptionType.HardwareBased:
         # Make all verify_pin_raw() calls dormant
         # All credentials should register themselves as not requiring PIN
-        app.verify_pin_raw = lambda x: secretsAppRaw.logfn(
+        app.verify_pin_raw = lambda x: secretsAppRaw.logfn(  # type: ignore[method-assign]
             "Skipping verify_pin_raw() call due to fixture configuration"
         )
     else:
@@ -134,7 +134,7 @@ def secretsApp(request, secretsAppRaw) -> SecretsApp:
 
 
 @pytest.fixture(scope="function")
-def secretsAppResetLogin(secretsApp) -> SecretsApp:
+def secretsAppResetLogin(secretsApp: SecretsApp) -> SecretsApp:
     secretsApp.reset()
     secretsApp.set_pin_raw(PIN)
     secretsApp.verify_pin_raw(PIN)
@@ -142,7 +142,7 @@ def secretsAppResetLogin(secretsApp) -> SecretsApp:
 
 
 @pytest.fixture(scope="function")
-def secretsAppNoLog(secretsApp) -> SecretsApp:
+def secretsAppNoLog(secretsApp: SecretsApp) -> SecretsApp:
     return secretsApp
 
 

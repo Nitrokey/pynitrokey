@@ -49,7 +49,7 @@ def storage():
     pass
 
 
-def process_runner(c: str, args: Optional[dict] = None) -> str:
+def process_runner(c: str, args: Optional[dict[str, str]] = None) -> str:
     """Wrapper for running command and returning output, both logged"""
     cmd = c.split()
     if args and any(f"${key}" in c for key in args.keys()):
@@ -73,7 +73,7 @@ class DfuTool:
     name = "dfu-programmer"
 
     @classmethod
-    def is_available(cls):
+    def is_available(cls) -> bool:
         """Check whether `name` is on PATH and marked as executable."""
         return which(cls.name) is not None
 
@@ -112,7 +112,7 @@ class ConnectedDevices:
     application_mode: int
     update_mode: int
 
-    def __init__(self, application_mode, update_mode):
+    def __init__(self, application_mode: int, update_mode: int) -> None:
         self.application_mode = application_mode
         self.update_mode = update_mode
 
@@ -121,7 +121,7 @@ class UsbId:
     vid: int
     pid: int
 
-    def __init__(self, vid, pid):
+    def __init__(self, vid: int, pid: int) -> None:
         self.vid = vid
         self.pid = pid
 
@@ -214,14 +214,14 @@ def update(firmware: str, experimental):
     list_cmd.callback()
 
 
-def check_for_update_mode():
+def check_for_update_mode() -> None:
     connected = is_connected()
     assert (
         connected.application_mode + connected.update_mode > 0
     ), "No connected Nitrokey Storage devices found"
     if connected.application_mode and not connected.update_mode:
         # execute bootloader
-        storage.commands["enable-update"].callback()
+        storage.commands["enable-update"].callback()  # type: ignore[misc]
         for _ in tqdm(range(10), leave=False):
             if is_connected().update_mode != 0:
                 break
@@ -465,7 +465,7 @@ def compare(fw1_path: str, fw2_path: str, region: str, max_diff: int):
     else:
         raise click.ClickException(f"Wrong type")
 
-    def geti(f, i):
+    def geti(f: IntelHex, i: int) -> int:
         return f[i + offset[f]]
 
     click.echo(f"Checking binary images in range {hex(data_start)}:{hex(data_stop)}")

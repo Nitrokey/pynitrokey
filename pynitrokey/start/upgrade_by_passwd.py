@@ -400,7 +400,7 @@ FIRMWARE_URL = {
 }
 
 
-def hash_data_512(data):
+def hash_data_512(data: bytes) -> bytes:
     hash512 = hashlib.sha512(data).digest()
     hash512_hex = binascii.b2a_hex(hash512)
     return hash512_hex
@@ -440,7 +440,7 @@ def get_firmware_file(file_name: str, type: FirmwareType):
 
     local_print(
         f"- {type}: {len(firmware_data)}, "
-        f"hash: ...{hash_data[-8:]} {hash_valid} (from ...{url[-24:]})"
+        f"hash: ...{hash_data[-8:]} {hash_valid} (from ...{url[-24:]})"  # type: ignore[str-bytes-safe]
     )
     return firmware_data
 

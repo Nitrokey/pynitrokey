@@ -15,7 +15,7 @@ import subprocess
 import threading
 import time
 from sys import stderr
-from typing import List, Optional
+from typing import Iterable, List, Optional
 
 
 class ThreadLog(threading.Thread):
@@ -36,7 +36,7 @@ class ThreadLog(threading.Thread):
         self.execute(self.command.split())
 
     @staticmethod
-    def _contains(value, strings):
+    def _contains(value: str, strings: Iterable[str]) -> bool:
         for s in strings:
             if s in value:
                 return True
@@ -60,7 +60,7 @@ class ThreadLog(threading.Thread):
         self.process.wait()
         self.logger.debug("Finished")
 
-    def start_logging(self):
+    def start_logging(self) -> None:
         self._write_to_log = True
 
     def __enter__(self):
@@ -76,7 +76,7 @@ class ThreadLog(threading.Thread):
         self.join(10)
 
 
-def test_run():
+def test_run() -> None:
     FORMAT = "%(relativeCreated)05d [%(process)x] - %(levelname)s - %(name)s - %(message)s [%(filename)s:%(lineno)d]"
     logging.basicConfig(format=FORMAT, stream=stderr, level=logging.DEBUG)
     logger = logging.getLogger("threadlog")

@@ -129,13 +129,10 @@ def update(firmware_path: str):
     print = local_print
     # TODO(szszsz): extract logic to nkdfu, leaving only end-user error handling
     assert firmware_path.endswith("bin")
-    vendor = "20a0:42b4"
-    product = None
-    if vendor is not None:
-        if ":" in vendor:
-            vendor, product = vendor.split(":")
-            product = int(product, 16)  # type: ignore
-        vendor = int(vendor, 16)  # type: ignore
+    vendor_str = "20a0:42b4"
+    vendor_str, product_str = vendor_str.split(":")
+    product = int(product_str, 16)
+    vendor = int(vendor_str, 16)
     dev = None
     bus = None
     with usb1.USBContext() as context:

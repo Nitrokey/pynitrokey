@@ -26,7 +26,7 @@ import time
 from array import array
 from contextlib import contextmanager
 from struct import *
-from typing import Optional
+from typing import Iterator, Optional, Tuple
 
 import usb
 
@@ -55,7 +55,9 @@ HID_SUBCLASS_NO_BOOT = 0x00
 HID_PROTOCOL_0 = 0x00
 
 
-def icc_compose(msg_type, data_len, slot, seq, param, data):
+def icc_compose(
+    msg_type: int, data_len: int, slot: int, seq: int, param: int, data: bytes
+) -> bytes:
     return pack("<BiBBBH", msg_type, data_len, slot, seq, 0, param) + data
 
 
@@ -94,7 +96,12 @@ def iso7816_compose(
 
 # This class only supports Gnuk (for now)
 class gnuk_token(object):
-    def __init__(self, device, configuration, interface):
+    def __init__(
+        self,
+        device: usb.Device,
+        configuration: usb.Configuration,
+        interface: usb.Interface,
+    ) -> None:
         """
         __init__(device, configuration, interface) -> None
         Initialize the device.
@@ -142,16 +149,16 @@ class gnuk_token(object):
     def get_string(self, num):
         return self.__devhandle.getString(num, 512)
 
-    def increment_seq(self):
+    def increment_seq(self) -> None:
         self.__seq = (self.__seq + 1) & 0xFF
 
-    def reset_device(self):
+    def reset_device(self) -> None:
         try:
             self.__devhandle.reset()
         except:
             pass
 
-    def release_gnuk(self):
+    def release_gnuk(self) -> None:
         self.__devhandle.releaseInterface()
 
     @contextmanager
@@ -223,10 +230,10 @@ class gnuk_token(object):
             requestType=0x40, request=2, buffer=None, value=i, index=o, timeout=10
         )
 
-    def icc_get_result(self):
+    def icc_get_result(self) -> Tuple[int, int, array[int]]:
         usbmsg = self.__devhandle.bulkRead(self.__bulkin, 1024, self.__timeout)
         if len(usbmsg) < 10:
-            self.local_print(usbmsg, True)
+            self.local_print(usbmsg, True)  # type: ignore[arg-type]
             raise ValueError("icc_get_result")
         msg = array("B", usbmsg)
         msg_type = msg[0]
@@ -240,7 +247,7 @@ class gnuk_token(object):
         # XXX: check msg_type, data_len, slot, seq, error
         return (status, chain, data)
 
-    def icc_get_status(self):
+    def icc_get_status(self) -> int:
         msg = icc_compose(0x65, 0, 0, self.__seq, 0, b"")
         self.__devhandle.bulkWrite(self.__bulkout, msg, self.__timeout)
         self.increment_seq()
@@ -248,7 +255,7 @@ class gnuk_token(object):
         # XXX: check chain, data
         return status
 
-    def icc_power_on(self):
+    def icc_power_on(self) -> array[int]:
         msg = icc_compose(0x62, 0, 0, self.__seq, 0, b"")
         self.__devhandle.bulkWrite(self.__bulkout, msg, self.__timeout)
         self.increment_seq()
@@ -257,7 +264,7 @@ class gnuk_token(object):
         self.atr = data
         return self.atr
 
-    def icc_power_off(self):
+    def icc_power_off(self) -> int:
         msg = icc_compose(0x63, 0, 0, self.__seq, 0, b"")
         self.__devhandle.bulkWrite(self.__bulkout, msg, self.__timeout)
         self.increment_seq()
@@ -265,13 +272,13 @@ class gnuk_token(object):
         # XXX: check chain, data
         return status
 
-    def icc_send_data_block(self, data):
+    def icc_send_data_block(self, data) -> Tuple[int, int, array[int]]:
         msg = icc_compose(0x6F, len(data), 0, self.__seq, 0, data)
         self.__devhandle.bulkWrite(self.__bulkout, msg, self.__timeout)
         self.increment_seq()
         return self.icc_get_result()
 
-    def icc_send_cmd(self, data):
+    def icc_send_cmd(self, data) -> array[int]:
         status, chain, data_rcv = self.icc_send_data_block(data)
         if chain == 0:
             while status == 0x80:
@@ -698,7 +705,7 @@ def compare(data_original, data_in_device):
     raise ValueError("verify failed")
 
 
-def gnuk_devices():
+def gnuk_devices() -> Iterator[Tuple[usb.Device, usb.Configuration, usb.Interface]]:
     busses = usb.busses()
     for bus in busses:
         devices = bus.devices
@@ -715,7 +722,7 @@ def gnuk_devices():
                             yield dev, config, alt
 
 
-def gnuk_devices_by_vidpid():
+def gnuk_devices_by_vidpid() -> Iterator[usb.Device]:
     try:
         busses = usb.busses()
     except usb.core.NoBackendError:

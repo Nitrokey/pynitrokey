@@ -44,7 +44,7 @@ def get_dict_for_device(dev: usb.Device) -> dict[str, Optional[str]]:
     return res
 
 
-def get_devices() -> list:
+def get_devices() -> list[dict[str, Optional[str]]]:
     from pynitrokey.start.gnuk_token import gnuk_devices_by_vidpid
 
     res = []

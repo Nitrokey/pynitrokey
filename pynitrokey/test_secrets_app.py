@@ -515,7 +515,7 @@ def test_load(secretsAppResetLogin, kind: Kind, long_labels: str, count):
         # Iterate over credentials and check code at given challenge
         nameb = name_gen(i).encode()
         secretsApp.verify_pin_raw(PIN)
-        assert secretsApp.calculate(nameb, i) == lib_at(i)
+        assert secretsApp.calculate(nameb, i) == lib_at(i)  # type: ignore[no-untyped-call]
 
     secretsApp.verify_pin_raw(PIN)
     l = secretsApp.list()
@@ -916,7 +916,7 @@ def test_change_pin_data_dont_change(secretsAppResetLogin):
         for i in range(10):
             # Use non-modified verify_pin_raw_always call to always verify PIN, regardless of the fixture type
             secretsApp.verify_pin_raw_always(PIN)
-            assert secretsApp.calculate(CREDID, i) == lib_at(i)
+            assert secretsApp.calculate(CREDID, i) == lib_at(i)  # type: ignore[no-untyped-call]
 
     # Initial setup for the TOTP slot and test
     secret = "00" * 20
@@ -1316,7 +1316,7 @@ def test_password_safe(secretsAppResetLogin: SecretsApp, length: int) -> None:
     ).encode()
     for i in range(10):
         secretsApp.verify_pin_raw(PIN)
-        assert secretsApp.calculate(name, i) == lib_at(i)
+        assert secretsApp.calculate(name, i) == lib_at(i)  # type: ignore[no-untyped-call]
 
     secretsApp.verify_pin_raw(PIN)
     p: PasswordSafeEntry = secretsApp.get_credential(name)
