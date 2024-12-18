@@ -27,6 +27,20 @@ from pynitrokey.fido2.commands import SoloBootloader, SoloExtension
 from pynitrokey.helpers import local_critical
 
 
+def list_ctaphid_devices() -> list[CtapHidDevice]:
+    hid_devices = list(CtapHidDevice.list_devices())
+    return [
+        d
+        for d in hid_devices
+        if (d.descriptor.vid, d.descriptor.pid)
+        in [
+            (0x0483, 0xA2CA),  #
+            (0x20A0, 0x42B3),  # ...
+            (0x20A0, 0x42B1),  # NK FIDO2
+        ]
+    ]
+
+
 class NKFido2Client:
     def __init__(self) -> None:
         self.origin = "https://example.org"
@@ -56,7 +70,6 @@ class NKFido2Client:
         self,
         dev: Optional[CtapHidDevice] = None,
         solo_serial: Optional[str] = None,
-        pin: Optional[str] = None,
     ) -> CtapHidDevice:
 
         devices = []
@@ -68,12 +81,12 @@ class NKFido2Client:
                     solo_serial = solo_serial.split("=")[1]
                     found_dev = open_device(solo_serial)
                 else:
-                    devices = list(CtapHidDevice.list_devices())
+                    devices = list_ctaphid_devices()
                     devices = [
                         d for d in devices if d.descriptor.serial_number == solo_serial
                     ]
             else:
-                devices = list(CtapHidDevice.list_devices())
+                devices = list_ctaphid_devices()
             if len(devices) > 1:
                 raise pynitrokey.exceptions.NonUniqueDeviceError
             if len(devices) > 0:

@@ -1,17 +1,17 @@
+import sys
 import time
 from typing import List, Optional, Union
 
 from fido2.hid import CtapHidDevice
 
 from pynitrokey.exceptions import NoSoloFoundError
-from pynitrokey.fido2.client import NKFido2Client
+from pynitrokey.fido2.client import NKFido2Client, list_ctaphid_devices
 
 
 def find(
     solo_serial: Optional[str] = None,
     retries: int = 5,
     raw_device: Optional[CtapHidDevice] = None,
-    pin: Optional[str] = None,
 ) -> NKFido2Client:
     p = NKFido2Client()
 
@@ -20,30 +20,21 @@ def find(
 
     for i in range(retries):
         try:
-            p.find_device(dev=raw_device, solo_serial=solo_serial, pin=pin)
+            p.find_device(dev=raw_device, solo_serial=solo_serial)
             return p
         except RuntimeError:
             time.sleep(0.2)
 
+    print(
+        "Warning: This command only works with the Nitrokey FIDO2, not with "
+        "other FIDO2 devices!",
+        file=sys.stderr,
+    )
     raise NoSoloFoundError("no Nitrokey FIDO2 found")
 
 
 def find_all() -> List[NKFido2Client]:
-
-    hid_devices = list(CtapHidDevice.list_devices())
-    solo_devices = [
-        d
-        for d in hid_devices
-        if (d.descriptor.vid, d.descriptor.pid)
-        in [
-            # (  1155,  41674),     <- replacing with 0x-notation
-            (0x0483, 0xA2CA),  #
-            (0x20A0, 0x42B3),  # ...
-            (0x20A0, 0x42B1),  # NK FIDO2
-            # (0x20A0, 0x42B2),     # NK3
-        ]
-    ]
-    return [find(raw_device=device) for device in solo_devices]
+    return [find(raw_device=device) for device in list_ctaphid_devices()]
 
 
 def device_path_to_str(path: Union[bytes, str]) -> str:
