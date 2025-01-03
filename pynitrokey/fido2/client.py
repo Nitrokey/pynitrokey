@@ -283,7 +283,7 @@ class NKFido2Client:
             s = i
             ext = min(i + chunk, seg[1])
             data = ih.tobinarray(start=i, size=ext - s)
-            self.write_flash(i, data)
+            self.write_flash(i, data)  # type: ignore[arg-type]
             total += chunk
             progress = total / float(size) * 100
             sys.stdout.write("updating firmware %.2f%%...\r" % progress)

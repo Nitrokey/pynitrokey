@@ -165,7 +165,7 @@ def update(firmware_path: str):
         dfu_device = None
         try:
             dfu_device = dfu.DFU(device.open())
-        except usb1.USBErrorAccess as e:
+        except usb1.USBErrorAccess as e:  # type: ignore[attr-defined]
             print(f"Cannot connect to the device: {device} -> {e}")
             if "LIBUSB_ERROR_ACCESS" in str(e) and platform.system().lower() == "linux":
                 print(

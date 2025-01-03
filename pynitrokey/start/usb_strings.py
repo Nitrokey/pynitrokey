@@ -23,14 +23,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 import sys
+from typing import Mapping, Optional
 
 import usb
 
 field = ["Vendor", "Product", "Serial", "Revision", "Config", "Sys", "Board"]
 
 
-def get_dict_for_device(dev: usb.Device) -> dict:
-    res = {}
+def get_dict_for_device(dev: usb.Device) -> dict[str, Optional[str]]:
+    res: dict[str, Optional[str]] = {}
     handle = dev.open()
     res["name"] = dev.filename
     for i, f in enumerate(field):
@@ -52,7 +53,7 @@ def get_devices() -> list:
     return res
 
 
-def print_device(dev: usb.Device, n: int = 8) -> None:
+def print_device(dev: Mapping[str, Optional[str]], n: int = 8) -> None:
     print("Device: %s" % dev["name"])
     for i, f in enumerate(field):
         if i > n:

@@ -40,13 +40,13 @@ builde:
 
 # code checks
 check-format:
-	$(PYTHON3_VENV) -m black --check $(PACKAGE_NAME)/
+	$(PYTHON3_VENV) -m black --check $(PACKAGE_NAME)/ stubs
 
 check-import-sorting:
-	$(PYTHON3_VENV) -m isort --check-only $(PACKAGE_NAME)/
+	$(PYTHON3_VENV) -m isort --check-only $(PACKAGE_NAME)/ stubs
 
 check-style:
-	$(PYTHON3_VENV) -m flake8 $(FLAKE8_DIRS)
+	$(PYTHON3_VENV) -m flake8 $(FLAKE8_DIRS) stubs
 
 check-typing:
 	@echo "Note: run semi-clean target in case this fails without any proper reason"
@@ -56,8 +56,8 @@ check: check-format check-import-sorting check-style check-typing
 
 # automatic code fixes
 fix:
-	$(PYTHON3_VENV) -m black $(BLACK_FLAGS) $(PACKAGE_NAME)/
-	$(PYTHON3_VENV) -m isort $(ISORT_FLAGS) $(PACKAGE_NAME)/
+	$(PYTHON3_VENV) -m black $(BLACK_FLAGS) $(PACKAGE_NAME)/ stubs
+	$(PYTHON3_VENV) -m isort $(ISORT_FLAGS) $(PACKAGE_NAME)/ stubs
 
 semi-clean:
 	rm -rf ./**/__pycache__

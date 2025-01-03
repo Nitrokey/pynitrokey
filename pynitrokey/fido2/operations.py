@@ -21,7 +21,10 @@ def genkey(
     output_pem_file: str, input_seed_file: Optional[str] = None
 ) -> ecdsa.VerifyingKey:
     from ecdsa import NIST256p, SigningKey
-    from ecdsa.util import randrange_from_seed__trytryagain
+
+    # TODO: it looks like this is an internal API -- do we really want to use it?
+    # If yes, we should add type annotations.
+    from ecdsa.util import randrange_from_seed__trytryagain  # type: ignore[import]
 
     if input_seed_file is not None:
         seed = input_seed_file
@@ -238,7 +241,7 @@ def sign_firmware_for_version(
     print("im_size: ", im_size)
     print("firmware_size: ", len(arr))
 
-    byts = (arr).tobytes() if hasattr(arr, "tobytes") else (arr).tostring()
+    byts = (arr).tobytes() if hasattr(arr, "tobytes") else (arr).tostring()  # type: ignore[attr-defined]
     h = sha256()
     h.update(byts)
     sig = binascii.unhexlify(h.hexdigest())

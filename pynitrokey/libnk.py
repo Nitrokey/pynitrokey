@@ -229,7 +229,7 @@ class DeviceModel(IntEnum):
 
 # string-conversion functions from/to C(++) @fixme: rename properly
 c_enc = lambda x: x.encode("ascii") if isinstance(x, str) else x
-py_enc = lambda x: ffi.string(x).decode() if not isinstance(x, str) else x
+py_enc = lambda x: ffi.string(x).decode() if not isinstance(x, str) else x  # type: ignore[union-attr]
 
 
 class BaseLibNitrokey:

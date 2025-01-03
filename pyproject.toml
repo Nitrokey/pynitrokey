@@ -52,6 +52,7 @@ dev = [
   "mypy >=1.4,<1.5",
   "pyinstaller ~=6.5.0",
   "pyinstaller-versionfile ==2.1.1; sys_platform=='win32'",
+  "types-cffi",
   "types-requests",
   "types-tqdm",
   "pytest",
@@ -107,24 +108,6 @@ strict_concatenate = false
 strict_equality = false
 warn_unused_ignores = false
 warn_return_any = false
-
-# libraries without annotations
-[[tool.mypy.overrides]]
-module = [
-    "cbor.*",
-    "cffi.*",
-    "ecdsa.*",
-    "intelhex.*",
-    "nkdfu.*",
-    "ruamel.*",
-    "serial.*",
-    "usb.*",
-    "usb1.*",
-    "tlv8.*",
-    "pytest.*",
-    "smartcard.*",
-]
-ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 log_cli = false
