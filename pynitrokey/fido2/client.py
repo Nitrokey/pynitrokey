@@ -55,10 +55,6 @@ class NKFido2Client:
     def use_hid(self) -> None:
         self.exchange = self.exchange_hid
 
-    def set_reboot(self, val: bool) -> None:
-        """option to reboot after programming"""
-        self.do_reboot = val
-
     def reboot(self) -> None:
         """option to reboot after programming"""
         try:
@@ -118,12 +114,6 @@ class NKFido2Client:
 
         return packed_cmd + packed_addr[:3] + SoloBootloader.TAG + length + data
 
-    def send_only_hid(self, cmd: int, data: bytes = b"A" * 16) -> None:
-        if not isinstance(data, bytes):
-            data = struct.pack("%dB" % len(data), *[ord(x) for x in data])
-        assert isinstance(self.dev, CtapHidDevice)
-        self.dev.call(0x80 | cmd, bytearray(data))
-
     def send_data_hid(self, cmd: int, data: bytes = b"A" * 16) -> bytes:
         if not isinstance(data, bytes):
             data = struct.pack("%dB" % len(data), *[ord(x) for x in data])
@@ -153,23 +143,6 @@ class NKFido2Client:
         ret = res.signature[0]
         if ret != CtapError.ERR.SUCCESS:
             raise CtapError(ret)
-
-        return res.signature[1:]
-
-    def exchange_fido2(self, cmd: int, addr: int = 0, data: bytes = b"A" * 16) -> bytes:
-        chal = b"B" * 32
-
-        req = NKFido2Client.format_request(cmd, addr, data)
-
-        assert isinstance(self.ctap2, Ctap2)
-        assertion = self.ctap2.get_assertion(
-            self.host, chal, [{"id": req, "type": "public-key"}]
-        )
-
-        res = assertion
-        ret = res.signature[0]
-        if ret != CtapError.ERR.SUCCESS:
-            raise RuntimeError("Device returned non-success code %02x" % (ret,))
 
         return res.signature[1:]
 
@@ -259,28 +232,6 @@ class NKFido2Client:
         def parseField(f: str) -> bytes:
             return base64.b64decode(helpers.from_websafe(f).encode())
 
-        def isCorrectVersion(current: Tuple[int, int, int], target: str) -> bool:
-            """current is tuple (x,y,z).  target is string '>=x.y.z'.
-            Return True if current satisfies the target expression.
-            """
-            if "=" in target:
-                target_toks = target.split("=")
-                assert target_toks[0] in [">", "<"]
-                target_num_toks = [int(x) for x in target_toks[1].split(".")]
-                assert len(target_num_toks) == 3
-                comp = target_toks[0] + "="
-            else:
-                assert target[0] in [">", "<"]
-                target_num_toks = [int(x) for x in target[1:].split(".")]
-                comp = target[0]
-            target_num = (
-                (target_num_toks[0] << 16)
-                | (target_num_toks[1] << 8)
-                | (target_num_toks[2] << 0)
-            )
-            current_num = (current[0] << 16) | (current[1] << 8) | (current[2] << 0)
-            return eval(str(current_num) + comp + str(target_num))  # type: ignore [no-any-return]
-
         firmware_file_data = None
         if name.lower().endswith(".json"):
             firmware_file_data = json.loads(open(name, "r").read())
@@ -296,11 +247,6 @@ class NKFido2Client:
                         pass
                     else:
                         raise (e)
-                # for v in firmware_file_data["versions"]:
-                #     if not isCorrectVersion(current, v):
-                #         print("using signature version", v)
-                #         sig = parseField(firmware_file_data["versions"][v]["signature"])
-                #         break
                 sig = parseField(firmware_file_data["versions"][">2.5.3"]["signature"])
 
                 if sig is None:
@@ -374,29 +320,3 @@ class NKFido2Client:
             local_critical(msg, support_hint=False)
 
         return sig
-
-    def check_only(self, name: str) -> None:
-        # FIXME refactor
-        # copy from program_file
-        if name.lower().endswith(".json"):
-            data = json.loads(open(name, "r").read())
-            fw = base64.b64decode(helpers.from_websafe(data["firmware"]).encode())
-            sig = base64.b64decode(helpers.from_websafe(data["signature"]).encode())
-            ih = IntelHex()
-            tmp = tempfile.NamedTemporaryFile(delete=False)
-            tmp.write(fw)
-            tmp.seek(0)
-            tmp.close()
-            ih.fromfile(tmp.name, format="hex")
-        else:
-            if not name.lower().endswith(".hex"):
-                print('Warning, assuming "%s" is an Intel Hex file.' % name)
-            sig = None
-            ih = IntelHex()
-            ih.fromfile(name, format="hex")
-
-        if sig is None:
-            sig = b"A" * 64
-
-        if self.do_reboot:
-            self.verify_flash(sig)

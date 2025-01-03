@@ -38,8 +38,6 @@ def prepare_for_pkcs1v15_sign_2048(data: bytes) -> bytes:
 
 
 class StatusError(Exception):
-    id: int
-
     def __init__(self, value: int):
         self.value = value
 

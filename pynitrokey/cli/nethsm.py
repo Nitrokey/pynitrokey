@@ -41,14 +41,6 @@ def base64_input(s: str) -> Base64:
     return Base64.from_encoded(s, ignore_whitespace=True)
 
 
-API_CERTIFICATE_MIME_TYPE = "application/x-pem-file"
-KEY_CERTIFICATE_MIME_TYPES = [
-    "application/x-pem-file",
-    "application/x-x509-ca-cert",
-    "application/pgp-keys",
-]
-
-
 DATETIME_TYPE = click.DateTime(formats=["%Y-%m-%dT%H:%M:%S%z"])
 ROLE_TYPE = make_enum_type(nethsm_sdk.Role)
 LOG_LEVEL_TYPE = make_enum_type(nethsm_sdk.LogLevel)

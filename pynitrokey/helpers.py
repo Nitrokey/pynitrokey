@@ -17,9 +17,8 @@ import time
 from getpass import getpass
 from importlib.metadata import version
 from itertools import chain
-from numbers import Number
 from threading import Event, Timer
-from typing import Any, Callable, Dict, List, NoReturn, Optional, Tuple, TypeVar, Union
+from typing import Any, Callable, List, Optional, Tuple, TypeVar, Union
 
 import click
 from nitrokey.updates import Repository
