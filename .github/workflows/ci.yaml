@@ -77,3 +77,18 @@ jobs:
         run: |
           . venv/bin/activate
           make check-typing
+  run:
+    name: Run nitropy --help
+    runs-on: ubuntu-latest
+    container: python:3.9-slim
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install required packages
+        run: |
+          apt update
+          apt install -y gcc libpcsclite-dev swig git
+      - name: Install pynitrokey
+        run: python3 -m venv venv && venv/bin/pip install .[pcsc]
+      - name: Run nitropy --help
+        run: venv/bin/nitropy --help
