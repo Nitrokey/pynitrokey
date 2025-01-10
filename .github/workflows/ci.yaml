@@ -80,14 +80,26 @@ jobs:
   run:
     name: Run nitropy --help
     runs-on: ubuntu-latest
-    container: python:3.9-slim
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      - name: Install python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
       - name: Install required packages
         run: |
-          apt update
-          apt install -y gcc libpcsclite-dev swig git
+          sudo apt update
+          sudo apt install -y gcc libpcsclite-dev swig
+      # For Python 3.13, we need additional build dependencies, see:
+      # https://github.com/Nitrokey/pynitrokey/issues/610
+      - name: Install more required packages
+        run: |
+          sudo apt update
+          sudo apt install -y libudev-dev libpython3-dev
       - name: Install pynitrokey
         run: python3 -m venv venv && venv/bin/pip install .[pcsc]
       - name: Run nitropy --help
