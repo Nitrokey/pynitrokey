@@ -26,12 +26,19 @@ import time
 from array import array
 from contextlib import contextmanager
 from struct import *
-from typing import Iterator, Optional, Tuple
+from typing import TYPE_CHECKING, Iterator, Optional, Tuple
 
 import usb
 
 # Possible Gnuk Token products
 from pynitrokey.start.usb_strings import get_dict_for_device
+
+# Workaround for compatibility with Python 3.11 and older, see:
+# https://github.com/python/mypy/issues/13942
+if TYPE_CHECKING:
+    IntArray = array[int]
+else:
+    IntArray = array
 
 USB_PRODUCT_LIST = [
     {"vendor": 0x234B, "product": 0x0000},  # FSIJ Gnuk Token
@@ -230,7 +237,7 @@ class gnuk_token(object):
             requestType=0x40, request=2, buffer=None, value=i, index=o, timeout=10
         )
 
-    def icc_get_result(self) -> Tuple[int, int, array[int]]:
+    def icc_get_result(self) -> Tuple[int, int, IntArray]:
         usbmsg = self.__devhandle.bulkRead(self.__bulkin, 1024, self.__timeout)
         if len(usbmsg) < 10:
             self.local_print(usbmsg, True)  # type: ignore[arg-type]
@@ -255,7 +262,7 @@ class gnuk_token(object):
         # XXX: check chain, data
         return status
 
-    def icc_power_on(self) -> array[int]:
+    def icc_power_on(self) -> IntArray:
         msg = icc_compose(0x62, 0, 0, self.__seq, 0, b"")
         self.__devhandle.bulkWrite(self.__bulkout, msg, self.__timeout)
         self.increment_seq()
@@ -272,13 +279,13 @@ class gnuk_token(object):
         # XXX: check chain, data
         return status
 
-    def icc_send_data_block(self, data) -> Tuple[int, int, array[int]]:
+    def icc_send_data_block(self, data) -> Tuple[int, int, IntArray]:
         msg = icc_compose(0x6F, len(data), 0, self.__seq, 0, data)
         self.__devhandle.bulkWrite(self.__bulkout, msg, self.__timeout)
         self.increment_seq()
         return self.icc_get_result()
 
-    def icc_send_cmd(self, data) -> array[int]:
+    def icc_send_cmd(self, data) -> IntArray:
         status, chain, data_rcv = self.icc_send_data_block(data)
         if chain == 0:
             while status == 0x80:
