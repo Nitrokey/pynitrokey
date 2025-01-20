@@ -12,6 +12,7 @@ import contextlib
 import datetime
 import json
 import mimetypes
+import os
 import os.path
 import sys
 from dataclasses import dataclass
@@ -85,16 +86,14 @@ def print_table(headers: Sequence[str], data: Iterable[Sequence[Any]]) -> None:
 
 @dataclass
 class Config:
-    host: str
+    host: Optional[str]
     username: Optional[str]
     password: Optional[str]
     verify_tls: bool
 
 
 @click.group()
-@click.option(
-    "-h", "--host", "host", required=True, help="Set the host of the NetHSM API"
-)
+@click.option("-h", "--host", "host", help="Set the host of the NetHSM API")
 @click.option("-u", "--username", "username", help="The NetHSM user name")
 @click.option("-p", "--password", "password", help="The NetHSM password")
 @click.option(
@@ -105,12 +104,13 @@ class Config:
 @click.pass_context
 def nethsm(
     ctx: Context,
-    host: str,
+    host: Optional[str],
     username: Optional[str],
     password: Optional[str],
     verify_tls: bool,
 ) -> None:
     """Interact with NetHSM devices, see subcommands."""
+
     ctx.obj = Config(
         host=host, username=username, password=password, verify_tls=verify_tls
     )
@@ -121,22 +121,31 @@ def connect(ctx: Context, require_auth: bool = True) -> Iterator[NetHSM]:
     config = ctx.obj
     assert isinstance(config, Config)
 
+    host = config.host
+    if host is None:
+        v = "NETHSM_HOST"
+        if v not in os.environ:
+            raise CliException(
+                "Missing NetHSM host: set the --host option or the "
+                f"{v} environment variable",
+                support_hint=False,
+            )
+        host = os.environ[v]
+
     auth = None
     if require_auth:
         username = config.username
         password = config.password
         if not username:
-            username = prompt_str(f"[auth] User name for NetHSM {config.host}")
+            username = prompt_str(f"[auth] User name for NetHSM {host}")
         if not password:
             password = prompt_str(
-                f"[auth] Password for user {username} on NetHSM {config.host}",
+                f"[auth] Password for user {username} on NetHSM {host}",
                 hide_input=True,
             )
         auth = Authentication(username=username, password=password)
 
-    with nethsm_sdk.connect(
-        config.host, auth=auth, verify_tls=config.verify_tls
-    ) as nethsm:
+    with nethsm_sdk.connect(host, auth=auth, verify_tls=config.verify_tls) as nethsm:
         try:
             yield nethsm
         except nethsm_sdk.NetHSMError as e:
