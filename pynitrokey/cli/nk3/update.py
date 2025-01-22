@@ -97,12 +97,6 @@ class UpdateCli(UpdateUi):
             if not confirm("Have you read these information? Do you want to continue?"):
                 raise Abort()
 
-    def request_repeated_update(self) -> Exception:
-        local_print(
-            "Bootloader mode enabled. Please repeat this command to apply the update."
-        )
-        return Abort()
-
     def pre_bootloader_hint(self) -> None:
         pass
 
