@@ -348,9 +348,7 @@ def list_credentials(serial: str, pin: str) -> None:
     help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
 )
 @click.option("--pin", help="provide PIN instead of asking the user", default=None)
-@click.option(
-    "-cid", "--cred-id", help="Credential id of there Credential to be deleted"
-)
+@click.option("-cid", "--cred-id", help="Credential id of the Credential to be deleted")
 def delete_credential(serial: str, pin: str, cred_id: str) -> None:
     """Delete a specific credential from the key"""
 
