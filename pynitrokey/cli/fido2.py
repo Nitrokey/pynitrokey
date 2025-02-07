@@ -344,7 +344,7 @@ def list_credentials(serial: str, pin: str) -> None:
 )
 @click.option("--pin", help="provide PIN instead of asking the user", default=None)
 @click.option(
-    "-cid", "--cred-id", help="Credential id of there Credential to be deleted"
+    "-cid", "--cred-id", help="Credential id of the Credential to be deleted"
 )
 def delete_credential(serial: str, pin: str, cred_id: str) -> None:
     """Delete a specific credential from the key"""
