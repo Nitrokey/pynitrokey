@@ -351,15 +351,27 @@ def test_fido2(ctx: TestContext, device: TrussedBase) -> TestResult:
 
     # Based on https://github.com/Yubico/python-fido2/blob/142587b3e698ca0e253c78d75758fda635cac51a/examples/credential.py
 
+    from fido2.attestation.base import InvalidSignature
+    from fido2.attestation.packed import PackedAttestation
     from fido2.client import PinRequiredError, UserInteraction
     from fido2.server import Fido2Server
     from fido2.webauthn import (
         AttestationConveyancePreference,
+        AttestationObject,
         AuthenticatorAttachment,
         PublicKeyCredentialRpEntity,
         PublicKeyCredentialUserEntity,
         UserVerificationRequirement,
     )
+
+    def verify_attestation(
+        attestation_object: AttestationObject, client_data_hash: bytes
+    ) -> None:
+        verifier = PackedAttestation()
+        assert attestation_object.fmt == verifier.FORMAT
+        verifier.verify(
+            attestation_object.att_stmt, attestation_object.auth_data, client_data_hash
+        )
 
     class NoInteraction(UserInteraction):
         def __init__(self, pin: Optional[str]) -> None:
@@ -383,6 +395,7 @@ def test_fido2(ctx: TestContext, device: TrussedBase) -> TestResult:
     server = Fido2Server(
         PublicKeyCredentialRpEntity(id="example.com", name="Example RP"),
         attestation=AttestationConveyancePreference.DIRECT,
+        verify_attestation=verify_attestation,
     )
     uv = UserVerificationRequirement.DISCOURAGED
     user = PublicKeyCredentialUserEntity(id=b"user_id", name="A. User")
@@ -413,11 +426,14 @@ def test_fido2(ctx: TestContext, device: TrussedBase) -> TestResult:
                 f"Unexpected FIDO2 cert hash for version {firmware_version}: {cert_hash}",
             )
 
-    auth_data = server.register_complete(
-        state,
-        make_credential_result.client_data,
-        make_credential_result.attestation_object,
-    )
+    try:
+        auth_data = server.register_complete(
+            state,
+            make_credential_result.client_data,
+            make_credential_result.attestation_object,
+        )
+    except InvalidSignature:
+        return TestResult(TestStatus.FAILURE, "Invalid attestation signature")
     if not auth_data.credential_data:
         return TestResult(TestStatus.FAILURE, "Missing credential data in auth data")
     credentials = [auth_data.credential_data]
