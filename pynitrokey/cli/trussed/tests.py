@@ -351,15 +351,37 @@ def test_fido2(ctx: TestContext, device: TrussedBase) -> TestResult:
 
     # Based on https://github.com/Yubico/python-fido2/blob/142587b3e698ca0e253c78d75758fda635cac51a/examples/credential.py
 
+    from fido2.attestation.base import AttestationResult, AttestationVerifier
     from fido2.client import PinRequiredError, UserInteraction
     from fido2.server import Fido2Server
     from fido2.webauthn import (
         AttestationConveyancePreference,
         AuthenticatorAttachment,
+        AuthenticatorData,
         PublicKeyCredentialRpEntity,
         PublicKeyCredentialUserEntity,
         UserVerificationRequirement,
     )
+
+    class NitrokeyAttestationVerifier(AttestationVerifier):
+        def ca_lookup(
+            self, attestation_result: AttestationResult, auth_data: AuthenticatorData
+        ) -> Optional[bytes]:
+            if len(attestation_result.trust_path) != 1:
+                logger.info(
+                    f"NitrokeyAttestationVerifer: len(trust_path) = {len(attestation_result.trust_path)}"
+                )
+                return None
+            digest = sha256(attestation_result.trust_path[0]).digest().hex()
+            logger.info(f"NitrokeyAttestationVerifer: digest = {digest}")
+            if (
+                digest
+                == "4c331d7af869fd1d8217198b917a33d1fa503e9778da7638504a64a438661ae0"
+            ):
+                return bytes.fromhex(
+                    "3082038930820171a003020102020308a642300d06092a864886f70d01010b05003036310b300906035504061302444531163014060355040a0c0d4e6974726f6b657920476d6248310f300d06035504030c06526f6f7420333020170d3232303830343038343731345a180f32303732303732323038343731345a3039310b300906035504061302444531163014060355040a0c0d4e6974726f6b657920476d62483112301006035504030c094649444f20434120343059301306072a8648ce3d020106082a8648ce3d0301070342000489c597cb5d4c3141236cac7825286f7b0721f6c6baa29aea5bf35c4397199d4c993674e72294ed4403a8249c94f2c985597e2bba0ecb7ac517b569a3a95b6ed1a3663064301d0603551d0e04160414f249af9643d0509609444fd74183a1c5f44ecce5301f0603551d23041830168014d3a4d49e69e619a9f4f4a3571572f4e12d50863730120603551d130101ff040830060101ff020100300e0603551d0f0101ff040403020106300d06092a864886f70d01010b05000382020100673c1a27594b5d62f96ce884393419cff2ab2f312d2e22f6bfd021cb3ba4ded9023167a8d2569f68e18d2fd752750e90d89c9d1e95228a1ae6a0712d37c4de7e3fd4e827b18b942b426237021f5b53bcfb35b8571c2254d07a9e9cc383ce1870546dd59a34eefd369dfa3ba936484411d6f96463d39bd3a184e95b700db92edc8a23484c3b60f40e752cfce36c15965ee6b44452422fdab110b794e9e34c7027fe73ff1e8ad0d395e7e321f830cbf1e9b7a45253bca592b3e5a3ce6cdb0546021157d75e0e29f9684afd2adb53ee12b5a0341675d426a6bf6914c4098edf0215f128dc1c8f4b0b8afdcac098e3d1143b2b8c44e3e2957bb7c4c2c29971c94a2197bc6a5c893ca46c585fa90699e656bfe345ed1ff47a5620406751476999b44552a2ad94efe71f12f008ee86864e1c44c36b0e6f1e9010ad02423938bc9f8400b5e31c98a9c03da6163eabb571f6789ebd7cf2d221aa605d04ced2e1af46100e3af168fc007d426bdb538812a42049b40a0eed25d667c3b6da2ebf6ccb302a6ceb2f5ad3e58f587bab8e2fdee3637ab22644f0c38be30a7914a5cc76bfd248e6b65058aa441c0e72ed8723276d943b53f8d6160e41b5538094d8424cce10547088487f8df2527a5ac62452c99cb2f3d38426da2d97c1c5e87cecf0c9d6b247cd5b0594462760e6b4c938bc3e16b6b36e5b82643a0bf174945ac2ed85e98610c6"
+                )
+            return None
 
     class NoInteraction(UserInteraction):
         def __init__(self, pin: Optional[str]) -> None:
@@ -383,6 +405,7 @@ def test_fido2(ctx: TestContext, device: TrussedBase) -> TestResult:
     server = Fido2Server(
         PublicKeyCredentialRpEntity(id="example.com", name="Example RP"),
         attestation=AttestationConveyancePreference.DIRECT,
+        verify_attestation=NitrokeyAttestationVerifier(),
     )
     uv = UserVerificationRequirement.DISCOURAGED
     user = PublicKeyCredentialUserEntity(id=b"user_id", name="A. User")
