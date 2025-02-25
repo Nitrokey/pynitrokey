@@ -210,9 +210,9 @@ class PivApp:
 
         our_challenge = os.urandom(expected_len)
         cipher = Cipher(algorithm, mode=modes.ECB())
-        encryptor = cipher.encryptor()
         decryptor = cipher.decryptor()
-        response = encryptor.update(challenge) + encryptor.finalize()
+        response = decryptor.update(challenge) + decryptor.finalize()
+        decryptor = cipher.decryptor()
         our_challenge_encrypted = decryptor.update(our_challenge) + decryptor.finalize()
         response_body = Tlv.build(
             [(0x7C, Tlv.build([(0x80, response), (0x81, our_challenge_encrypted)]))]
