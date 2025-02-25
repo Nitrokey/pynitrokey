@@ -680,9 +680,14 @@ def prompt_mechanisms(type: str) -> list[str]:
             show_choices=False,
             show_default=False,
         )
+
+        if "" not in available_mechanisms:
+            available_mechanisms.append("")
+
         assert isinstance(mechanism, str)
         if mechanism:
             mechanisms.append(mechanism)
+            available_mechanisms.remove(mechanism)
         else:
             cont = False
 
