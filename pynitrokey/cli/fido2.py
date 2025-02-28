@@ -15,6 +15,8 @@ from getpass import getpass
 from typing import Any, Optional
 
 import click
+from fido2.attestation.base import InvalidSignature
+from fido2.attestation.packed import PackedAttestation
 from fido2.client import ClientError as Fido2ClientError
 from fido2.client import Fido2Client, UserInteraction
 from fido2.cose import ES256, EdDSA
@@ -187,6 +189,14 @@ def _make_credential(
     )
 
     response = client.make_credential(options)
+
+    att_obj = response.attestation_object
+    assert att_obj.fmt == "packed"
+    verifier = PackedAttestation()
+    try:
+        verifier.verify(att_obj.att_stmt, att_obj.auth_data, response.client_data.hash)
+    except InvalidSignature:
+        raise CliException("Invalid attestation signature in makeCredential")
 
     if hmac_secret:
         assert response.extension_results is not None
