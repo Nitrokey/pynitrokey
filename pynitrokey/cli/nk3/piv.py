@@ -369,12 +369,6 @@ try:  # noqa: C901
         help="Algorithm for the key.",
     )
     @click.option(
-        "--domain-component",
-        type=click.STRING,
-        multiple=True,
-        help="Domain component for the certificate signing request.",
-    )
-    @click.option(
         "--subject-name",
         type=click.STRING,
         multiple=True,
@@ -402,7 +396,6 @@ try:  # noqa: C901
         admin_key: str,
         key: str,
         algo: str,
-        domain_component: Optional[Sequence[str]],
         subject_name: Optional[Sequence[str]],
         subject_alt_name_upn: Optional[str],
         pin: str,
@@ -475,20 +468,11 @@ try:  # noqa: C901
         certificate_builder = x509.CertificateBuilder()
         csr_builder = x509.CertificateSigningRequestBuilder()
 
-        if domain_component is None:
-            domain_component = []
-
         if subject_name is None:
             crypto_rdns = x509.Name([])
         else:
             crypto_rdns = x509.Name(
                 [
-                    x509.RelativeDistinguishedName(
-                        [
-                            x509.NameAttribute(x509.NameOID.DOMAIN_COMPONENT, subject)
-                            for subject in domain_component
-                        ]
-                    ),
                     x509.RelativeDistinguishedName(
                         [
                             x509.NameAttribute(x509.NameOID.COMMON_NAME, subject)
