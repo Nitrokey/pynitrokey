@@ -321,6 +321,18 @@ try:  # noqa: C901
         "95": "5FC120",
     }
 
+    def _validate_rfc4514(
+        ctx: click.core.Context, param: click.core.Option, value: str
+    ) -> Optional[x509.Name]:
+        if value is None:
+            return value
+
+        try:
+            subject_name = x509.Name.from_rfc4514_string(value)
+            return subject_name
+        except ValueError:
+            raise click.BadParameter("Must be valid RFC4514 string.")
+
     @piv.command(help="Generate a new key and certificate signing request.")
     @click.option(
         "--admin-key",
@@ -371,7 +383,7 @@ try:  # noqa: C901
     @click.option(
         "--subject-name",
         type=click.STRING,
-        multiple=True,
+        callback=_validate_rfc4514,
         help="Subject name for the certificate signing request.",
     )
     @click.option(
@@ -396,7 +408,7 @@ try:  # noqa: C901
         admin_key: str,
         key: str,
         algo: str,
-        subject_name: Optional[Sequence[str]],
+        subject_name: Optional[x509.Name],
         subject_alt_name_upn: Optional[str],
         pin: str,
         path: str,
@@ -471,16 +483,7 @@ try:  # noqa: C901
         if subject_name is None:
             crypto_rdns = x509.Name([])
         else:
-            crypto_rdns = x509.Name(
-                [
-                    x509.RelativeDistinguishedName(
-                        [
-                            x509.NameAttribute(x509.NameOID.COMMON_NAME, subject)
-                            for subject in subject_name
-                        ]
-                    ),
-                ]
-            )
+            crypto_rdns = subject_name
 
         certificate_builder = (
             certificate_builder.subject_name(crypto_rdns)
