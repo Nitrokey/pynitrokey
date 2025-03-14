@@ -1,6 +1,6 @@
 import datetime
 import sys
-from typing import Optional, Sequence, Tuple, Union
+from typing import Any, Iterable, Optional, Sequence, Tuple, Union
 
 import click
 import cryptography
@@ -118,6 +118,26 @@ try:  # noqa: C901
 
             return self._device.sign_p256(data, self._key_reference)
 
+    def print_row(values: Iterable[str], widths: Iterable[int]) -> None:
+        row = [value.ljust(width) for (value, width) in zip(values, widths)]
+        print(*row, sep="\t")
+
+    def print_table(headers: Sequence[str], data: Iterable[Sequence[Any]]) -> None:
+        widths = [len(header) for header in headers]
+        str_data = []
+        for row in data:
+            str_row = []
+            for i in range(len(widths)):
+                str_value = str(row[i])
+                str_row.append(str_value)
+                widths[i] = max(widths[i], len(str_value))
+            str_data.append(str_row)
+
+        print_row(headers, widths)
+        print_row(["-" * width for width in widths], widths)
+        for row in str_data:
+            print_row(row, widths)
+
     @nk3.group()
     @click.option(
         "--experimental",
@@ -179,22 +199,6 @@ try:  # noqa: C901
         local_print(f"Reader: {reader}")
         guid = device.guid()
         local_print(f"GUID: {guid.hex().upper()}")
-
-        printed_head = False
-        for key, slot in KEY_TO_CERT_OBJ_ID_MAP.items():
-            cert = device.cert(bytes(bytearray.fromhex(slot)))
-            if cert is not None:
-                if not printed_head:
-                    local_print("Keys:")
-                    printed_head = True
-                parsed_cert = x509.load_der_x509_certificate(cert)
-                local_print(f"    {key}")
-                local_print(
-                    f"        algorithm: {parsed_cert.signature_algorithm_oid._name}"
-                )
-        if not printed_head:
-            local_print("No certificate found")
-        pass
 
     @piv.command(help="Change the admin key.")
     @click.option(
@@ -767,6 +771,30 @@ try:  # noqa: C901
 
         with click.open_file(path, mode="wb") as f:
             f.write(cert_serialized)
+
+    @piv.command(help="List certificates.")
+    def list_certificates() -> None:
+        device = PivApp()
+
+        headers = ["Slot", "Algorithm", "Subject"]
+        data = []
+
+        for key, slot in KEY_TO_CERT_OBJ_ID_MAP.items():
+            cert = device.cert(bytes(bytearray.fromhex(slot)))
+            if cert is not None:
+                parsed_cert = x509.load_der_x509_certificate(cert)
+                data.append(
+                    [
+                        key,
+                        parsed_cert.signature_algorithm_oid._name,
+                        parsed_cert.subject.rfc4514_string(),
+                    ]
+                )
+
+        if data:
+            print_table(headers, data)
+        else:
+            local_print("No certificate found.")
 
 except ImportError:
     from pynitrokey.cli.nk3.pcsc_absent import PCSC_ABSENT
