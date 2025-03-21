@@ -12,6 +12,7 @@ from typing import Optional, Sequence
 
 import click
 from nitrokey.nk3 import NK3, NK3Bootloader
+from nitrokey.nk3.updates import Warning
 from nitrokey.trussed import Model, TrussedBase
 
 from pynitrokey.cli import trussed
@@ -79,6 +80,12 @@ def _list() -> None:
     help="Allow updates with an outdated pynitrokey version (dangerous)",
 )
 @click.option(
+    "--ignore-warning",
+    help="Ignore the warning(s) with the given ID(s) during the update (dangerous)",
+    type=click.Choice([w.value for w in Warning]),
+    multiple=True,
+)
+@click.option(
     "--confirm",
     default=False,
     is_flag=True,
@@ -96,6 +103,7 @@ def update(
     ctx: Context,
     image: Optional[str],
     version: Optional[str],
+    ignore_warning: list[str],
     ignore_pynitrokey_version: bool,
     confirm: bool,
     experimental: bool,
@@ -123,7 +131,10 @@ def update(
 
     from .update import update as exec_update
 
-    exec_update(ctx, image, version, ignore_pynitrokey_version, confirm)
+    ignore_warnings = frozenset([Warning.from_str(s) for s in ignore_warning])
+    exec_update(
+        ctx, image, version, ignore_pynitrokey_version, ignore_warnings, confirm
+    )
 
 
 @nk3.command()

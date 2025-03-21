@@ -33,7 +33,7 @@ dependencies = [
   "hidapi >=0.14.0.post1, <0.14.0.post4 ; sys_platform == 'linux'",
   "intelhex",
   "nkdfu",
-  "nitrokey ~=0.2.1",
+  "nitrokey >=0.3,<0.4",
   "pyusb",
   "requests",
   "tqdm",

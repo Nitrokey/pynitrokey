@@ -8,11 +8,12 @@
 # copied, modified, or distributed except according to those terms.
 
 import logging
+from collections.abc import Set
 from contextlib import contextmanager
 from typing import Any, Callable, Iterator, List, Optional
 
 from click import Abort
-from nitrokey.nk3.updates import Updater, UpdateUi
+from nitrokey.nk3.updates import Updater, UpdateUi, Warning
 from nitrokey.trussed import Version
 
 from pynitrokey.cli.exceptions import CliException
@@ -32,6 +33,19 @@ class UpdateCli(UpdateUi):
 
     def abort(self, *msgs: Any) -> Exception:
         return CliException(*msgs, support_hint=False)
+
+    def raise_warning(self, warning: Warning) -> Exception:
+        return self.abort(
+            f"{warning.message}\nTo ignore this warning and install the update at your own risk,"
+            f" set the --ignore-warning {warning.value} option."
+        )
+
+    def show_warning(self, warning: Warning) -> None:
+        logger.warning(f"Ignoring warning {warning.value}")
+        local_print(f"Warning: {warning.message}")
+        local_print(
+            f"Note: The update will continue as --ignore-warning {warning.value} has been set."
+        )
 
     def abort_downgrade(self, current: Version, image: Version) -> Exception:
         self._print_firmware_versions(current, image)
@@ -97,12 +111,6 @@ class UpdateCli(UpdateUi):
             if not confirm("Have you read these information? Do you want to continue?"):
                 raise Abort()
 
-    def request_repeated_update(self) -> Exception:
-        local_print(
-            "Bootloader mode enabled. Please repeat this command to apply the update."
-        )
-        return Abort()
-
     def pre_bootloader_hint(self) -> None:
         pass
 
@@ -145,10 +153,14 @@ def update(
     image: Optional[str],
     version: Optional[str],
     ignore_pynitrokey_version: bool,
+    ignore_warnings: Set[Warning],
     confirm_continue: bool,
 ) -> Version:
     with ctx.connect() as device:
         updater = Updater(
-            UpdateCli(confirm_continue), ctx.await_bootloader, ctx.await_device
+            ui=UpdateCli(confirm_continue),
+            await_bootloader=ctx.await_bootloader,
+            await_device=ctx.await_device,
+            ignore_warnings=ignore_warnings,
         )
         return updater.update(device, image, version, ignore_pynitrokey_version)
