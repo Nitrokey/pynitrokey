@@ -544,6 +544,8 @@ def validate_update(ctx: Context[Bootloader, Device], image: str) -> None:
         raise CliException("Failed to validate firmware image", e, support_hint=False)
 
     print(f"version:      {container.version}")
+    if container.sdk:
+        print(f"Nitrokey SDK: >= {container.sdk}")
     if container.pynitrokey:
         print(f"pynitrokey:   >= {container.pynitrokey}")
 
