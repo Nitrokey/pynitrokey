@@ -3,7 +3,7 @@
 
 import datetime
 import sys
-from typing import Optional, Sequence, Tuple, Union
+from typing import Any, Iterable, Optional, Sequence, Tuple, Union
 
 import click
 import cryptography
@@ -121,6 +121,26 @@ try:  # noqa: C901
 
             return self._device.sign_p256(data, self._key_reference)
 
+    def print_row(values: Iterable[str], widths: Iterable[int]) -> None:
+        row = [value.ljust(width) for (value, width) in zip(values, widths)]
+        print(*row, sep="\t")
+
+    def print_table(headers: Sequence[str], data: Iterable[Sequence[Any]]) -> None:
+        widths = [len(header) for header in headers]
+        str_data = []
+        for row in data:
+            str_row = []
+            for i in range(len(widths)):
+                str_value = str(row[i])
+                str_row.append(str_value)
+                widths[i] = max(widths[i], len(str_value))
+            str_data.append(str_row)
+
+        print_row(headers, widths)
+        print_row(["-" * width for width in widths], widths)
+        for row in str_data:
+            print_row(row, widths)
+
     @nk3.group()
     @click.option(
         "--experimental",
@@ -182,22 +202,6 @@ try:  # noqa: C901
         local_print(f"Reader: {reader}")
         guid = device.guid()
         local_print(f"GUID: {guid.hex().upper()}")
-
-        printed_head = False
-        for key, slot in KEY_TO_CERT_OBJ_ID_MAP.items():
-            cert = device.cert(bytes(bytearray.fromhex(slot)))
-            if cert is not None:
-                if not printed_head:
-                    local_print("Keys:")
-                    printed_head = True
-                parsed_cert = x509.load_der_x509_certificate(cert)
-                local_print(f"    {key}")
-                local_print(
-                    f"        algorithm: {parsed_cert.signature_algorithm_oid._name}"
-                )
-        if not printed_head:
-            local_print("No certificate found")
-        pass
 
     @piv.command(help="Change the admin key.")
     @click.option(
@@ -324,6 +328,18 @@ try:  # noqa: C901
         "95": "5FC120",
     }
 
+    def _validate_rfc4514(
+        ctx: click.core.Context, param: click.core.Option, value: str
+    ) -> Optional[x509.Name]:
+        if value is None:
+            return value
+
+        try:
+            subject_name = x509.Name.from_rfc4514_string(value)
+            return subject_name
+        except ValueError:
+            raise click.BadParameter("Must be valid RFC4514 string.")
+
     @piv.command(help="Generate a new key and certificate signing request.")
     @click.option(
         "--admin-key",
@@ -372,15 +388,9 @@ try:  # noqa: C901
         help="Algorithm for the key.",
     )
     @click.option(
-        "--domain-component",
-        type=click.STRING,
-        multiple=True,
-        help="Domain component for the certificate signing request.",
-    )
-    @click.option(
         "--subject-name",
         type=click.STRING,
-        multiple=True,
+        callback=_validate_rfc4514,
         help="Subject name for the certificate signing request.",
     )
     @click.option(
@@ -405,8 +415,7 @@ try:  # noqa: C901
         admin_key: str,
         key: str,
         algo: str,
-        domain_component: Optional[Sequence[str]],
-        subject_name: Optional[Sequence[str]],
+        subject_name: Optional[x509.Name],
         subject_alt_name_upn: Optional[str],
         pin: str,
         path: str,
@@ -478,28 +487,10 @@ try:  # noqa: C901
         certificate_builder = x509.CertificateBuilder()
         csr_builder = x509.CertificateSigningRequestBuilder()
 
-        if domain_component is None:
-            domain_component = []
-
         if subject_name is None:
             crypto_rdns = x509.Name([])
         else:
-            crypto_rdns = x509.Name(
-                [
-                    x509.RelativeDistinguishedName(
-                        [
-                            x509.NameAttribute(x509.NameOID.DOMAIN_COMPONENT, subject)
-                            for subject in domain_component
-                        ]
-                    ),
-                    x509.RelativeDistinguishedName(
-                        [
-                            x509.NameAttribute(x509.NameOID.COMMON_NAME, subject)
-                            for subject in subject_name
-                        ]
-                    ),
-                ]
-            )
+            crypto_rdns = subject_name
 
         certificate_builder = (
             certificate_builder.subject_name(crypto_rdns)
@@ -783,6 +774,30 @@ try:  # noqa: C901
 
         with click.open_file(path, mode="wb") as f:
             f.write(cert_serialized)
+
+    @piv.command(help="List certificates.")
+    def list_certificates() -> None:
+        device = PivApp()
+
+        headers = ["Slot", "Algorithm", "Subject"]
+        data = []
+
+        for key, slot in KEY_TO_CERT_OBJ_ID_MAP.items():
+            cert = device.cert(bytes(bytearray.fromhex(slot)))
+            if cert is not None:
+                parsed_cert = x509.load_der_x509_certificate(cert)
+                data.append(
+                    [
+                        key,
+                        parsed_cert.signature_algorithm_oid._name,
+                        parsed_cert.subject.rfc4514_string(),
+                    ]
+                )
+
+        if data:
+            print_table(headers, data)
+        else:
+            local_print("No certificate found.")
 
 except ImportError:
     from pynitrokey.cli.nk3.pcsc_absent import PCSC_ABSENT
