@@ -1,3 +1,6 @@
+# Copyright Nitrokey GmbH
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
 import datetime
 import sys
 from typing import Optional, Sequence, Tuple, Union

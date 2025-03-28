@@ -1,3 +1,6 @@
+# Copyright Nitrokey GmbH
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
 """
 Tests for the Secrets application interface placed in secrets_app.py.
 Requires a live device, or an USB-IP simulation.

@@ -1,3 +1,6 @@
+# Copyright Nitrokey GmbH
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
 from array import array
 from typing import BinaryIO, Literal, Optional, Sequence, TextIO, Tuple, Union, overload
 

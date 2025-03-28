@@ -1,3 +1,8 @@
+<!--
+Copyright 2019 SoloKeys Developers
+SPDX-License-Identifier: Apache-2.0 OR MIT
+-->
+
 # Changelog
 All notable changes to this project will be documented in this file.
 

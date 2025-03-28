@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+Copyright Nitrokey GmbH
+SPDX-License-Identifier: Apache-2.0 OR MIT
+-->
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
     <Product Id="*"
         Name="Nitropy"

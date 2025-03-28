@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with libnitrokey. If not, see <http://www.gnu.org/licenses/>.
  *
- * SPDX-License-Identifier: LGPL-3.0
+ * SPDX-License-Identifier: LGPL-3.0-only
  */
 
 #ifndef LIBNITROKEY_NK_C_API_H

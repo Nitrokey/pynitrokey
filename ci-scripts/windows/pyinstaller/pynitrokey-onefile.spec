@@ -1,4 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
+# Copyright Nitrokey GmbH
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
 from PyInstaller.utils.hooks import copy_metadata
 
 datas = [

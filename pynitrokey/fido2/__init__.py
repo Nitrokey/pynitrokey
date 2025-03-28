@@ -1,3 +1,6 @@
+# Copyright Nitrokey GmbH
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
 import sys
 import time
 from typing import List, Optional, Union

@@ -1,3 +1,7 @@
+# Copyright 2019 SoloKeys Developers
+# Copyright Nitrokey GmbH
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
 .PHONY: all black build clean publish reinstall
 
 PACKAGE_NAME=pynitrokey

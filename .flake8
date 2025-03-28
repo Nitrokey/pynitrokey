@@ -1,3 +1,7 @@
+# Copyright 2019 SoloKeys Developers
+# Copyright Nitrokey GmbH
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
 [flake8]
 # E203,E701 suggested by black, see:
 # https://black.readthedocs.io/en/stable/guides/using_black_with_other_tools.html#flake8
