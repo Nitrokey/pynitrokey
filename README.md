@@ -71,10 +71,17 @@ Current maintainers can be found in [MAINTAINERS.md](MAINTAINERS.md) file.
 
 ## License
 
-Licensed similarly to upstream, under either of
+pynitrokey is licensed under either of
 
 - Apache License, Version 2.0 ([LICENSE-APACHE](./LICENSES/Apache-2.0.txt) or
   http://www.apache.org/licenses/LICENSE-2.0)
 - MIT license ([LICENSE-MIT](./LICENSES/MIT.txt) or http://opensource.org/licenses/MIT)
 
 at your option.
+
+pynitrokey also contains code originating from these projects:
+- [gnuk](https://salsa.debian.org/gnuk-team/gnuk/gnuk) by NIIBE Yutaka, [GPL-3.0-or-later](./LICENSES/GPL-3.0-or-later.txt)
+- [libnitrokey](https://github.com/Nitrokey/libnitrokey) by Nitrokey GmbH, [LGPL-3.0-only](./LICENSES/LGPL-3.0-only.txt)
+- [solo1-cli](https://github.com/solokeys/solo1-cli) by SoloKeys Developers, [Apache-2.0](./LICENSES/Apache-2.0.txt) or [MIT](./LICENSES/MIT)
+
+For more information, see the SDPX license headers in each file.
