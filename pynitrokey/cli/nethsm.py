@@ -84,6 +84,7 @@ class Config:
     username: Optional[str]
     password: Optional[str]
     verify_tls: bool
+    ca_certs: Optional[str]
 
 
 @click.group()
@@ -95,6 +96,10 @@ class Config:
     default=True,
     help="Whether to verify the TLS certificate of the NetHSM",
 )
+@click.option(
+    "--ca-certs",
+    help="Path to the CA certs to use for the TLS verification",
+)
 @click.pass_context
 def nethsm(
     ctx: Context,
@@ -102,11 +107,16 @@ def nethsm(
     username: Optional[str],
     password: Optional[str],
     verify_tls: bool,
+    ca_certs: Optional[str],
 ) -> None:
     """Interact with NetHSM devices, see subcommands."""
 
     ctx.obj = Config(
-        host=host, username=username, password=password, verify_tls=verify_tls
+        host=host,
+        username=username,
+        password=password,
+        verify_tls=verify_tls,
+        ca_certs=ca_certs,
     )
 
 
@@ -139,20 +149,24 @@ def connect(ctx: Context, require_auth: bool = True) -> Iterator[NetHSM]:
             )
         auth = Authentication(username=username, password=password)
 
-    with nethsm_sdk.connect(host, auth=auth, verify_tls=config.verify_tls) as nethsm:
-        try:
-            yield nethsm
-        except nethsm_sdk.NetHSMError as e:
-            raise click.ClickException(f"NetHSM request failed: {e}")
-        except nethsm_sdk.NetHSMRequestError as e:
-            if e.type == nethsm_sdk.RequestErrorType.SSL_ERROR:
-                raise click.ClickException(
-                    f"Could not connect to the NetHSM: {e.reason}\nIf you use a self-signed certificate, please set the --no-verify-tls option."
-                )
-            else:
-                raise click.ClickException(
-                    f"Cound not connect to the NetHSM: {e.reason}\nIs the NetHSM running and reachable?"
-                )
+    nethsm = NetHSM(
+        host, auth=auth, verify_tls=config.verify_tls, ca_certs=config.ca_certs
+    )
+    try:
+        yield nethsm
+    except nethsm_sdk.NetHSMError as e:
+        raise click.ClickException(f"NetHSM request failed: {e}")
+    except nethsm_sdk.NetHSMRequestError as e:
+        if e.type == nethsm_sdk.RequestErrorType.SSL_ERROR:
+            raise click.ClickException(
+                f"Could not connect to the NetHSM: {e.reason}\nIf you use a self-signed certificate, please set the --no-verify-tls option."
+            )
+        else:
+            raise click.ClickException(
+                f"Cound not connect to the NetHSM: {e.reason}\nIs the NetHSM running and reachable?"
+            )
+    finally:
+        nethsm.close()
 
 
 @nethsm.command()
