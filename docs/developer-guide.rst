@@ -104,7 +104,7 @@ It is also possible to upgrade the development version to the latest ``master`` 
   $ pipx upgrade pynitrokey-git
   $ pipx uninstall pynitrokey-git
 
-It is also possible to install a development version from an open pull request, for example for PR #123::
+Alternatively, you can install a development version from an open pull request, for example for PR #123::
 
   $ export PULL_REQUEST=123
   $ pipx install git+https://github.com/Nitrokey/pynitrokey.git@refs/pull/${PULL_REQUEST}/head --suffix=-pr${PULL_REQUEST}
