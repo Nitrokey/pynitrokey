@@ -85,6 +85,19 @@ def from_websafe(data: str) -> str:
     return data + "=="[: (3 * len(data)) % 4]
 
 
+def b32padding(data: str) -> str:
+    """Helper function to pad base32 strings correctly, as some services
+    provide OTP secrets as base32 strings without the necessary padding
+
+    `s`: `str` base32 input string
+
+    Returns:
+        `str`: string padded to full base32 character blocks
+    """
+    padding_needed = 8 - (len(data) % 8)
+    return data + (padding_needed * "=")
+
+
 class ProgressBar:
     """
     Helper class for progress bars where the total length of the progress bar
