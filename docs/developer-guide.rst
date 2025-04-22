@@ -86,6 +86,31 @@ It is also possible to use a local path::
   "nitrokey @ file:../nitrokey-sdk-py",
 
 
+Installing a Development Version
+--------------------------------
+
+It is possible to install a development version of ``pynitrokey`` from the latest ``master`` branch using ``pipx``, for example::
+
+  $ pipx install git+https://github.com/Nitrokey/pynitrokey.git --suffix=-git
+
+The installed binary will be available as ``nitropy-git`` so that it can be used in parallel with a normal installation::
+
+  $ nitropy-git --help
+  $ which nitropy-git
+  $ which nitropy
+
+It is also possible to upgrade the development version to the latest ``master`` branch or to remove it::
+
+  $ pipx upgrade pynitrokey-git
+  $ pipx uninstall pynitrokey-git
+
+Alternatively, you can install a development version from an open pull request, for example for PR #123::
+
+  $ export PULL_REQUEST=123
+  $ pipx install git+https://github.com/Nitrokey/pynitrokey.git@refs/pull/${PULL_REQUEST}/head --suffix=-pr${PULL_REQUEST}
+  $ nitropy-pr123 --help
+  $ pipx uninstall pynitrokey-pr123
+
 Design Patterns
 ---------------
 
