@@ -248,7 +248,7 @@ def add_otp(
         raise click.ClickException("Please provide secret for the OTP to work")
 
     digits = int(digits_str)
-    secret_bytes = b32decode(b32padding(secret))
+    secret_bytes = b32decode(b32padding(secret), casefold=True)
     hash_algorithm = ALGORITHM_TO_KIND[hash.upper()]
 
     with ctx.connect_device() as device:
@@ -361,7 +361,7 @@ def add_password(
 def add_challenge_response(ctx: Context, slot: str, secret: str) -> None:
     """Register Challenge-Response credential."""
 
-    secret_bytes = b32decode(b32padding(secret))
+    secret_bytes = b32decode(b32padding(secret), casefold=True)
     sl = len(secret_bytes)
     if sl != 20:
         local_critical(f"Secret has to be exactly 20 bytes in length (got {sl})")
