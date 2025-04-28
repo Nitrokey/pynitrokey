@@ -64,6 +64,31 @@ class PivApp:
                 connection.connect()
             except NoCardException:
                 continue
+
+            expected_atr = [
+                59,
+                143,
+                1,
+                128,
+                93,
+                78,
+                105,
+                116,
+                114,
+                111,
+                107,
+                101,
+                121,
+                0,
+                0,
+                0,
+                0,
+                0,
+                106,
+            ]
+            if not expected_atr == connection.getATR():
+                continue
+
             select = [
                 0x00,
                 0xA4,
