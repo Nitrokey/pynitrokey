@@ -58,7 +58,6 @@ class PivApp:
         readers = smartcard.System.readers()
         chosen_connection: Optional[CardConnection] = None
         for r in readers:
-            print(r)
             connection = r.createConnection()
             try:
                 connection.connect()
@@ -88,6 +87,7 @@ class PivApp:
             ]
             if not expected_atr == connection.getATR():
                 continue
+            print(r)
 
             select = [
                 0x00,
