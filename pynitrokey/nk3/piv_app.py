@@ -64,27 +64,7 @@ class PivApp:
             except NoCardException:
                 continue
 
-            expected_atr = [
-                59,
-                143,
-                1,
-                128,
-                93,
-                78,
-                105,
-                116,
-                114,
-                111,
-                107,
-                101,
-                121,
-                0,
-                0,
-                0,
-                0,
-                0,
-                106,
-            ]
+            expected_atr = list(bytes.fromhex("3b8f01805d4e6974726f6b657900000000006a"))
             if not expected_atr == connection.getATR():
                 continue
             print(r)
