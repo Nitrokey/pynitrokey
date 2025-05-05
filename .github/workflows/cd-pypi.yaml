@@ -56,7 +56,7 @@ jobs:
     name: Publish to TestPyPI
     runs-on: ubuntu-latest
     needs: build
-    if: github.event_name == 'release' || github.ref == 'refs/heads/main'
+    if: github.event_name == 'release' || github.ref == 'refs/heads/master'
     environment:
       name: testpypi
       url: https://test.pypi.org/p/pynitrokey
