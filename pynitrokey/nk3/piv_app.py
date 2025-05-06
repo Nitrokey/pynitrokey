@@ -58,12 +58,17 @@ class PivApp:
         readers = smartcard.System.readers()
         chosen_connection: Optional[CardConnection] = None
         for r in readers:
-            print(r)
             connection = r.createConnection()
             try:
                 connection.connect()
             except NoCardException:
                 continue
+
+            expected_atr = list(bytes.fromhex("3b8f01805d4e6974726f6b657900000000006a"))
+            if not expected_atr == connection.getATR():
+                continue
+            print(r)
+
             select = [
                 0x00,
                 0xA4,
