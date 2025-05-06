@@ -7,8 +7,7 @@ from PyInstaller.utils.hooks import copy_metadata
 datas = [
     ('../../../venv/lib/python3.9/site-packages/fido2/public_suffix_list.dat', 'fido2'),
     ('../../../pynitrokey/VERSION', 'pynitrokey'),
-    ('../../../LICENSE-APACHE', '.'),
-    ('../../../LICENSE-MIT', '.')
+    ('../../../LICENSES', '.'),
 ]
 datas += copy_metadata('pynitrokey')
 datas += copy_metadata('ecdsa')
@@ -20,7 +19,7 @@ block_cipher = None
 
 
 a = Analysis(
-    ['../../../nitropy.py'],
+    ['../../nitropy.py'],
     pathex=[],
     binaries=[],
     datas=datas,
