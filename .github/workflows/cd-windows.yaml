@@ -4,8 +4,10 @@
 name: Continuous delivery - Windows
 
 on:
+  push:
+  pull_request:
   release:
-    types: [prereleased, released]
+    types: [published]
 
 env:
   FLIT_ROOT_INSTALL: 1
@@ -14,6 +16,7 @@ jobs:
   version-check:
     name: Check versioning
     runs-on: windows-latest
+    if: github.event_name == 'release'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -29,7 +32,6 @@ jobs:
   build-onedir:
     name: Build onedir
     runs-on: windows-latest
-    needs: version-check
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -59,7 +61,6 @@ jobs:
   build-onefile:
     name: Build onefile
     runs-on: windows-latest
-    needs: version-check
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -137,7 +138,8 @@ jobs:
   publish-binary:
     name: Publish binary
     runs-on: windows-latest
-    needs: build-onefile
+    needs: [build-onefile, version-check]
+    if: github.event_name == 'release'
     permissions:
       contents: write
     steps:
@@ -162,7 +164,8 @@ jobs:
   publish-msi-installer:
     name: Publish MSI installer
     runs-on: windows-latest
-    needs: build-msi-installer
+    needs: [build-msi-installer, version-check]
+    if: github.event_name == 'release'
     permissions:
       contents: write
     steps:

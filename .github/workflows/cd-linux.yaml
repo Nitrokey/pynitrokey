@@ -4,8 +4,10 @@
 name: Continuous delivery - Linux
 
 on:
+  push:
+  pull_request:
   release:
-    types: [prereleased, released]
+    types: [published]
 
 env:
   FLIT_ROOT_INSTALL: 1
@@ -14,6 +16,7 @@ jobs:
   version-check:
     name: Check versioning
     runs-on: ubuntu-latest
+    if: github.event_name == 'release'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -29,7 +32,6 @@ jobs:
     name: Build onefile
     runs-on: ubuntu-latest
     container: python:3.9-slim
-    needs: version-check
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -57,7 +59,8 @@ jobs:
     name: Publish binary
     runs-on: ubuntu-latest
     container: python:3.9-slim
-    needs: build-onefile
+    needs: [build-onefile, version-check]
+    if: github.event_name == 'release'
     permissions:
       contents: write
     steps:
