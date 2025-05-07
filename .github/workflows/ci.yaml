@@ -96,7 +96,7 @@ jobs:
       - name: Install required packages
         run: |
           sudo apt update
-          sudo apt install -y gcc libpcsclite-dev swig
+          sudo apt install -y gcc libpcsclite-dev swig git
       # For Python 3.13, we need additional build dependencies, see:
       # https://github.com/Nitrokey/pynitrokey/issues/610
       - name: Install more required packages
