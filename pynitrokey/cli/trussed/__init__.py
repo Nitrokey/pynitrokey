@@ -21,7 +21,7 @@ from nitrokey.trussed import (
     TrussedDevice,
     parse_firmware_image,
 )
-from nitrokey.trussed.admin_app import BootMode
+from nitrokey.trussed.admin_app import BootMode, InitStatus
 from nitrokey.trussed.provisioner_app import ProvisionerApp
 from nitrokey.updates import OverwriteError
 
@@ -405,6 +405,10 @@ def status(ctx: Context[Bootloader, Device]) -> None:
         status = device.admin.status()
         if status.init_status is not None:
             local_print(f"Init status:        {status.init_status}")
+            if status.init_status & InitStatus.EXT_FLASH_NEED_REFORMAT:
+                local_print(
+                    "EFS is corrupted, please contact support for information on how to solve this issue"
+                )
         if status.ifs_blocks is not None:
             local_print(f"Free blocks (int):  {status.ifs_blocks}")
         if status.efs_blocks is not None:
