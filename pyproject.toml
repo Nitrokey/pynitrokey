@@ -38,7 +38,7 @@ dependencies = [
   "intelhex",
   "nkdfu",
   # "nitrokey >=0.3.1,<0.4",
-  "nitrokey @ git+ssh://git@github.com/nitrokey/nitrokey-sdk-py@init-status-efs-need-reformat",
+  "nitrokey @ git+https://github.com/nitrokey/nitrokey-sdk-py@init-status-efs-need-reformat",
   "pyusb",
   "requests",
   "tqdm",
