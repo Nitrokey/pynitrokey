@@ -28,7 +28,8 @@ class EnumMeta(Protocol):
         ...
 
 
-def make_enum_type(enum_cls: EnumMeta) -> click.Choice:
+# FIXME: Newer click versions have a generic `Choice`, but imcompatible with python 3.9
+def make_enum_type(enum_cls: EnumMeta) -> click.Choice:  # type: ignore[type-arg, unused-ignore]
     return click.Choice([variant.value for variant in enum_cls], case_sensitive=False)
 
 

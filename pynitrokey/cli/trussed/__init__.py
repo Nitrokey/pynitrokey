@@ -19,9 +19,10 @@ from nitrokey.trussed import (
     TrussedBase,
     TrussedBootloader,
     TrussedDevice,
+    Version,
     parse_firmware_image,
 )
-from nitrokey.trussed.admin_app import BootMode
+from nitrokey.trussed.admin_app import BootMode, InitStatus, Status
 from nitrokey.trussed.provisioner_app import ProvisionerApp
 from nitrokey.updates import OverwriteError
 
@@ -29,6 +30,7 @@ from pynitrokey.cli.exceptions import CliException
 from pynitrokey.helpers import (
     DownloadProgressBar,
     Retries,
+    local_critical,
     local_print,
     require_windows_admin,
 )
@@ -393,6 +395,25 @@ def rng(ctx: Context[Bootloader, Device], length: int) -> None:
             length -= len(rng)
 
 
+def print_status(version: Version, status: Status) -> None:
+    local_print(f"Firmware version:   {version}")
+    if status.init_status is not None:
+        local_print(f"Init status:        {status.init_status}")
+    if status.ifs_blocks is not None:
+        local_print(f"Free blocks (int):  {status.ifs_blocks}")
+    if status.efs_blocks is not None:
+        local_print(f"Free blocks (ext):  {status.efs_blocks}")
+    if status.variant is not None:
+        local_print(f"Variant:            {status.variant.name}")
+
+    # Print at the end so that other status info are written
+    if status.init_status is not None:
+        if status.init_status & InitStatus.EXT_FLASH_NEED_REFORMAT:
+            local_critical(
+                "EFS is corrupted, please contact support for information on how to solve this issue"
+            )
+
+
 @click.command()
 @click.pass_obj
 def status(ctx: Context[Bootloader, Device]) -> None:
@@ -403,17 +424,8 @@ def status(ctx: Context[Bootloader, Device]) -> None:
             local_print(f"UUID:               {uuid}")
 
         version = device.admin.version()
-        local_print(f"Firmware version:   {version}")
-
         status = device.admin.status()
-        if status.init_status is not None:
-            local_print(f"Init status:        {status.init_status}")
-        if status.ifs_blocks is not None:
-            local_print(f"Free blocks (int):  {status.ifs_blocks}")
-        if status.efs_blocks is not None:
-            local_print(f"Free blocks (ext):  {status.efs_blocks}")
-        if status.variant is not None:
-            local_print(f"Variant:            {status.variant.name}")
+        print_status(version, status)
 
 
 @click.command()

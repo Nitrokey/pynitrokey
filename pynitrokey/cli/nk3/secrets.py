@@ -195,14 +195,16 @@ def update(
 @click.option(
     "--kind",
     "kind",
-    type=click.Choice(choices=STRING_TO_KIND.keys(), case_sensitive=False),  # type: ignore[arg-type]
+    # FIXME: Newer click versions have a generic `Choice`, but imcompatible with python 3.9
+    type=click.Choice(choices=STRING_TO_KIND.keys(), case_sensitive=False),  # type: ignore[arg-type, unused-ignore]
     help="OTP mechanism to use. Case insensitive.",
     default="NOT_SET",
 )
 @click.option(
     "--hash",
     "hash",
-    type=click.Choice(choices=ALGORITHM_TO_KIND.keys(), case_sensitive=False),  # type: ignore[arg-type]
+    # FIXME: Newer click versions have a generic `Choice`, but imcompatible with python 3.9
+    type=click.Choice(choices=ALGORITHM_TO_KIND.keys(), case_sensitive=False),  # type: ignore[arg-type, unused-ignore]
     help="Hash algorithm to use",
     default="SHA1",
 )
