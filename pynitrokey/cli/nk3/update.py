@@ -4,11 +4,12 @@
 import logging
 from collections.abc import Set
 from contextlib import contextmanager
-from typing import Any, Callable, Iterator, List, Optional
+from typing import Any, Callable, Iterator, List, Optional, Tuple
 
 from click import Abort
 from nitrokey.nk3.updates import Updater, UpdateUi, Warning
 from nitrokey.trussed import Version
+from nitrokey.trussed.admin_app import Status
 
 from pynitrokey.cli.exceptions import CliException
 from pynitrokey.cli.nk3 import Context
@@ -149,7 +150,7 @@ def update(
     ignore_pynitrokey_version: bool,
     ignore_warnings: Set[Warning],
     confirm_continue: bool,
-) -> Version:
+) -> Tuple[Version, Status]:
     with ctx.connect() as device:
         updater = Updater(
             ui=UpdateCli(confirm_continue),
