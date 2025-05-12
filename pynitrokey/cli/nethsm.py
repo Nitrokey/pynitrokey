@@ -28,7 +28,7 @@ class EnumMeta(Protocol):
         ...
 
 
-def make_enum_type(enum_cls: EnumMeta) -> click.Choice:
+def make_enum_type(enum_cls: EnumMeta) -> click.Choice:  # type: ignore
     return click.Choice([variant.value for variant in enum_cls], case_sensitive=False)
 
 
