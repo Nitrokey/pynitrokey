@@ -29,6 +29,7 @@ from pynitrokey.cli.exceptions import CliException
 from pynitrokey.helpers import (
     DownloadProgressBar,
     Retries,
+    local_critical,
     local_print,
     require_windows_admin,
 )
@@ -405,16 +406,19 @@ def status(ctx: Context[Bootloader, Device]) -> None:
         status = device.admin.status()
         if status.init_status is not None:
             local_print(f"Init status:        {status.init_status}")
-            if status.init_status & InitStatus.EXT_FLASH_NEED_REFORMAT:
-                local_print(
-                    "EFS is corrupted, please contact support for information on how to solve this issue"
-                )
         if status.ifs_blocks is not None:
             local_print(f"Free blocks (int):  {status.ifs_blocks}")
         if status.efs_blocks is not None:
             local_print(f"Free blocks (ext):  {status.efs_blocks}")
         if status.variant is not None:
             local_print(f"Variant:            {status.variant.name}")
+
+        # Print at the end so that other status info are written
+        if status.init_status is not None:
+            if status.init_status & InitStatus.EXT_FLASH_NEED_REFORMAT:
+                local_critical(
+                    "EFS is corrupted, please contact support for information on how to solve this issue"
+                )
 
 
 @click.command()
