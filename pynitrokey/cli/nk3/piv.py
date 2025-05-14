@@ -779,7 +779,7 @@ try:  # noqa: C901
     def list_certificates() -> None:
         device = PivApp()
 
-        headers = ["Slot", "Algorithm", "Subject", "Serial Number"]
+        headers = ["Slot", "Algorithm", "Subject", "Serial Number", "Issuer"]
         data = []
 
         for key, slot in KEY_TO_CERT_OBJ_ID_MAP.items():
@@ -792,6 +792,7 @@ try:  # noqa: C901
                         parsed_cert.signature_algorithm_oid._name,
                         parsed_cert.subject.rfc4514_string(),
                         f"{parsed_cert.serial_number:x}",
+                        parsed_cert.issuer.rfc4514_string(),
                     ]
                 )
 
