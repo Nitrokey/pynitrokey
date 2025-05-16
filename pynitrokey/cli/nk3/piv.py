@@ -829,6 +829,7 @@ try:  # noqa: C901
             public_key_hash = digest.finalize()
             sha1_public_key = public_key_hash.hex()
 
+            local_print("Set mapping in 'altSecurityIdentities' attribute to one of the following:")
             local_print(
                 f"X509IssuerSerialNumber: X509:<I>{issuer_name_reversed}<SR>{serial_number_reversed}"
             )
