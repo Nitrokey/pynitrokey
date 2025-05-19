@@ -801,6 +801,50 @@ try:  # noqa: C901
         else:
             local_print("No certificate found.")
 
+    @piv.command(help="Get Windows authentication certificate mapping.")
+    def get_windows_auth_mapping() -> None:
+        device = PivApp()
+
+        cert = device.cert(bytes(bytearray.fromhex(KEY_TO_CERT_OBJ_ID_MAP["9A"])))
+        if cert is not None:
+            parsed_cert = x509.load_der_x509_certificate(cert)
+
+            issuer_name = parsed_cert.issuer
+            issuer_name.rdns.reverse()
+            issuer_name_reversed = issuer_name.rfc4514_string()
+
+            serial_number = bytearray.fromhex(f"{parsed_cert.serial_number:x}")
+            serial_number.reverse()
+            serial_number_reversed = serial_number.hex()
+
+            subject_key_identifier: Union[None, str]
+            try:
+                subject_key_identifier = parsed_cert.extensions.get_extension_for_class(
+                    x509.SubjectKeyIdentifier
+                ).value.digest.hex()
+            except x509.ExtensionNotFound:
+                subject_key_identifier = None
+
+            public_key = parsed_cert.public_bytes(Encoding.DER)
+            digest = hashes.Hash(hashes.SHA1())
+            digest.update(public_key)
+            public_key_hash = digest.finalize()
+            sha1_public_key = public_key_hash.hex()
+
+            local_print(
+                "Set mapping in 'altSecurityIdentities' attribute to one of the following:"
+            )
+            local_print(
+                f"X509IssuerSerialNumber: X509:<I>{issuer_name_reversed}<SR>{serial_number_reversed}"
+            )
+            if subject_key_identifier:
+                local_print(
+                    f"               X509SKI: X509:<SKI>{subject_key_identifier}"
+                )
+            local_print(f"     X509SHA1PublicKey: X509:<SHA1-PUKEY>{sha1_public_key}")
+        else:
+            local_print("No certificate found.")
+
 except ImportError:
     from pynitrokey.cli.nk3.pcsc_absent import PCSC_ABSENT
 
