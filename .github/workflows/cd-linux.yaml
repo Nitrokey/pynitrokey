@@ -46,7 +46,7 @@ jobs:
       - name: Install poetry
         run: pip install "${POETRY_SPEC}"
       - name: Create virtual environment
-        run: make install
+        run: poetry sync --all-extras --with pyinstaller
       - name: Build
         run: poetry run pyinstaller -- ci-scripts/pyinstaller.spec -- --mode onefile --platform linux
       - name: Test onefile

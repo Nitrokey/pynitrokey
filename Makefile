@@ -18,7 +18,7 @@ all: install
 
 .PHONY: install
 install:
-	poetry sync --all-extras
+	poetry sync --all-extras --with dev
 
 .PHONY: lock
 lock:
