@@ -10,16 +10,19 @@ on:
     types: [published]
 
 env:
-  FLIT_ROOT_INSTALL: 1
+  POETRY_SPEC: poetry >=2,<3
 
 jobs:
   version-check:
     name: Check versioning
     runs-on: ubuntu-latest
+    container: python:3.9-slim
     if: github.event_name == 'release'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      - name: Install poetry
+        run: pip install "${POETRY_SPEC}"
       - name: Check version tag format
         run: |
           TAG_VERSION="${{ github.event.release.tag_name }}"
@@ -27,7 +30,7 @@ jobs:
       - name: Check if version tag and package version are equal
         run: |
           TAG_VERSION="${{ github.event.release.tag_name }}"
-          if [ ${TAG_VERSION:1} == $(cat pynitrokey/VERSION) ]; then exit 0; else exit 1; fi
+          if [ ${TAG_VERSION:1} == $(poetry version --short) ]; then exit 0; else exit 1; fi
   build-onefile:
     name: Build onefile
     runs-on: ubuntu-latest
@@ -39,17 +42,12 @@ jobs:
         run: |
           apt update
           apt install -y binutils gcc git libpcsclite-dev libusb-1.0-0 make swig
+      - name: Install poetry
+        run: pip install "${POETRY_SPEC}"
       - name: Create virtual environment
-        run: |
-          python -m venv venv
-          . venv/bin/activate
-          pip install flit
-          flit install --symlink
+        run: poetry sync --all-extras --with pyinstaller
       - name: Build
-        run: |
-          . venv/bin/activate
-          pyinstaller \
-            ci-scripts/linux/pyinstaller/pynitrokey-onefile.spec
+        run: poetry run pyinstaller ci-scripts/linux/pyinstaller/pynitrokey-onefile.spec
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:

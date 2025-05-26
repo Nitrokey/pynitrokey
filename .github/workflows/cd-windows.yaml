@@ -9,9 +9,6 @@ on:
   release:
     types: [published]
 
-env:
-  FLIT_ROOT_INSTALL: 1
-
 jobs:
   version-check:
     name: Check versioning
@@ -20,6 +17,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      - name: Install poetry
+        run: choco install poetry --source python
       - name: Check version tag format
         run: |
           $VERSION_TAG="${{ github.event.release.tag_name }}"
@@ -27,7 +26,7 @@ jobs:
       - name: Check if version tag and package version are equal
         run: |
           $VERSION_TAG="${{ github.event.release.tag_name }}"
-          $VERSION_FILE=Get-Content .\pynitrokey\VERSION
+          $VERSION_FILE=poetry version --short
           if ($VERSION_TAG.Substring(1) -eq $VERSION_FILE) {exit 0} else {exit 1}
   build-onedir:
     name: Build onedir
@@ -35,24 +34,18 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      - name: Install poetry
+        run: choco install poetry --source python
       - name: Create virtual environment
-        run: |
-          python -m venv venv
-          .\venv\Scripts\Activate.ps1
-          .\venv\Scripts\pip install pip
-          .\venv\Scripts\pip install flit
-          .\venv\Scripts\flit install --symlink
+        run: poetry sync --all-extras --with pyinstaller
       - name: Create Windows version info file
         run: |
-          .\venv\Scripts\Activate.ps1
-          create-version-file `
+          poetry run create-version-file `
             --outfile .\ci-scripts\windows\pyinstaller\file_version_info.txt `
-            --version "$(Get-Content .\pynitrokey\VERSION)" `
+            --version "$(poetry version --short)" `
             .\ci-scripts\windows\pyinstaller\file_version_info_metadata.yaml
       - name: Build onedir
-        run: |
-          .\venv\Scripts\Activate.ps1
-          pyinstaller ci-scripts/windows/pyinstaller/pynitrokey-onedir.spec
+        run: poetry run pyinstaller ci-scripts/windows/pyinstaller/pynitrokey-onedir.spec
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -64,24 +57,18 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      - name: Install poetry
+        run: choco install poetry --source python
       - name: Create virtual environment
-        run: |
-          python -m venv venv
-          .\venv\Scripts\Activate.ps1
-          .\venv\Scripts\pip install pip
-          .\venv\Scripts\pip install flit
-          .\venv\Scripts\flit install --symlink
+        run: poetry sync --all-extras --with pyinstaller
       - name: Create Windows version info file
         run: |
-          .\venv\Scripts\Activate.ps1
-          create-version-file `
+          poetry run create-version-file `
             --outfile .\ci-scripts\windows\pyinstaller\file_version_info.txt `
-            --version "$(Get-Content .\pynitrokey\VERSION)" `
+            --version "$(poetry version --short)" `
             .\ci-scripts\windows\pyinstaller\file_version_info_metadata.yaml
       - name: Build onefile
-        run: |
-          .\venv\Scripts\Activate.ps1
-          pyinstaller ci-scripts/windows/pyinstaller/pynitrokey-onefile.spec
+        run: poetry run pyinstaller ci-scripts/windows/pyinstaller/pynitrokey-onefile.spec
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:

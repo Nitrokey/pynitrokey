@@ -2,11 +2,19 @@
 # Copyright Nitrokey GmbH
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 
+import importlib.metadata
 from PyInstaller.utils.hooks import copy_metadata
 
+
+def find_file(package: str, file_name: str) -> str:
+    all_files = importlib.metadata.files(package)
+    matching_files = [f for f in all_files if str(f) == file_name]
+    assert len(matching_files) == 1
+    return str(matching_files[0].locate())
+
+
 datas = [
-    ('../../../venv/lib/python3.9/site-packages/fido2/public_suffix_list.dat', 'fido2'),
-    ('../../../pynitrokey/VERSION', 'pynitrokey'),
+    (find_file("fido2", "fido2/public_suffix_list.dat"), 'fido2'),
     ('../../../LICENSES', '.'),
 ]
 datas += copy_metadata('pynitrokey')
