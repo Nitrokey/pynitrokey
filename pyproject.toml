@@ -8,6 +8,9 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "pynitrokey"
+version = "0.8.4"
+description = "Python client for Nitrokey devices"
+license = { text = "Apache-2.0 OR MIT" }
 authors = [
   { name = "Nitrokey", email = "pypi@nitrokey.com" },
 ]
@@ -46,7 +49,6 @@ dependencies = [
   "semver",
   "nethsm >=1.4.0, <2",
 ]
-dynamic = ["version", "description"]
 
 [project.optional-dependencies]
 dev = [
@@ -68,7 +70,7 @@ dev = [
 pcsc = ["pyscard >=2.0.0,<3"]
 
 [project.urls]
-Source = "https://github.com/Nitrokey/pynitrokey"
+repository = "https://github.com/Nitrokey/pynitrokey"
 
 [project.scripts]
 nitropy = "pynitrokey.cli:main"

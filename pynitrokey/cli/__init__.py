@@ -68,8 +68,9 @@ def nitropy():
     for x in pymodules:
         logger.info(f"{x} version: {package_version(x)}")
 
+    version = package_version("pynitrokey")
     print(
-        f"Command line tool to interact with Nitrokey devices {pynitrokey.__version__}",
+        f"Command line tool to interact with Nitrokey devices {version}",
         file=sys.stderr,
     )
 

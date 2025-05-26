@@ -11,15 +11,19 @@ on:
 
 env:
   FLIT_ROOT_INSTALL: 1
+  POETRY_SPEC: poetry >=2,<3
 
 jobs:
   version-check:
     name: Check versioning
     runs-on: ubuntu-latest
+    container: python:3.9-slim
     if: github.event_name == 'release'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+      - name: Install poetry
+        run: pip install "${POETRY_SPEC}"
       - name: Check version tag format
         run: |
           TAG_VERSION="${{ github.event.release.tag_name }}"
@@ -27,7 +31,7 @@ jobs:
       - name: Check if version tag and package version are equal
         run: |
           TAG_VERSION="${{ github.event.release.tag_name }}"
-          if [ ${TAG_VERSION:1} == $(cat pynitrokey/VERSION) ]; then exit 0; else exit 1; fi
+          if [ ${TAG_VERSION:1} == $(poetry version --short) ]; then exit 0; else exit 1; fi
   build-onefile:
     name: Build onefile
     runs-on: ubuntu-latest

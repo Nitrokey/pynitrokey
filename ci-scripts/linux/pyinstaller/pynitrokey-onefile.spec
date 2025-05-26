@@ -6,7 +6,6 @@ from PyInstaller.utils.hooks import copy_metadata
 
 datas = [
     ('../../../venv/lib/python3.9/site-packages/fido2/public_suffix_list.dat', 'fido2'),
-    ('../../../pynitrokey/VERSION', 'pynitrokey'),
     ('../../../LICENSES', '.'),
 ]
 datas += copy_metadata('pynitrokey')
