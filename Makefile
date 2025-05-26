@@ -78,9 +78,7 @@ clean: semi-clean
 
 # Package management
 
-VERSION_FILE := "$(PACKAGE_NAME)/VERSION"
-VERSION := $(shell cat $(VERSION_FILE))
-
+tag: VERSION := $(shell poetry version --short)
 tag:
 	git tag -a $(VERSION) -m"v$(VERSION)"
 	git push origin $(VERSION)

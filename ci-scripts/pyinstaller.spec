@@ -25,7 +25,6 @@ args = parser.parse_args()
 
 datas = [
     (find_file('fido2', 'fido2/public_suffix_list.dat'), 'fido2'),
-    ('../pynitrokey/VERSION', 'pynitrokey'),
     ('../LICENSES', '.'),
 ]
 datas += copy_metadata('pynitrokey')

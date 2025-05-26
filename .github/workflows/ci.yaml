@@ -10,8 +10,20 @@ on:
 
 env:
   FLIT_ROOT_INSTALL: 1
+  POETRY_SPEC: poetry >=2,<3
 
 jobs:
+  check-pyproject:
+    name: Check pyproject syntax
+    runs-on: ubuntu-latest
+    container: python:3.9-slim
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install poetry
+        run: pip install "${POETRY_SPEC}"
+      - name: Check pyproject syntax
+        run: poetry check
   format-code:
     name: Check code format
     runs-on: ubuntu-latest
