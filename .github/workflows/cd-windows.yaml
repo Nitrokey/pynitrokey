@@ -9,9 +9,6 @@ on:
   release:
     types: [published]
 
-env:
-  FLIT_ROOT_INSTALL: 1
-
 jobs:
   version-check:
     name: Check versioning

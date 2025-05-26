@@ -10,7 +10,6 @@ on:
     types: [published]
 
 env:
-  FLIT_ROOT_INSTALL: 1
   POETRY_SPEC: poetry >=2,<3
 
 jobs:
