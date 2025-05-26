@@ -108,6 +108,9 @@ check_untyped_defs = false
 disallow_incomplete_defs = false
 disallow_untyped_defs = false
 
+[tool.poetry.dependencies]
+python = ">= 3.9.2, <3.14"
+
 [tool.pytest.ini_options]
 log_cli = false
 log_cli_level = "INFO"

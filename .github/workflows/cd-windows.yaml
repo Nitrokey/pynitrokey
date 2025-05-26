@@ -40,23 +40,15 @@ jobs:
       - name: Install poetry
         run: choco install poetry --source python
       - name: Create virtual environment
-        run: |
-          python -m venv venv
-          .\venv\Scripts\Activate.ps1
-          .\venv\Scripts\pip install pip
-          .\venv\Scripts\pip install flit
-          .\venv\Scripts\flit install --symlink
+        run: poetry sync --all-extras
       - name: Create Windows version info file
         run: |
-          .\venv\Scripts\Activate.ps1
-          create-version-file `
+          poetry run create-version-file `
             --outfile .\ci-scripts\windows\pyinstaller\file_version_info.txt `
             --version "$(poetry version --short)" `
             .\ci-scripts\windows\pyinstaller\file_version_info_metadata.yaml
       - name: Build onedir
-        run: |
-          .\venv\Scripts\Activate.ps1
-          pyinstaller ci-scripts/pyinstaller.spec -- --mode onedir --platform windows
+        run: poetry run pyinstaller -- ci-scripts/pyinstaller.spec -- --mode onedir --platform windows
       - name: Test onedir
         run: dist/nitropy/nitropy.exe --help
       - name: Upload artifacts
@@ -73,23 +65,15 @@ jobs:
       - name: Install poetry
         run: choco install poetry --source python
       - name: Create virtual environment
-        run: |
-          python -m venv venv
-          .\venv\Scripts\Activate.ps1
-          .\venv\Scripts\pip install pip
-          .\venv\Scripts\pip install flit
-          .\venv\Scripts\flit install --symlink
+        run: poetry sync --all-extras
       - name: Create Windows version info file
         run: |
-          .\venv\Scripts\Activate.ps1
-          create-version-file `
+          poetry run create-version-file `
             --outfile .\ci-scripts\windows\pyinstaller\file_version_info.txt `
             --version "$(poetry version --short)" `
             .\ci-scripts\windows\pyinstaller\file_version_info_metadata.yaml
       - name: Build onefile
-        run: |
-          .\venv\Scripts\Activate.ps1
-          pyinstaller ci-scripts/pyinstaller.spec -- --mode onefile --platform windows
+        run: poetry run pyinstaller -- ci-scripts/pyinstaller.spec -- --mode onefile --platform windows
       - name: Test onefile
         run: dist/nitropy.exe --help
       - name: Upload artifacts

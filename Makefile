@@ -2,12 +2,7 @@
 # Copyright Nitrokey GmbH
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 
-.PHONY: all black build clean publish reinstall
-
 PACKAGE_NAME=pynitrokey
-VENV=venv
-PYTHON3=python3
-PYTHON3_VENV=venv/bin/python3
 
 # whitelist of directories for flake8
 FLAKE8_DIRS=\
@@ -18,44 +13,39 @@ FLAKE8_DIRS=\
 	pynitrokey/cli/trussed \
 	pynitrokey/fido2
 
-all: init
+.PHONY: all
+all: install
 
-.PHONY: init-fedora37
-init-fedora37:
-	sudo dnf install -y swig pcsc-lite-devel
-	$(MAKE) init
+.PHONY: install
+install:
+	poetry sync --all-extras
 
-# setup development environment
-init: update-venv
+.PHONY: lock
+lock:
+	poetry lock
 
-ARGS=
-.PHONY: run rune builde
-run:
-	./venv/bin/nitropy $(ARGS)
-
-DOCKER=docker
-IMAGE=pynitrokey
-CMD=/bin/bash
-rune:
-	$(DOCKER) run --privileged --rm -it -v $(PWD):/app --entrypoint= $(IMAGE) $(CMD)
-
-builde:
-	earthly +build
+.PHONY: update
+update:
+	poetry update
 
 # code checks
+.PHONY: check-format
 check-format:
-	$(PYTHON3_VENV) -m black --check $(PACKAGE_NAME)/ stubs
+	poetry run black --check $(PACKAGE_NAME)/ stubs
 
+.PHONY: check-import-sorting
 check-import-sorting:
-	$(PYTHON3_VENV) -m isort --check-only $(PACKAGE_NAME)/ stubs
+	poetry run isort --check-only $(PACKAGE_NAME)/ stubs
 
+.PHONY: check-style
 check-style:
-	$(PYTHON3_VENV) -m flake8 $(FLAKE8_DIRS) stubs
+	poetry run flake8 $(FLAKE8_DIRS) stubs
 
+.PHONY: check-typing
 check-typing:
-	@echo "Note: run semi-clean target in case this fails without any proper reason"
-	$(PYTHON3_VENV) -m mypy $(PACKAGE_NAME)/
+	poetry run mypy $(PACKAGE_NAME)/
 
+.PHONY: check
 check: check-format check-import-sorting check-style check-typing
 
 .PHONY: test
@@ -63,83 +53,25 @@ test:
 	$(PYTHON3_VENV) -m doctest pynitrokey/helpers.py
 
 # automatic code fixes
+.PHONY: fix
 fix:
-	$(PYTHON3_VENV) -m black $(BLACK_FLAGS) $(PACKAGE_NAME)/ stubs
-	$(PYTHON3_VENV) -m isort $(ISORT_FLAGS) $(PACKAGE_NAME)/ stubs
+	poetry run black $(BLACK_FLAGS) $(PACKAGE_NAME)/ stubs
+	poetry run isort $(ISORT_FLAGS) $(PACKAGE_NAME)/ stubs
 
-semi-clean:
+.PHONY: clean
+clean:
+	rm -rf ./dist
 	rm -rf ./**/__pycache__
 	rm -rf ./.mypy_cache
-
-clean: semi-clean
-	rm -rf ./$(VENV)
-	rm -rf ./dist
 
 
 # Package management
 
+.PHONY: tag
 tag: VERSION := $(shell poetry version --short)
 tag:
 	git tag -a $(VERSION) -m"v$(VERSION)"
 	git push origin $(VERSION)
-
-.PHONY: build-forced
-build-forced:
-	$(PYTHON3_VENV) -m flit build
-
-build: check
-	$(PYTHON3_VENV) -m flit build
-
-publish:
-	$(PYTHON3_VENV) -m flit --repository pypi publish
-
-system-pip-install-upgrade:
-	$(PYTHON3) -m pip install -U pynitrokey
-
-system-pip-install-last-version:
-	$(PYTHON3) -m pip install pynitrokey==$(VERSION)
-
-system-pip-install:
-	$(PYTHON3) -m pip install pynitrokey
-
-system-pip-uninstall:
-	$(PYTHON3) -m pip uninstall pynitrokey -y
-
-system-nitropy-test-simple:
-	which nitropy
-	nitropy
-
-
-$(VENV):
-	$(PYTHON3) -m venv $(VENV)
-	$(PYTHON3_VENV) -m pip install -U pip
-
-
-# re-run if dev or runtime dependencies change,
-# or when adding new scripts
-update-venv: $(VENV)
-	$(PYTHON3_VENV) -m pip install -U pip
-	$(PYTHON3_VENV) -m pip install flit
-	$(PYTHON3_VENV) -m flit install --symlink
-
-.PHONY: CI
-CI:
-	env FLIT_ROOT_INSTALL=1 $(MAKE) init VENV=$(VENV)
-	env FLIT_ROOT_INSTALL=1 $(MAKE) build-forced VENV=$(VENV)
-	$(MAKE) check
-	@echo
-	env LC_ALL=C.UTF-8 LANG=C.UTF-8 $(VENV)/bin/nitropy
-	@echo
-	env LC_ALL=C.UTF-8 LANG=C.UTF-8 $(VENV)/bin/nitropy version
-	git describe
-
-.PHONY: build-CI-test
-build-CI-test:
-	sudo docker build . -t nitro-python-ci
-
-.PHONY: CI-test
-CI-test:
-	sudo docker run -it --rm -v $(PWD):/app nitro-python-ci make CI VENV=venv-ci
 
 .PHONY: secrets-test-all secrets-test secrets-test-report secrets-test-report-CI
 LOG=info

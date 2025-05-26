@@ -43,16 +43,12 @@ jobs:
         run: |
           apt update
           apt install -y binutils gcc git libpcsclite-dev libusb-1.0-0 make swig
+      - name: Install poetry
+        run: pip install "${POETRY_SPEC}"
       - name: Create virtual environment
-        run: |
-          python -m venv venv
-          . venv/bin/activate
-          pip install flit
-          flit install --symlink
+        run: make install
       - name: Build
-        run: |
-          . venv/bin/activate
-          pyinstaller ci-scripts/pyinstaller.spec -- --mode onefile --platform linux
+        run: poetry run pyinstaller -- ci-scripts/pyinstaller.spec -- --mode onefile --platform linux
       - name: Test onefile
         run: dist/nitropy --help
       - name: Upload artifacts

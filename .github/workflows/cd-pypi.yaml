@@ -41,16 +41,10 @@ jobs:
         run: |
           apt update
           apt install -y binutils gcc libpcsclite-dev libusb-1.0-0 make swig
-      - name: Create virtual environment
-        run: |
-          python -m venv venv
-          . venv/bin/activate
-          pip install flit
-          flit install --symlink
+      - name: Install poetry
+        run: pip install "${POETRY_SPEC}"
       - name: Build
-        run: |
-          . venv/bin/activate
-          flit build
+        run: poetry build
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
