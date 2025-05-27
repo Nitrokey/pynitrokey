@@ -48,8 +48,7 @@ jobs:
       - name: Build
         run: |
           . venv/bin/activate
-          pyinstaller \
-            ci-scripts/linux/pyinstaller/pynitrokey-onefile.spec
+          pyinstaller ci-scripts/pyinstaller.spec -- --mode onefile --platform linux
       - name: Test onefile
         run: dist/nitropy --help
       - name: Upload artifacts
