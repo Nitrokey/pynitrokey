@@ -52,7 +52,7 @@ jobs:
       - name: Build onedir
         run: |
           .\venv\Scripts\Activate.ps1
-          pyinstaller ci-scripts/windows/pyinstaller/pynitrokey-onedir.spec
+          pyinstaller ci-scripts/pyinstaller.spec -- --mode onedir --platform windows
       - name: Test onedir
         run: dist/nitropy/nitropy.exe --help
       - name: Upload artifacts
@@ -83,7 +83,7 @@ jobs:
       - name: Build onefile
         run: |
           .\venv\Scripts\Activate.ps1
-          pyinstaller ci-scripts/windows/pyinstaller/pynitrokey-onefile.spec
+          pyinstaller ci-scripts/pyinstaller.spec -- --mode onefile --platform windows
       - name: Test onefile
         run: dist/nitropy.exe --help
       - name: Upload artifacts
