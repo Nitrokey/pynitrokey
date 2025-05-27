@@ -53,6 +53,8 @@ jobs:
         run: |
           .\venv\Scripts\Activate.ps1
           pyinstaller ci-scripts/windows/pyinstaller/pynitrokey-onedir.spec
+      - name: Test onedir
+        run: dist/nitropy/nitropy.exe --help
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -82,6 +84,8 @@ jobs:
         run: |
           .\venv\Scripts\Activate.ps1
           pyinstaller ci-scripts/windows/pyinstaller/pynitrokey-onefile.spec
+      - name: Test onefile
+        run: dist/nitropy.exe --help
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
