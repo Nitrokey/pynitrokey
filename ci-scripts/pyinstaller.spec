@@ -4,8 +4,6 @@
 
 import argparse
 import importlib.metadata
-import os
-import sys
 
 from PyInstaller.utils.hooks import copy_metadata
 
