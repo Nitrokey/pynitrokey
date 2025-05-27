@@ -50,6 +50,8 @@ jobs:
           . venv/bin/activate
           pyinstaller \
             ci-scripts/linux/pyinstaller/pynitrokey-onefile.spec
+      - name: Test onefile
+        run: dist/nitropy --help
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
