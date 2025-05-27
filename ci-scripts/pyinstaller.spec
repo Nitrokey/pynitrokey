@@ -33,69 +33,31 @@ datas += copy_metadata('ecdsa')
 datas += copy_metadata('fido2')
 datas += copy_metadata('pyusb')
 
-block_cipher = None
-
 binaries = []
 if args.platform == "windows":
-    binaries = [
-        (find_file("libusb1", "usb1/libusb-1.0.dll"), "."),
-    ]
+    binaries.append((find_file("libusb1", "usb1/libusb-1.0.dll"), "."))
 
-a = Analysis(
-    ['nitropy.py'],
-    pathex=[],
-    binaries=binaries,
-    datas=datas,
-    hiddenimports=[],
-    hookspath=[],
-    hooksconfig={},
-    runtime_hooks=[],
-    excludes=['tkinter'],
-    win_no_prefer_redirects=False,
-    win_private_assemblies=False,
-    cipher=block_cipher,
-    noarchive=False,
-)
-pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+a = Analysis(['nitropy.py'], binaries=binaries, datas=datas, excludes=['tkinter'])
+pyz = PYZ(a.pure, a.zipped_data)
 
 exe_args = [pyz, a.scripts]
-exe_kwargs = {
-    "name": 'nitropy',
-    "debug": False,
-    "bootloader_ignore_signals": False,
-    "strip": False,
-    "upx": True,
-    "console": True,
-    "disable_windowed_traceback": False,
-    "argv_emulation": False,
-    "target_arch": None,
-    "codesign_identity": None,
-    "entitlements_file": None,
-}
+is_onedir = args.mode == "onedir"
+version = None
 
 if args.mode == "onefile":
     exe_args += [a.binaries, a.zipfiles, a.datas]
-    exe_kwargs["upx_exclude"] = []
-    exe_kwargs["runtime_tmpdir"] = None
-if args.mode == "onedir":
-    exe_kwargs["exclude_binaries"] = True
+
 if args.platform == "windows":
-    exe_kwargs["icon"] = None
-    exe_kwargs["version"] = "windows/pyinstaller/file_version_info.txt"
-    exe_kwargs["uac_admin"] = False
+    version = "windows/pyinstaller/file_version_info.txt"
 
-exe_args.append([])
+exe = EXE(*exe_args, name="nitropy", upx=True, exclude_binaries=is_onedir, version=version)
 
-exe = EXE(*exe_args, **exe_kwargs)
-
-if args.mode == "onedir":
+if is_onedir:
     coll = COLLECT(
         exe,
         a.binaries,
         a.zipfiles,
         a.datas,
-        strip=False,
         upx=True,
-        upx_exclude=[],
         name='nitropy',
     )
