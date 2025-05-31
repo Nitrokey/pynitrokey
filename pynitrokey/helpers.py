@@ -94,7 +94,7 @@ def b32padding(data: str) -> str:
     Returns:
         `str`: string padded to full base32 character blocks
     """
-    padding_needed = 8 - (len(data) % 8)
+    padding_needed = -len(data) % 8
     return data + (padding_needed * "=")
 
 
