@@ -80,6 +80,21 @@ jobs:
         run: |
           . venv/bin/activate
           make check-typing
+  run-tests:
+    name: Run tests
+    runs-on: ubuntu-latest
+    container: python:3.9-slim
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install required packages
+        run: |
+          apt update
+          apt install -y gcc libpcsclite-dev make swig git
+      - name: Create virtual environment
+        run: make init
+      - name: Run tests
+        run: make test
   run:
     name: Run nitropy --help
     runs-on: ubuntu-latest

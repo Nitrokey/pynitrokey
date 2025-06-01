@@ -93,6 +93,21 @@ def b32padding(data: str) -> str:
 
     Returns:
         `str`: string padded to full base32 character blocks
+
+    >>> b32padding("")
+    ''
+    >>> b32padding("AA")
+    'AA======'
+    >>> b32padding("AAAA")
+    'AAAA===='
+    >>> b32padding("AAAAA")
+    'AAAAA==='
+    >>> b32padding("AAAAAAA")
+    'AAAAAAA='
+    >>> b32padding("AAAAAAAA")
+    'AAAAAAAA'
+    >>> b32padding("AAAAAAAABB")
+    'AAAAAAAABB======'
     """
     padding_needed = -len(data) % 8
     return data + (padding_needed * "=")

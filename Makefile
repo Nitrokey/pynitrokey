@@ -58,6 +58,10 @@ check-typing:
 
 check: check-format check-import-sorting check-style check-typing
 
+.PHONY: test
+test:
+	$(PYTHON3_VENV) -m doctest pynitrokey/helpers.py
+
 # automatic code fixes
 fix:
 	$(PYTHON3_VENV) -m black $(BLACK_FLAGS) $(PACKAGE_NAME)/ stubs
