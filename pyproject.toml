@@ -99,7 +99,7 @@ python = ">= 3.9.2, <3.14"
 optional = true
 
 [tool.poetry.group.dev.dependencies]
-black = "^22.1.0"
+black = "^24.3.0"
 flake8 = "*"
 ipython = "*"
 isort = "*"
