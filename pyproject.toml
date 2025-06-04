@@ -59,9 +59,6 @@ repository = "https://github.com/Nitrokey/pynitrokey"
 [project.scripts]
 nitropy = "pynitrokey.cli:main"
 
-[tool.black]
-target-version = ["py39"]
-
 [tool.isort]
 py_version = "39"
 profile = "black"
@@ -99,7 +96,7 @@ python = ">= 3.9.2, <3.14"
 optional = true
 
 [tool.poetry.group.dev.dependencies]
-black = "^22.1.0"
+black = ">=25, <26"
 flake8 = "*"
 ipython = "*"
 isort = "*"

@@ -22,6 +22,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 SPDX-License-Identifier: GPL-3.0-or-later
 """
+
 import binascii
 import logging
 import time
@@ -388,7 +389,7 @@ class gnuk_token(object):
             count += 1
 
     def cmd_select_openpgp(self):
-        cmd_data = iso7816_compose(0xA4, 0x04, 0x00, b"\xD2\x76\x00\x01\x24\x01")
+        cmd_data = iso7816_compose(0xA4, 0x04, 0x00, b"\xd2\x76\x00\x01\x24\x01")
         r = self.icc_send_cmd(cmd_data)
         if len(r) < 2:
             raise ValueError(r)
@@ -758,7 +759,7 @@ def get_gnuk_device(verbose=True, logger: Optional[logging.Logger] = None):
 
     candidates = []
     icc = None
-    for (dev, config, intf) in gnuk_devices():
+    for dev, config, intf in gnuk_devices():
         try:
             icc = gnuk_token(dev, config, intf)
             if logger:

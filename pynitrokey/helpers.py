@@ -290,9 +290,11 @@ def local_critical(
             f"- You can report issues at: {SUPPORT_URL}",
             f"- Writing an e-mail to {SUPPORT_EMAIL} is also possible",
             f"- Please attach the log: '{LOG_FN}' with any support/help request!",
-            f"- Please check if you have udev rules installed: {UDEV_URL}"
-            if linux
-            else "" "-" * 80,
+            (
+                f"- Please check if you have udev rules installed: {UDEV_URL}"
+                if linux
+                else "" "-" * 80
+            ),
             "",
         )
     sys.exit(ret_code)

@@ -34,7 +34,7 @@ def prepare_for_pkcs1v15_sign_2048(data: bytes) -> bytes:
 
     prefix = bytearray.fromhex("3031300d060960864801650304020105000420")
     padding_len = 256 - 32 - 19 - 3
-    padding = b"\x00\x01" + (b"\xFF" * padding_len) + b"\x00"
+    padding = b"\x00\x01" + (b"\xff" * padding_len) + b"\x00"
     total = padding + prefix + hashed
     assert len(total) == 256
     return total
@@ -174,9 +174,9 @@ class PivApp:
     def authenticate_admin(self, admin_key: bytes) -> None:
 
         if len(admin_key) == 24:
-            algorithm: Union[
-                TripleDES, algorithms.AES128, algorithms.AES256
-            ] = TripleDES(admin_key)
+            algorithm: Union[TripleDES, algorithms.AES128, algorithms.AES256] = (
+                TripleDES(admin_key)
+            )
             # algo = "tdes"
             algo_byte = 0x03
             expected_len = 8
