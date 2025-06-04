@@ -24,8 +24,7 @@ from pynitrokey.helpers import prompt
 
 
 class EnumMeta(Protocol):
-    def __iter__(self) -> Iterator[Enum]:
-        ...
+    def __iter__(self) -> Iterator[Enum]: ...
 
 
 def make_enum_type(enum_cls: EnumMeta) -> click.Choice:

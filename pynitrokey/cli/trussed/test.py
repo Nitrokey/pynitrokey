@@ -142,7 +142,7 @@ def run_tests(
     description_len = max([len(test_case.description) for test_case in test_cases]) + 2
     status_len = max([len(status.name) for status in TestStatus]) + 2
 
-    for (i, test_case) in enumerate(test_cases):
+    for i, test_case in enumerate(test_cases):
         try:
             result = test_case.fn(ctx, device)
         except Exception:

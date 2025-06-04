@@ -26,4 +26,4 @@ class SoloBootloader:
     HIDCommandProbe = 0x70
     HIDCommandStatus = 0x71
 
-    TAG = b"\x8C\x27\x90\xf6"
+    TAG = b"\x8c\x27\x90\xf6"
