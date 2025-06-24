@@ -4,6 +4,7 @@
 import logging
 import os
 import tempfile
+from datetime import datetime
 from enum import IntEnum
 
 
@@ -40,7 +41,9 @@ if _env_dbg_lvl:
             f"setting default: {VERBOSE.name} = {VERBOSE.value}"
         )
 
-LOG_FN = tempfile.NamedTemporaryFile(prefix="nitropy.", suffix=".log").name
+LOG_FN = tempfile.NamedTemporaryFile(
+    prefix=f"nitropy-{datetime.now().strftime('%Y%m%dT%H%M%S')}-", suffix=".log"
+).name
 LOG_FORMAT_STDOUT = "%(asctime)-15s %(levelname)6s %(name)10s %(message)s"
 LOG_FORMAT = "%(relativeCreated)-8d %(levelname)6s %(name)10s %(message)s"
 
