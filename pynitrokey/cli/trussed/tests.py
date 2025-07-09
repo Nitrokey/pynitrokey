@@ -331,9 +331,12 @@ def test_fido2(ctx: TestContext, device: TrussedBase) -> TestResult:
         return TestResult(TestStatus.SKIPPED)
 
     # drop out early, if pin is needed, but not provided
-    from fido2.client import Fido2Client
+    from fido2.client import DefaultClientDataCollector, Fido2Client
 
-    fido2_client = Fido2Client(device=device.device, origin="https://example.org")
+    client_data_collector = DefaultClientDataCollector(origin="https://examples.org")
+    fido2_client = Fido2Client(
+        device=device.device, client_data_collector=client_data_collector
+    )
     has_pin = fido2_client.info.options["clientPin"]
 
     if has_pin and not ctx.pin:
@@ -383,7 +386,9 @@ def test_fido2(ctx: TestContext, device: TrussedBase) -> TestResult:
             return True
 
     client = Fido2Client(
-        device.device, "https://example.com", user_interaction=NoInteraction(ctx.pin)
+        device=device.device,
+        client_data_collector=client_data_collector,
+        user_interaction=NoInteraction(ctx.pin),
     )
     server = Fido2Server(
         PublicKeyCredentialRpEntity(id="example.com", name="Example RP"),
@@ -407,7 +412,7 @@ def test_fido2(ctx: TestContext, device: TrussedBase) -> TestResult:
             TestStatus.FAILURE,
             "PIN activated -- please set the --pin option",
         )
-    cert = make_credential_result.attestation_object.att_stmt["x5c"]
+    cert = make_credential_result.response.attestation_object.att_stmt["x5c"]
     cert_hash = sha256(cert[0]).digest().hex()
 
     firmware_version = ctx.firmware_version or device.admin.version()
@@ -422,8 +427,7 @@ def test_fido2(ctx: TestContext, device: TrussedBase) -> TestResult:
     try:
         auth_data = server.register_complete(
             state,
-            make_credential_result.client_data,
-            make_credential_result.attestation_object,
+            response=make_credential_result,
         )
     except InvalidSignature:
         return TestResult(TestStatus.FAILURE, "Invalid attestation signature")
@@ -437,19 +441,12 @@ def test_fido2(ctx: TestContext, device: TrussedBase) -> TestResult:
 
     local_print("Please press the touch button on the device ...")
     get_assertion_result = client.get_assertion(request_options["publicKey"])
-    get_assertion_response = get_assertion_result.get_response(0)
-    if not get_assertion_response.credential_id:
-        return TestResult(
-            TestStatus.FAILURE, "Missing credential ID in GetAssertion response"
-        )
+    get_assertion_response = get_assertion_result.get_response(0).response
 
     server.authenticate_complete(
         state,
         credentials,
-        get_assertion_response.credential_id,
-        get_assertion_response.client_data,
-        get_assertion_response.authenticator_data,
-        get_assertion_response.signature,
+        response=get_assertion_response,
     )
 
     return TestResult(TestStatus.SUCCESS)

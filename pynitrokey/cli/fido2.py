@@ -13,7 +13,7 @@ import click
 from fido2.attestation.base import InvalidSignature
 from fido2.attestation.packed import PackedAttestation
 from fido2.client import ClientError as Fido2ClientError
-from fido2.client import Fido2Client, UserInteraction
+from fido2.client import DefaultClientDataCollector, Fido2Client, UserInteraction
 from fido2.cose import ES256, EdDSA
 from fido2.ctap import CtapError
 from fido2.ctap2.base import Ctap2, Info
@@ -139,6 +139,7 @@ def _fido2(
 ) -> Fido2Client:
     # TODO: set user_interaction
     origin = f"https://{host}"
+    client_data_collector = DefaultClientDataCollector(origin=origin)
     extensions = []
     if hmac_secret:
         # there are no type annotations for HmacSecretExtension.__init__
@@ -146,7 +147,7 @@ def _fido2(
     user_interaction = CliInteraction(pin)
     return Fido2Client(
         device=device,
-        origin=origin,
+        client_data_collector=client_data_collector,
         extensions=extensions,
         user_interaction=user_interaction,
     )
@@ -183,22 +184,25 @@ def _make_credential(
         ),
     )
 
-    response = client.make_credential(options)
+    registration_response = client.make_credential(options)
 
-    att_obj = response.attestation_object
+    attestation_response = registration_response.response
+    att_obj = attestation_response.attestation_object
     assert att_obj.fmt == "packed"
     verifier = PackedAttestation()
     try:
-        verifier.verify(att_obj.att_stmt, att_obj.auth_data, response.client_data.hash)
+        verifier.verify(
+            att_obj.att_stmt, att_obj.auth_data, attestation_response.client_data.hash
+        )
     except InvalidSignature:
         raise CliException("Invalid attestation signature in makeCredential")
 
     if hmac_secret:
-        assert response.extension_results is not None
-        assert "hmacCreateSecret" in response.extension_results
-        assert response.extension_results["hmacCreateSecret"] is True
+        extension_outputs = registration_response.client_extension_results
+        assert "hmacCreateSecret" in extension_outputs
+        assert extension_outputs["hmacCreateSecret"] is True
 
-    return response.attestation_object
+    return att_obj
 
 
 def _simple_secret(
@@ -228,10 +232,9 @@ def _simple_secret(
         )
     ).get_response(0)
 
-    assert assertion.extension_results is not None
-    assert "hmacGetSecret" in assertion.extension_results
+    assert "hmacGetSecret" in assertion.client_extension_results
     # from_dict would be more suitable but does not have type annotations
-    output = HMACGetSecretOutput(**assertion.extension_results["hmacGetSecret"])
+    output = HMACGetSecretOutput(**assertion.client_extension_results["hmacGetSecret"])
 
     return output.output1
 

@@ -475,18 +475,18 @@ tests = ["asttokens (>=2.1.0)", "coverage", "coverage-enable-subprocess", "ipyth
 
 [[package]]
 name = "fido2"
-version = "1.2.0"
+version = "2.0.0"
 description = "FIDO2/WebAuthn library for implementing clients and servers."
 optional = false
-python-versions = "<4.0,>=3.8"
+python-versions = "<4,>=3.10"
 groups = ["main"]
 files = [
-    {file = "fido2-1.2.0-py3-none-any.whl", hash = "sha256:f7c8ee62e359aa980a45773f9493965bb29ede1b237a9218169dbfe60c80e130"},
-    {file = "fido2-1.2.0.tar.gz", hash = "sha256:e39f95920122d64283fda5e5581d95a206e704fa42846bfa4662f86aa0d3333b"},
+    {file = "fido2-2.0.0-py3-none-any.whl", hash = "sha256:685f54a50a57e019c6156e2dd699802a603e3abf70bab334f26affdd4fb8d4f7"},
+    {file = "fido2-2.0.0.tar.gz", hash = "sha256:3061cd05e73b3a0ef6afc3b803d57c826aa2d6a9732d16abd7277361f58e7964"},
 ]
 
 [package.dependencies]
-cryptography = ">=2.6,<35 || >35,<45"
+cryptography = ">=2.6,<35 || >35,<48"
 
 [package.extras]
 pcsc = ["pyscard (>=1.9,<3)"]
@@ -1052,20 +1052,20 @@ dev = ["black (>=22.1.0,<23)", "cryptography", "docker", "flake8", "flit (>=3.2,
 
 [[package]]
 name = "nitrokey"
-version = "0.3.1"
+version = "0.3.2"
 description = "Nitrokey Python SDK"
 optional = false
 python-versions = "<4.0.0,>=3.9.2"
 groups = ["main"]
 files = [
-    {file = "nitrokey-0.3.1-py3-none-any.whl", hash = "sha256:14fa62962a73d551874e1c9b2b85e49ddff585af23481832344fd3c11824d3c3"},
-    {file = "nitrokey-0.3.1.tar.gz", hash = "sha256:2dfdb476ef830f032b1eb0bec025f114d1bc4e10676e89f1e30abb0dab47e17e"},
+    {file = "nitrokey-0.3.2-py3-none-any.whl", hash = "sha256:f0e91d57a9958dc785019424cd9e1e22a4ff2d7348496acd27aa5f238d81b0b2"},
+    {file = "nitrokey-0.3.2.tar.gz", hash = "sha256:240828ac0d95f961e0aadc24f1f10f8ddc28a20ed0df193ddda2922749b11e44"},
 ]
 
 [package.dependencies]
 crcmod = ">=1.7,<2.0"
 cryptography = ">=41"
-fido2 = ">=1.1.2,<2.0.0"
+fido2 = ">=1.1.2,<3"
 hidapi = ">=0.14,<0.15"
 protobuf = ">=5.26,<6.0"
 pyserial = ">=3.5,<4.0"
@@ -1897,4 +1897,4 @@ pcsc = ["pyscard"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">= 3.10, <3.14"
-content-hash = "8eb858d423701d1d33a533920da3a32efb81ebb80f999999b7650056d9af4961"
+content-hash = "9b0e731d41424375aeb99cdca1c62f38ddff63a638e52f586a9f3c12d0726972"
