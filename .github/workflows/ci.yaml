@@ -15,7 +15,7 @@ jobs:
   check-pyproject:
     name: Check pyproject syntax
     runs-on: ubuntu-latest
-    container: python:3.9-slim
+    container: python:3.10-slim
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -26,7 +26,7 @@ jobs:
   format-code:
     name: Check code format
     runs-on: ubuntu-latest
-    container: python:3.9-slim
+    container: python:3.10-slim
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -43,7 +43,7 @@ jobs:
   format-import:
     name: Check imports format
     runs-on: ubuntu-latest
-    container: python:3.9-slim
+    container: python:3.10-slim
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -60,7 +60,7 @@ jobs:
   lint-style:
     name: Check code style
     runs-on: ubuntu-latest
-    container: python:3.9-slim
+    container: python:3.10-slim
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -77,7 +77,7 @@ jobs:
   lint-typing:
     name: Check static typing
     runs-on: ubuntu-latest
-    container: python:3.9-slim
+    container: python:3.10-slim
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -94,7 +94,7 @@ jobs:
   run-tests:
     name: Run tests
     runs-on: ubuntu-latest
-    container: python:3.9-slim
+    container: python:3.10-slim
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -113,7 +113,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
