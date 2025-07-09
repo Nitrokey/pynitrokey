@@ -71,6 +71,9 @@ try:  # noqa: C901
         ) -> bytes:
             raise NotImplementedError()
 
+        def __copy__(self) -> "RsaPivSigner":
+            raise NotImplementedError()
+
     class P256PivSigner(ec.EllipticCurvePrivateKey):
         _device: PivApp
         _key_reference: int
@@ -120,6 +123,9 @@ try:  # noqa: C901
             assert isinstance(signature_algorithm.algorithm, hashes.SHA256)
 
             return self._device.sign_p256(data, self._key_reference)
+
+        def __copy__(self) -> "P256PivSigner":
+            raise NotImplementedError()
 
     def print_row(values: Iterable[str], widths: Iterable[int]) -> None:
         row = [value.ljust(width) for (value, width) in zip(values, widths)]
