@@ -333,7 +333,7 @@ def test_fido2(ctx: TestContext, device: TrussedBase) -> TestResult:
     # drop out early, if pin is needed, but not provided
     from fido2.client import DefaultClientDataCollector, Fido2Client
 
-    client_data_collector = DefaultClientDataCollector(origin="https://examples.org")
+    client_data_collector = DefaultClientDataCollector(origin="https://example.com")
     fido2_client = Fido2Client(
         device=device.device, client_data_collector=client_data_collector
     )
@@ -441,7 +441,7 @@ def test_fido2(ctx: TestContext, device: TrussedBase) -> TestResult:
 
     local_print("Please press the touch button on the device ...")
     get_assertion_result = client.get_assertion(request_options["publicKey"])
-    get_assertion_response = get_assertion_result.get_response(0).response
+    get_assertion_response = get_assertion_result.get_response(0)
 
     server.authenticate_complete(
         state,
