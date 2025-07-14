@@ -13,6 +13,7 @@ import click
 import requests
 
 import pynitrokey
+from pynitrokey.cli.exceptions import CliException
 from pynitrokey.confconsts import LOG_FN
 from pynitrokey.helpers import (
     AskUser,
@@ -33,7 +34,7 @@ logger = logging.getLogger()
 )
 @click.option("-y", "--yes", default=False, is_flag=True, help="agree to everything")
 @click.option("-f", "--force", default=False, is_flag=True, help="force")
-def update(serial, yes, force):
+def update(serial: str, yes: bool, force: bool) -> None:
     """Update Nitrokey FIDO2 device to the latest firmware version."""
 
     # @fixme: print this and allow user to cancel (if not -y is active)
@@ -61,12 +62,11 @@ def update(serial, yes, force):
     from pynitrokey.fido2 import find
 
     # Determine target key
-    client = None
     try:
         client = find(serial)
 
     except pynitrokey.exceptions.NoSoloFoundError as e:
-        local_critical(
+        raise CliException(
             None,
             "No Nitrokey key found!",
             e,
@@ -78,7 +78,7 @@ def update(serial, yes, force):
         )
 
     except pynitrokey.exceptions.NonUniqueDeviceError as e:
-        local_critical(
+        raise CliException(
             None,
             "Multiple Nitrokey keys are plugged in!",
             e,
@@ -88,17 +88,16 @@ def update(serial, yes, force):
         )
 
     except Exception as e:
-        local_critical(None, "Unhandled error connecting to key", e, None)
+        raise CliException(None, "Unhandled error connecting to key", e, None)
 
     # determine asset url: we want the (signed) json file
     # @fixme: move to confconsts.py ...
     api_base_url = "https://api.github.com/repos"
     api_url = f"{api_base_url}/Nitrokey/nitrokey-fido2-firmware/releases/latest"
-    gh_release_data = None
     try:
         gh_release_data = json.loads(requests.get(api_url).text)
     except Exception as e:
-        local_critical("Failed downloading firmware", e)
+        raise CliException("Failed downloading firmware", e)
 
     # search asset with `fn` suffix being .json and take its url
     assets = [(x["name"], x["browser_download_url"]) for x in gh_release_data["assets"]]
@@ -108,7 +107,7 @@ def update(serial, yes, force):
             download_url = url
             break
     if not download_url:
-        local_critical(
+        raise CliException(
             "Failed to determine latest release (url)", "assets:", *map(str, assets)
         )
 
@@ -136,7 +135,7 @@ def update(serial, yes, force):
                 "Firmware is up-to-date. Continue due to --force switch applied."
             )
 
-    def download_firmware():
+    def download_firmware() -> str:
         # download asset url
         # @fixme: move to confconsts.py ...
         local_print(
@@ -183,7 +182,7 @@ def update(serial, yes, force):
 
     time.sleep(1.0)
 
-    def connect_and_flash():
+    def connect_and_flash() -> None:
         # reconnect and actually flash it...
         # fail after 5 attempts
         exc = None

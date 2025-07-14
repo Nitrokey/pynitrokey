@@ -28,7 +28,7 @@ from pynitrokey.helpers import filter_sensitive_parameters, local_critical
 logger = logging.getLogger(__name__)
 
 
-def check_root():
+def check_root() -> None:
     if (os.name == "posix") and os.environ.get("ALLOW_ROOT") is None:
         if os.geteuid() == 0:
             print("THIS COMMAND SHOULD NOT BE RUN AS ROOT!")
@@ -50,7 +50,7 @@ def check_root():
 
 
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
-def nitropy():
+def nitropy() -> None:
     handler = logging.FileHandler(filename=LOG_FN, delay=True, encoding="utf-8")
     logging.basicConfig(format=LOG_FORMAT, level=logging.DEBUG, handlers=[handler])
 
@@ -91,7 +91,7 @@ nitropy.add_command(pro)
 
 
 @click.command()
-def version():
+def version() -> None:
     """Version of pynitrokey library and tool."""
     print(pynitrokey.__version__)
 
@@ -99,25 +99,30 @@ def version():
 nitropy.add_command(version)
 
 
-def _list():
+def _list() -> None:
     from .nk3 import _list as list_nk3
     from .nkpk import _list as list_nkpk
 
-    fido2.commands["list"].callback()
-    start.commands["list"].callback()
+    list_fido2 = fido2.commands["list"].callback
+    list_start = start.commands["list"].callback
+    assert list_fido2 is not None
+    assert list_start is not None
+
+    list_fido2()
+    list_start()
     list_nk3()
     list_nkpk()
     # TODO add other handled models
 
 
 @click.command()
-def list():
+def list() -> None:
     """List Nitrokey devices (in firmware or bootloader mode)"""
     _list()
 
 
 @click.command(hidden=True)
-def ls():
+def ls() -> None:
     warnings.warn("The ls command is deprecated. Please use list instead.")
     _list()
 

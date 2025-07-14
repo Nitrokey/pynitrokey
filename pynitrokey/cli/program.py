@@ -12,7 +12,7 @@ from pynitrokey.helpers import local_critical, local_print
 
 
 @click.group()
-def program():
+def program() -> None:
     """Program a key."""
     pass
 
@@ -40,7 +40,7 @@ def program():
     help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
 )
 @click.argument("firmware")  # , help="firmware (bundle) to program")
-def bootloader(serial, firmware):
+def bootloader(serial: str, firmware: str) -> None:
     """Program via Nitrokey FIDO2 bootloader interface.
 
     \b
@@ -83,12 +83,12 @@ def bootloader(serial, firmware):
 
 
 @click.group()
-def aux():
+def aux() -> None:
     """Auxiliary commands related to firmware/bootloader/dfu mode."""
     pass
 
 
-def _enter_bootloader(serial):
+def _enter_bootloader(serial: str) -> None:
     from pynitrokey.fido2 import find
 
     p = find(serial)
@@ -108,7 +108,7 @@ def _enter_bootloader(serial):
     "--serial",
     help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
 )
-def enter_bootloader(serial):
+def enter_bootloader(serial: str) -> None:
     """Switch from Nitrokey firmware to Nitrokey bootloader.
 
     Note that after powercycle, you will be in the firmware again,
@@ -124,7 +124,7 @@ def enter_bootloader(serial):
     "--serial",
     help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
 )
-def leave_bootloader(serial):
+def leave_bootloader(serial: str) -> None:
     """Switch from Nitrokey bootloader to Nitrokey firmware."""
     from pynitrokey.fido2 import find
 
@@ -137,7 +137,7 @@ def leave_bootloader(serial):
     "--serial",
     help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
 )
-def reboot(serial):
+def reboot(serial: str) -> None:
     """Reboot.
 
     \b
@@ -158,7 +158,7 @@ def reboot(serial):
     help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
 )
 @click.option("-p", "--pubkey", help="Show public key for the firmware", is_flag=True)
-def bootloader_version(serial, pubkey):
+def bootloader_version(serial: str, pubkey: bool) -> None:
     """Version of bootloader."""
     from pynitrokey.fido2 import find
 
@@ -177,11 +177,11 @@ def bootloader_version(serial, pubkey):
     if pubkey:
         bpub = p.boot_pubkey()
         bpub = b2a_hex(bpub)
-        local_print(f"Bootloader public key: \t\t{bpub}")
+        local_print(f"Bootloader public key: \t\t{bpub!r}")
         s = sha256()
         s.update(bpub)
         bpubh = b2a_hex(s.digest())
-        local_print(f"Bootloader public key sha256: \t{bpubh}")
+        local_print(f"Bootloader public key sha256: \t{bpubh!r}")
 
 
 program.add_command(aux)

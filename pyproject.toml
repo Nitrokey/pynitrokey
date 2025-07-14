@@ -63,12 +63,9 @@ strict = true
 # - https://mypy.readthedocs.io/en/stable/existing_code.html#introduce-stricter-options
 [[tool.mypy.overrides]]
 module = [
-    "pynitrokey.cli",
     "pynitrokey.cli.pro",
-    "pynitrokey.cli.program",
     "pynitrokey.cli.start",
     "pynitrokey.cli.storage",
-    "pynitrokey.cli.update",
     "pynitrokey.conftest",
     "pynitrokey.libnk",
     "pynitrokey.start.*",
