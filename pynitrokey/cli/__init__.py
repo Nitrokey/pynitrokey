@@ -93,7 +93,7 @@ nitropy.add_command(pro)
 @click.command()
 def version() -> None:
     """Version of pynitrokey library and tool."""
-    print(pynitrokey.__version__)
+    print(package_version("pynitrokey"))
 
 
 nitropy.add_command(version)
