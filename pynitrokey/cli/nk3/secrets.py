@@ -195,14 +195,14 @@ def update(
 @click.option(
     "--kind",
     "kind",
-    type=click.Choice(choices=STRING_TO_KIND.keys(), case_sensitive=False),  # type: ignore[arg-type]
+    type=click.Choice(choices=STRING_TO_KIND.keys(), case_sensitive=False),
     help="OTP mechanism to use. Case insensitive.",
     default="NOT_SET",
 )
 @click.option(
     "--hash",
     "hash",
-    type=click.Choice(choices=ALGORITHM_TO_KIND.keys(), case_sensitive=False),  # type: ignore[arg-type]
+    type=click.Choice(choices=ALGORITHM_TO_KIND.keys(), case_sensitive=False),
     help="Hash algorithm to use",
     default="SHA1",
 )
