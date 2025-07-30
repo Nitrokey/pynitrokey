@@ -28,7 +28,6 @@ datas = [
     ('../LICENSES', '.'),
 ]
 datas += copy_metadata('pynitrokey')
-datas += copy_metadata('ecdsa')
 datas += copy_metadata('fido2')
 datas += copy_metadata('pyusb')
 

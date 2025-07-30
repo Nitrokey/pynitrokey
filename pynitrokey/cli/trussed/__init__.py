@@ -9,9 +9,7 @@ from typing import BinaryIO, Callable, Generic, Optional, Sequence, TypeVar
 
 import click
 from cryptography import x509
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey
-from ecdsa import NIST256p, SigningKey
+from cryptography.hazmat.primitives.asymmetric import ec
 from nitrokey.trussed import (
     FirmwareContainer,
     Model,
@@ -265,21 +263,16 @@ def provision_fido2(
 
     if len(key) != 36:
         raise CliException(f"Invalid key length {len(key)} (expected 36)")
-    ecdsa_key = SigningKey.from_string(key[4:], curve=NIST256p)
-    pem_pubkey = serialization.load_pem_public_key(
-        ecdsa_key.get_verifying_key().to_pem()
-    )
-
+    ec_key = ec.derive_private_key(int(key[4:].hex(), 16), ec.SECP256R1())
+    ec_pubkey = ec_key.public_key()
     x509_cert = x509.load_der_x509_certificate(cert)
     cert_pubkey = x509_cert.public_key()
 
-    if not isinstance(pem_pubkey, EllipticCurvePublicKey):
-        raise CliException("The FIDO2 attestation key is not an EC key")
-    if not isinstance(cert_pubkey, EllipticCurvePublicKey):
+    if not isinstance(cert_pubkey, ec.EllipticCurvePublicKey):
         raise CliException(
             "The FIDO2 attestation certificate does not contain an EC key"
         )
-    if pem_pubkey.public_numbers() != cert_pubkey.public_numbers():
+    if ec_pubkey.public_numbers() != cert_pubkey.public_numbers():
         raise CliException(
             "The FIDO2 attestation certificate does not match the public key"
         )

@@ -21,7 +21,6 @@ dependencies = [
   "cffi",
   "click >=8.1.6, <9",
   "cryptography >=43,<46",
-  "ecdsa",
   "fido2 >=2,<3",
   "hidapi >=0.14,<0.15",
   # Limit hidapi on Linux to versions using the hidraw backend, see
