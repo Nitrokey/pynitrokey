@@ -13,7 +13,6 @@ from importlib.metadata import version as package_version
 import click
 
 import pynitrokey
-import pynitrokey.fido2.operations
 from pynitrokey.cli.exceptions import CliException
 from pynitrokey.cli.fido2 import fido2
 from pynitrokey.cli.nethsm import nethsm

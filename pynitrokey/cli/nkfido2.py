@@ -2,13 +2,12 @@
 # Copyright Nitrokey GmbH
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 
-import json
 import os
 import platform
 import struct
 import sys
 import time
-from typing import List, Optional
+from typing import Optional
 
 if "linux" in platform.platform().lower():
     import fcntl
@@ -19,10 +18,10 @@ from fido2.ctap1 import ApduError
 from fido2.hid import CtapHidDevice
 
 import pynitrokey.fido2 as nkfido2
-import pynitrokey.fido2.operations
 from pynitrokey.cli.monitor import monitor
 from pynitrokey.cli.program import program
 from pynitrokey.cli.update import update
+from pynitrokey.exceptions import NoSoloFoundError
 from pynitrokey.helpers import local_critical, local_print
 
 
@@ -36,110 +35,6 @@ def rng() -> None:
 def util() -> None:
     """Additional utilities, see subcommands."""
     pass
-
-
-# @todo: is this working as intended?
-@click.command()
-@click.option("--input-seed-file")
-@click.argument("output_pem_file")
-def genkey(input_seed_file: Optional[str], output_pem_file: str) -> None:
-    """Generates key pair that can be used for Solo signed firmware updates.
-
-    \b
-    * Generates NIST P256 keypair.
-    * Public key must be copied into correct source location in solo bootloader
-    * The private key can be used for signing updates.
-    * You may optionally supply a file to seed the RNG for key generating.
-    """
-
-    vk = pynitrokey.fido2.operations.genkey(
-        output_pem_file, input_seed_file=input_seed_file
-    )
-
-    local_print(
-        "Public key in various formats:",
-        None,
-        [c for c in vk.to_string()],
-        None,
-        "".join(["%02x" % c for c in vk.to_string()]),
-        None,
-        '"\\x' + "\\x".join(["%02x" % c for c in vk.to_string()]) + '"',
-        None,
-    )
-
-
-# @todo: is this working as intended ?
-@click.command()
-@click.argument("verifying-key")
-@click.argument("app-hex")
-@click.argument("output-json")
-@click.option("--pages", default=128, type=int, help="Size of the MCU flash in pages")
-@click.option(
-    "--end_page",
-    help="Set APPLICATION_END_PAGE. Shall be in sync with firmware settings",
-    default=20,
-    type=int,
-)
-def sign(
-    verifying_key: str, app_hex: str, output_json: str, end_page: int, pages: int
-) -> None:
-    """Signs a fw-hex file, outputs a .json file that can be used for signed update."""
-
-    msg = pynitrokey.fido2.operations.sign_firmware(
-        verifying_key, app_hex, APPLICATION_END_PAGE=end_page, PAGES=pages
-    )
-    local_print(f"Saving signed firmware to: {output_json}")
-    with open(output_json, "wb+") as fh:
-        fh.write(json.dumps(msg).encode())
-
-
-@click.command()
-@click.option("--attestation-key", help="attestation key in hex")
-@click.option("--attestation-cert", help="attestation certificate file")
-@click.option(
-    "--lock",
-    help="Indicate to lock device from unsigned changes permanently.",
-    default=False,
-    is_flag=True,
-)
-@click.argument("input_hex_files", nargs=-1)
-@click.argument("output_hex_file")
-@click.option(
-    "--end_page",
-    help="Set APPLICATION_END_PAGE. Should be in sync with firmware settings.",
-    default=20,
-    type=int,
-)
-@click.option(
-    "--pages",
-    help="Set MCU flash size in pages. Should be in sync with firmware settings.",
-    default=128,
-    type=int,
-)
-def mergehex(
-    attestation_key: Optional[bytes],
-    attestation_cert: Optional[bytes],
-    lock: bool,
-    input_hex_files: List[str],
-    output_hex_file: str,
-    end_page: int,
-    pages: int,
-) -> None:
-    """Merges hex files, and patches in the attestation key.
-
-    \b
-    If no attestation key is passed, uses default Solo Hacker one.
-    Note that later hex files replace data of earlier ones, if they overlap.
-    """
-    pynitrokey.fido2.operations.mergehex(
-        input_hex_files,
-        output_hex_file,
-        attestation_key=attestation_key,
-        APPLICATION_END_PAGE=end_page,
-        attestation_cert=attestation_cert,
-        lock=lock,
-        PAGES=pages,
-    )
 
 
 @click.command()
@@ -301,13 +196,13 @@ def version(serial: Optional[str]) -> None:
                 locked = "unlocked"
         local_print(f"{major}.{minor}.{patch} {locked}")
 
-    except pynitrokey.exceptions.NoSoloFoundError:
+    except NoSoloFoundError:
         local_critical(
             "No Nitrokey found.", "If you are on Linux, are your udev rules up to date?"
         )
 
     # unused ???
-    except (pynitrokey.exceptions.NoSoloFoundError, ApduError):
+    except (NoSoloFoundError, ApduError):
         local_critical(
             "Firmware is out of date (key does not know the NITROKEY_VERSION command)."
         )
@@ -340,11 +235,6 @@ rng.add_command(raw)
 rng.add_command(feedkernel)
 
 util.add_command(program)
-
-# used for fw-signing... (does not seem to work @fixme)
-util.add_command(sign)
-util.add_command(genkey)
-util.add_command(mergehex)
 util.add_command(monitor)
 
 
