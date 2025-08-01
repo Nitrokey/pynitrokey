@@ -1036,23 +1036,27 @@ name = "nitrokey"
 version = "0.3.2"
 description = "Nitrokey Python SDK"
 optional = false
-python-versions = "<4.0.0,>=3.9.2"
+python-versions = ">=3.10, <4"
 groups = ["main"]
-files = [
-    {file = "nitrokey-0.3.2-py3-none-any.whl", hash = "sha256:f0e91d57a9958dc785019424cd9e1e22a4ff2d7348496acd27aa5f238d81b0b2"},
-    {file = "nitrokey-0.3.2.tar.gz", hash = "sha256:240828ac0d95f961e0aadc24f1f10f8ddc28a20ed0df193ddda2922749b11e44"},
-]
+files = []
+develop = false
 
 [package.dependencies]
-crcmod = ">=1.7,<2.0"
+crcmod = ">=1.7,<2"
 cryptography = ">=41"
 fido2 = ">=1.1.2,<3"
 hidapi = ">=0.14,<0.15"
-protobuf = ">=5.26,<6.0"
-pyserial = ">=3.5,<4.0"
-requests = ">=2,<3"
+protobuf = ">=5.26,<6"
+pyserial = ">=3.5,<4"
+requests = ">=2.16,<3"
 semver = ">=3,<4"
 tlv8 = ">=0.10,<0.11"
+
+[package.source]
+type = "git"
+url = "https://github.com/Nitrokey/nitrokey-sdk-py"
+reference = "refs/pull/82/head"
+resolved_reference = "c13e2fc701a9df921cb363d5212874230e9c3d23"
 
 [[package]]
 name = "nkdfu"
@@ -1878,4 +1882,4 @@ pcsc = ["pyscard"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">= 3.10, <3.14"
-content-hash = "1f58cb58c5f1e506d7e9153fa2d600b6a83537198c2dd3cfd5d73b28d6730fa9"
+content-hash = "1e586193788ffe1741d7237c5004ca0b6a7e89ff172455b47a6c8d9851ccf787"

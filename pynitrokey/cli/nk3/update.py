@@ -7,8 +7,9 @@ from contextlib import contextmanager
 from typing import Any, Callable, Iterator, List, Optional
 
 from click import Abort
-from nitrokey.nk3.updates import Updater, UpdateUi, Warning
-from nitrokey.trussed import Version
+from nitrokey.trussed import Model, TrussedBootloader, TrussedDevice, Version
+from nitrokey.trussed.admin_app import Status
+from nitrokey.trussed.updates import DeviceHandler, Updater, UpdateUi, Warning
 
 from pynitrokey.cli.exceptions import CliException
 from pynitrokey.cli.nk3 import Context
@@ -142,6 +143,24 @@ class UpdateCli(UpdateUi):
             self._version_printed = True
 
 
+class ContextDeviceHandler(DeviceHandler):
+    def __init__(self, ctx: Context) -> None:
+        self.ctx = ctx
+
+    def await_bootloader(self, model: Model) -> TrussedBootloader:
+        assert model == self.ctx.model
+        return self.ctx.await_bootloader()
+
+    def await_device(
+        self,
+        model: Model,
+        wait_retries: Optional[int],
+        callback: Optional[Callable[[int, int], None]],
+    ) -> TrussedDevice:
+        assert model == self.ctx.model
+        return self.ctx.await_device(wait_retries, callback)
+
+
 def update(
     ctx: Context,
     image: Optional[str],
@@ -149,12 +168,11 @@ def update(
     ignore_pynitrokey_version: bool,
     ignore_warnings: Set[Warning],
     confirm_continue: bool,
-) -> Version:
+) -> tuple[Version, Status]:
     with ctx.connect() as device:
         updater = Updater(
             ui=UpdateCli(confirm_continue),
-            await_bootloader=ctx.await_bootloader,
-            await_device=ctx.await_device,
+            device_handler=ContextDeviceHandler(ctx),
             ignore_warnings=ignore_warnings,
         )
         return updater.update(device, image, version, ignore_pynitrokey_version)
