@@ -6,11 +6,12 @@ from typing import Optional, Sequence
 
 import click
 from nitrokey.nk3 import NK3, NK3Bootloader
-from nitrokey.nk3.updates import Warning
 from nitrokey.trussed import Model, TrussedBase
+from nitrokey.trussed.updates import Warning
 
 from pynitrokey.cli import trussed
 from pynitrokey.cli.exceptions import CliException
+from pynitrokey.cli.trussed import print_status
 from pynitrokey.cli.trussed.test import TestCase
 from pynitrokey.helpers import local_critical, local_print
 
@@ -126,9 +127,10 @@ def update(
     from .update import update as exec_update
 
     ignore_warnings = frozenset([Warning.from_str(s) for s in ignore_warning])
-    exec_update(
+    update_to_version, status = exec_update(
         ctx, image, version, ignore_pynitrokey_version, ignore_warnings, confirm
     )
+    print_status(update_to_version, status)
 
 
 @nk3.command()
