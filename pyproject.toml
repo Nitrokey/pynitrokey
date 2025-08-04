@@ -33,7 +33,6 @@ dependencies = [
   "requests",
   "tqdm",
   "tlv8",
-  "click-aliases >=1.0.5, <2",
   "semver",
   "nethsm >=1.4.0, <2",
 ]

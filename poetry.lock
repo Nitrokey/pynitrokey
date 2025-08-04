@@ -301,21 +301,6 @@ files = [
 colorama = {version = "*", markers = "platform_system == \"Windows\""}
 
 [[package]]
-name = "click-aliases"
-version = "1.0.5"
-description = "Add (mutiple) aliases to a click group or command"
-optional = false
-python-versions = ">=3.7"
-groups = ["main"]
-files = [
-    {file = "click_aliases-1.0.5-py3-none-any.whl", hash = "sha256:cbb83a348acc00809fe18b6da13a7f6307bc71b3c5f69cc730e012dfb4bbfdc3"},
-    {file = "click_aliases-1.0.5.tar.gz", hash = "sha256:e37d4cabbaad68e1c48ec0f063a59dfa15f0e7450ec901bd1ce4f4b954bc881d"},
-]
-
-[package.dependencies]
-click = ">=8.1.7,<9.0.0"
-
-[[package]]
 name = "colorama"
 version = "0.4.6"
 description = "Cross-platform colored terminal text."
@@ -1880,4 +1865,4 @@ pcsc = ["pyscard"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">= 3.10, <3.14"
-content-hash = "e20ced733627ff25dc8f82d62ce2f3b4036d07a450fa087628051749daa42b94"
+content-hash = "206fa1952bbbe6820e2ce14ddbfc28ddcaa92702079fcb7fc7910a9bcd7d7b75"

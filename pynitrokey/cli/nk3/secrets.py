@@ -7,10 +7,9 @@ import json
 import sys
 import typing
 from base64 import b32decode
-from typing import Callable, List, Optional
+from typing import Any, Callable, List, Optional
 
 import click
-from click_aliases import ClickAliasedGroup
 from nitrokey.nk3.secrets_app import (
     ALGORITHM_TO_KIND,
     STRING_TO_KIND,
@@ -24,7 +23,7 @@ from pynitrokey.cli.nk3 import Context, nk3
 from pynitrokey.helpers import AskUser, b32padding, local_critical, local_print
 
 
-@nk3.group(cls=ClickAliasedGroup)
+@nk3.group()
 @click.pass_context
 def secrets(ctx: click.Context) -> None:
     """Nitrokey Secrets App. Manage OTP and Password Safe secrets on the device.
@@ -175,58 +174,111 @@ def update(
         local_print("Done")
 
 
-@secrets.command(aliases=["register"])
+# adapted from click.decorators
+_AnyCallable = Callable[..., Any]
+
+
+def with_options(
+    *options: Callable[[_AnyCallable], _AnyCallable]
+) -> Callable[[_AnyCallable], _AnyCallable]:
+    # based on https://stackoverflow.com/a/67138197
+    def decorator(f: _AnyCallable) -> _AnyCallable:
+        for option in reversed(options):
+            f = option(f)
+        return f
+
+    return decorator
+
+
+add_otp_options = [
+    click.argument(
+        "name",
+        type=click.STRING,
+    ),
+    click.argument(
+        "secret",
+        type=click.STRING,
+    ),
+    click.option(
+        "--digits-str",
+        "digits_str",
+        type=click.Choice(["6", "8"]),
+        help="Digits count",
+        default="6",
+    ),
+    click.option(
+        "--kind",
+        "kind",
+        type=click.Choice(choices=STRING_TO_KIND.keys(), case_sensitive=False),
+        help="OTP mechanism to use. Case insensitive.",
+        default="NOT_SET",
+    ),
+    click.option(
+        "--hash",
+        "hash",
+        type=click.Choice(choices=ALGORITHM_TO_KIND.keys(), case_sensitive=False),
+        help="Hash algorithm to use",
+        default="SHA1",
+    ),
+    click.option(
+        "--counter-start",
+        "counter_start",
+        type=click.INT,
+        help="Starting value for the counter (HOTP only)",
+        default=0,
+    ),
+    click.option(
+        "--touch-button",
+        "touch_button",
+        type=click.BOOL,
+        help="This credential requires button press before use",
+        is_flag=True,
+    ),
+    click.option(
+        "--protect-with-pin",
+        "pin_protection",
+        type=click.BOOL,
+        help="This credential should be additionally encrypted with a PIN, which will be required before each use",
+        is_flag=True,
+    ),
+]
+
+
+@secrets.command(deprecated="Use 'add-otp' instead.")
 @click.pass_obj
-@click.argument(
-    "name",
-    type=click.STRING,
-)
-@click.argument(
-    "secret",
-    type=click.STRING,
-)
-@click.option(
-    "--digits-str",
-    "digits_str",
-    type=click.Choice(["6", "8"]),
-    help="Digits count",
-    default="6",
-)
-@click.option(
-    "--kind",
-    "kind",
-    type=click.Choice(choices=STRING_TO_KIND.keys(), case_sensitive=False),
-    help="OTP mechanism to use. Case insensitive.",
-    default="NOT_SET",
-)
-@click.option(
-    "--hash",
-    "hash",
-    type=click.Choice(choices=ALGORITHM_TO_KIND.keys(), case_sensitive=False),
-    help="Hash algorithm to use",
-    default="SHA1",
-)
-@click.option(
-    "--counter-start",
-    "counter_start",
-    type=click.INT,
-    help="Starting value for the counter (HOTP only)",
-    default=0,
-)
-@click.option(
-    "--touch-button",
-    "touch_button",
-    type=click.BOOL,
-    help="This credential requires button press before use",
-    is_flag=True,
-)
-@click.option(
-    "--protect-with-pin",
-    "pin_protection",
-    type=click.BOOL,
-    help="This credential should be additionally encrypted with a PIN, which will be required before each use",
-    is_flag=True,
-)
+@with_options(*add_otp_options)
+def register(
+    ctx: Context,
+    name: str,
+    secret: str,
+    digits_str: str,
+    kind: str,
+    hash: str,
+    counter_start: int,
+    touch_button: bool,
+    pin_protection: bool,
+) -> None:
+    """Register OTP credential.
+
+    Write credential under the NAME.
+    Secret should be base32 encoded.
+    """
+    add_otp_impl(
+        ctx,
+        name,
+        secret,
+        digits_str,
+        kind,
+        hash,
+        counter_start,
+        touch_button,
+        pin_protection,
+    )
+
+
+@secrets.command()
+@click.pass_obj
+@with_options(*add_otp_options)
 def add_otp(
     ctx: Context,
     name: str,
@@ -243,6 +295,30 @@ def add_otp(
     Write credential under the NAME.
     Secret should be base32 encoded.
     """
+    add_otp_impl(
+        ctx,
+        name,
+        secret,
+        digits_str,
+        kind,
+        hash,
+        counter_start,
+        touch_button,
+        pin_protection,
+    )
+
+
+def add_otp_impl(
+    ctx: Context,
+    name: str,
+    secret: str,
+    digits_str: str,
+    kind: str,
+    hash: str,
+    counter_start: int,
+    touch_button: bool,
+    pin_protection: bool,
+) -> None:
     otp_kind = STRING_TO_KIND[kind.upper()]
     if not secret:
         raise click.ClickException("Please provide secret for the OTP to work")
@@ -463,26 +539,44 @@ def reset(ctx: Context, force: bool) -> None:
         local_print("Done")
 
 
-@secrets.command(aliases=["get"])
+get_otp_options = [
+    click.argument(
+        "name",
+        type=click.STRING,
+    ),
+    click.option(
+        "--timestamp",
+        "timestamp",
+        type=click.INT,
+        help="The timestamp to use instead of the local time (TOTP only)",
+        default=0,
+    ),
+    click.option(
+        "--period",
+        "period",
+        type=click.INT,
+        help="The period to use in seconds (TOTP only)",
+        default=30,
+    ),
+]
+
+
+@secrets.command(deprecated="Use 'get-otp' instead.")
 @click.pass_obj
-@click.argument(
-    "name",
-    type=click.STRING,
-)
-@click.option(
-    "--timestamp",
-    "timestamp",
-    type=click.INT,
-    help="The timestamp to use instead of the local time (TOTP only)",
-    default=0,
-)
-@click.option(
-    "--period",
-    "period",
-    type=click.INT,
-    help="The period to use in seconds (TOTP only)",
-    default=30,
-)
+@with_options(*get_otp_options)
+def get(
+    ctx: Context,
+    name: str,
+    timestamp: int,
+    period: int,
+) -> None:
+    """Generate OTP code from registered credential."""
+    get_otp_impl(ctx, name, timestamp, period)
+
+
+@secrets.command()
+@click.pass_obj
+@with_options(*get_otp_options)
 def get_otp(
     ctx: Context,
     name: str,
@@ -490,6 +584,15 @@ def get_otp(
     period: int,
 ) -> None:
     """Generate OTP code from registered credential."""
+    get_otp_impl(ctx, name, timestamp, period)
+
+
+def get_otp_impl(
+    ctx: Context,
+    name: str,
+    timestamp: int,
+    period: int,
+) -> None:
     # TODO: for TOTP get the time from a timeserver via NTP, instead of the local clock
 
     from datetime import datetime
