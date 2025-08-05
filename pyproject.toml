@@ -18,27 +18,29 @@ readme = "README.md"
 requires-python = ">=3.10"
 dynamic = ["classifiers"]
 dependencies = [
-  "cffi",
-  "click >=8.2,<9",
-  "cryptography >=43,<46",
-  "fido2 >=2,<3",
-  "hidapi >=0.14,<0.15",
+  "cffi >=1.15, <2",
+  "click >=8.2, <9",
+  "cryptography >=43, <46",
+  "fido2 >=2, <3",
+  "hidapi >=0.14, <0.15",
   # Limit hidapi on Linux to versions using the hidraw backend, see
   # https://github.com/Nitrokey/pynitrokey/issues/601
   "hidapi >=0.14.0.post1, <0.14.0.post4 ; sys_platform == 'linux'",
-  "intelhex",
-  "nkdfu",
-  "nitrokey >=0.4,<0.5",
-  "pyusb",
-  "requests",
-  "tqdm",
-  "tlv8",
-  "semver",
-  "nethsm >=1.4.0, <2",
+  "intelhex >=2.3, <3",
+  "libusb1 >=3, <4",
+  "nethsm >=1.4, <2",
+  "nitrokey >=0.4, <0.5",
+  "nkdfu >=0.2, <0.3",
+  "pyusb >=1.2, <2",
+  "pyserial >=3.5, <4",
+  "requests >=2.16, <3",
+  "semver >=3, <4",
+  "tqdm >=4.64, <5",
+  "tlv8 >=0.10, <0.11",
 ]
 
 [project.optional-dependencies]
-pcsc = ["pyscard >=2.0.0,<3"]
+pcsc = ["pyscard >=2, <3"]
 
 [project.urls]
 repository = "https://github.com/Nitrokey/pynitrokey"
@@ -90,11 +92,11 @@ black = ">=25, <26"
 flake8 = "*"
 ipython = "*"
 isort = "*"
-mypy = ">=1.4,<1.5"
-types-cffi = "*"
-types-requests = "*"
-types-tqdm = "*"
-pytest = "*"
+mypy = ">=1.4, <1.5"
+types-cffi = ">=1.15, <2"
+types-requests = ">=2.16, <3"
+types-tqdm = ">=4.64, <5"
+pytest = ">=8, <9"
 pytest-reporter-html1 = "*"
 oath = "*"
 
