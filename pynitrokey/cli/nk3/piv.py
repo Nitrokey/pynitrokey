@@ -251,6 +251,11 @@ try:  # noqa: C901
         help="New PIN.",
     )
     def change_pin(current_pin: str, new_pin: str) -> None:
+        if len(new_pin) > 8 or len(new_pin) < 6 or not new_pin.isdigit():
+            local_critical(
+                "PIV application PIN must consist of 6 to 8 numeric characters",
+                support_hint=False,
+            )
         device = PivApp()
         device.change_pin(current_pin, new_pin)
         local_print("Changed pin successfully")
