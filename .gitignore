@@ -13,6 +13,7 @@ venv-ci/
 firmware-*.json
 *.sha2
 *.hex
+uv.lock
 
 *.pyc
 .tags*

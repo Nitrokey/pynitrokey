@@ -1865,4 +1865,4 @@ pcsc = ["pyscard"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">= 3.10, <3.14"
-content-hash = "206fa1952bbbe6820e2ce14ddbfc28ddcaa92702079fcb7fc7910a9bcd7d7b75"
+content-hash = "c92c38a6a5ca103f45bbf8a1edd80b89385cda2017ef7fe00f471705dc5bab42"
