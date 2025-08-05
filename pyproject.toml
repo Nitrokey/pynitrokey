@@ -19,7 +19,7 @@ requires-python = ">=3.10"
 dynamic = ["classifiers"]
 dependencies = [
   "cffi",
-  "click >=8.1.6, <9",
+  "click >=8.2,<9",
   "cryptography >=43,<46",
   "fido2 >=2,<3",
   "hidapi >=0.14,<0.15",
