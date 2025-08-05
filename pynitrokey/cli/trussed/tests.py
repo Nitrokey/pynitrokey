@@ -337,9 +337,11 @@ def test_fido2(ctx: TestContext, device: TrussedBase) -> TestResult:
     fido2_client = Fido2Client(
         device=device.device, client_data_collector=client_data_collector
     )
-    has_pin = fido2_client.info.options["clientPin"]
+    options = fido2_client.info.options
+    has_pin = options["clientPin"]
+    uv_required = not options.get("makeCredUvNotRqd", False)
 
-    if has_pin and not ctx.pin:
+    if has_pin and uv_required and not ctx.pin:
         return TestResult(
             TestStatus.FAILURE,
             "FIDO2 pin is set, but not provided (use the --pin argument)",
