@@ -13,6 +13,8 @@ FLAKE8_DIRS=\
 	pynitrokey/cli/trussed \
 	pynitrokey/fido2
 
+MYPY ?= poetry run mypy
+
 .PHONY: all
 all: install
 
@@ -43,7 +45,7 @@ check-style:
 
 .PHONY: check-typing
 check-typing:
-	poetry run mypy $(PACKAGE_NAME)/
+	$(MYPY) $(PACKAGE_NAME)/
 
 .PHONY: check
 check: check-format check-import-sorting check-style check-typing
