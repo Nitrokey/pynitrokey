@@ -135,3 +135,31 @@ jobs:
         run: python3 -m venv venv && venv/bin/pip install .[pcsc]
       - name: Run nitropy --help
         run: venv/bin/nitropy --help
+  test-uv-resolution:
+    name: Test different resolution strategies with uv
+    runs-on: ubuntu-latest
+    container: python:3.10-slim
+    strategy:
+      matrix:
+        resolution:
+          - lowest
+          - lowest-direct
+          - highest
+    env:
+      UV_RESOLUTION: ${{ matrix.resolution }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install required packages
+        run: apt update && apt install -y make libpcsclite-dev swig gcc libffi-dev
+      - name: Install uv
+        run: pip install uv
+      - name: Prepare poetry.lock
+        # uv does not handle our duplicate hidapi dependency well so we remove one of them
+        run: sed -i "/hidapi .* ; sys_platform == 'linux'/d" pyproject.toml
+      - name: Lock dependencies
+        run: uv lock && uv tree --locked
+      - name: Check code static typing
+        run: make check-typing MYPY="uv run --locked mypy"
+      - name: Run nitropy --help
+        run: uv run --locked nitropy --help
