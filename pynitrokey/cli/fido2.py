@@ -471,7 +471,7 @@ def challenge_response(
 def reset(serial: Optional[str], yes: bool) -> None:
     """Reset device - wipes all credentials!!!"""
     local_print(
-        "Reset is only possible 10secs after plugging in the device.",
+        "Reset is only possible within 10secs after plugging in the device.",
         "Please (re-)plug in your Nitrokey FIDO2 now!",
     )
     if yes or AskUser.yes_no("Warning: Your credentials will be lost!!! continue?"):
