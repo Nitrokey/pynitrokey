@@ -9,6 +9,7 @@ import os
 import platform
 import sys
 import time
+from collections.abc import Sequence
 from getpass import getpass
 from importlib.metadata import version
 from itertools import chain
@@ -111,6 +112,34 @@ def b32padding(data: str) -> str:
     """
     padding_needed = -len(data) % 8
     return data + (padding_needed * "=")
+
+
+class Table:
+    def __init__(self, headers: Sequence[str]) -> None:
+        self._headers = headers
+        self._rows: list[list[str]] = []
+        self._widths = [len(header) for header in headers]
+
+    def add_row(self, row: Sequence[Any]) -> None:
+        assert len(row) == len(self._headers)
+        str_row = []
+        for i, item in enumerate(row):
+            s = str(item)
+            self._widths[i] = max(self._widths[i], len(s))
+            str_row.append(s)
+        self._rows.append(str_row)
+
+    def __str__(self) -> str:
+        def format_row(items: Sequence[str]) -> str:
+            row = [item.ljust(width) for (item, width) in zip(items, self._widths)]
+            return "\t".join(row)
+
+        lines = []
+        lines.append(format_row(self._headers))
+        lines.append(format_row(["-" * width for width in self._widths]))
+        for row in self._rows:
+            lines.append(format_row(row))
+        return "\n".join(lines)
 
 
 class ProgressBar:

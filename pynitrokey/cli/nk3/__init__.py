@@ -13,7 +13,7 @@ from pynitrokey.cli import trussed
 from pynitrokey.cli.exceptions import CliException
 from pynitrokey.cli.trussed import print_status
 from pynitrokey.cli.trussed.test import TestCase
-from pynitrokey.helpers import local_critical, local_print
+from pynitrokey.helpers import Table, local_critical, local_print
 
 
 class Context(trussed.Context[NK3Bootloader, NK3]):
@@ -131,6 +131,32 @@ def update(
         ctx, image, version, ignore_pynitrokey_version, ignore_warnings, confirm
     )
     print_status(update_to_version, status)
+
+
+@nk3.command()
+@click.pass_obj
+def list_config_fields(ctx: Context) -> None:
+    """
+    List all supported config fields.
+
+    This commands lists all config fields that can be accessed with get-config
+    and set-config as well as their type. The possible types are Bool ("true"
+    or "false") and U8 (an integer between 0 and 255).
+
+    The available config fields depend on the firmware version of the device.
+    """
+    with ctx.connect_device() as device:
+        fields = device.admin.list_available_fields()
+
+        table = Table(["config field", "type"])
+        for field in fields:
+            table.add_row(
+                [
+                    field.name,
+                    field.ty,
+                ]
+            )
+        local_print(table)
 
 
 @nk3.command()
