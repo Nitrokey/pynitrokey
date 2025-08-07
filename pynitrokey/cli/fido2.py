@@ -126,6 +126,8 @@ def _credential_management(device: CtapHidDevice, pin: str) -> CredentialManagem
                 "will have to be reset. (If no pin is set, plugging it in again might fix this warning)",
                 support_hint=False,
             )
+        if error.code == CtapError.ERR.PIN_INVALID:
+            local_critical("Wrong pin, please retry", support_hint=False)
         raise
 
     return CredentialManagement(ctap2, client_pin.protocol, client_token)
