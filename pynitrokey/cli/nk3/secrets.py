@@ -606,17 +606,18 @@ def get_otp_impl(
         def call(app: SecretsApp) -> None:
             code = app.calculate(name.encode(), timestamp // period)
             local_print(
-                f"Timestamp: {datetime.isoformat(datetime.fromtimestamp(timestamp), timespec='seconds')} ({timestamp}), period: {period}"
+                f"Timestamp: {datetime.isoformat(datetime.fromtimestamp(timestamp), timespec='seconds')} ({timestamp}), period: {period}",
+                file=sys.stderr,
             )
             local_print(code.decode())
 
         try:
             call(app)
-
         except SecretsAppException as e:
-            local_print(
+            local_critical(
                 f"Device returns error: {e}. \n"
-                f"This credential id might not be registered, or its not allowed to be used here."
+                f"This credential id might not be registered, or its not allowed to be used here.",
+                support_hint=False,
             )
 
 
