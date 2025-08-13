@@ -4,10 +4,12 @@
 name: Continuous delivery - Linux
 
 on:
-  push:
   pull_request:
+  push:
+    branches: [master]
   release:
     types: [published]
+  workflow_dispatch:
 
 env:
   POETRY_SPEC: poetry >=2,<3

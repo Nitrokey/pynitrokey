@@ -4,10 +4,12 @@
 name: Continuous delivery - Windows
 
 on:
-  push:
   pull_request:
+  push:
+    branches: [master]
   release:
     types: [published]
+  workflow_dispatch:
 
 env:
   PYTHON_VERSION: "3.10"

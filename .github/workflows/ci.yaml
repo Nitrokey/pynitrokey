@@ -3,10 +3,10 @@
 
 name: Continuous integration
 on:
-  push:
-    branches-ignore:
-      - "master"
   pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
 
 env:
   POETRY_SPEC: poetry >=2,<3
