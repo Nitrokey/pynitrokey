@@ -1,0 +1,28 @@
+name: Full compatibility tests
+on:
+  schedule:
+    # run daily
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+jobs:
+  test-pypi:
+    name: Test pynitrokey from PyPI
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      # additional build dependencies on Linux with Python 3.13, see https://github.com/Nitrokey/pynitrokey/issues/610
+      - name: Install dependencies
+        if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13' }}
+        run: sudo apt-get update && sudo apt-get install -y gcc libudev-dev
+      - name: Install pynitrokey
+        run: pip install pynitrokey
+      - name: Run nitropy --help
+        run: nitropy --help
