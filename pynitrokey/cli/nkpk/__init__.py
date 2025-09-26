@@ -9,7 +9,7 @@ from nitrokey.trussed import Model, TrussedBase
 
 from pynitrokey.cli.trussed.test import TestCase
 
-from . import trussed
+from pynitrokey.cli import trussed
 
 
 class Context(trussed.Context[NKPKBootloader, NKPK]):

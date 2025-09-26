@@ -9,7 +9,7 @@ FLAKE8_DIRS=\
 	pynitrokey/cli/fido2.py \
 	pynitrokey/cli/nk3 \
 	pynitrokey/cli/nkfido2.py \
-	pynitrokey/cli/nkpk.py \
+	pynitrokey/cli/nkpk \
 	pynitrokey/cli/trussed \
 	pynitrokey/fido2
 
