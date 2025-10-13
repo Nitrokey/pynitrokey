@@ -5,6 +5,7 @@ import base64
 import contextlib
 import datetime
 import json
+import logging
 import mimetypes
 import os
 import os.path
@@ -84,6 +85,7 @@ class Config:
     password: Optional[str]
     verify_tls: bool
     ca_certs: Optional[str]
+    debug: bool
 
 
 @click.group()
@@ -99,6 +101,7 @@ class Config:
     "--ca-certs",
     help="Path to the CA certs to use for the TLS verification",
 )
+@click.option("--debug", is_flag=True, help="Enable debug log messages")
 @click.pass_context
 def nethsm(
     ctx: Context,
@@ -107,6 +110,7 @@ def nethsm(
     password: Optional[str],
     verify_tls: bool,
     ca_certs: Optional[str],
+    debug: bool,
 ) -> None:
     """Interact with NetHSM devices, see subcommands."""
 
@@ -116,6 +120,7 @@ def nethsm(
         password=password,
         verify_tls=verify_tls,
         ca_certs=ca_certs,
+        debug=debug,
     )
 
 
@@ -151,6 +156,10 @@ def connect(ctx: Context, require_auth: bool = True) -> Iterator[NetHSM]:
     nethsm = NetHSM(
         host, auth=auth, verify_tls=config.verify_tls, ca_certs=config.ca_certs
     )
+    if config.debug:
+        loggers = ["nethsm.client", "urllib3"]
+        for logger in loggers:
+            logging.getLogger(logger).setLevel(logging.DEBUG)
     try:
         yield nethsm
     except nethsm_sdk.NetHSMError as e:
