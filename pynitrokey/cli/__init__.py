@@ -61,6 +61,8 @@ def nitropy() -> None:
         "pynitrokey",
         "cryptography",
         "fido2",
+        "nethsm",
+        "nitrokey",
         "pyusb",
     ]
     for x in pymodules:
