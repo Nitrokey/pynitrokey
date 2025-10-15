@@ -998,14 +998,14 @@ files = [
 
 [[package]]
 name = "nethsm"
-version = "1.4.1"
+version = "2.0.0"
 description = "Python Library to manage NetHSM(s)."
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "nethsm-1.4.1-py3-none-any.whl", hash = "sha256:7a59dc98bc1f5b95670301c0dcfb1f594c94e014d6aa6fca48742255f5e01e01"},
-    {file = "nethsm-1.4.1.tar.gz", hash = "sha256:b4502d69f60a8b675a598c3a7075a08cf7bd30f9f2ab20373f0ce427c1fc7671"},
+    {file = "nethsm-2.0.0-py3-none-any.whl", hash = "sha256:9dd803a49a54f94e06e48337664a051e96f4086151d738e27c3d3c028f0f274b"},
+    {file = "nethsm-2.0.0.tar.gz", hash = "sha256:2242f859f51ea8af63daf65549c771266475e5c57a3095fc9f385dbf96f66c7a"},
 ]
 
 [package.dependencies]
@@ -1865,4 +1865,4 @@ pcsc = ["pyscard"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">= 3.10, <3.14"
-content-hash = "c92c38a6a5ca103f45bbf8a1edd80b89385cda2017ef7fe00f471705dc5bab42"
+content-hash = "97f6df6fa2ed85cf9a8ef43ad515047e2b4ef917568fa229e103909575c09a90"
