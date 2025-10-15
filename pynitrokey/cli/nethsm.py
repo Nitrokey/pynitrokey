@@ -642,6 +642,20 @@ def get_key(ctx: Context, key_id: str, public_key: bool) -> None:
 
 
 @nethsm.command()
+@click.argument("old-key-id")
+@click.argument("new-key-id")
+@click.pass_context
+def move_key(ctx: Context, old_key_id: str, new_key_id: str) -> None:
+    """Move the key pair with the given old key ID to the new key ID (requires NetHSM v3).
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    with connect(ctx) as nethsm:
+        nethsm.move_key(old_key_id, new_key_id)
+        print(f"Key {old_key_id} moved to {new_key_id} on NetHSM {nethsm.host}")
+
+
+@nethsm.command()
 @click.argument("key-id")
 @click.pass_context
 def delete_key(ctx: Context, key_id: str) -> None:
