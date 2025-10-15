@@ -576,14 +576,17 @@ def metrics(ctx: Context) -> None:
     type=str,
     help="Filter keys by tags for respective user",
 )
+@click.option("-p", "--prefix", type=str, help="Only list keys with the given prefix")
 @click.pass_context
-def list_keys(ctx: Context, details: bool, filter: Optional[str]) -> None:
+def list_keys(
+    ctx: Context, details: bool, filter: Optional[str], prefix: Optional[str]
+) -> None:
     """List all keys on the NetHSM.
 
     This command requires authentication as a user with the Administrator or
     Operator role."""
     with connect(ctx) as nethsm:
-        key_ids = nethsm.list_keys(filter)
+        key_ids = nethsm.list_keys(filter, prefix=prefix)
 
         print(f"Keys on NetHSM {nethsm.host}:")
         print()
