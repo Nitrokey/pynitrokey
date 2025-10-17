@@ -8,6 +8,7 @@ import platform
 import sys
 import warnings
 from datetime import datetime
+from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as package_version
 
 import click
@@ -66,7 +67,10 @@ def nitropy() -> None:
         "pyusb",
     ]
     for x in pymodules:
-        logger.info(f"{x} version: {package_version(x)}")
+        try:
+            logger.info(f"{x} version: {package_version(x)}")
+        except PackageNotFoundError:
+            logger.warning(f"package {x} not found")
 
     version = package_version("pynitrokey")
     print(
