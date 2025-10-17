@@ -53,7 +53,11 @@ jobs:
       - name: Build
         run: poetry run pyinstaller -- ci-scripts/pyinstaller.spec -- --mode onefile --platform linux
       - name: Test onefile
-        run: dist/nitropy --help
+        run: |
+            dist/nitropy --help
+            dist/nitropy version
+            dist/nitropy nethsm --host nethsmdemo.nitrokey.com state
+            dist/nitropy list
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:

@@ -56,7 +56,11 @@ jobs:
       - name: Build onedir
         run: poetry run pyinstaller -- ci-scripts/pyinstaller.spec -- --mode onedir --platform windows
       - name: Test onedir
-        run: dist/nitropy/nitropy.exe --help
+        run: |
+            dist/nitropy/nitropy.exe --help
+            dist/nitropy/nitropy.exe version
+            dist/nitropy/nitropy.exe nethsm --host nethsmdemo.nitrokey.com state
+            dist/nitropy/nitropy.exe list
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -85,7 +89,11 @@ jobs:
       - name: Build onefile
         run: poetry run pyinstaller -- ci-scripts/pyinstaller.spec -- --mode onefile --platform windows
       - name: Test onefile
-        run: dist/nitropy.exe --help
+        run: |
+            dist/nitropy.exe --help
+            dist/nitropy.exe version
+            dist/nitropy.exe nethsm --host nethsmdemo.nitrokey.com state
+            dist/nitropy.exe list
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
