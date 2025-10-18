@@ -18,7 +18,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 dynamic = ["classifiers"]
 dependencies = [
-  "cffi >=1.15, <2",
+  "cffi >=1.15, <3",
   "click >=8.2, <9",
   "cryptography >=43, <46",
   "fido2 >=2, <3",
@@ -93,7 +93,7 @@ flake8 = "*"
 ipython = "*"
 isort = "*"
 mypy = ">=1.4, <1.5"
-types-cffi = ">=1.15, <2"
+types-cffi = ">=1.15, <3"
 types-requests = ">=2.16, <3"
 types-tqdm = ">=4.64, <5"
 pytest = ">=8, <9"
