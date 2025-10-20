@@ -20,7 +20,7 @@ dynamic = ["classifiers"]
 dependencies = [
   "cffi >=1.15, <3",
   "click >=8.2, <9",
-  "cryptography >=43, <46",
+  "cryptography >=43, <47",
   "fido2 >=2, <3",
   "hidapi >=0.14, <0.15",
   # Limit hidapi on Linux to versions using the hidraw backend, see
