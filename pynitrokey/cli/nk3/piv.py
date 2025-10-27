@@ -598,16 +598,25 @@ try:  # noqa: C901
             csr_builder = csr_builder.add_extension(crypto_sujbect_alt_name, False)
 
         if algo == "nistp256":
+            # 9C PIN requires login to be the operation just before
+            if key_ref == 0x9C:
+                device.login(pin)
             csr = csr_builder.sign(
                 P256PivSigner(device, key_ref, public_key_ecc), hashes.SHA256()
             )
+            if key_ref == 0x9C:
+                device.login(pin)
             certificate = certificate_builder.public_key(public_key_ecc).sign(
                 P256PivSigner(device, key_ref, public_key_ecc), hashes.SHA256()
             )
         elif algo == "rsa2048":
+            if key_ref == 0x9C:
+                device.login(pin)
             csr = csr_builder.sign(
                 RsaPivSigner(device, key_ref, public_key_rsa), hashes.SHA256()
             )
+            if key_ref == 0x9C:
+                device.login(pin)
             certificate = certificate_builder.public_key(public_key_rsa).sign(
                 RsaPivSigner(device, key_ref, public_key_rsa), hashes.SHA256()
             )
