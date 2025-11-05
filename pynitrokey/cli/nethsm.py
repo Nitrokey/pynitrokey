@@ -1667,7 +1667,13 @@ def shutdown(ctx: Context, force: bool) -> None:
 
     This command requires authentication as a user with the Administrator
     role."""
-    with connect(ctx) as nethsm:
+    require_auth = False
+    with connect(ctx, require_auth=require_auth) as nethsm:
+        state = nethsm.get_state()
+        if state == State.OPERATIONAL:
+            require_auth = True
+
+    with connect(ctx, require_auth=require_auth) as nethsm:
         print(f"NetHSM {nethsm.host} will be shutdown.")
         shutdown = force or click.confirm("Do you want to continue?")
 
