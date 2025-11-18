@@ -59,7 +59,7 @@ def nkpk(ctx: click.Context, path: Optional[str]) -> None:
 
 
 # shared Trussed commands
-trussed.add_commands(nkpk)
+trussed.add_commands(nkpk, has_app_reset=False)
 
 
 def _list() -> None:
