@@ -83,6 +83,7 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
+nethsm = { git = "https://github.com/Nitrokey/nethsm-sdk-py.git", branch = "cluster" }
 python = ">= 3.10, <3.14"
 
 [tool.poetry.group.dev]

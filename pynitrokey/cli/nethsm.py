@@ -1824,3 +1824,71 @@ def sign(ctx: Context, key_id: str, data: str, mode: str) -> None:
             key_id, base64_input(data), nethsm_sdk.SignMode.from_string(mode)
         )
         print(signature.data)
+
+
+@nethsm.command()
+@click.option(
+    "--url",
+    multiple=True,
+)
+@click.pass_context
+def add_cluster_member(ctx: Context, url: tuple[str]) -> None:
+    with connect(ctx) as nethsm:
+        cluster_members = nethsm.add_cluster_member(list(url))
+
+    n = len(cluster_members)
+    print(f"{n} cluster members:")
+    for m in cluster_members:
+        print("- id: {m.id}")
+        print("  name: {m.name}")
+        print("  URLs: {m.urls}")
+
+
+@nethsm.command()
+@click.pass_context
+def list_cluster_members(ctx: Context) -> None:
+    with connect(ctx) as nethsm:
+        cluster_members = nethsm.list_cluster_members()
+
+    n = len(cluster_members)
+    print(f"{n} cluster members:")
+    for m in cluster_members:
+        print("- id: {m.id}")
+        print("  name: {m.name}")
+        print("  peer URLs: {m.urls}")
+
+
+@nethsm.command()
+@click.option(
+    "--url",
+    multiple=True,
+)
+@click.argument("member-id")
+@click.pass_context
+def set_cluster_member_urls(ctx: Context, member_id: str, url: tuple[str]) -> None:
+    with connect(ctx) as nethsm:
+        nethsm.set_cluster_member_urls(member_id, list(url))
+
+
+@nethsm.command()
+@click.argument("member-id")
+@click.pass_context
+def remove_cluster_member(ctx: Context, member_id: str) -> None:
+    with connect(ctx) as nethsm:
+        nethsm.remove_cluster_member(member_id)
+
+
+@nethsm.command()
+@click.pass_context
+def get_cluster_ca_certificate(ctx: Context) -> None:
+    with connect(ctx) as nethsm:
+        print(nethsm.get_cluster_ca_certificate())
+
+
+@nethsm.command()
+@click.argument("filename")
+@click.pass_context
+def set_cluster_ca_certificate(ctx: Context, filename: str) -> None:
+    with connect(ctx) as nethsm:
+        with open(filename, "rb") as f:
+            nethsm.set_cluster_ca_certificate(f)
