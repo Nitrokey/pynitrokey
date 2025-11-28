@@ -12,12 +12,13 @@ import os.path
 import sys
 from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
 from typing import Any, Iterable, Iterator, Optional, Protocol, Sequence
 
 import click
 import nethsm as nethsm_sdk
 from click import Context
-from nethsm import Authentication, Base64, NetHSM, State
+from nethsm import Authentication, Base64, ClusterJoinData, NetHSM, State
 from nethsm.backup import EncryptedBackup
 
 from pynitrokey.cli.exceptions import CliException
@@ -1951,3 +1952,82 @@ def test(
         with connect(ctx, require_auth=True) as nethsm:
             print("Perform factory reset.")
             nethsm.factory_reset()
+
+
+@nethsm.command()
+@click.option(
+    "--url",
+    multiple=True,
+)
+@click.argument("join_data_path", type=Path)
+@click.pass_context
+def add_cluster_member(ctx: Context, url: tuple[str], join_data_path: Path) -> None:
+    with connect(ctx) as nethsm:
+        join_data = nethsm.add_cluster_member(list(url))
+
+    s = json.dumps(join_data.to_dict())
+    join_data_path.write_text(s)
+    print("Wrote join data to {join_data_path}")
+
+
+@nethsm.command()
+@click.pass_context
+def list_cluster_members(ctx: Context) -> None:
+    with connect(ctx) as nethsm:
+        cluster_members = nethsm.list_cluster_members()
+
+    n = len(cluster_members)
+    print(f"{n} cluster members:")
+    for m in cluster_members:
+        print(f"- id: {m.id}")
+        print(f"  name: {m.name}")
+        print(f"  peer URLs: {m.urls}")
+
+
+@nethsm.command()
+@click.option(
+    "--url",
+    multiple=True,
+)
+@click.argument("member-id")
+@click.pass_context
+def set_cluster_member_urls(ctx: Context, member_id: str, url: tuple[str]) -> None:
+    with connect(ctx) as nethsm:
+        nethsm.set_cluster_member_urls(member_id, list(url))
+
+
+@nethsm.command()
+@click.argument("member-id")
+@click.pass_context
+def remove_cluster_member(ctx: Context, member_id: str) -> None:
+    with connect(ctx) as nethsm:
+        nethsm.remove_cluster_member(member_id)
+
+
+@nethsm.command()
+@click.option("--backup-passphrase")
+@click.argument("join_data_path", type=Path)
+@click.pass_context
+def join_cluster(ctx: Context, backup_passphrase: str, join_data_path: Path) -> None:
+    data = json.loads(join_data_path.read_text())
+    if not isinstance(data, dict):
+        raise ValueError("Join data must contain an object")
+    join_data = ClusterJoinData.from_dict(data)
+    with connect(ctx) as nethsm:
+        nethsm.join_cluster(data=join_data, backup_passphrase=backup_passphrase)
+
+
+@nethsm.command()
+@click.pass_context
+def get_cluster_ca_certificate(ctx: Context) -> None:
+    with connect(ctx) as nethsm:
+        print(nethsm.get_cluster_ca_certificate())
+
+
+@nethsm.command()
+@click.argument("filename")
+@click.pass_context
+def set_cluster_ca_certificate(ctx: Context, filename: str) -> None:
+    with connect(ctx) as nethsm:
+        with open(filename, "rb") as f:
+            nethsm.set_cluster_ca_certificate(f)
