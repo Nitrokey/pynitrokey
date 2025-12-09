@@ -401,8 +401,9 @@ def factory_reset(ctx: Context[Bootloader, Device]) -> None:
             )
 
 
-# We consciously do not allow resetting the admin app
-APPLICATIONS_CHOICE = click.Choice(["fido", "opcard", "secrets", "piv", "webcrypt"])
+# opcard is the only application that supports factory reset at the moment
+# see the reset_client_id implementations in components/apps/src/lib.rs in nitrokey-3-firmware
+APPLICATIONS_CHOICE = click.Choice(["opcard"])
 
 
 @click.command()
