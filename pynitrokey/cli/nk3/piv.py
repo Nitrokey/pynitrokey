@@ -395,7 +395,9 @@ try:  # noqa: C901
     )
     @click.option(
         "--algo",
-        type=click.Choice(["rsa2048", "rsa3072", "rsa4096", "nistp256"], case_sensitive=False),
+        type=click.Choice(
+            ["rsa2048", "rsa3072", "rsa4096", "nistp256"], case_sensitive=False
+        ),
         default="nistp256",
         help="Algorithm for the key.",
     )
@@ -471,10 +473,7 @@ try:  # noqa: C901
         else:
             local_critical("Unimplemented algorithm", support_hint=False)
 
-        body = Tlv.build([(0xAC, Tlv.build([
-            (0x80, algo_id),
-            (0x81, key_selector)
-        ]))])
+        body = Tlv.build([(0xAC, Tlv.build([(0x80, algo_id), (0x81, key_selector)]))])
 
         ins = 0x47
         p1 = 0
