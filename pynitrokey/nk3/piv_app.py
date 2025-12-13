@@ -44,6 +44,7 @@ def prepare_for_pkcs1v15_sign(data: bytes, key_size_bytes: int) -> bytes:
     assert len(total) == key_size_bytes
     return total
 
+
 class StatusError(Exception):
     def __init__(self, value: int):
         self.value = value
