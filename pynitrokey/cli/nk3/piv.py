@@ -55,7 +55,8 @@ try:  # noqa: C901
             assert isinstance(padding, PKCS1v15)
             assert isinstance(algorithm, hashes.SHA256)
 
-            return self._device.sign_rsa2048(data, self._key_reference)
+            bits = self.key_size  # 2048 or 3072 or 4096
+            return self._device.sign_rsa(data, self._key_reference, bits)
 
         def decrypt(self, ciphertext: bytes, padding: AsymmetricPadding) -> bytes:
             raise NotImplementedError()
@@ -394,7 +395,9 @@ try:  # noqa: C901
     )
     @click.option(
         "--algo",
-        type=click.Choice(["rsa2048", "nistp256"], case_sensitive=False),
+        type=click.Choice(
+            ["rsa2048", "rsa3072", "rsa4096", "nistp256"], case_sensitive=False
+        ),
         default="nistp256",
         help="Algorithm for the key.",
     )
@@ -448,12 +451,30 @@ try:  # noqa: C901
         algo = algo.lower()
         if algo == "rsa2048":
             algo_id = b"\x07"
+        elif algo == "rsa3072":
+            algo_id = b"\x05"
+        elif algo == "rsa4096":
+            algo_id = b"\x16"
         elif algo == "nistp256":
             algo_id = b"\x11"
         else:
             local_critical("Unimplemented algorithm", support_hint=False)
 
-        body = Tlv.build([(0xAC, Tlv.build([(0x80, algo_id)]))])
+        if algo in ("rsa2048", "rsa3072", "rsa4096"):
+            key_selector = {
+                "rsa2048": b"\x10",
+                "rsa3072": b"\x18",
+                "rsa4096": b"\x20",
+            }[algo]
+        elif algo in ("nistp256",):  # TODO: add "nistp384" later
+            key_selector = {
+                "nistp256": b"\x01",
+            }[algo]
+        else:
+            local_critical("Unimplemented algorithm", support_hint=False)
+
+        body = Tlv.build([(0xAC, Tlv.build([(0x80, algo_id), (0x81, key_selector)]))])
+
         ins = 0x47
         p1 = 0
         p2 = key_ref
@@ -481,7 +502,7 @@ try:  # noqa: C901
                 cryptography.hazmat.primitives.asymmetric.ec.SECP256R1(),
             )
             public_key_ecc = public_numbers_ecc.public_key()
-        elif algo == "rsa2048":
+        elif algo in ("rsa2048", "rsa3072", "rsa4096"):
             modulus_data = find_by_id(0x81, data)
             exponent_data = find_by_id(0x82, data)
             if modulus_data is None or exponent_data is None:
@@ -609,7 +630,7 @@ try:  # noqa: C901
             certificate = certificate_builder.public_key(public_key_ecc).sign(
                 P256PivSigner(device, key_ref, public_key_ecc), hashes.SHA256()
             )
-        elif algo == "rsa2048":
+        elif algo in ("rsa2048", "rsa3072", "rsa4096"):
             if key_ref == 0x9C:
                 device.login(pin)
             csr = csr_builder.sign(

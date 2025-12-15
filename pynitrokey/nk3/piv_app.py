@@ -27,16 +27,21 @@ def find_by_id(tag: int, data: Sequence[tuple[int, bytes]]) -> Optional[bytes]:
 
 
 # size is in bytes
-def prepare_for_pkcs1v15_sign_2048(data: bytes) -> bytes:
+def prepare_for_pkcs1v15_sign(data: bytes, key_size_bytes: int) -> bytes:
     digest = hashes.Hash(hashes.SHA256())
     digest.update(data)
     hashed = digest.finalize()
 
+    # ASN.1 DigestInfo prefix for SHA-256
     prefix = bytearray.fromhex("3031300d060960864801650304020105000420")
-    padding_len = 256 - 32 - 19 - 3
+
+    # PKCS#1 v1.5 block:
+    #  0x00 0x01 FF FF ... FF 0x00 prefix hash
+    padding_len = key_size_bytes - 3 - len(prefix) - len(hashed)
     padding = b"\x00\x01" + (b"\xff" * padding_len) + b"\x00"
+
     total = padding + prefix + hashed
-    assert len(total) == 256
+    assert len(total) == key_size_bytes
     return total
 
 
@@ -302,9 +307,12 @@ class PivApp:
         payload = digest.finalize()
         return self.raw_sign(payload, key, 0x11)
 
-    def sign_rsa2048(self, data: bytes, key: int) -> bytes:
-        payload = prepare_for_pkcs1v15_sign_2048(data)
-        return self.raw_sign(payload, key, 0x07)
+    def sign_rsa(self, data: bytes, key: int, bits: int) -> bytes:
+        key_size_bytes = bits // 8
+        payload = prepare_for_pkcs1v15_sign(data, key_size_bytes)
+        algo_map = {2048: 0x07, 3072: 0x05, 4096: 0x16}
+        algo_id = algo_map[bits]
+        return self.raw_sign(payload, key, algo_id)
 
     def raw_sign(self, payload: bytes, key: int, algo: int) -> bytes:
         body = Tlv.build([(0x7C, Tlv.build([(0x81, payload), (0x82, b"")]))])
