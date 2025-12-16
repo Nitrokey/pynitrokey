@@ -117,6 +117,17 @@ try:  # noqa: C901
         ) -> bytes:
             raise NotImplementedError()
 
+        def sign(
+            self, data: bytes, signature_algorithm: ec.EllipticCurveSignatureAlgorithm
+        ) -> bytes:
+            assert isinstance(signature_algorithm, ec.ECDSA)
+            assert isinstance(signature_algorithm.algorithm, hashes.SHA256)
+
+            return self._device.sign_p256(data, self._key_reference)
+
+        def __copy__(self) -> "P256PivSigner":
+            raise NotImplementedError()
+
     class P384PivSigner(ec.EllipticCurvePrivateKey):
         _device: PivApp
         _key_reference: int
@@ -157,17 +168,6 @@ try:  # noqa: C901
             format: serialization.PrivateFormat,
             encryption_algorithm: serialization.KeySerializationEncryption,
         ) -> bytes:
-            raise NotImplementedError()
-
-        def sign(
-            self, data: bytes, signature_algorithm: ec.EllipticCurveSignatureAlgorithm
-        ) -> bytes:
-            assert isinstance(signature_algorithm, ec.ECDSA)
-            assert isinstance(signature_algorithm.algorithm, hashes.SHA384)
-
-            return self._device.sign_p384(data, self._key_reference)
-
-        def __copy__(self) -> "P384PivSigner":
             raise NotImplementedError()
 
         def sign(
