@@ -174,11 +174,11 @@ try:  # noqa: C901
             self, data: bytes, signature_algorithm: ec.EllipticCurveSignatureAlgorithm
         ) -> bytes:
             assert isinstance(signature_algorithm, ec.ECDSA)
-            assert isinstance(signature_algorithm.algorithm, hashes.SHA256)
+            assert isinstance(signature_algorithm.algorithm, hashes.SHA384)
 
-            return self._device.sign_p256(data, self._key_reference)
+            return self._device.sign_p384(data, self._key_reference)
 
-        def __copy__(self) -> "P256PivSigner":
+        def __copy__(self) -> "P384PivSigner":
             raise NotImplementedError()
 
     def print_row(values: Iterable[str], widths: Iterable[int]) -> None:
