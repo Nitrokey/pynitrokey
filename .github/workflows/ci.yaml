@@ -3,163 +3,163 @@
 
 name: Continuous integration
 on:
-  pull_request:
-  push:
-    branches: [master]
-  workflow_dispatch:
+    pull_request:
+    push:
+        branches: [master]
+    workflow_dispatch:
 
 env:
-  POETRY_SPEC: poetry >=2,<3
+    POETRY_SPEC: poetry >=2,<3
 
 jobs:
-  check-pyproject:
-    name: Check pyproject syntax
-    runs-on: ubuntu-latest
-    container: python:3.10-slim
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Install poetry
-        run: pip install "${POETRY_SPEC}"
-      - name: Check pyproject syntax
-        run: poetry check
-  format-code:
-    name: Check code format
-    runs-on: ubuntu-latest
-    container: python:3.10-slim
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Install required packages
-        run: |
-          apt update
-          apt install -y gcc libpcsclite-dev make swig git
-      - name: Install poetry
-        run: pip install "${POETRY_SPEC}"
-      - name: Create virtual environment
-        run: make install
-      - name: Check code format
-        run: make check-format
-  format-import:
-    name: Check imports format
-    runs-on: ubuntu-latest
-    container: python:3.10-slim
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Install required packages
-        run: |
-          apt update
-          apt install -y gcc libpcsclite-dev make swig git
-      - name: Install poetry
-        run: pip install "${POETRY_SPEC}"
-      - name: Create virtual environment
-        run: make install
-      - name: Check code import format
-        run: make check-import-sorting
-  lint-style:
-    name: Check code style
-    runs-on: ubuntu-latest
-    container: python:3.10-slim
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Install required packages
-        run: |
-          apt update
-          apt install -y gcc libpcsclite-dev make swig git
-      - name: Install poetry
-        run: pip install "${POETRY_SPEC}"
-      - name: Create virtual environment
-        run: make install
-      - name: Check code style
-        run: make check-style
-  lint-typing:
-    name: Check static typing
-    runs-on: ubuntu-latest
-    container: python:3.10-slim
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Install required packages
-        run: |
-          apt update
-          apt install -y gcc libpcsclite-dev make swig git
-      - name: Install poetry
-        run: pip install "${POETRY_SPEC}"
-      - name: Create virtual environment
-        run: make install
-      - name: Check code static typing
-        run: make check-typing
-  run-tests:
-    name: Run tests
-    runs-on: ubuntu-latest
-    container: python:3.10-slim
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Install required packages
-        run: |
-          apt update
-          apt install -y gcc libpcsclite-dev make swig git
-      - name: Install poetry
-        run: pip install "${POETRY_SPEC}"
-      - name: Create virtual environment
-        run: make install
-      - name: Run tests
-        run: make test
-  run:
-    name: Run nitropy --help
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Install python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install required packages
-        run: |
-          sudo apt update
-          sudo apt install -y gcc libpcsclite-dev swig
-      # For Python 3.13, we need additional build dependencies, see:
-      # https://github.com/Nitrokey/pynitrokey/issues/610
-      - name: Install more required packages
-        run: |
-          sudo apt update
-          sudo apt install -y libudev-dev libpython3-dev
-      - name: Install pynitrokey
-        run: python3 -m venv venv && venv/bin/pip install .[pcsc]
-      - name: Run nitropy --help
-        run: venv/bin/nitropy --help
-  test-uv-resolution:
-    name: Test different resolution strategies with uv
-    runs-on: ubuntu-latest
-    container: python:3.10-slim
-    strategy:
-      matrix:
-        resolution:
-          - lowest
-          - lowest-direct
-          - highest
-    env:
-      UV_RESOLUTION: ${{ matrix.resolution }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Install required packages
-        run: apt update && apt install -y make libpcsclite-dev swig gcc libffi-dev
-      - name: Install uv
-        run: pip install uv
-      - name: Prepare poetry.lock
-        # uv does not handle our duplicate hidapi dependency well so we remove one of them
-        run: sed -i "/hidapi .* ; sys_platform == 'linux'/d" pyproject.toml
-      - name: Lock dependencies
-        run: uv lock && uv tree --locked
-      - name: Check code static typing
-        run: make check-typing MYPY="uv run --locked mypy"
-      - name: Run nitropy --help
-        run: uv run --locked nitropy --help
+    check-pyproject:
+        name: Check pyproject syntax
+        runs-on: ubuntu-latest
+        container: python:3.10-slim
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+            - name: Install poetry
+              run: pip install "${POETRY_SPEC}"
+            - name: Check pyproject syntax
+              run: poetry check
+    format-code:
+        name: Check code format
+        runs-on: ubuntu-latest
+        container: python:3.10-slim
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+            - name: Install required packages
+              run: |
+                  apt update
+                  apt install -y gcc libpcsclite-dev make swig git
+            - name: Install poetry
+              run: pip install "${POETRY_SPEC}"
+            - name: Create virtual environment
+              run: make install
+            - name: Check code format
+              run: make check-format
+    format-import:
+        name: Check imports format
+        runs-on: ubuntu-latest
+        container: python:3.10-slim
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+            - name: Install required packages
+              run: |
+                  apt update
+                  apt install -y gcc libpcsclite-dev make swig git
+            - name: Install poetry
+              run: pip install "${POETRY_SPEC}"
+            - name: Create virtual environment
+              run: make install
+            - name: Check code import format
+              run: make check-import-sorting
+    lint-style:
+        name: Check code style
+        runs-on: ubuntu-latest
+        container: python:3.10-slim
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+            - name: Install required packages
+              run: |
+                  apt update
+                  apt install -y gcc libpcsclite-dev make swig git
+            - name: Install poetry
+              run: pip install "${POETRY_SPEC}"
+            - name: Create virtual environment
+              run: make install
+            - name: Check code style
+              run: make check-style
+    lint-typing:
+        name: Check static typing
+        runs-on: ubuntu-latest
+        container: python:3.10-slim
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+            - name: Install required packages
+              run: |
+                  apt update
+                  apt install -y gcc libpcsclite-dev make swig git
+            - name: Install poetry
+              run: pip install "${POETRY_SPEC}"
+            - name: Create virtual environment
+              run: make install
+            - name: Check code static typing
+              run: make check-typing
+    run-tests:
+        name: Run tests
+        runs-on: ubuntu-latest
+        container: python:3.10-slim
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+            - name: Install required packages
+              run: |
+                  apt update
+                  apt install -y gcc libpcsclite-dev make swig git
+            - name: Install poetry
+              run: pip install "${POETRY_SPEC}"
+            - name: Create virtual environment
+              run: make install
+            - name: Run tests
+              run: make test
+    run:
+        name: Run nitropy --help
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                python-version: ["3.10", "3.11", "3.12", "3.13"]
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+            - name: Install python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: ${{ matrix.python-version }}
+            - name: Install required packages
+              run: |
+                  sudo apt update
+                  sudo apt install -y gcc libpcsclite-dev swig
+            # For Python 3.13, we need additional build dependencies, see:
+            # https://github.com/Nitrokey/pynitrokey/issues/610
+            - name: Install more required packages
+              run: |
+                  sudo apt update
+                  sudo apt install -y libudev-dev libpython3-dev
+            - name: Install pynitrokey
+              run: python3 -m venv venv && venv/bin/pip install .[pcsc]
+            - name: Run nitropy --help
+              run: venv/bin/nitropy --help
+    test-uv-resolution:
+        name: Test different resolution strategies with uv
+        runs-on: ubuntu-latest
+        container: python:3.10-slim
+        strategy:
+            matrix:
+                resolution:
+                    - lowest
+                    - lowest-direct
+                    - highest
+        env:
+            UV_RESOLUTION: ${{ matrix.resolution }}
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+            - name: Install required packages
+              run: apt update && apt install -y make libpcsclite-dev swig gcc libffi-dev git
+            - name: Install uv
+              run: pip install uv
+            - name: Prepare poetry.lock
+              # uv does not handle our duplicate hidapi dependency well so we remove one of them
+              run: sed -i "/hidapi .* ; sys_platform == 'linux'/d" pyproject.toml
+            - name: Lock dependencies
+              run: uv lock && uv tree --locked
+            - name: Check code static typing
+              run: make check-typing MYPY="uv run --locked mypy"
+            - name: Run nitropy --help
+              run: uv run --locked nitropy --help

@@ -133,7 +133,11 @@ def run_tests(
     results = []
 
     local_print("")
-    local_print(f"Running tests for {device.name} at {device.path}")
+    path = device.path
+    if device.path is None:
+        local_print(f"Running tests for {device.name}")
+    else:
+        local_print(f"Running tests for {device.name} at {path}")
     local_print("")
 
     n = len(test_cases)
