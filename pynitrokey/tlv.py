@@ -1,7 +1,7 @@
 # Copyright Nitrokey GmbH
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 
-from typing import Optional, Sequence, Tuple
+from typing import Sequence, Tuple
 
 
 def build_one(tag: int, data: bytes) -> bytes:
@@ -18,7 +18,7 @@ def build_one(tag: int, data: bytes) -> bytes:
         out.append(0x82)
         out += data_len.to_bytes((data_len.bit_length() + 7) // 8, byteorder="big")
 
-    return out + data
+    return bytes(out + data)
 
 
 def take_tag(data: bytes) -> Tuple[int, bytes]:
@@ -71,7 +71,7 @@ class Tlv:
         out = bytearray()
         for tag, data in input:
             out += build_one(tag, data)
-        return out
+        return bytes(out)
 
     @staticmethod
     def parse(data: bytes) -> Sequence[Tuple[int, bytes]]:

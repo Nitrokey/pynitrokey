@@ -12,6 +12,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives._asymmetric import AsymmetricPadding
 from cryptography.hazmat.primitives.asymmetric import ec, rsa
 from cryptography.hazmat.primitives.asymmetric import utils as asym_utils
+from cryptography.hazmat.primitives.asymmetric.ec import SECP256R1
 from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
 from cryptography.hazmat.primitives.serialization import Encoding, pkcs12
 
@@ -178,12 +179,14 @@ try:  # noqa: C901
             raise NotImplementedError()
 
         def sign(
-            self, data: bytes, signature_algorithm: ec.EllipticCurveSignatureAlgorithm
+            self,
+            data: cryptography.utils.Buffer,
+            signature_algorithm: ec.EllipticCurveSignatureAlgorithm,
         ) -> bytes:
             assert isinstance(signature_algorithm, ec.ECDSA)
             assert isinstance(signature_algorithm.algorithm, hashes.SHA256)
 
-            return self._device.sign_p256(data, self._key_reference)
+            return self._device.sign_p256(bytes(data), self._key_reference)
 
         def __copy__(self) -> "P256PivSigner":
             raise NotImplementedError()
@@ -275,7 +278,7 @@ try:  # noqa: C901
     )
     def admin_auth(admin_key: str) -> None:
         try:
-            admin_key_bytes = bytearray.fromhex(admin_key)
+            admin_key_bytes = bytes.fromhex(admin_key)
         except ValueError:
             local_critical(
                 "Key is expected to be an hexadecimal string",
@@ -294,7 +297,7 @@ try:  # noqa: C901
     )
     def init(admin_key: str) -> None:
         try:
-            admin_key_bytes = bytearray.fromhex(admin_key)
+            admin_key_bytes = bytes.fromhex(admin_key)
         except ValueError:
             local_critical(
                 "Key is expected to be an hexadecimal string",
@@ -330,8 +333,8 @@ try:  # noqa: C901
     )
     def change_admin_key(current_admin_key: str, new_admin_key: str) -> None:
         try:
-            current_admin_key_bytes = bytearray.fromhex(current_admin_key)
-            new_admin_key_bytes = bytearray.fromhex(new_admin_key)
+            current_admin_key_bytes = bytes.fromhex(current_admin_key)
+            new_admin_key_bytes = bytes.fromhex(new_admin_key)
         except ValueError:
             local_critical(
                 "Key is expected to be an hexadecimal string",
@@ -577,7 +580,7 @@ try:  # noqa: C901
         path: str,
     ) -> None:
         try:
-            admin_key_bytes = bytearray.fromhex(admin_key)
+            admin_key_bytes = bytes.fromhex(admin_key)
         except ValueError:
             local_critical(
                 "Key is expected to be an hexadecimal string",
@@ -641,7 +644,7 @@ try:  # noqa: C901
             public_numbers_ecc = ec.EllipticCurvePublicNumbers(
                 public_x,
                 public_y,
-                cryptography.hazmat.primitives.asymmetric.ec.SECP256R1(),
+                SECP256R1(),
             )
             public_key_ecc = public_numbers_ecc.public_key()
         elif algo in ("rsa2048", "rsa3072", "rsa4096"):
@@ -817,7 +820,7 @@ try:  # noqa: C901
     )
     def write_certificate(admin_key: str, format: str, key: str, path: str) -> None:
         try:
-            admin_key_bytes: bytes = bytearray.fromhex(admin_key)
+            admin_key_bytes: bytes = bytes.fromhex(admin_key)
         except ValueError:
             local_critical(
                 "Key is expected to be an hexadecimal string",
