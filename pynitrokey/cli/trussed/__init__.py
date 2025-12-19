@@ -21,6 +21,7 @@ from nitrokey.trussed import (
     TrussedDevice,
     Version,
     parse_firmware_image,
+    should_default_ccid,
     updates,
 )
 from nitrokey.trussed.admin_app import BootMode, InitStatus, Status
@@ -54,11 +55,13 @@ class Context(ABC, Generic[Bootloader, Device]):
         bootloader_type: type[Bootloader],
         device_type: type[Device],
         model: Model,
+        protocol_is_ccid: bool,
     ) -> None:
         self.path = path
         self.bootloader_type = bootloader_type
         self.device_type = device_type
         self.model = model
+        self.protocol_is_ccid = protocol_is_ccid
 
     @property
     @abstractmethod
@@ -68,7 +71,7 @@ class Context(ABC, Generic[Bootloader, Device]):
         return trussed.open(path, model=self.model)
 
     def list_all(self) -> Sequence[TrussedBase]:
-        return trussed.list(model=self.model)
+        return trussed.list(self.protocol_is_ccid, model=self.model)
 
     def list(self) -> Sequence[TrussedBase]:
         if self.path:
@@ -236,12 +239,16 @@ def list(ctx: Context[Bootloader, Device]) -> None:
 def _list(ctx: Context[Bootloader, Device]) -> None:
     local_print(f":: '{ctx.model}' keys")
     for device in ctx.list_all():
+        print("DEVICE", device)
         with device as device:
             uuid = device.uuid()
+            msg = ""
+            if device.path:
+                msg = msg + device.path + ": "
+            msg = msg + device.name
             if uuid:
-                local_print(f"{device.path}: {device.name} {uuid}")
-            else:
-                local_print(f"{device.path}: {device.name}")
+                msg = msg + f" {uuid}"
+            local_print(msg)
 
 
 @click.command()
@@ -486,8 +493,7 @@ def provision_fido2(
             raise CliException(f"Missing subject {name} in certificate")
     if subject_attrs["OU"] != "Authenticator Attestation":
         raise CliException(
-            f"Unexpected certificate subject OU {subject_attrs['OU']!r} (expected "
-            "Authenticator Attestation)"
+            f"Unexpected certificate subject OU {subject_attrs['OU']!r} (expected Authenticator Attestation)"
         )
 
     found_aaguid = False
@@ -541,8 +547,7 @@ def reboot(ctx: Context[Bootloader, Device], bootloader: bool) -> None:
 
     if not success:
         raise CliException(
-            "The connected device cannot be rebooted automatically.  Remove and reinsert the "
-            "device to reboot it.",
+            "The connected device cannot be rebooted automatically.  Remove and reinsert the device to reboot it.",
             support_hint=False,
         )
 
@@ -778,6 +783,21 @@ def update(
     """
 
     from .update import update as exec_update
+
+    if ctx.protocol_is_ccid:
+        windows_part = ""
+        flag_part = ""
+        if sys.platform == "win32" or sys.platform == "cygwin":
+            windows_part = " be aware that --use-ctaphid will require runing nitropy as an administrator"
+        flag_part = (
+            "please use `nitropy nk3 --use-ctaphid update`"
+            if should_default_ccid()
+            else "please remove the `--use-ccid flag`"
+        )
+        local_critical(
+            f"Updating is not supported over ccid, {flag_part}{windows_part}",
+            support_hint=False,
+        )
 
     ignore_warnings = frozenset([Warning.from_str(s) for s in ignore_warning])
     update_to_version, status = exec_update(

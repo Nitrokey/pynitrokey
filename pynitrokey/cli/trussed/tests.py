@@ -7,6 +7,7 @@ from struct import unpack
 from threading import Thread
 from typing import Any, Optional
 
+from fido2.hid import CtapHidDevice
 from nitrokey.trussed import Fido2Certs, TrussedBase, TrussedDevice, Uuid, Version
 from tqdm import tqdm
 
@@ -329,6 +330,8 @@ def test_se050(ctx: TestContext, device: TrussedBase) -> TestResult:
 def test_fido2(ctx: TestContext, device: TrussedBase) -> TestResult:
     if not isinstance(device, TrussedDevice):
         return TestResult(TestStatus.SKIPPED)
+    if not isinstance(device.device, CtapHidDevice):
+        return TestResult(TestStatus.SKIPPED, "Cannot run fido2 tests in CCID mode")
 
     # drop out early, if pin is needed, but not provided
     from fido2.client import DefaultClientDataCollector, Fido2Client

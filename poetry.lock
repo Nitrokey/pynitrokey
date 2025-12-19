@@ -1023,12 +1023,10 @@ name = "nitrokey"
 version = "0.4.2"
 description = "Nitrokey Python SDK"
 optional = false
-python-versions = "<4,>=3.10"
+python-versions = ">=3.10, <4"
 groups = ["main"]
-files = [
-    {file = "nitrokey-0.4.2-py3-none-any.whl", hash = "sha256:1846944d8283e2632d2f0084283f36cabee7a2cfcad1926babfbf6d84614c954"},
-    {file = "nitrokey-0.4.2.tar.gz", hash = "sha256:67207980d65ce47c68859ca973fd7df0f3c1c6a1bd511b1c41f5d8016cecee7f"},
-]
+files = []
+develop = false
 
 [package.dependencies]
 crcmod = ">=1.7,<2"
@@ -1040,6 +1038,15 @@ pyserial = ">=3.5,<4"
 requests = ">=2.16,<3"
 semver = ">=3,<4"
 tlv8 = ">=0.10,<0.11"
+
+[package.extras]
+pcsc = ["pyscard (>=2,<3)"]
+
+[package.source]
+type = "git"
+url = "https://github.com/Nitrokey/nitrokey-sdk-py.git"
+reference = "3a4d82a77c16f9e68541777b0afc3deb8a37a62d"
+resolved_reference = "3a4d82a77c16f9e68541777b0afc3deb8a37a62d"
 
 [[package]]
 name = "nkdfu"
@@ -1866,4 +1873,4 @@ pcsc = ["pyscard"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">= 3.10, <3.14"
-content-hash = "fc1d1aaeb641a9dc25f39c47f258359a5003bdbf8621a6b8038fe9cef1363cca"
+content-hash = "69d80ba07527c0680f30ae83110e92f3683f024627182de2b273afd9357ac110"
