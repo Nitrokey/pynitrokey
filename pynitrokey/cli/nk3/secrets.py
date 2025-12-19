@@ -492,7 +492,6 @@ def list(ctx: Context, hexa: bool) -> None:
                 authenticate_if_needed(app)
             except click.Abort:
                 pass
-
         credentials_list = sorted(app.list_with_properties(), key=lambda x: x.label)
         for i, credential in enumerate(credentials_list):
             local_print(f"{i+1:02}. {credential}")

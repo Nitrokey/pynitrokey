@@ -90,7 +90,7 @@ def change_firmware_password():
     except DeviceNotFound:
         local_critical(f"No {nk.friendly_name} device found", support_hint=False)
 
-    (_major, minor) = nk.fw_version
+    _major, minor = nk.fw_version
     if minor < 11:
         local_critical(
             f"The connected {nk.friendly_name} does not support firmware updates",
