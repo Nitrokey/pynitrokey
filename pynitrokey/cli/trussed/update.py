@@ -12,7 +12,7 @@ from nitrokey.trussed.admin_app import Status
 from nitrokey.trussed.updates import DeviceHandler, Updater, UpdateUi, Warning
 
 from pynitrokey.cli.exceptions import CliException
-from pynitrokey.cli.nk3 import Context
+from pynitrokey.cli.trussed import Bootloader, Context, Device
 from pynitrokey.helpers import DownloadProgressBar, ProgressBar, confirm, local_print
 
 logger = logging.getLogger(__name__)
@@ -81,8 +81,8 @@ class UpdateCli(UpdateUi):
         self._print_firmware_versions(current, new)
         local_print("")
         local_print(
-            "Please do not remove the Nitrokey 3 or insert any other Nitrokey 3 devices "
-            "during the update. Doing so may damage the Nitrokey 3."
+            "Please do not remove the device or insert any other Nitrokey devices "
+            "during the update. Doing so may damage the device."
         )
 
         if self._confirm_continue:
@@ -144,7 +144,7 @@ class UpdateCli(UpdateUi):
 
 
 class ContextDeviceHandler(DeviceHandler):
-    def __init__(self, ctx: Context) -> None:
+    def __init__(self, ctx: Context[Bootloader, Device]) -> None:
         self.ctx = ctx
 
     def await_bootloader(self, model: Model) -> TrussedBootloader:
@@ -162,7 +162,7 @@ class ContextDeviceHandler(DeviceHandler):
 
 
 def update(
-    ctx: Context,
+    ctx: Context[Bootloader, Device],
     image: Optional[str],
     version: Optional[str],
     ignore_pynitrokey_version: bool,

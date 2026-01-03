@@ -11,6 +11,7 @@ from typing import BinaryIO, Callable, Generic, Optional, Sequence, TypeVar
 import click
 from cryptography import x509
 from cryptography.hazmat.primitives.asymmetric import ec
+from nitrokey import trussed
 from nitrokey.trussed import (
     FirmwareContainer,
     Model,
@@ -24,6 +25,7 @@ from nitrokey.trussed import (
 )
 from nitrokey.trussed.admin_app import BootMode, InitStatus, Status
 from nitrokey.trussed.provisioner_app import ProvisionerApp
+from nitrokey.trussed.updates import Warning
 from nitrokey.updates import OverwriteError
 
 from pynitrokey.cli.exceptions import CliException
@@ -62,11 +64,11 @@ class Context(ABC, Generic[Bootloader, Device]):
     @abstractmethod
     def test_cases(self) -> Sequence[TestCase]: ...
 
-    @abstractmethod
-    def open(self, path: str) -> Optional[TrussedBase]: ...
+    def open(self, path: str) -> Optional[TrussedBase]:
+        return trussed.open(path, model=self.model)
 
-    @abstractmethod
-    def list_all(self) -> Sequence[TrussedBase]: ...
+    def list_all(self) -> Sequence[TrussedBase]:
+        return trussed.list(model=self.model)
 
     def list(self) -> Sequence[TrussedBase]:
         if self.path:
@@ -79,20 +81,20 @@ class Context(ABC, Generic[Bootloader, Device]):
             return self.list_all()
 
     def connect(self) -> TrussedBase:
-        return self._select_unique(self.model.name, self.list())
+        return self._select_unique(str(self.model), self.list())
 
     def connect_device(self) -> Device:
         devices = [
             device for device in self.list() if isinstance(device, self.device_type)
         ]
-        return self._select_unique(self.model.name, devices)
+        return self._select_unique(str(self.model), devices)
 
     def await_device(
         self,
         retries: Optional[int] = None,
         callback: Optional[Callable[[int, int], None]] = None,
     ) -> Device:
-        return self._await(self.model.name, self.device_type, retries, callback)
+        return self._await(str(self.model), self.device_type, retries, callback)
 
     def await_bootloader(
         self,
@@ -100,7 +102,7 @@ class Context(ABC, Generic[Bootloader, Device]):
         callback: Optional[Callable[[int, int], None]] = None,
     ) -> Bootloader:
         return self._await(
-            f"{self.model.name} bootloader", self.bootloader_type, retries, callback
+            f"{self.model} bootloader", self.bootloader_type, retries, callback
         )
 
     def _select_unique(self, name: str, devices: Sequence[T]) -> T:
@@ -161,6 +163,7 @@ def add_commands(group: click.Group, *, has_app_reset: bool = True) -> None:
     group.add_command(rng)
     group.add_command(status)
     group.add_command(test)
+    group.add_command(update)
     group.add_command(validate_update)
     group.add_command(version)
 
@@ -231,7 +234,7 @@ def list(ctx: Context[Bootloader, Device]) -> None:
 
 
 def _list(ctx: Context[Bootloader, Device]) -> None:
-    local_print(f":: '{ctx.model.name}' keys")
+    local_print(f":: '{ctx.model}' keys")
     for device in ctx.list_all():
         with device as device:
             uuid = device.uuid()
@@ -694,9 +697,9 @@ def test(
 
     if len(devices) == 0:
         log_devices()
-        raise CliException(f"No connected {ctx.model.name} devices found")
+        raise CliException(f"No connected {ctx.model} devices found")
 
-    local_print(f"Found {len(devices)} {ctx.model.name} device(s):")
+    local_print(f"Found {len(devices)} {ctx.model} device(s):")
     for device in devices:
         local_print(f"- {device.name} at {device.path}")
 
@@ -723,6 +726,64 @@ def test(
     if failure > 0:
         local_print("")
         raise CliException(f"Test failed for {failure} device(s)")
+
+
+@click.command()
+@click.argument("image", type=click.Path(exists=True, dir_okay=False), required=False)
+@click.option(
+    "--version",
+    help="Set the firmware version to update to (default: latest stable)",
+)
+@click.option(
+    "--ignore-pynitrokey-version",
+    default=False,
+    is_flag=True,
+    help="Allow updates with an outdated pynitrokey version (dangerous)",
+)
+@click.option(
+    "--ignore-warning",
+    help="Ignore the warning(s) with the given ID(s) during the update (dangerous)",
+    type=click.Choice([w.value for w in Warning]),
+    multiple=True,
+)
+@click.option(
+    "--confirm",
+    default=False,
+    is_flag=True,
+    help="Confirm all questions to allow running non-interactively",
+)
+@click.pass_obj
+def update(
+    ctx: Context[Bootloader, Device],
+    image: Optional[str],
+    version: Optional[str],
+    ignore_warning: Sequence[str],
+    ignore_pynitrokey_version: bool,
+    confirm: bool,
+) -> None:
+    """
+    Update the firmware of the device using the given image.
+
+    This command requires that exactly one Nitrokey in bootloader or firmware mode is connected.
+    The user is asked to confirm the operation before the update is started.  If the --confirm
+    option is provided, this is the confirmation.  This option may be used to automate an update.
+    The Nitrokey may not be removed during the update.  Also, additional Nitrokey devices may
+    not be connected during the update.
+
+    If no firmware image is given, the latest firmware release is downloaded automatically.  If
+    the --version option is set, the given version is downloaded instead.
+
+    If the connected Nitrokey device is in firmware mode, the user is prompted to touch the
+    device’s button to confirm rebooting to bootloader mode.
+    """
+
+    from .update import update as exec_update
+
+    ignore_warnings = frozenset([Warning.from_str(s) for s in ignore_warning])
+    update_to_version, status = exec_update(
+        ctx, image, version, ignore_pynitrokey_version, ignore_warnings, confirm
+    )
+    print_status(update_to_version, status)
 
 
 @click.command()

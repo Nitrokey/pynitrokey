@@ -1,11 +1,11 @@
 # Copyright Nitrokey GmbH
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 
-from typing import Optional, Sequence
+from typing import Optional
 
 import click
 from nitrokey.nkpk import NKPK, NKPKBootloader
-from nitrokey.trussed import Model, TrussedBase
+from nitrokey.trussed import Model
 
 from pynitrokey.cli.trussed.test import TestCase
 
@@ -33,20 +33,6 @@ class Context(trussed.Context[NKPKBootloader, NKPK]):
             tests.test_firmware_mode,
             tests.test_fido2,
         ]
-
-    @property
-    def device_name(self) -> str:
-        return "Nitrokey Passkey"
-
-    def open(self, path: str) -> Optional[TrussedBase]:
-        from nitrokey.nkpk import open
-
-        return open(path)
-
-    def list_all(self) -> Sequence[TrussedBase]:
-        from nitrokey.nkpk import list
-
-        return list()
 
 
 @click.group()
