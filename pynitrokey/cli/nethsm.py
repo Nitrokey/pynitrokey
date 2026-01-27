@@ -1824,3 +1824,130 @@ def sign(ctx: Context, key_id: str, data: str, mode: str) -> None:
             key_id, base64_input(data), nethsm_sdk.SignMode.from_string(mode)
         )
         print(signature.data)
+
+
+@nethsm.command()
+@click.option(
+    "-a",
+    "--admin-passphrase",
+    default="adminadmin",
+    help="The admin passphrase to set.",
+)
+@click.option(
+    "-o",
+    "--operator-passphrase",
+    default="operatoroperator",
+    help="The operator passphrase to set.",
+)
+@click.option(
+    "-u",
+    "--unlock-passphrase",
+    default="unlockunlock",
+    help="The unlock passphrase to set.",
+)
+@click.option(
+    "-k",
+    "--key-generations",
+    default=1000,
+    help="Number of keys to generate.",
+)
+@click.option(
+    "-r",
+    "--random-length",
+    default=1024,
+    help="Number of random bytes to generate.",
+)
+@click.option(
+    "--skip-factory-reset",
+    is_flag=True,
+    help="Skip the factory reset at the end of the test.",
+)
+@click.pass_context
+def test(
+    ctx: Context,
+    admin_passphrase: str,
+    operator_passphrase: str,
+    unlock_passphrase: str,
+    key_generations: int,
+    random_length: int,
+    skip_factory_reset: bool,
+) -> None:
+    """Test a NetHSM by running certain operations."""
+
+    admin_username = "admin"
+    operator_username = "operator"
+
+    with connect(ctx, require_auth=False) as nethsm:
+        state = nethsm.get_state()
+        if state == State.UNPROVISIONED:
+            print("Unprovisioned NetHSM found.")
+        else:
+            raise CliException(
+                "Provisioned or operational NetHSM found.", support_hint=False
+            )
+
+        system_time = datetime.datetime.now(datetime.timezone.utc)
+        nethsm.provision(unlock_passphrase, admin_passphrase, system_time)
+        print("Provisioned the NetHSM.")
+        print(f"  Admin username: {admin_username}")
+        print(f"  Admin passphrase: {admin_passphrase}")
+        print(f"  Unlock passphrase: {unlock_passphrase}")
+
+    ctx.obj.username = admin_username
+    ctx.obj.password = admin_passphrase
+
+    with connect(ctx, require_auth=True) as nethsm:
+        nethsm.add_user(
+            operator_username,
+            nethsm_sdk.Role.OPERATOR,
+            operator_passphrase,
+            operator_username,
+            None,
+        )
+        print("Created operator user.")
+        print(f"  Operator username: {operator_username}")
+        print(f"  Operator passphrase: {operator_passphrase}")
+
+        for i in range(key_generations):
+            nethsm.generate_key(
+                nethsm_sdk.KeyType.RSA,
+                [nethsm_sdk.KeyMechanism.RSA_DECRYPTION_RAW],
+                2048,
+                f"key{i}",
+            )
+        keys = len(nethsm.list_keys())
+        if keys == key_generations:
+            print(f"Generated {key_generations} RSA2048 keys.")
+        else:
+            raise CliException(
+                f"The amount of keys requested and stored does not match.",
+                support_hint=False,
+            )
+
+    ctx.obj.username = operator_username
+    ctx.obj.password = operator_passphrase
+
+    with connect(ctx, require_auth=True) as nethsm:
+        MAX_RANDOM_LENGTH_PER_REQUEST = 1024
+        received_random_length = 0
+        remaining_random_length = random_length
+        while remaining_random_length > 0:
+            current_length = min(remaining_random_length, MAX_RANDOM_LENGTH_PER_REQUEST)
+            data = nethsm.get_random_data(current_length)
+            received_random_length += len(data.decode())
+            remaining_random_length -= current_length
+        if received_random_length == random_length:
+            print(f"Generated {random_length} bytes of random data.")
+        else:
+            raise CliException(
+                "The amount of random data requested and received does not match.",
+                support_hint=False,
+            )
+
+    if not skip_factory_reset:
+        ctx.obj.username = admin_username
+        ctx.obj.password = admin_passphrase
+
+        with connect(ctx, require_auth=True) as nethsm:
+            print("Perform factory reset.")
+            nethsm.factory_reset()
