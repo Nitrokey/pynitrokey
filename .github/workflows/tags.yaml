@@ -1,0 +1,26 @@
+# Copyright Nitrokey GmbH
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
+name: Tag verification
+
+on:
+  push:
+    tags:
+      - v**
+  workflow_dispatch:
+
+jobs:
+  check-signature:
+    name: Verify signature
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - name: Import maintainer keys
+        run: for f in keys/*.asc ; do gpg --import $f ; done
+      - name: List known public keys
+        run: gpg --list-keys
+      - name: Verify tag signature
+        run: git verify-tag "${{ github.ref_name }}"
