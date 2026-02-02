@@ -16,6 +16,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
       - name: Import maintainer keys
         run: for f in keys/*.asc ; do gpg --import $f ; done
       - name: List known public keys
