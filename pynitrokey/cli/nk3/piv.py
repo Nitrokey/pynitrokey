@@ -13,7 +13,7 @@ from cryptography.hazmat.primitives._asymmetric import AsymmetricPadding
 from cryptography.hazmat.primitives.asymmetric import ec, rsa
 from cryptography.hazmat.primitives.asymmetric import utils as asym_utils
 from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
-from cryptography.hazmat.primitives.serialization import Encoding
+from cryptography.hazmat.primitives.serialization import Encoding, pkcs12
 
 from pynitrokey.cli.nk3 import nk3
 from pynitrokey.helpers import check_experimental_flag, local_critical, local_print
@@ -147,6 +147,31 @@ try:  # noqa: C901
         print_row(["-" * width for width in widths], widths)
         for row in str_data:
             print_row(row, widths)
+
+    def import_rsa2048(
+        device: PivApp,
+        key_ref: int,
+        key: rsa.RSAPrivateNumbers,
+        public_key: rsa.RSAPublicNumbers,
+    ) -> None:
+
+        device.send_receive(
+            0xFE,
+            0x07,
+            key_ref,
+            Tlv.build(
+                [
+                    (0x01, key.p.to_bytes(256, "big")),
+                    (0x02, key.q.to_bytes(256, "big")),
+                    (
+                        0x03,
+                        public_key.e.to_bytes(
+                            (public_key.e.bit_length() + 7) // 8, "big"
+                        ),
+                    ),
+                ]
+            ),
+        )
 
     @nk3.group()
     @click.option(
@@ -351,6 +376,118 @@ try:  # noqa: C901
             return subject_name
         except ValueError:
             raise click.BadParameter("Must be valid RFC4514 string.")
+
+    @piv.command(help="Import a key and a certificate from a .p12 file")
+    @click.option(
+        "--admin-key",
+        type=click.STRING,
+        default="010203040506070801020304050607080102030405060708",
+        help="Current admin key",
+    )
+    @click.option(
+        "--key",
+        type=click.Choice(
+            [
+                "9A",
+                "9C",
+                "9D",
+                "9E",
+                "82",
+                "83",
+                "84",
+                "85",
+                "86",
+                "87",
+                "88",
+                "89",
+                "8A",
+                "8B",
+                "8C",
+                "8D",
+                "8E",
+                "8F",
+                "90",
+                "91",
+                "92",
+                "93",
+                "94",
+                "95",
+            ],
+            case_sensitive=False,
+        ),
+        default="9A",
+        help="Key slot for operation.",
+    )
+    @click.option(
+        "--algo",
+        type=click.Choice(["rsa2048"], case_sensitive=False),
+        default="rsa2048",
+        help="Algorithm for the key.",
+    )
+    @click.option(
+        "--path",
+        type=click.Path(allow_dash=True),
+        default="-",
+        help="Path to the .pem file containing the private key",
+    )
+    def import_key(
+        admin_key: str,
+        key: str,
+        algo: str,
+        path: str,
+    ) -> None:
+        try:
+            admin_key_bytes = bytearray.fromhex(admin_key)
+        except ValueError:
+            local_critical(
+                "Key is expected to be an hexadecimal string",
+                support_hint=False,
+            )
+
+        with open(path, "rb") as key_file:
+            private_key, certificate, _ = pkcs12.load_key_and_certificates(
+                key_file.read(), password=None
+            )
+        if (
+            not isinstance(private_key, rsa.RSAPrivateKey)
+            or private_key.key_size != 2048
+            or certificate is None
+        ):
+            local_critical(
+                "--path must point to a RSA 2048 private key and certificate as a p12 file",
+                support_hint=False,
+            )
+            return
+
+        key_hex = key.upper()
+        key_ref = int(key_hex, 16)
+
+        piv_app = PivApp()
+        piv_app.authenticate_admin(admin_key_bytes)
+        import_rsa2048(
+            piv_app,
+            key_ref,
+            private_key.private_numbers(),
+            private_key.public_key().public_numbers(),
+        )
+
+        payload = Tlv.build(
+            [
+                (0x5C, bytes(bytearray.fromhex(KEY_TO_CERT_OBJ_ID_MAP[key_hex]))),
+                (
+                    0x53,
+                    Tlv.build(
+                        [
+                            (0x70, certificate.public_bytes(Encoding.DER)),
+                            (0x71, bytes([0])),
+                        ]
+                    ),
+                ),
+            ]
+        )
+        piv_app.send_receive(0xDB, 0x3F, 0xFF, payload)
+
+        return
 
     @piv.command(help="Generate a new key and certificate signing request.")
     @click.option(
