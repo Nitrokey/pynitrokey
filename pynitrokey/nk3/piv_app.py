@@ -307,6 +307,12 @@ class PivApp:
         payload = digest.finalize()
         return self.raw_sign(payload, key, 0x11)
 
+    def sign_p384(self, data: bytes, key: int) -> bytes:
+        digest = hashes.Hash(hashes.SHA384())
+        digest.update(data)
+        payload = digest.finalize()
+        return self.raw_sign(payload, key, 0x14)
+
     def sign_rsa(self, data: bytes, key: int, bits: int) -> bytes:
         key_size_bytes = bits // 8
         payload = prepare_for_pkcs1v15_sign(data, key_size_bytes)

@@ -128,6 +128,59 @@ try:  # noqa: C901
         def __copy__(self) -> "P256PivSigner":
             raise NotImplementedError()
 
+    class P384PivSigner(ec.EllipticCurvePrivateKey):
+        _device: PivApp
+        _key_reference: int
+        _public_key: ec.EllipticCurvePublicKey
+
+        def __init__(
+            self,
+            device: PivApp,
+            key_reference: int,
+            public_key: ec.EllipticCurvePublicKey,
+        ):
+            self._device = device
+            self._key_reference = key_reference
+            self._public_key = public_key
+
+        def exchange(
+            self, algorithm: ec.ECDH, peer_public_key: ec.EllipticCurvePublicKey
+        ) -> bytes:
+            raise NotImplementedError()
+
+        def public_key(self) -> ec.EllipticCurvePublicKey:
+            return self._public_key
+
+        @property
+        def curve(self) -> ec.EllipticCurve:
+            return self._public_key.curve
+
+        def private_numbers(self) -> ec.EllipticCurvePrivateNumbers:
+            raise NotImplementedError()
+
+        @property
+        def key_size(self) -> int:
+            return self._public_key.key_size
+
+        def private_bytes(
+            self,
+            encoding: serialization.Encoding,
+            format: serialization.PrivateFormat,
+            encryption_algorithm: serialization.KeySerializationEncryption,
+        ) -> bytes:
+            raise NotImplementedError()
+
+        def sign(
+            self, data: bytes, signature_algorithm: ec.EllipticCurveSignatureAlgorithm
+        ) -> bytes:
+            assert isinstance(signature_algorithm, ec.ECDSA)
+            assert isinstance(signature_algorithm.algorithm, hashes.SHA384)
+
+            return self._device.sign_p384(data, self._key_reference)
+
+        def __copy__(self) -> "P384PivSigner":
+            raise NotImplementedError()
+
     def print_row(values: Iterable[str], widths: Iterable[int]) -> None:
         row = [value.ljust(width) for (value, width) in zip(values, widths)]
         print(*row, sep="\t")
@@ -396,7 +449,8 @@ try:  # noqa: C901
     @click.option(
         "--algo",
         type=click.Choice(
-            ["rsa2048", "rsa3072", "rsa4096", "nistp256"], case_sensitive=False
+            ["rsa2048", "rsa3072", "rsa4096", "nistp256", "nistp384"],
+            case_sensitive=False,
         ),
         default="nistp256",
         help="Algorithm for the key.",
@@ -457,6 +511,8 @@ try:  # noqa: C901
             algo_id = b"\x16"
         elif algo == "nistp256":
             algo_id = b"\x11"
+        elif algo == "nistp384":
+            algo_id = b"\x14"
         else:
             local_critical("Unimplemented algorithm", support_hint=False)
 
@@ -466,9 +522,10 @@ try:  # noqa: C901
                 "rsa3072": b"\x18",
                 "rsa4096": b"\x20",
             }[algo]
-        elif algo in ("nistp256",):  # TODO: add "nistp384" later
+        elif algo in ("nistp256", "nistp384"):
             key_selector = {
                 "nistp256": b"\x01",
+                "nistp384": b"\x01",
             }[algo]
         else:
             local_critical("Unimplemented algorithm", support_hint=False)
@@ -500,6 +557,20 @@ try:  # noqa: C901
                 public_x,
                 public_y,
                 cryptography.hazmat.primitives.asymmetric.ec.SECP256R1(),
+            )
+            public_key_ecc = public_numbers_ecc.public_key()
+        elif algo == "nistp384":
+            key_data = find_by_id(0x86, data)
+            if key_data is None:
+                local_critical("Device did not send public key data")
+                return
+            key_data = key_data[1:]
+            public_x = int.from_bytes(key_data[:48], byteorder="big", signed=False)
+            public_y = int.from_bytes(key_data[48:], byteorder="big", signed=False)
+            public_numbers_ecc = ec.EllipticCurvePublicNumbers(
+                public_x,
+                public_y,
+                cryptography.hazmat.primitives.asymmetric.ec.SECP384R1(),
             )
             public_key_ecc = public_numbers_ecc.public_key()
         elif algo in ("rsa2048", "rsa3072", "rsa4096"):
@@ -629,6 +700,18 @@ try:  # noqa: C901
                 device.login(pin)
             certificate = certificate_builder.public_key(public_key_ecc).sign(
                 P256PivSigner(device, key_ref, public_key_ecc), hashes.SHA256()
+            )
+        elif algo == "nistp384":
+            # 9C PIN requires login to be the operation just before
+            if key_ref == 0x9C:
+                device.login(pin)
+            csr = csr_builder.sign(
+                P384PivSigner(device, key_ref, public_key_ecc), hashes.SHA384()
+            )
+            if key_ref == 0x9C:
+                device.login(pin)
+            certificate = certificate_builder.public_key(public_key_ecc).sign(
+                P384PivSigner(device, key_ref, public_key_ecc), hashes.SHA384()
             )
         elif algo in ("rsa2048", "rsa3072", "rsa4096"):
             if key_ref == 0x9C:
