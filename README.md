@@ -57,7 +57,7 @@ Tip: alternative `gpg-connect-agent reloadagent /bye` is not sufficient.
 
 ## Development
 
-Information for developers and contributors can be found in the [Developer Guide](./docs/developer-guide.rst).
+Information for developers and contributors can be found in the [Developer Guide](./docs/developer-guide.md).
 
 ## Contributors
 
