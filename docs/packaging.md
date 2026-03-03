@@ -5,9 +5,8 @@ SPDX-License-Identifier: Apache-2.0 OR MIT
 
 # Packaging pynitrokey
 
-When `pynitrokey` is packaged for a distribution or a package manager, we recommend that the package provides both the `pynitrokey` Python library and the `nitropy` executable.
-Alternatively, the Python library can be packaged as `pynitrokey` and the executable as `nitropy`.
-(Note that we consider splitting `pynitrokey` into a library and an executable in a future release.)
+When `pynitrokey` is packaged for a distribution or a package manager, the `nitropy` executable should always be included.
+Optionally, the package can also provide `pynitrokey` as a Python library.
 
 Shell completions for Bash, Zsh and Fish can be generated from the `nitropy` script:
 
