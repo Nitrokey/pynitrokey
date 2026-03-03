@@ -7,14 +7,13 @@ SPDX-License-Identifier: Apache-2.0 OR MIT
 
 ## Setting Up The Environment
 
-Use `make init` to install `pynitrokey`, its dependencies and the development tools inside a virtual environment in the `venv` folder.
+`pynitrokey` uses `poetry` for dependency management.
+Use `make install` to install `pynitrokey`, its dependencies and the development tools inside a virtual environment managed by `poetry`.
 This virtual environment is also used by other targets in the Makefile like `make check`.
 `pynitrokey` is installed in editable mode so that all changes to the source code also apply to the `nitropy` executable in the virtual environment.
-If dependencies are changed, run `make update-venv` to update the virtual environment.
+If dependencies are changed, run `make install` again to update the virtual environment.
 
-By default the development environment is isolated using venv, when set up using `make init`.
-To run the `nitropy` from there call `./venv/bin/nitropy`.
-This can be used as a shortcut `make run ARGS="nk3 list"`, where `ARGS` is an optional argument to pass to `nitropy`.
+To run `nitropy` from the virtual environment, use `poetry run nitropy`.
 
 ## Containerized Environment
 
@@ -35,7 +34,7 @@ Use Dockerfile directly instead if in doubt.
 
 We use [flake8](https://flake8.pycqa.org/en/latest/) for style checks, [black](https://github.com/psf/black) for code formatting, [isort](https://github.com/PyCQA/isort) for import sorting and [mypy](https://github.com/python/mypy) for static type analysis.
 To run all checks, execute `make check`.
-Before using it for the first time, you have to call `make init` to setup a virtual environment and install the required dependencies.
+Before using it for the first time, you have to call `make install` to setup a virtual environment and install the required dependencies.
 
 mypy is configured to only check annotated code.
 If you add new code, please consider adding type annotations and enabling strict checks for your modules in `pyproject.toml`.
