@@ -26,6 +26,66 @@ from pynitrokey.tlv import Tlv
 try:  # noqa: C901
     from pynitrokey.nk3.piv_app import PivApp, find_by_id
 
+    default_admin_key = "010203040506070801020304050607080102030405060708"
+    all_key_ids = [
+        "9A",
+        "9C",
+        "9D",
+        "9E",
+        "82",
+        "83",
+        "84",
+        "85",
+        "86",
+        "87",
+        "88",
+        "89",
+        "8A",
+        "8B",
+        "8C",
+        "8D",
+        "8E",
+        "8F",
+        "90",
+        "91",
+        "92",
+        "93",
+        "94",
+        "95",
+    ]
+
+    key_id_click_type = type = click.Choice(
+        [
+            "9A",
+            "9C",
+            "9D",
+            "9E",
+            "82",
+            "83",
+            "84",
+            "85",
+            "86",
+            "87",
+            "88",
+            "89",
+            "8A",
+            "8B",
+            "8C",
+            "8D",
+            "8E",
+            "8F",
+            "90",
+            "91",
+            "92",
+            "93",
+            "94",
+            "95",
+        ],
+        case_sensitive=False,
+    )
+
+    default_key_id = "9A"
+
     class RsaPivSigner(rsa.RSAPrivateKey):
         _device: PivApp
         _key_reference: int
@@ -189,7 +249,7 @@ try:  # noqa: C901
     @click.argument(
         "admin-key",
         type=click.STRING,
-        default="010203040506070801020304050607080102030405060708",
+        default=default_admin_key,
     )
     def admin_auth(admin_key: str) -> None:
         try:
@@ -208,7 +268,7 @@ try:  # noqa: C901
     @click.argument(
         "admin-key",
         type=click.STRING,
-        default="010203040506070801020304050607080102030405060708",
+        default=default_admin_key,
     )
     def init(admin_key: str) -> None:
         try:
@@ -239,7 +299,7 @@ try:  # noqa: C901
     @click.option(
         "--current-admin-key",
         type=click.STRING,
-        default="010203040506070801020304050607080102030405060708",
+        default=default_admin_key,
         help="Current admin key.",
     )
     @click.argument(
@@ -381,41 +441,13 @@ try:  # noqa: C901
     @click.option(
         "--admin-key",
         type=click.STRING,
-        default="010203040506070801020304050607080102030405060708",
+        default=default_admin_key,
         help="Current admin key",
     )
     @click.option(
         "--key",
-        type=click.Choice(
-            [
-                "9A",
-                "9C",
-                "9D",
-                "9E",
-                "82",
-                "83",
-                "84",
-                "85",
-                "86",
-                "87",
-                "88",
-                "89",
-                "8A",
-                "8B",
-                "8C",
-                "8D",
-                "8E",
-                "8F",
-                "90",
-                "91",
-                "92",
-                "93",
-                "94",
-                "95",
-            ],
-            case_sensitive=False,
-        ),
-        default="9A",
+        type=key_id_click_type,
+        default=default_key_id,
         help="Key slot for operation.",
     )
     @click.option(
@@ -493,41 +525,13 @@ try:  # noqa: C901
     @click.option(
         "--admin-key",
         type=click.STRING,
-        default="010203040506070801020304050607080102030405060708",
+        default=default_admin_key,
         help="Current admin key",
     )
     @click.option(
         "--key",
-        type=click.Choice(
-            [
-                "9A",
-                "9C",
-                "9D",
-                "9E",
-                "82",
-                "83",
-                "84",
-                "85",
-                "86",
-                "87",
-                "88",
-                "89",
-                "8A",
-                "8B",
-                "8C",
-                "8D",
-                "8E",
-                "8F",
-                "90",
-                "91",
-                "92",
-                "93",
-                "94",
-                "95",
-            ],
-            case_sensitive=False,
-        ),
-        default="9A",
+        type=key_id_click_type,
+        default=default_key_id,
         help="Key slot for operation.",
     )
     @click.option(
@@ -805,7 +809,7 @@ try:  # noqa: C901
     @click.argument(
         "admin-key",
         type=click.STRING,
-        default="010203040506070801020304050607080102030405060708",
+        default=default_admin_key,
     )
     @click.option(
         "--format",
@@ -815,36 +819,8 @@ try:  # noqa: C901
     )
     @click.option(
         "--key",
-        type=click.Choice(
-            [
-                "9A",
-                "9C",
-                "9D",
-                "9E",
-                "82",
-                "83",
-                "84",
-                "85",
-                "86",
-                "87",
-                "88",
-                "89",
-                "8A",
-                "8B",
-                "8C",
-                "8D",
-                "8E",
-                "8F",
-                "90",
-                "91",
-                "92",
-                "93",
-                "94",
-                "95",
-            ],
-            case_sensitive=False,
-        ),
-        default="9A",
+        type=key_id_click_type,
+        default=default_key_id,
         help="Key slot for operation.",
     )
     @click.option(
@@ -893,36 +869,8 @@ try:  # noqa: C901
     )
     @click.option(
         "--key",
-        type=click.Choice(
-            [
-                "9A",
-                "9C",
-                "9D",
-                "9E",
-                "82",
-                "83",
-                "84",
-                "85",
-                "86",
-                "87",
-                "88",
-                "89",
-                "8A",
-                "8B",
-                "8C",
-                "8D",
-                "8E",
-                "8F",
-                "90",
-                "91",
-                "92",
-                "93",
-                "94",
-                "95",
-            ],
-            case_sensitive=False,
-        ),
-        default="9A",
+        type=key_id_click_type,
+        default=default_key_id,
         help="Key slot for operation.",
     )
     @click.option(
