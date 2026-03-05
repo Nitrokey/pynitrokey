@@ -6,7 +6,6 @@ import sys
 from typing import Any, Iterable, Optional, Sequence, Tuple, Union
 
 import click
-import cryptography
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives._asymmetric import AsymmetricPadding
@@ -120,7 +119,8 @@ try:  # noqa: C901
 
         def sign(
             self,
-            data: cryptography.utils.Buffer,
+            # the Buffer type was added in cryptography 45.0.1, we support 43
+            data: bytes,  # type: ignore[unused-ignore, override]
             signature_algorithm: ec.EllipticCurveSignatureAlgorithm,
         ) -> bytes:
             assert isinstance(signature_algorithm, ec.ECDSA)
