@@ -233,6 +233,28 @@ try:  # noqa: C901
             ),
         )
 
+    def import_certificate(
+        device: PivApp,
+        key_hex: str,
+        certificate: bytes,
+    ) -> None:
+        payload = Tlv.build(
+            [
+                (0x5C, bytes(bytearray.fromhex(KEY_TO_CERT_OBJ_ID_MAP[key_hex]))),
+                (
+                    0x53,
+                    Tlv.build(
+                        [
+                            (0x70, certificate),
+                            (0x71, bytes([0])),
+                        ]
+                    ),
+                ),
+            ]
+        )
+
+        device.send_receive(0xDB, 0x3F, 0xFF, payload)
+
     @nk3.group()
     @click.option(
         "--experimental",
@@ -503,21 +525,7 @@ try:  # noqa: C901
             private_key.public_key().public_numbers(),
         )
 
-        payload = Tlv.build(
-            [
-                (0x5C, bytes(bytearray.fromhex(KEY_TO_CERT_OBJ_ID_MAP[key_hex]))),
-                (
-                    0x53,
-                    Tlv.build(
-                        [
-                            (0x70, certificate.public_bytes(Encoding.DER)),
-                            (0x71, bytes([0])),
-                        ]
-                    ),
-                ),
-            ]
-        )
-        piv_app.send_receive(0xDB, 0x3F, 0xFF, payload)
+        import_certificate(piv_app, key_hex, certificate.public_bytes(Encoding.DER))
 
         return
 
@@ -788,22 +796,7 @@ try:  # noqa: C901
         with click.open_file(path, mode="wb") as file:
             file.write(csr.public_bytes(Encoding.DER))
 
-        payload = Tlv.build(
-            [
-                (0x5C, bytes(bytearray.fromhex(KEY_TO_CERT_OBJ_ID_MAP[key_hex]))),
-                (
-                    0x53,
-                    Tlv.build(
-                        [
-                            (0x70, certificate.public_bytes(Encoding.DER)),
-                            (0x71, bytes([0])),
-                        ]
-                    ),
-                ),
-            ]
-        )
-
-        device.send_receive(0xDB, 0x3F, 0xFF, payload)
+        import_certificate(device, key_hex, certificate.public_bytes(Encoding.DER))
 
     @piv.command(help="Write a certificate to a key slot.")
     @click.argument(
