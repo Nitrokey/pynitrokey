@@ -4,5 +4,4 @@
 
 """Python Library for Nitrokey devices."""
 
-
 __all__ = ["client", "commands", "dfu", "enums", "exceptions", "helpers", "operations"]
