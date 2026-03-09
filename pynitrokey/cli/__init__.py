@@ -50,9 +50,19 @@ def check_root() -> None:
 
 
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
-def nitropy() -> None:
+@click.option(
+    "--log-level",
+    type=click.Choice(
+        ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], case_sensitive=False
+    ),
+    default="WARNING",
+    help="Set the logging level (default: warning)",
+)
+def nitropy(log_level: str) -> None:
     handler = logging.FileHandler(filename=LOG_FN, delay=True, encoding="utf-8")
-    logging.basicConfig(format=LOG_FORMAT, level=logging.DEBUG, handlers=[handler])
+
+    numeric_level = getattr(logging, log_level.upper())
+    logging.basicConfig(format=LOG_FORMAT, level=numeric_level, handlers=[handler])
 
     logger.info(f"Timestamp: {datetime.now()}")
     logger.info(f"OS: {platform.uname()}")
