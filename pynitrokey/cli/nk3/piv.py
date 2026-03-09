@@ -473,12 +473,6 @@ try:  # noqa: C901
         help="Key slot for operation.",
     )
     @click.option(
-        "--algo",
-        type=click.Choice(["rsa2048"], case_sensitive=False),
-        default="rsa2048",
-        help="Algorithm for the key.",
-    )
-    @click.option(
         "--path",
         type=click.Path(allow_dash=True),
         default="-",
@@ -487,7 +481,6 @@ try:  # noqa: C901
     def import_key(
         admin_key: str,
         key: str,
-        algo: str,
         path: str,
     ) -> None:
         try:
