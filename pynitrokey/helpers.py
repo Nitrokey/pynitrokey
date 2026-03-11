@@ -251,7 +251,7 @@ class Retries:
 # @todo: introduce granularization: dbg, info, err (warn?)
 #        + machine-readable
 #        + logfile-only (partly solved)
-def local_print(*messages: Any, **kwargs: Any) -> None:
+def local_print(*messages: Any, is_secret: bool = False, **kwargs: Any) -> None:
     """Application-wide logging function"""
 
     passed_exc = None
@@ -272,7 +272,10 @@ def local_print(*messages: Any, **kwargs: Any) -> None:
         # logfile debug output
         else:
             whereto = "print: " if STDOUT_PRINT else ""
-            logger.debug(f"{whereto}{str(item).strip()}")
+            if is_secret:
+                logger.debug(f"{whereto}!REDACTED SECRET FROM LOGS!")
+            else:
+                logger.debug(f"{whereto}{str(item).strip()}")
 
         # to stdout
         if STDOUT_PRINT:
@@ -281,6 +284,11 @@ def local_print(*messages: Any, **kwargs: Any) -> None:
     # handle `passed_exc`: re-raise on debug verbosity!
     if VERBOSE == Verbosity.debug and passed_exc:
         raise passed_exc
+
+
+def local_print_secret(*messages: Any, **kwargs: Any) -> None:
+    """Application-wide logging function for secret messages"""
+    local_print(*messages, is_secret=True, **kwargs)
 
 
 def local_critical(
