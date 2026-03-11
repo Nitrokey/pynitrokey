@@ -22,7 +22,7 @@ from pynitrokey.cli.monitor import monitor
 from pynitrokey.cli.program import program
 from pynitrokey.cli.update import update
 from pynitrokey.exceptions import NoSoloFoundError
-from pynitrokey.helpers import local_critical, local_print
+from pynitrokey.helpers import local_critical, local_print, local_print_secret
 
 
 @click.group()
@@ -74,7 +74,7 @@ def hexbytes(count: int, serial: Optional[str]) -> None:
 
     if not 0 <= count <= 255:
         local_critical(f"Number of bytes must be between 0 and 255, you passed {count}")
-    local_print(nkfido2.find(serial).get_rng(count).hex())
+    local_print_secret(nkfido2.find(serial).get_rng(count).hex())
 
 
 # @todo: not really useful like this? endless output only on request (--count ?)
