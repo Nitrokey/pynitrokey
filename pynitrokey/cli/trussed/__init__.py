@@ -35,6 +35,7 @@ from pynitrokey.helpers import (
     Table,
     local_critical,
     local_print,
+    local_print_secret,
     require_windows_admin,
 )
 
@@ -574,7 +575,7 @@ def rng(ctx: Context[Bootloader, Device], length: int) -> None:
     with ctx.connect_device() as device:
         while length > 0:
             rng = device.admin.rng()
-            local_print(rng[:length].hex())
+            local_print_secret(rng[:length].hex())
             length -= len(rng)
 
 
