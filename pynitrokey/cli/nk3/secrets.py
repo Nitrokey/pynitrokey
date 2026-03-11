@@ -20,7 +20,13 @@ from nitrokey.nk3.secrets_app import (
 )
 
 from pynitrokey.cli.nk3 import Context, nk3
-from pynitrokey.helpers import AskUser, b32padding, local_critical, local_print
+from pynitrokey.helpers import (
+    AskUser,
+    b32padding,
+    local_critical,
+    local_print,
+    local_print_secret,
+)
 
 
 @nk3.group()
@@ -609,7 +615,7 @@ def get_otp_impl(
                 f"Timestamp: {datetime.isoformat(datetime.fromtimestamp(timestamp), timespec='seconds')} ({timestamp}), period: {period}",
                 file=sys.stderr,
             )
-            local_print(code.decode())
+            local_print_secret(code.decode())
 
         try:
             call(app)
@@ -664,21 +670,21 @@ def get_password(
             data = {k: decode_if_bytes(v) for k, v in cred.__dict__.items()}
             if password:
                 if cred.password:
-                    local_print(decode_if_bytes(cred.password))
+                    local_print_secret(decode_if_bytes(cred.password))
             elif format == "json":
                 js = json.dumps(data)
-                local_print(js)
+                local_print_secret(js)
             elif format == "csv":
                 si = io.StringIO()
                 writer = csv.DictWriter(si, fieldnames=data)
                 writer.writeheader()
                 writer.writerow(data)
-                local_print(si.getvalue().strip())
+                local_print_secret(si.getvalue().strip())
             else:
                 for f, v in data.items():
                     # f: str
                     # v: bytes
-                    local_print(f"{f:20}: {decode_if_bytes(v, '---')}")
+                    local_print_secret(f"{f:20}: {decode_if_bytes(v, '---')}")
 
         try:
             call(app)
