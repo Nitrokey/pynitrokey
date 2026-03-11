@@ -22,7 +22,7 @@ from pynitrokey.cli.nkpk import nkpk
 from pynitrokey.cli.pro import pro
 from pynitrokey.cli.start import start
 from pynitrokey.cli.storage import storage
-from pynitrokey.confconsts import LOG_FN, LOG_FORMAT
+from pynitrokey.confconsts import LOG_FILE, LOG_FN, LOG_FORMAT
 from pynitrokey.helpers import filter_sensitive_parameters, local_critical
 
 logger = logging.getLogger(__name__)
@@ -51,7 +51,7 @@ def check_root() -> None:
 
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
 def nitropy() -> None:
-    handler = logging.FileHandler(filename=LOG_FN, delay=True, encoding="utf-8")
+    handler = logging.StreamHandler(stream=LOG_FILE)
     logging.basicConfig(format=LOG_FORMAT, level=logging.DEBUG, handlers=[handler])
 
     logger.info(f"Timestamp: {datetime.now()}")

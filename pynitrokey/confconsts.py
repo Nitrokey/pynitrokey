@@ -41,9 +41,14 @@ if _env_dbg_lvl:
             f"setting default: {VERBOSE.name} = {VERBOSE.value}"
         )
 
-LOG_FN = tempfile.NamedTemporaryFile(
-    prefix=f"nitropy-{datetime.now().strftime('%Y%m%dT%H%M%S')}-", suffix=".log"
-).name
+LOG_FILE = tempfile.NamedTemporaryFile(
+    prefix=f"nitropy-{datetime.now().strftime('%Y%m%dT%H%M%S')}-",
+    suffix=".log",
+    mode="w",
+    encoding="utf-8",
+    delete=False,
+)
+LOG_FN = LOG_FILE.name
 LOG_FORMAT_STDOUT = "%(asctime)-15s %(levelname)6s %(name)10s %(message)s"
 LOG_FORMAT = "%(relativeCreated)-8d %(levelname)6s %(name)10s %(message)s"
 
