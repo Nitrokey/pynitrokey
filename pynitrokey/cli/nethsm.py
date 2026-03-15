@@ -1254,7 +1254,7 @@ def set_certificate(
 
     This command requires authentication as a user with the Administrator
     role."""
-    (api, key_id) = get_api_or_key_id(api, key_id)
+    api, key_id = get_api_or_key_id(api, key_id)
     with connect(ctx) as nethsm:
         with open(filename, "rb") as f:
             if key_id:
@@ -1283,7 +1283,7 @@ def get_certificate(ctx: Context, api: bool, key_id: Optional[str]) -> None:
     This command requires authentication as a user with the Administrator role.
     The certificate for a key can also be queried by a user with the Operator
     role."""
-    (api, key_id) = get_api_or_key_id(api, key_id)
+    api, key_id = get_api_or_key_id(api, key_id)
     with connect(ctx) as nethsm:
         if key_id:
             cert = nethsm.get_key_certificate(key_id)
@@ -1350,7 +1350,7 @@ def csr(
 
     This command requires authentication as a user with the Administrator
     role."""
-    (api, key_id) = get_api_or_key_id(api, key_id)
+    api, key_id = get_api_or_key_id(api, key_id)
     with connect(ctx) as nethsm:
         if key_id:
             csr = nethsm.key_csr(

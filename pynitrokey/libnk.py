@@ -19,6 +19,7 @@ along with libnitrokey. If not, see <http://www.gnu.org/licenses/>.
 
 SPDX-License-Identifier: LGPL-3.0-only
 """
+
 import os
 import sys
 from enum import IntEnum
