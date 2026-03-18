@@ -687,32 +687,32 @@ try:  # noqa: C901
 
         data = Tlv.parse(data_tmp)
 
-        if algo == "nistp256":
+        if algo in ("nistp256", "nistp384"):
+            scalar_size, hash_algo = {
+                "nistp256": (
+                    32,
+                    cryptography.hazmat.primitives.asymmetric.ec.SECP256R1(),
+                ),
+                "nistp384": (
+                    48,
+                    cryptography.hazmat.primitives.asymmetric.ec.SECP384R1(),
+                ),
+            }[algo]
             key_data = find_by_id(0x86, data)
             if key_data is None:
                 local_critical("Device did not send public key data")
                 return
             key_data = key_data[1:]
-            public_x = int.from_bytes(key_data[:32], byteorder="big", signed=False)
-            public_y = int.from_bytes(key_data[32:], byteorder="big", signed=False)
-            public_numbers_ecc = ec.EllipticCurvePublicNumbers(
-                public_x,
-                public_y,
-                cryptography.hazmat.primitives.asymmetric.ec.SECP256R1(),
+            public_x = int.from_bytes(
+                key_data[:scalar_size], byteorder="big", signed=False
             )
-            public_key_ecc = public_numbers_ecc.public_key()
-        elif algo == "nistp384":
-            key_data = find_by_id(0x86, data)
-            if key_data is None:
-                local_critical("Device did not send public key data")
-                return
-            key_data = key_data[1:]
-            public_x = int.from_bytes(key_data[:48], byteorder="big", signed=False)
-            public_y = int.from_bytes(key_data[48:], byteorder="big", signed=False)
+            public_y = int.from_bytes(
+                key_data[scalar_size:], byteorder="big", signed=False
+            )
             public_numbers_ecc = ec.EllipticCurvePublicNumbers(
                 public_x,
                 public_y,
-                cryptography.hazmat.primitives.asymmetric.ec.SECP384R1(),
+                hash_algo,
             )
             public_key_ecc = public_numbers_ecc.public_key()
         elif algo in ("rsa2048", "rsa3072", "rsa4096"):
@@ -831,29 +831,22 @@ try:  # noqa: C901
             )
             csr_builder = csr_builder.add_extension(crypto_sujbect_alt_name, False)
 
-        if algo == "nistp256":
+        if algo in ("nistp256", "nistp384"):
+            hash_256: Union[hashes.SHA256, hashes.SHA384] = hashes.SHA256()
+            hash_384: Union[hashes.SHA256, hashes.SHA384] = hashes.SHA384()
+            hash: Union[hashes.SHA256, hashes.SHA384]
+            signer_cls, hash = {
+                "nistp256": (P256PivSigner, hash_256),
+                "nistp384": (P384PivSigner, hash_384),
+            }[algo]
             # 9C PIN requires login to be the operation just before
             if key_ref == 0x9C:
                 device.login(pin)
-            csr = csr_builder.sign(
-                P256PivSigner(device, key_ref, public_key_ecc), hashes.SHA256()
-            )
+            csr = csr_builder.sign(signer_cls(device, key_ref, public_key_ecc), hash)
             if key_ref == 0x9C:
                 device.login(pin)
             certificate = certificate_builder.public_key(public_key_ecc).sign(
-                P256PivSigner(device, key_ref, public_key_ecc), hashes.SHA256()
-            )
-        elif algo == "nistp384":
-            # 9C PIN requires login to be the operation just before
-            if key_ref == 0x9C:
-                device.login(pin)
-            csr = csr_builder.sign(
-                P384PivSigner(device, key_ref, public_key_ecc), hashes.SHA384()
-            )
-            if key_ref == 0x9C:
-                device.login(pin)
-            certificate = certificate_builder.public_key(public_key_ecc).sign(
-                P384PivSigner(device, key_ref, public_key_ecc), hashes.SHA384()
+                signer_cls(device, key_ref, public_key_ecc), hash
             )
         elif algo in ("rsa2048", "rsa3072", "rsa4096"):
             if key_ref == 0x9C:
