@@ -658,21 +658,7 @@ try:  # noqa: C901
         else:
             local_critical("Unimplemented algorithm", support_hint=False)
 
-        if algo in ("rsa2048", "rsa3072", "rsa4096"):
-            key_selector = {
-                "rsa2048": b"\x10",
-                "rsa3072": b"\x18",
-                "rsa4096": b"\x20",
-            }[algo]
-        elif algo in ("nistp256", "nistp384"):
-            key_selector = {
-                "nistp256": b"\x01",
-                "nistp384": b"\x01",
-            }[algo]
-        else:
-            local_critical("Unimplemented algorithm", support_hint=False)
-
-        body = Tlv.build([(0xAC, Tlv.build([(0x80, algo_id), (0x81, key_selector)]))])
+        body = Tlv.build([(0xAC, Tlv.build([(0x80, algo_id)]))])
 
         ins = 0x47
         p1 = 0
