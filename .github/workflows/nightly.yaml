@@ -20,7 +20,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       # additional build dependencies on Linux since Python 3.13, see https://github.com/Nitrokey/pynitrokey/issues/610
       - name: Install dependencies
-        if: ${{ matrix.os == 'ubuntu-latest' && !contains(['3.10', '3.11', '3.12'], matrix.python-version) }}
+        if: ${{ matrix.os == 'ubuntu-latest' && !contains(fromJSON('["3.10", "3.11", "3.12"]'), matrix.python-version) }}
         run: sudo apt-get update && sudo apt-get install -y gcc libudev-dev
       - name: Install pynitrokey
         run: pip install pynitrokey
