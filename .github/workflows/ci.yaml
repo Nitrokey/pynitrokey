@@ -118,7 +118,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
       - name: Install python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install required packages

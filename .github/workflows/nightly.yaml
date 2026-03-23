@@ -18,7 +18,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Install Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
       # additional build dependencies on Linux since Python 3.13, see https://github.com/Nitrokey/pynitrokey/issues/610
