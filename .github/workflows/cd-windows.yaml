@@ -62,7 +62,7 @@ jobs:
             dist/nitropy/nitropy.exe nethsm --host nethsmdemo.nitrokey.com state
             dist/nitropy/nitropy.exe list
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: pynitrokey-onedir
           path: dist/nitropy
@@ -95,7 +95,7 @@ jobs:
             dist/nitropy.exe nethsm --host nethsmdemo.nitrokey.com state
             dist/nitropy.exe list
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: pynitrokey-onefile
           path: dist/nitropy.exe
@@ -143,7 +143,7 @@ jobs:
             .\Sources.wixobj `
             -o nitropy.msi
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: nitropy-installer
           path: nitropy.msi
