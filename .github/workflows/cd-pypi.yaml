@@ -21,7 +21,7 @@ jobs:
     container: python:3.10-slim
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Install poetry
         run: pip install "${POETRY_SPEC}"
       - name: Check package version format
@@ -37,7 +37,7 @@ jobs:
     needs: check-package-version
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Install required packages
         run: |
           apt update
@@ -63,7 +63,7 @@ jobs:
       id-token: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -81,7 +81,7 @@ jobs:
     if: github.event_name == 'release'
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Install poetry
         run: pip install "${POETRY_SPEC}"
       - name: Check tag version
@@ -104,7 +104,7 @@ jobs:
       id-token: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:

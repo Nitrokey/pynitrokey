@@ -18,7 +18,7 @@ jobs:
     container: python:3.10-slim
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Install poetry
         run: pip install "${POETRY_SPEC}"
       - name: Check pyproject syntax
@@ -29,7 +29,7 @@ jobs:
     container: python:3.10-slim
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Install required packages
         run: |
           apt update
@@ -46,7 +46,7 @@ jobs:
     container: python:3.10-slim
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Install required packages
         run: |
           apt update
@@ -63,7 +63,7 @@ jobs:
     container: python:3.10-slim
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Install required packages
         run: |
           apt update
@@ -80,7 +80,7 @@ jobs:
     container: python:3.10-slim
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Install required packages
         run: |
           apt update
@@ -97,7 +97,7 @@ jobs:
     container: python:3.10-slim
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Install required packages
         run: |
           apt update
@@ -116,7 +116,7 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Install python
         uses: actions/setup-python@v5
         with:
@@ -149,7 +149,7 @@ jobs:
       UV_RESOLUTION: ${{ matrix.resolution }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Install required packages
         run: apt update && apt install -y make libpcsclite-dev swig gcc libffi-dev
       - name: Install uv
