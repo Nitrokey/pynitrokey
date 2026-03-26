@@ -936,6 +936,12 @@ def generate_key(
         print(f"Key {key_id} generated on NetHSM {nethsm.host}")
 
 
+def _optional_or(s: Optional[str], default: str) -> str:
+    if s is None:
+        return default
+    return s
+
+
 @nethsm.command()
 @click.option("--logging", is_flag=True, help="Query the logging configuration")
 @click.option("--network", is_flag=True, help="Query the network configuration")
@@ -981,6 +987,12 @@ def get_config(
             print("    IP address:   ", network_config.ip_address)
             print("    Netmask:      ", network_config.netmask)
             print("    Gateway:      ", network_config.gateway)
+            ipv6 = "not configured" if network_config.ipv6 is None else ""
+            print("    IPv6:         ", ipv6)
+            if network_config.ipv6 is not None:
+                print("        CIDR:     ", network_config.ipv6.cidr)
+                gateway = _optional_or(network_config.ipv6.gateway, "not configured")
+                print("        Gateway:  ", gateway)
 
         if show_all or time:
             time_config = nethsm.get_config_time()
@@ -1165,16 +1177,30 @@ def set_logging_config(
     help="The new gateway",
     required=True,
 )
+@click.option("--ipv6-cidr")
+@click.option("--ipv6-gateway")
 @click.pass_context
 def set_network_config(
-    ctx: Context, ip_address: str, netmask: str, gateway: str
+    ctx: Context,
+    ip_address: str,
+    netmask: str,
+    gateway: str,
+    ipv6_cidr: Optional[str],
+    ipv6_gateway: Optional[str],
 ) -> None:
     """Set the network configuration of a NetHSM.
 
     This command requires authentication as a user with the Administrator
     role."""
+    ipv6 = None
+    if ipv6_cidr is not None or ipv6_gateway is not None:
+        if ipv6_cidr is None:
+            raise CliException(
+                f"--ipv6-cidr must be set if --ipv6-gateway is set", support_hint=False
+            )
+        ipv6 = nethsm_sdk.Ipv6Config(cidr=ipv6_cidr, gateway=ipv6_gateway)
     with connect(ctx) as nethsm:
-        nethsm.set_network_config(ip_address, netmask, gateway)
+        nethsm.set_network_config(ip_address, netmask, gateway, ipv6=ipv6)
         print(f"Updated the network configuration for NetHSM {nethsm.host}")
 
 
