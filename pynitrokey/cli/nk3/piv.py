@@ -109,7 +109,8 @@ try:  # noqa: C901
             self,
             data: bytes,
             padding: AsymmetricPadding,
-            algorithm: Union[asym_utils.Prehashed, hashes.HashAlgorithm],
+            # cryptography v47 adds NoDigestInfo to the union
+            algorithm: Union[asym_utils.Prehashed, hashes.HashAlgorithm],  # type: ignore[override, unused-ignore]
         ) -> bytes:
             assert not isinstance(algorithm, asym_utils.Prehashed)
             assert isinstance(padding, PKCS1v15)
@@ -133,6 +134,9 @@ try:  # noqa: C901
             raise NotImplementedError()
 
         def __copy__(self) -> "RsaPivSigner":
+            raise NotImplementedError()
+
+        def __deepcopy__(self, memo: dict[Any, Any]) -> "RsaPivSigner":
             raise NotImplementedError()
 
     class P256PivSigner(ec.EllipticCurvePrivateKey):
@@ -186,6 +190,9 @@ try:  # noqa: C901
             return self._device.sign_p256(data, self._key_reference)
 
         def __copy__(self) -> "P256PivSigner":
+            raise NotImplementedError()
+
+        def __deepcopy__(self, memo: dict[Any, Any]) -> "P256PivSigner":
             raise NotImplementedError()
 
     def print_row(values: Iterable[str], widths: Iterable[int]) -> None:
