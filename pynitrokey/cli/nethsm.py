@@ -1356,6 +1356,14 @@ def delete_certificate(ctx: Context, key_id: str) -> None:
 )
 @click.option("--common-name", default="", prompt=True, help="The common name")
 @click.option("--email-address", default="", prompt=True, help="The email address")
+@click.option(
+    "--san",
+    multiple=True,
+    help="The Subject Alternative Name(s) (default: same as common name)",
+)
+@click.option(
+    "--no-san", is_flag=True, help="Omit the Subject Alternative Name extension"
+)
 @click.pass_context
 def csr(
     ctx: Context,
@@ -1368,6 +1376,8 @@ def csr(
     organizational_unit: str,
     common_name: str,
     email_address: str,
+    san: tuple[str],
+    no_san: bool,
 ) -> None:
     """Generate a certificate signing request.
 
@@ -1375,8 +1385,25 @@ def csr(
     example to replace the self-signed initial certificate.  If the --key-id
     option is set, the CSR is generated for a key stored on the NetHSM.
 
+    By default, the certificate contains a Subject Alternative Name (SAN)
+    extension with the common name. If the --no-san option is set, the
+    extension is omitted. If the --san option is set one or more times, the
+    passed values are used instead of the common name.
+
     This command requires authentication as a user with the Administrator
     role."""
+
+    subject_alt_names = None
+    if len(san) > 0:
+        if no_san:
+            raise CliException(
+                "The --san and --no-san options cannot bet used at the same time.",
+                support_hint=False,
+            )
+        subject_alt_names = list(san)
+    if no_san:
+        subject_alt_names = []
+
     api, key_id = get_api_or_key_id(api, key_id)
     with connect(ctx) as nethsm:
         if key_id:
@@ -1389,6 +1416,7 @@ def csr(
                 organizational_unit=organizational_unit,
                 common_name=common_name,
                 email_address=email_address,
+                subject_alt_names=subject_alt_names,
             )
         else:
             csr = nethsm.csr(
@@ -1399,6 +1427,7 @@ def csr(
                 organizational_unit=organizational_unit,
                 common_name=common_name,
                 email_address=email_address,
+                subject_alt_names=subject_alt_names,
             )
         print(csr)
 
