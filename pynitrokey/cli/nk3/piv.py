@@ -248,7 +248,7 @@ try:  # noqa: C901
         def __copy__(self) -> "P384PivSigner":
             raise NotImplementedError()
 
-        def __deepcopy__(self, memo: dict[Any, Any]) -> "RsaPivSigner":
+        def __deepcopy__(self, memo: dict[Any, Any]) -> "P384PivSigner":
             raise NotImplementedError()
 
     def print_row(values: Iterable[str], widths: Iterable[int]) -> None:
