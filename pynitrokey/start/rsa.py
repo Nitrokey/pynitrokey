@@ -39,16 +39,7 @@ def read_key_from_file(file):
     n = int(n_str, 16)
     if n != p * q:
         raise ValueError("wrong key", p, q, n)
-    return (
-        unhexlify(n_str),
-        unhexlify(e_str),
-        unhexlify(p_str),
-        unhexlify(q_str),
-        e,
-        p,
-        q,
-        n,
-    )
+    return (unhexlify(n_str), unhexlify(e_str), unhexlify(p_str), unhexlify(q_str), e, p, q, n)
 
 
 def read_key_from_list(data):
@@ -59,16 +50,7 @@ def read_key_from_list(data):
     n = int(n_str, 16)
     if n != p * q:
         raise ValueError("wrong key", p, q, n)
-    return (
-        unhexlify(n_str),
-        unhexlify(e_str),
-        unhexlify(p_str),
-        unhexlify(q_str),
-        e,
-        p,
-        q,
-        n,
-    )
+    return (unhexlify(n_str), unhexlify(e_str), unhexlify(p_str), unhexlify(q_str), e, p, q, n)
 
 
 # egcd and modinv are from wikibooks
@@ -93,11 +75,7 @@ def modinv(a, m):
 
 def pkcs1_pad_for_sign(digestinfo):
     byte_repr = (
-        b"\x00"
-        + b"\x01"
-        + bytes.ljust(b"", 256 - 19 - 32 - 3, b"\xff")
-        + b"\x00"
-        + digestinfo
+        b"\x00" + b"\x01" + bytes.ljust(b"", 256 - 19 - 32 - 3, b"\xff") + b"\x00" + digestinfo
     )
     return int(hexlify(byte_repr), 16)
 

@@ -85,26 +85,18 @@ class Context(ABC, Generic[Bootloader, Device]):
         return self._select_unique(str(self.model), self.list())
 
     def connect_device(self) -> Device:
-        devices = [
-            device for device in self.list() if isinstance(device, self.device_type)
-        ]
+        devices = [device for device in self.list() if isinstance(device, self.device_type)]
         return self._select_unique(str(self.model), devices)
 
     def await_device(
-        self,
-        retries: Optional[int] = None,
-        callback: Optional[Callable[[int, int], None]] = None,
+        self, retries: Optional[int] = None, callback: Optional[Callable[[int, int], None]] = None
     ) -> Device:
         return self._await(str(self.model), self.device_type, retries, callback)
 
     def await_bootloader(
-        self,
-        retries: Optional[int] = None,
-        callback: Optional[Callable[[int, int], None]] = None,
+        self, retries: Optional[int] = None, callback: Optional[Callable[[int, int], None]] = None
     ) -> Bootloader:
-        return self._await(
-            f"{self.model} bootloader", self.bootloader_type, retries, callback
-        )
+        return self._await(f"{self.model} bootloader", self.bootloader_type, retries, callback)
 
     def _select_unique(self, name: str, devices: Sequence[T]) -> T:
         if len(devices) == 0:
@@ -220,8 +212,7 @@ def fetch_update(
         local_print(f"Successfully downloaded firmware release {update.tag} to {path}")
     except OverwriteError as e:
         raise CliException(
-            f"{e.path} already exists.  Use --force to overwrite the file.",
-            support_hint=False,
+            f"{e.path} already exists.  Use --force to overwrite the file.", support_hint=False
         )
     except Exception as e:
         raise CliException(f"Failed to download firmware update {update.tag}", e)
@@ -262,12 +253,7 @@ def list_config_fields(ctx: Context[Bootloader, Device]) -> None:
 
         table = Table(["config field", "type"])
         for field in fields:
-            table.add_row(
-                [
-                    field.name,
-                    field.ty,
-                ]
-            )
+            table.add_row([field.name, field.ty])
         local_print(table)
 
 
@@ -331,21 +317,14 @@ def set_config(
                 "Changing configuration values can have unexpected side effects, including data loss.",
                 file=sys.stderr,
             )
-            print(
-                "This should only be used for development and testing.",
-                file=sys.stderr,
-            )
+            print("This should only be used for development and testing.", file=sys.stderr)
             if not force:
                 raise CliException(
                     "Unknown config values can only be set if the --force/-f flag is set.  Aborting.",
                     support_hint=False,
                 )
 
-        if (
-            not force
-            and field_metadata is not None
-            and not field_metadata.ty.is_valid(value)
-        ):
+        if not force and field_metadata is not None and not field_metadata.ty.is_valid(value):
             raise CliException(
                 f"Invalid config value for {field}: expected {field_metadata.ty}, got `{value}`. Unknown config values can only be set if the --force/-f flag is set.  Aborting.",
                 support_hint=False,
@@ -364,10 +343,7 @@ def set_config(
                 file=sys.stderr,
             )
         elif field_metadata is not None and field_metadata.destructive:
-            print(
-                "This configuration value may delete data on your device",
-                file=sys.stderr,
-            )
+            print("This configuration value may delete data on your device", file=sys.stderr)
 
         if field_metadata is not None and field_metadata.destructive:
             click.confirm("Do you want to continue anyway?", abort=True)
@@ -377,10 +353,7 @@ def set_config(
             raise click.Abort()
 
         if field_metadata is not None and field_metadata.requires_touch_confirmation:
-            print(
-                "Press the touch button to confirm the configuration change.",
-                file=sys.stderr,
-            )
+            print("Press the touch button to confirm the configuration change.", file=sys.stderr)
 
         device.admin.set_config(key, value)
 
@@ -465,23 +438,15 @@ def provision_fido2(
     cert_pubkey = x509_cert.public_key()
 
     if not isinstance(cert_pubkey, ec.EllipticCurvePublicKey):
-        raise CliException(
-            "The FIDO2 attestation certificate does not contain an EC key"
-        )
+        raise CliException("The FIDO2 attestation certificate does not contain an EC key")
     if ec_pubkey.public_numbers() != cert_pubkey.public_numbers():
-        raise CliException(
-            "The FIDO2 attestation certificate does not match the public key"
-        )
+        raise CliException("The FIDO2 attestation certificate does not match the public key")
 
     # See https://www.w3.org/TR/webauthn-2/#sctn-packed-attestation-cert-requirements
     if x509_cert.version != x509.Version.v3:
-        raise CliException(
-            f"Unexpected certificate version {x509_cert.version} (expected v3)"
-        )
+        raise CliException(f"Unexpected certificate version {x509_cert.version} (expected v3)")
 
-    subject_attrs = {
-        attr.rfc4514_attribute_name: attr.value for attr in x509_cert.subject
-    }
+    subject_attrs = {attr.rfc4514_attribute_name: attr.value for attr in x509_cert.subject}
     for name in ["C", "CN", "O", "OU"]:
         if name not in subject_attrs:
             raise CliException(f"Missing subject {name} in certificate")
@@ -498,9 +463,7 @@ def provision_fido2(
     if not found_aaguid:
         raise CliException("Missing AAGUID extension in certificate")
 
-    basic_constraints = x509_cert.extensions.get_extension_for_class(
-        x509.BasicConstraints
-    )
+    basic_constraints = x509_cert.extensions.get_extension_for_class(x509.BasicConstraints)
     if basic_constraints.value.ca:
         raise CliException("CA must be set to false in the basic constraints")
 
@@ -514,11 +477,7 @@ def provision_fido2(
 
 
 @click.command()
-@click.option(
-    "--bootloader",
-    is_flag=True,
-    help="Reboot the device into bootloader mode",
-)
+@click.option("--bootloader", is_flag=True, help="Reboot the device into bootloader mode")
 @click.pass_obj
 def reboot(ctx: Context[Bootloader, Device], bootloader: bool) -> None:
     """
@@ -549,25 +508,18 @@ def reboot(ctx: Context[Bootloader, Device], bootloader: bool) -> None:
 
 
 def reboot_to_bootloader(device: TrussedDevice) -> bool:
-    local_print(
-        "Please press the touch button to reboot the device into bootloader mode ..."
-    )
+    local_print("Please press the touch button to reboot the device into bootloader mode ...")
     try:
         return device.admin.reboot(BootMode.BOOTROM)
     except TimeoutException:
         raise CliException(
-            "The reboot was not confirmed with the touch button.",
-            support_hint=False,
+            "The reboot was not confirmed with the touch button.", support_hint=False
         )
 
 
 @click.command()
 @click.option(
-    "-l",
-    "--length",
-    "length",
-    default=57,
-    help="The length of the generated data (default: 57)",
+    "-l", "--length", "length", default=57, help="The length of the generated data (default: 57)"
 )
 @click.pass_obj
 def rng(ctx: Context[Bootloader, Device], length: int) -> None:
@@ -622,11 +574,7 @@ def status(ctx: Context[Bootloader, Device]) -> None:
 
 
 @click.command()
-@click.option(
-    "--pin",
-    "pin",
-    help="The FIDO2 PIN of the device (if enabled)",
-)
+@click.option("--pin", "pin", help="The FIDO2 PIN of the device (if enabled)")
 @click.option(
     "--only",
     "only",
@@ -639,16 +587,8 @@ def status(ctx: Context[Bootloader, Device]) -> None:
     default=False,
     help="Run all tests (except those specified with --exclude)",
 )
-@click.option(
-    "--include",
-    "include",
-    help="Also run the specified tests",
-)
-@click.option(
-    "--exclude",
-    "exclude",
-    help="Do not run the specified tests",
-)
+@click.option("--include", "include", help="Also run the specified tests")
+@click.option("--exclude", "exclude", help="Do not run the specified tests")
 @click.option(
     "--list",
     "list_",
@@ -707,22 +647,13 @@ def test(
     results = []
     test_ctx = TestContext(pin=pin)
     for device in devices:
-        results.append(
-            run_tests(
-                test_ctx,
-                device,
-                test_selector,
-                ctx.test_cases,
-            )
-        )
+        results.append(run_tests(test_ctx, device, test_selector, ctx.test_cases))
 
     n = len(devices)
     success = sum(results)
     failure = n - success
     local_print("")
-    local_print(
-        f"Summary: {n} device(s) tested, {success} successful, {failure} failed"
-    )
+    local_print(f"Summary: {n} device(s) tested, {success} successful, {failure} failed")
 
     if failure > 0:
         local_print("")
@@ -731,10 +662,7 @@ def test(
 
 @click.command()
 @click.argument("image", type=click.Path(exists=True, dir_okay=False), required=False)
-@click.option(
-    "--version",
-    help="Set the firmware version to update to (default: latest stable)",
-)
+@click.option("--version", help="Set the firmware version to update to (default: latest stable)")
 @click.option(
     "--ignore-pynitrokey-version",
     default=False,

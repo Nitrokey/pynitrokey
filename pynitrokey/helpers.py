@@ -58,9 +58,7 @@ def filter_sensitive_parameters(parameters: list[str]) -> list[str]:
                        in `pynitrokey.confconsts.CLI_LOG_BLACKLIST`
     """
     parameters = list(
-        chain.from_iterable(
-            [normalize_parameters(parameter) for parameter in parameters]
-        )
+        chain.from_iterable([normalize_parameters(parameter) for parameter in parameters])
     )
 
     redact_count = 0
@@ -294,13 +292,11 @@ def local_print_secret(*messages: Any, **kwargs: Any) -> None:
 def local_critical(
     *messages: Any, support_hint: bool = True, ret_code: int = 1, **kwargs: Any
 ) -> None:
-
     global STDOUT_PRINT
     messages = ("Critical error:",) + tuple(messages)
     local_print(*messages, **kwargs)
 
     if support_hint:
-
         # list all connected devices to logfile
         # @fixme: not the best solution
         STDOUT_PRINT = False
@@ -327,11 +323,7 @@ def local_critical(
             f"- You can report issues at: {SUPPORT_URL}",
             f"- Writing an e-mail to {SUPPORT_EMAIL} is also possible",
             f"- Please attach the log: '{LOG_FN}' with any support/help request!",
-            (
-                f"- Please check if you have udev rules installed: {UDEV_URL}"
-                if linux
-                else "" "-" * 80
-            ),
+            (f"- Please check if you have udev rules installed: {UDEV_URL}" if linux else "-" * 80),
             "",
         )
     sys.exit(ret_code)
@@ -361,7 +353,6 @@ class AskUser:
         hide_input: bool = False,
         envvar: Optional[str] = None,
     ) -> None:
-
         self.data: Optional[str] = None
 
         self.question = question
@@ -404,9 +395,7 @@ class AskUser:
         return cls(what, hide_input=True).ask()
 
     def get_input(
-        self,
-        pre_str: Optional[str] = None,
-        hide_input: Optional[Union[str, bool]] = None,
+        self, pre_str: Optional[str] = None, hide_input: Optional[Union[str, bool]] = None
     ) -> str:
         pre_input_string = pre_str or self.final_question
         hide_input = hide_input if hide_input is not None else self.hide_input
@@ -479,9 +468,7 @@ def check_pynitrokey_version() -> None:
     current_version = Version.parse(version("pynitrokey"))
 
     if current_version < latest_version:
-        local_print(
-            f"You are using an outdated version ({current_version}) of pynitrokey."
-        )
+        local_print(f"You are using an outdated version ({current_version}) of pynitrokey.")
         local_print(f"Latest pynitrokey version is {latest_version}")
         local_print("Updating with an outdated version is discouraged.")
 

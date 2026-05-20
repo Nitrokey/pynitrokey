@@ -65,9 +65,7 @@ def test_case(name: str, description: str) -> Callable[[TestCaseFn], TestCase]:
     return decorator
 
 
-def filter_test_cases(
-    test_cases: Sequence[TestCase], names: Iterable[str]
-) -> Iterable[TestCase]:
+def filter_test_cases(test_cases: Sequence[TestCase], names: Iterable[str]) -> Iterable[TestCase]:
     for test_case in test_cases:
         if test_case.name in names:
             yield test_case
@@ -97,7 +95,7 @@ class TestSelector:
 def log_devices() -> None:
     from fido2.hid import CtapHidDevice
 
-    ctap_devices = [device for device in CtapHidDevice.list_devices()]
+    ctap_devices = list(CtapHidDevice.list_devices())
     logger.info(f"Found {len(ctap_devices)} CTAPHID devices:")
     for device in ctap_devices:
         descriptor = device.descriptor
@@ -110,10 +108,7 @@ def log_system() -> None:
     logger.info(f"uname: {platform.uname()}")
 
 
-def list_tests(
-    selector: TestSelector,
-    test_cases: Sequence[TestCase],
-) -> None:
+def list_tests(selector: TestSelector, test_cases: Sequence[TestCase]) -> None:
     test_cases = selector.select(test_cases)
     print(f"{len(test_cases)} test case(s) selected")
     for test_case in test_cases:
@@ -121,10 +116,7 @@ def list_tests(
 
 
 def run_tests(
-    ctx: TestContext,
-    device: TrussedBase,
-    selector: TestSelector,
-    test_cases: Sequence[TestCase],
+    ctx: TestContext, device: TrussedBase, selector: TestSelector, test_cases: Sequence[TestCase]
 ) -> bool:
     test_cases = selector.select(test_cases)
     if not test_cases:
@@ -171,4 +163,4 @@ def run_tests(
     local_print("")
     local_print(f"{n} tests, {success} successful, {skipped} skipped, {failed} failed")
 
-    return all([result.status != TestStatus.FAILURE for result in results])
+    return all(result.status != TestStatus.FAILURE for result in results)

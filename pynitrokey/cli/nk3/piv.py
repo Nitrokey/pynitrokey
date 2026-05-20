@@ -21,9 +21,7 @@ from pynitrokey.tlv import Tlv
 
 # Pyscard does not have wheels for all targets, leading to installation errors
 # It is therefore made optional
-#
-# C901: `TryExcept` is too complex
-try:  # noqa: C901
+try:
     from pynitrokey.nk3.piv_app import PivApp, find_by_id
 
     default_admin_key = "010203040506070801020304050607080102030405060708"
@@ -93,7 +91,7 @@ try:  # noqa: C901
 
         def __init__(
             self, device: PivApp, key_reference: int, public_key: rsa.RSAPublicKey
-        ):
+        ) -> None:
             self._device = device
             self._key_reference = key_reference
             self._public_key = public_key
@@ -145,18 +143,13 @@ try:  # noqa: C901
         _public_key: ec.EllipticCurvePublicKey
 
         def __init__(
-            self,
-            device: PivApp,
-            key_reference: int,
-            public_key: ec.EllipticCurvePublicKey,
-        ):
+            self, device: PivApp, key_reference: int, public_key: ec.EllipticCurvePublicKey
+        ) -> None:
             self._device = device
             self._key_reference = key_reference
             self._public_key = public_key
 
-        def exchange(
-            self, algorithm: ec.ECDH, peer_public_key: ec.EllipticCurvePublicKey
-        ) -> bytes:
+        def exchange(self, algorithm: ec.ECDH, peer_public_key: ec.EllipticCurvePublicKey) -> bytes:
             raise NotImplementedError()
 
         def public_key(self) -> ec.EllipticCurvePublicKey:
@@ -201,18 +194,13 @@ try:  # noqa: C901
         _public_key: ec.EllipticCurvePublicKey
 
         def __init__(
-            self,
-            device: PivApp,
-            key_reference: int,
-            public_key: ec.EllipticCurvePublicKey,
-        ):
+            self, device: PivApp, key_reference: int, public_key: ec.EllipticCurvePublicKey
+        ) -> None:
             self._device = device
             self._key_reference = key_reference
             self._public_key = public_key
 
-        def exchange(
-            self, algorithm: ec.ECDH, peer_public_key: ec.EllipticCurvePublicKey
-        ) -> bytes:
+        def exchange(self, algorithm: ec.ECDH, peer_public_key: ec.EllipticCurvePublicKey) -> bytes:
             raise NotImplementedError()
 
         def public_key(self) -> ec.EllipticCurvePublicKey:
@@ -252,7 +240,7 @@ try:  # noqa: C901
             raise NotImplementedError()
 
     def print_row(values: Iterable[str], widths: Iterable[int]) -> None:
-        row = [value.ljust(width) for (value, width) in zip(values, widths)]
+        row = [value.ljust(width) for (value, width) in zip(values, widths, strict=True)]
         print(*row, sep="\t")
 
     def print_table(headers: Sequence[str], data: Iterable[Sequence[Any]]) -> None:
@@ -272,12 +260,8 @@ try:  # noqa: C901
             print_row(row, widths)
 
     def import_rsa2048(
-        device: PivApp,
-        key_ref: int,
-        key: rsa.RSAPrivateNumbers,
-        public_key: rsa.RSAPublicNumbers,
+        device: PivApp, key_ref: int, key: rsa.RSAPrivateNumbers, public_key: rsa.RSAPublicNumbers
     ) -> None:
-
         device.send_receive(
             0xFE,
             0x07,
@@ -286,33 +270,16 @@ try:  # noqa: C901
                 [
                     (0x01, key.p.to_bytes(256, "big")),
                     (0x02, key.q.to_bytes(256, "big")),
-                    (
-                        0x03,
-                        public_key.e.to_bytes(
-                            (public_key.e.bit_length() + 7) // 8, "big"
-                        ),
-                    ),
+                    (0x03, public_key.e.to_bytes((public_key.e.bit_length() + 7) // 8, "big")),
                 ]
             ),
         )
 
-    def import_certificate(
-        device: PivApp,
-        key_hex: str,
-        certificate: bytes,
-    ) -> None:
+    def import_certificate(device: PivApp, key_hex: str, certificate: bytes) -> None:
         payload = Tlv.build(
             [
                 (0x5C, bytes(bytearray.fromhex(KEY_TO_CERT_OBJ_ID_MAP[key_hex]))),
-                (
-                    0x53,
-                    Tlv.build(
-                        [
-                            (0x70, certificate),
-                            (0x71, bytes([0])),
-                        ]
-                    ),
-                ),
+                (0x53, Tlv.build([(0x70, certificate), (0x71, bytes([0]))])),
             ]
         )
 
@@ -320,10 +287,7 @@ try:  # noqa: C901
 
     @nk3.group()
     @click.option(
-        "--experimental",
-        default=False,
-        is_flag=True,
-        help="Allow to execute experimental features",
+        "--experimental", default=False, is_flag=True, help="Allow to execute experimental features"
     )
     def piv(experimental: bool) -> None:
         """Nitrokey PIV App"""
@@ -331,38 +295,24 @@ try:  # noqa: C901
         pass
 
     @piv.command(help="Authenticate with the admin key.")
-    @click.argument(
-        "admin-key",
-        type=click.STRING,
-        default=default_admin_key,
-    )
+    @click.argument("admin-key", type=click.STRING, default=default_admin_key)
     def admin_auth(admin_key: str) -> None:
         try:
             admin_key_bytes = bytearray.fromhex(admin_key)
         except ValueError:
-            local_critical(
-                "Key is expected to be an hexadecimal string",
-                support_hint=False,
-            )
+            local_critical("Key is expected to be an hexadecimal string", support_hint=False)
 
         device = PivApp()
         device.authenticate_admin(admin_key_bytes)
         local_print("Authenticated successfully")
 
     @piv.command(help="Initialize the PIV application.")
-    @click.argument(
-        "admin-key",
-        type=click.STRING,
-        default=default_admin_key,
-    )
+    @click.argument("admin-key", type=click.STRING, default=default_admin_key)
     def init(admin_key: str) -> None:
         try:
             admin_key_bytes = bytearray.fromhex(admin_key)
         except ValueError:
-            local_critical(
-                "Key is expected to be an hexadecimal string",
-                support_hint=False,
-            )
+            local_critical("Key is expected to be an hexadecimal string", support_hint=False)
 
         device = PivApp()
         device.authenticate_admin(admin_key_bytes)
@@ -387,19 +337,13 @@ try:  # noqa: C901
         default=default_admin_key,
         help="Current admin key.",
     )
-    @click.argument(
-        "new-admin-key",
-        type=click.STRING,
-    )
+    @click.argument("new-admin-key", type=click.STRING)
     def change_admin_key(current_admin_key: str, new_admin_key: str) -> None:
         try:
             current_admin_key_bytes = bytearray.fromhex(current_admin_key)
             new_admin_key_bytes = bytearray.fromhex(new_admin_key)
         except ValueError:
-            local_critical(
-                "Key is expected to be an hexadecimal string",
-                support_hint=False,
-            )
+            local_critical("Key is expected to be an hexadecimal string", support_hint=False)
 
         device = PivApp()
         device.authenticate_admin(current_admin_key_bytes)
@@ -415,17 +359,12 @@ try:  # noqa: C901
         help="Current PIN.",
     )
     @click.option(
-        "--new-pin",
-        type=click.STRING,
-        prompt="Enter the new PIN",
-        hide_input=True,
-        help="New PIN.",
+        "--new-pin", type=click.STRING, prompt="Enter the new PIN", hide_input=True, help="New PIN."
     )
     def change_pin(current_pin: str, new_pin: str) -> None:
         if len(new_pin) > 8 or len(new_pin) < 6 or not new_pin.isdigit():
             local_critical(
-                "PIV application PIN must consist of 6 to 8 numeric characters",
-                support_hint=False,
+                "PIV application PIN must consist of 6 to 8 numeric characters", support_hint=False
             )
         device = PivApp()
         device.change_pin(current_pin, new_pin)
@@ -440,11 +379,7 @@ try:  # noqa: C901
         help="Current PUK.",
     )
     @click.option(
-        "--new-puk",
-        type=click.STRING,
-        prompt="Enter the new PUK",
-        hide_input=True,
-        help="New PUK.",
+        "--new-puk", type=click.STRING, prompt="Enter the new PUK", hide_input=True, help="New PUK."
     )
     def change_puk(current_puk: str, new_puk: str) -> None:
         device = PivApp()
@@ -453,18 +388,10 @@ try:  # noqa: C901
 
     @piv.command(help="Reset the retry counter.")
     @click.option(
-        "--puk",
-        type=click.STRING,
-        prompt="Enter the PUK",
-        hide_input=True,
-        help="Current PUK.",
+        "--puk", type=click.STRING, prompt="Enter the PUK", hide_input=True, help="Current PUK."
     )
     @click.option(
-        "--new-pin",
-        type=click.STRING,
-        prompt="Enter the new PIN",
-        hide_input=True,
-        help="New PIN.",
+        "--new-pin", type=click.STRING, prompt="Enter the new PIN", hide_input=True, help="New PIN."
     )
     def reset_retry_counter(puk: str, new_pin: str) -> None:
         device = PivApp()
@@ -524,16 +451,10 @@ try:  # noqa: C901
 
     @piv.command(help="Import a key and a certificate from a .p12 file")
     @click.option(
-        "--admin-key",
-        type=click.STRING,
-        default=default_admin_key,
-        help="Current admin key",
+        "--admin-key", type=click.STRING, default=default_admin_key, help="Current admin key"
     )
     @click.option(
-        "--key",
-        type=key_id_click_type,
-        default=default_key_id,
-        help="Key slot for operation.",
+        "--key", type=key_id_click_type, default=default_key_id, help="Key slot for operation."
     )
     @click.option(
         "--path",
@@ -541,18 +462,11 @@ try:  # noqa: C901
         default="-",
         help="Path to the .pem file containing the private key",
     )
-    def import_key(
-        admin_key: str,
-        key: str,
-        path: str,
-    ) -> None:
+    def import_key(admin_key: str, key: str, path: str) -> None:
         try:
             admin_key_bytes = bytearray.fromhex(admin_key)
         except ValueError:
-            local_critical(
-                "Key is expected to be an hexadecimal string",
-                support_hint=False,
-            )
+            local_critical("Key is expected to be an hexadecimal string", support_hint=False)
 
         with open(path, "rb") as key_file:
             private_key, certificate, _ = pkcs12.load_key_and_certificates(
@@ -587,22 +501,15 @@ try:  # noqa: C901
 
     @piv.command(help="Generate a new key and certificate signing request.")
     @click.option(
-        "--admin-key",
-        type=click.STRING,
-        default=default_admin_key,
-        help="Current admin key",
+        "--admin-key", type=click.STRING, default=default_admin_key, help="Current admin key"
     )
     @click.option(
-        "--key",
-        type=key_id_click_type,
-        default=default_key_id,
-        help="Key slot for operation.",
+        "--key", type=key_id_click_type, default=default_key_id, help="Key slot for operation."
     )
     @click.option(
         "--algo",
         type=click.Choice(
-            ["rsa2048", "rsa3072", "rsa4096", "nistp256", "nistp384"],
-            case_sensitive=False,
+            ["rsa2048", "rsa3072", "rsa4096", "nistp256", "nistp384"], case_sensitive=False
         ),
         default="nistp256",
         help="Algorithm for the key.",
@@ -619,11 +526,7 @@ try:  # noqa: C901
         help="Subject alternative name (UPN) for the certificate signing request.",
     )
     @click.option(
-        "--pin",
-        type=click.STRING,
-        prompt="Enter the PIN",
-        hide_input=True,
-        help="Current PIN.",
+        "--pin", type=click.STRING, prompt="Enter the PIN", hide_input=True, help="Current PIN."
     )
     @click.option(
         "--path",
@@ -643,10 +546,7 @@ try:  # noqa: C901
         try:
             admin_key_bytes = bytearray.fromhex(admin_key)
         except ValueError:
-            local_critical(
-                "Key is expected to be an hexadecimal string",
-                support_hint=False,
-            )
+            local_critical("Key is expected to be an hexadecimal string", support_hint=False)
         key_hex = key.upper()
         key_ref = int(key_hex, 16)
 
@@ -685,31 +585,17 @@ try:  # noqa: C901
 
         if algo in ("nistp256", "nistp384"):
             scalar_size, hash_algo = {
-                "nistp256": (
-                    32,
-                    cryptography.hazmat.primitives.asymmetric.ec.SECP256R1(),
-                ),
-                "nistp384": (
-                    48,
-                    cryptography.hazmat.primitives.asymmetric.ec.SECP384R1(),
-                ),
+                "nistp256": (32, cryptography.hazmat.primitives.asymmetric.ec.SECP256R1()),
+                "nistp384": (48, cryptography.hazmat.primitives.asymmetric.ec.SECP384R1()),
             }[algo]
             key_data = find_by_id(0x86, data)
             if key_data is None:
                 local_critical("Device did not send public key data")
                 return
             key_data = key_data[1:]
-            public_x = int.from_bytes(
-                key_data[:scalar_size], byteorder="big", signed=False
-            )
-            public_y = int.from_bytes(
-                key_data[scalar_size:], byteorder="big", signed=False
-            )
-            public_numbers_ecc = ec.EllipticCurvePublicNumbers(
-                public_x,
-                public_y,
-                hash_algo,
-            )
+            public_x = int.from_bytes(key_data[:scalar_size], byteorder="big", signed=False)
+            public_y = int.from_bytes(key_data[scalar_size:], byteorder="big", signed=False)
+            public_numbers_ecc = ec.EllipticCurvePublicNumbers(public_x, public_y, hash_algo)
             public_key_ecc = public_numbers_ecc.public_key()
         elif algo in ("rsa2048", "rsa3072", "rsa4096"):
             modulus_data = find_by_id(0x81, data)
@@ -798,8 +684,7 @@ try:  # noqa: C901
             ),
             (
                 x509.UnrecognizedExtension(
-                    oid=x509.oid.ObjectIdentifier("1.2.840.113549.1.9.15"),
-                    value=smime_extension,
+                    oid=x509.oid.ObjectIdentifier("1.2.840.113549.1.9.15"), value=smime_extension
                 ),
                 False,
             ),
@@ -816,15 +701,11 @@ try:  # noqa: C901
                         x509.ObjectIdentifier("1.3.6.1.4.1.311.20.2.3"),
                         # bytes, because it's different from bytearray, and tlv because
                         # it expects already DER encoded ASN1
-                        bytes(
-                            Tlv.build([(0x0C, subject_alt_name_upn.encode("utf-8"))])
-                        ),
+                        bytes(Tlv.build([(0x0C, subject_alt_name_upn.encode("utf-8"))])),
                     )
                 ]
             )
-            certificate_builder = certificate_builder.add_extension(
-                crypto_sujbect_alt_name, False
-            )
+            certificate_builder = certificate_builder.add_extension(crypto_sujbect_alt_name, False)
             csr_builder = csr_builder.add_extension(crypto_sujbect_alt_name, False)
 
         if algo in ("nistp256", "nistp384"):
@@ -847,9 +728,7 @@ try:  # noqa: C901
         elif algo in ("rsa2048", "rsa3072", "rsa4096"):
             if key_ref == 0x9C:
                 device.login(pin)
-            csr = csr_builder.sign(
-                RsaPivSigner(device, key_ref, public_key_rsa), hashes.SHA256()
-            )
+            csr = csr_builder.sign(RsaPivSigner(device, key_ref, public_key_rsa), hashes.SHA256())
             if key_ref == 0x9C:
                 device.login(pin)
             certificate = certificate_builder.public_key(public_key_rsa).sign(
@@ -864,11 +743,7 @@ try:  # noqa: C901
         import_certificate(device, key_hex, certificate.public_bytes(Encoding.DER))
 
     @piv.command(help="Write a certificate to a key slot.")
-    @click.argument(
-        "admin-key",
-        type=click.STRING,
-        default=default_admin_key,
-    )
+    @click.argument("admin-key", type=click.STRING, default=default_admin_key)
     @click.option(
         "--format",
         type=click.Choice(["DER", "PEM"], case_sensitive=False),
@@ -876,25 +751,16 @@ try:  # noqa: C901
         help="Format of certificate.",
     )
     @click.option(
-        "--key",
-        type=key_id_click_type,
-        default=default_key_id,
-        help="Key slot for operation.",
+        "--key", type=key_id_click_type, default=default_key_id, help="Key slot for operation."
     )
     @click.option(
-        "--path",
-        type=click.Path(allow_dash=True),
-        default="-",
-        help="Write certificate to path.",
+        "--path", type=click.Path(allow_dash=True), default="-", help="Write certificate to path."
     )
     def write_certificate(admin_key: str, format: str, key: str, path: str) -> None:
         try:
             admin_key_bytes: bytes = bytearray.fromhex(admin_key)
         except ValueError:
-            local_critical(
-                "Key is expected to be an hexadecimal string",
-                support_hint=False,
-            )
+            local_critical("Key is expected to be an hexadecimal string", support_hint=False)
 
         device = PivApp()
         device.authenticate_admin(admin_key_bytes)
@@ -926,23 +792,15 @@ try:  # noqa: C901
         help="Format of certificate.",
     )
     @click.option(
-        "--key",
-        type=key_id_click_type,
-        default=default_key_id,
-        help="Key slot for operation.",
+        "--key", type=key_id_click_type, default=default_key_id, help="Key slot for operation."
     )
     @click.option(
-        "--path",
-        type=click.Path(allow_dash=True),
-        default="-",
-        help="Read certificate from path.",
+        "--path", type=click.Path(allow_dash=True), default="-", help="Read certificate from path."
     )
     def read_certificate(format: str, key: str, path: str) -> None:
         device = PivApp()
 
-        value = device.cert(
-            bytes(bytearray.fromhex(KEY_TO_CERT_OBJ_ID_MAP[key.upper()]))
-        )
+        value = device.cert(bytes(bytearray.fromhex(KEY_TO_CERT_OBJ_ID_MAP[key.upper()])))
 
         if value is None:
             print("Certificate not found", file=sys.stderr)
@@ -1015,16 +873,12 @@ try:  # noqa: C901
             public_key_hash = digest.finalize()
             sha1_public_key = public_key_hash.hex()
 
-            local_print(
-                "Set mapping in 'altSecurityIdentities' attribute to one of the following:"
-            )
+            local_print("Set mapping in 'altSecurityIdentities' attribute to one of the following:")
             local_print(
                 f"X509IssuerSerialNumber: X509:<I>{issuer_name_reversed}<SR>{serial_number_reversed}"
             )
             if subject_key_identifier:
-                local_print(
-                    f"               X509SKI: X509:<SKI>{subject_key_identifier}"
-                )
+                local_print(f"               X509SKI: X509:<SKI>{subject_key_identifier}")
             local_print(f"     X509SHA1PublicKey: X509:<SHA1-PUKEY>{sha1_public_key}")
         else:
             local_print("No certificate found.")
@@ -1032,12 +886,7 @@ try:  # noqa: C901
 except ImportError:
     from pynitrokey.cli.nk3.pcsc_absent import PCSC_ABSENT
 
-    @nk3.group(
-        invoke_without_command=True,
-        context_settings=dict(
-            ignore_unknown_options=True,
-        ),
-    )
+    @nk3.group(invoke_without_command=True, context_settings={"ignore_unknown_options": True})
     @click.argument("args", nargs=-1, type=click.UNPROCESSED)
     def piv(args: list[str]) -> None:
         """Nitrokey PIV App"""

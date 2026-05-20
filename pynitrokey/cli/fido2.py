@@ -18,11 +18,7 @@ from fido2.cose import ES256, EdDSA
 from fido2.ctap import CtapError
 from fido2.ctap2.base import Ctap2, Info
 from fido2.ctap2.credman import CredentialManagement
-from fido2.ctap2.extensions import (
-    HMACGetSecretInput,
-    HMACGetSecretOutput,
-    HmacSecretExtension,
-)
+from fido2.ctap2.extensions import HMACGetSecretInput, HMACGetSecretOutput, HmacSecretExtension
 from fido2.ctap2.pin import ClientPin
 from fido2.hid import CtapHidDevice, open_device
 from fido2.webauthn import (
@@ -42,12 +38,7 @@ from fido2.webauthn import (
 
 from pynitrokey.cli.exceptions import CliException
 from pynitrokey.exceptions import NonUniqueDeviceError, NoSoloFoundError
-from pynitrokey.helpers import (
-    AskUser,
-    local_critical,
-    local_print,
-    require_windows_admin,
-)
+from pynitrokey.helpers import AskUser, local_critical, local_print, require_windows_admin
 
 # https://pocoo-click.readthedocs.io/en/latest/commands/#nested-handling-and-contexts
 
@@ -70,7 +61,7 @@ class CliInteraction(UserInteraction):
 
 
 def _device(serial: Optional[str] = None) -> CtapHidDevice:
-    for i in range(5):
+    for _i in range(5):
         devices = []
         if serial is not None:
             if serial.startswith("device="):
@@ -78,9 +69,7 @@ def _device(serial: Optional[str] = None) -> CtapHidDevice:
                 devices = [open_device(serial)]
             else:
                 devices = [
-                    d
-                    for d in CtapHidDevice.list_devices()
-                    if d.descriptor.serial_number == serial
+                    d for d in CtapHidDevice.list_devices() if d.descriptor.serial_number == serial
                 ]
         else:
             devices = list(CtapHidDevice.list_devices())
@@ -112,9 +101,7 @@ def _credential_management(device: CtapHidDevice, pin: str) -> CredentialManagem
         )
     except CtapError as error:
         if error.code == CtapError.ERR.PIN_NOT_SET:
-            local_critical(
-                "Please set a pin in order to manage credentials", support_hint=False
-            )
+            local_critical("Please set a pin in order to manage credentials", support_hint=False)
         if error.code == CtapError.ERR.PIN_AUTH_BLOCKED:
             local_critical(
                 "Pin authentication has been blocked, try reinserting the key or setting a pin if none is set",
@@ -134,10 +121,7 @@ def _credential_management(device: CtapHidDevice, pin: str) -> CredentialManagem
 
 
 def _fido2(
-    device: CtapHidDevice,
-    host: str,
-    hmac_secret: bool = False,
-    pin: Optional[str] = None,
+    device: CtapHidDevice, host: str, hmac_secret: bool = False, pin: Optional[str] = None
 ) -> Fido2Client:
     # TODO: set user_interaction
     origin = f"https://{host}"
@@ -193,9 +177,7 @@ def _make_credential(
     assert att_obj.fmt == "packed"
     verifier = PackedAttestation()
     try:
-        verifier.verify(
-            att_obj.att_stmt, att_obj.auth_data, attestation_response.client_data.hash
-        )
+        verifier.verify(att_obj.att_stmt, att_obj.auth_data, attestation_response.client_data.hash)
     except InvalidSignature:
         raise CliException("Invalid attestation signature in makeCredential")
 
@@ -208,17 +190,13 @@ def _make_credential(
 
 
 def _simple_secret(
-    device: CtapHidDevice,
-    credential_id: str,
-    secret_input: str,
-    host: str,
+    device: CtapHidDevice, credential_id: str, secret_input: str, host: str
 ) -> bytes:
     client = _fido2(device, host, hmac_secret=True)
 
     allow_list = [
         PublicKeyCredentialDescriptor(
-            type=PublicKeyCredentialType.PUBLIC_KEY,
-            id=bytes.fromhex(credential_id),
+            type=PublicKeyCredentialType.PUBLIC_KEY, id=bytes.fromhex(credential_id)
         )
     ]
 
@@ -301,15 +279,11 @@ def list_credentials(serial: str, pin: str) -> None:
     # Use this to get all existing creds
     cred_metadata = cred_manager.get_metadata()
     cred_count = cred_metadata.get(CredentialManagement.RESULT.EXISTING_CRED_COUNT)
-    remaining_cred_space = cred_metadata.get(
-        CredentialManagement.RESULT.MAX_REMAINING_COUNT
-    )
+    remaining_cred_space = cred_metadata.get(CredentialManagement.RESULT.MAX_REMAINING_COUNT)
 
     if cred_count == 0:
         local_print("There are no registered credentials")
-        local_print(
-            f"There is an estimated amount of {remaining_cred_space} credential slots left"
-        )
+        local_print(f"There is an estimated amount of {remaining_cred_space} credential slots left")
         return
 
     # Get amount of registered creds from first key in list (Same trick is used in the CredentialManager)
@@ -319,9 +293,7 @@ def list_credentials(serial: str, pin: str) -> None:
 
     for reliable_party_result in reliable_party_list:
         reliable_party = reliable_party_result.get(CredentialManagement.RESULT.RP)
-        reliable_party_hash = reliable_party_result.get(
-            CredentialManagement.RESULT.RP_ID_HASH
-        )
+        reliable_party_hash = reliable_party_result.get(CredentialManagement.RESULT.RP_ID_HASH)
         assert isinstance(reliable_party, dict)
         local_print("-----------------------------------")
         name_or_id = reliable_party.get("name", reliable_party.get("id", "(no id)"))
@@ -341,9 +313,7 @@ def list_credentials(serial: str, pin: str) -> None:
                 local_print(f"  user: {display_name} ({cred_user['name']})")
 
     local_print("-----------------------------------")
-    local_print(
-        f"There is an estimated amount of {remaining_cred_space} credential slots left"
-    )
+    local_print(f"There is an estimated amount of {remaining_cred_space} credential slots left")
 
 
 @click.command()
@@ -382,9 +352,7 @@ REQUIREMENT_CHOICE = click.Choice(["discouraged", "preferred", "required"])
 
 
 @click.command()
-@click.option(
-    "--host", help="Relying party's host", default="nitrokeys.dev", show_default=True
-)
+@click.option("--host", help="Relying party's host", default="nitrokeys.dev", show_default=True)
 @click.option("--user", help="User ID", default="they", show_default=True)
 @click.option(
     "--resident-key",
@@ -400,9 +368,7 @@ REQUIREMENT_CHOICE = click.Choice(["discouraged", "preferred", "required"])
     default="preferred",
     show_default=True,
 )
-def make_credential(
-    host: str, user: str, resident_key: str, user_verification: str
-) -> None:
+def make_credential(host: str, user: str, resident_key: str, user_verification: str) -> None:
     """Generate a credential."""
 
     # TODO: add flag for hmac-secret
@@ -434,10 +400,7 @@ def make_credential(
 @click.argument("credential-id")
 @click.argument("challenge")
 def challenge_response(
-    serial: Optional[str],
-    host: str,
-    credential_id: str,
-    challenge: str,
+    serial: Optional[str], host: str, credential_id: str, challenge: str
 ) -> None:
     """Uses `hmac-secret` to implement a challenge-response mechanism.
 
@@ -452,12 +415,7 @@ def challenge_response(
     """
 
     device = _device(serial)
-    output = _simple_secret(
-        device,
-        credential_id,
-        challenge,
-        host=host,
-    )
+    output = _simple_secret(device, credential_id, challenge, host=host)
     print(output.hex())
 
 
@@ -505,9 +463,7 @@ def change_pin(serial: Optional[str]) -> None:
 
     if new_pin != confirm_pin:
         local_critical(
-            "new pin does not match confirm-pin",
-            "please try again!",
-            support_hint=False,
+            "new pin does not match confirm-pin", "please try again!", support_hint=False
         )
     try:
         device = _device(serial)
@@ -517,9 +473,7 @@ def change_pin(serial: Optional[str]) -> None:
         local_print("done - please use new pin to verify key")
 
     except Exception as e:
-        local_critical(
-            "failed changing to new pin!", "did you set one already? or is it wrong?", e
-        )
+        local_critical("failed changing to new pin!", "did you set one already? or is it wrong?", e)
 
 
 @click.command()
@@ -537,9 +491,7 @@ def set_pin(serial: Optional[str]) -> None:
     confirm_pin = AskUser.hidden("Please confirm new pin: ")
     if new_pin != confirm_pin:
         local_critical(
-            "new pin does not match confirm-pin",
-            "please try again!",
-            support_hint=False,
+            "new pin does not match confirm-pin", "please try again!", support_hint=False
         )
     # use provided --pin arg
     else:
@@ -582,9 +534,7 @@ def verify(serial: Optional[str], pin: Optional[str]) -> None:
         cause = str(e.cause)
         # error 0x31
         if "PIN_INVALID" in cause:
-            raise CliException(
-                "your key has a different PIN. Please try to remember it :)", e
-            )
+            raise CliException("your key has a different PIN. Please try to remember it :)", e)
 
         # error 0x34 (power cycle helps)
         if "PIN_AUTH_BLOCKED" in cause:

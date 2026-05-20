@@ -57,5 +57,7 @@ def wink(ctx: Context) -> None:
 
 # This import has to be added here to avoid circular dependency
 # Import "secrets" subcommand from the secrets module
-from . import piv  # noqa: F401,E402
-from . import secrets  # noqa: F401,E402
+from . import (  # noqa: E402
+    piv,  # noqa: F401
+    secrets,  # noqa: F401
+)

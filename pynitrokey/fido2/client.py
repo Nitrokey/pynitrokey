@@ -58,11 +58,8 @@ class NKFido2Client:
             pass
 
     def find_device(
-        self,
-        dev: Optional[CtapHidDevice] = None,
-        solo_serial: Optional[str] = None,
+        self, dev: Optional[CtapHidDevice] = None, solo_serial: Optional[str] = None
     ) -> CtapHidDevice:
-
         devices = []
         found_dev: Optional[CtapHidDevice] = None
 
@@ -73,9 +70,7 @@ class NKFido2Client:
                     found_dev = open_device(solo_serial)
                 else:
                     devices = list_ctaphid_devices()
-                    devices = [
-                        d for d in devices if d.descriptor.serial_number == solo_serial
-                    ]
+                    devices = [d for d in devices if d.descriptor.serial_number == solo_serial]
             else:
                 devices = list_ctaphid_devices()
             if len(devices) > 1:
@@ -223,7 +218,7 @@ class NKFido2Client:
             pass
         return False
 
-    def program_file(self, name: str) -> bytes:  # noqa: C901
+    def program_file(self, name: str) -> bytes:
         def parseField(f: str) -> bytes:
             return base64.b64decode(helpers.from_websafe(f).encode())
 

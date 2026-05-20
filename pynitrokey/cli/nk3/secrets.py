@@ -20,13 +20,7 @@ from nitrokey.nk3.secrets_app import (
 )
 
 from pynitrokey.cli.nk3 import Context, nk3
-from pynitrokey.helpers import (
-    AskUser,
-    b32padding,
-    local_critical,
-    local_print,
-    local_print_secret,
-)
+from pynitrokey.helpers import AskUser, b32padding, local_critical, local_print, local_print_secret
 
 
 @nk3.group()
@@ -37,17 +31,17 @@ def secrets(ctx: click.Context) -> None:
     pass
 
 
-def repeat_if_pin_needed(func) -> Callable:  # type: ignore[no-untyped-def, type-arg]
+def repeat_if_pin_needed(func) -> Callable:  # type: ignore[no-untyped-def, type-arg]  # noqa: ANN001
     """
     Repeat the call of the decorated function, if PIN is required.
     Decorated function should have at least one argument,
     of which the first one should be an instance of the SecretsApp. Otherwise, a RuntimeError is raised.
     """
 
-    def wrapper(*args, **kwargs) -> None:  # type: ignore[no-untyped-def]
-        assert len(args) >= 1 and isinstance(
-            args[0], SecretsApp
-        ), "repeat_if_pin_needed: SecretsApp should be passed as an argument to this decorator"
+    def wrapper(*args, **kwargs) -> None:  # type: ignore[no-untyped-def]  # noqa: ANN002, ANN003
+        assert len(args) >= 1 and isinstance(args[0], SecretsApp), (
+            "repeat_if_pin_needed: SecretsApp should be passed as an argument to this decorator"
+        )
         app: SecretsApp = args[0]
 
         repeat_if_pin_needed.cached_PIN = getattr(  # type: ignore[attr-defined]
@@ -56,7 +50,8 @@ def repeat_if_pin_needed(func) -> Callable:  # type: ignore[no-untyped-def, type
         try:
             if app.protocol_v2_confirm_all_requests_with_pin():
                 repeat_if_pin_needed.cached_PIN = authenticate_if_needed(  # type: ignore[attr-defined]
-                    app, repeat_if_pin_needed.cached_PIN  # type: ignore[attr-defined]
+                    app,
+                    repeat_if_pin_needed.cached_PIN,  # type: ignore[attr-defined]
                 )
             func(*args, **kwargs)
         except SecretsAppException as e:
@@ -75,7 +70,8 @@ def repeat_if_pin_needed(func) -> Callable:  # type: ignore[no-untyped-def, type
                 raise
             # Ask for PIN and retry
             repeat_if_pin_needed.cached_PIN = authenticate_if_needed(  # type: ignore[attr-defined]
-                app, repeat_if_pin_needed.cached_PIN  # type: ignore[attr-defined]
+                app,
+                repeat_if_pin_needed.cached_PIN,  # type: ignore[attr-defined]
             )
             func(*args, **kwargs)
 
@@ -84,19 +80,9 @@ def repeat_if_pin_needed(func) -> Callable:  # type: ignore[no-untyped-def, type
 
 @secrets.command()
 @click.pass_obj
-@click.argument(
-    "name",
-    type=click.STRING,
-)
-@click.argument(
-    "new_name",
-    type=click.STRING,
-)
-def rename(
-    ctx: Context,
-    name: str,
-    new_name: str,
-) -> None:
+@click.argument("name", type=click.STRING)
+@click.argument("new_name", type=click.STRING)
+def rename(ctx: Context, name: str, new_name: str) -> None:
     """
     Rename credential.
     """
@@ -106,10 +92,7 @@ def rename(
 
         @repeat_if_pin_needed
         def call(app: SecretsApp) -> None:
-            app.rename_credential(
-                name.encode(),
-                new_name.encode(),
-            )
+            app.rename_credential(name.encode(), new_name.encode())
 
         call(app)
         local_print("Done")
@@ -117,23 +100,10 @@ def rename(
 
 @secrets.command()
 @click.pass_obj
-@click.argument(
-    "name",
-    type=click.STRING,
-)
+@click.argument("name", type=click.STRING)
+@click.option("--login", "login", type=click.STRING, help="Password Safe Login", default=None)
 @click.option(
-    "--login",
-    "login",
-    type=click.STRING,
-    help="Password Safe Login",
-    default=None,
-)
-@click.option(
-    "--password",
-    "password",
-    type=click.STRING,
-    help="Password Safe Password",
-    default=None,
+    "--password", "password", type=click.STRING, help="Password Safe Password", default=None
 )
 @click.option(
     "--metadata",
@@ -185,7 +155,7 @@ _AnyCallable = Callable[..., Any]
 
 
 def with_options(
-    *options: Callable[[_AnyCallable], _AnyCallable]
+    *options: Callable[[_AnyCallable], _AnyCallable],
 ) -> Callable[[_AnyCallable], _AnyCallable]:
     # based on https://stackoverflow.com/a/67138197
     def decorator(f: _AnyCallable) -> _AnyCallable:
@@ -197,14 +167,8 @@ def with_options(
 
 
 add_otp_options = [
-    click.argument(
-        "name",
-        type=click.STRING,
-    ),
-    click.argument(
-        "secret",
-        type=click.STRING,
-    ),
+    click.argument("name", type=click.STRING),
+    click.argument("secret", type=click.STRING),
     click.option(
         "--digits-str",
         "digits_str",
@@ -270,15 +234,7 @@ def register(
     Secret should be base32 encoded.
     """
     add_otp_impl(
-        ctx,
-        name,
-        secret,
-        digits_str,
-        kind,
-        hash,
-        counter_start,
-        touch_button,
-        pin_protection,
+        ctx, name, secret, digits_str, kind, hash, counter_start, touch_button, pin_protection
     )
 
 
@@ -302,15 +258,7 @@ def add_otp(
     Secret should be base32 encoded.
     """
     add_otp_impl(
-        ctx,
-        name,
-        secret,
-        digits_str,
-        kind,
-        hash,
-        counter_start,
-        touch_button,
-        pin_protection,
+        ctx, name, secret, digits_str, kind, hash, counter_start, touch_button, pin_protection
     )
 
 
@@ -356,10 +304,7 @@ def add_otp_impl(
 
 @secrets.command
 @click.pass_obj
-@click.argument(
-    "name",
-    type=click.STRING,
-)
+@click.argument("name", type=click.STRING)
 @click.option(
     "--touch-button",
     "touch_button",
@@ -374,19 +319,9 @@ def add_otp_impl(
     help="This credential should be additionally encrypted with a PIN, which will be required before each use",
     is_flag=True,
 )
+@click.option("--login", "login", type=click.STRING, help="Password Safe Login", default=None)
 @click.option(
-    "--login",
-    "login",
-    type=click.STRING,
-    help="Password Safe Login",
-    default=None,
-)
-@click.option(
-    "--password",
-    "password",
-    type=click.STRING,
-    help="Password Safe Password",
-    default=None,
+    "--password", "password", type=click.STRING, help="Password Safe Password", default=None
 )
 @click.option(
     "--metadata",
@@ -432,14 +367,8 @@ def add_password(
 
 @secrets.command
 @click.pass_obj
-@click.argument(
-    "slot",
-    type=click.Choice(["1", "2"]),
-)
-@click.argument(
-    "secret",
-    type=click.STRING,
-)
+@click.argument("slot", type=click.Choice(["1", "2"]))
+@click.argument("secret", type=click.STRING)
 def add_challenge_response(ctx: Context, slot: str, secret: str) -> None:
     """Register Challenge-Response credential."""
 
@@ -463,9 +392,7 @@ def add_challenge_response(ctx: Context, slot: str, secret: str) -> None:
 
 def abort_if_not_supported(cond: bool, name: str = "") -> None:
     if not cond:
-        message = (
-            f'Feature unsupported by this firmware version{f": {name}" if name else ""}'
-        )
+        message = f"Feature unsupported by this firmware version{f': {name}' if name else ''}"
         local_print(message)
         raise click.Abort()
 
@@ -478,12 +405,7 @@ def ask_to_touch_if_needed() -> None:
 @secrets.command()
 @click.pass_obj
 @click.option(
-    "--hexa",
-    "hexa",
-    type=click.BOOL,
-    help="Use hex representation",
-    default=False,
-    is_flag=True,
+    "--hexa", "hexa", type=click.BOOL, help="Use hex representation", default=False, is_flag=True
 )
 def list(ctx: Context, hexa: bool) -> None:
     """List registered OTP credentials."""
@@ -501,17 +423,14 @@ def list(ctx: Context, hexa: bool) -> None:
 
         credentials_list = sorted(app.list_with_properties(), key=lambda x: x.label)
         for i, credential in enumerate(credentials_list):
-            local_print(f"{i+1:02}. {credential}")
+            local_print(f"{i + 1:02}. {credential}")
         if len(credentials_list) == 0:
             local_print("No credentials found")
 
 
 @secrets.command()
 @click.pass_obj
-@click.argument(
-    "name",
-    type=click.STRING,
-)
+@click.argument("name", type=click.STRING)
 def remove(ctx: Context, name: str) -> None:
     """Remove OTP credential."""
     with ctx.connect_device() as device:
@@ -528,11 +447,7 @@ def remove(ctx: Context, name: str) -> None:
 
 @secrets.command()
 @click.pass_obj
-@click.option(
-    "--force",
-    is_flag=True,
-    help="Do not ask for confirmation",
-)
+@click.option("--force", is_flag=True, help="Do not ask for confirmation")
 def reset(ctx: Context, force: bool) -> None:
     """Remove all OTP credentials from the device."""
     confirmed = force or click.confirm("Do you want to continue?")
@@ -546,10 +461,7 @@ def reset(ctx: Context, force: bool) -> None:
 
 
 get_otp_options = [
-    click.argument(
-        "name",
-        type=click.STRING,
-    ),
+    click.argument("name", type=click.STRING),
     click.option(
         "--timestamp",
         "timestamp",
@@ -570,12 +482,7 @@ get_otp_options = [
 @secrets.command(deprecated="Use 'get-otp' instead.")
 @click.pass_obj
 @with_options(*get_otp_options)
-def get(
-    ctx: Context,
-    name: str,
-    timestamp: int,
-    period: int,
-) -> None:
+def get(ctx: Context, name: str, timestamp: int, period: int) -> None:
     """Generate OTP code from registered credential."""
     get_otp_impl(ctx, name, timestamp, period)
 
@@ -583,22 +490,12 @@ def get(
 @secrets.command()
 @click.pass_obj
 @with_options(*get_otp_options)
-def get_otp(
-    ctx: Context,
-    name: str,
-    timestamp: int,
-    period: int,
-) -> None:
+def get_otp(ctx: Context, name: str, timestamp: int, period: int) -> None:
     """Generate OTP code from registered credential."""
     get_otp_impl(ctx, name, timestamp, period)
 
 
-def get_otp_impl(
-    ctx: Context,
-    name: str,
-    timestamp: int,
-    period: int,
-) -> None:
+def get_otp_impl(ctx: Context, name: str, timestamp: int, period: int) -> None:
     # TODO: for TOTP get the time from a timeserver via NTP, instead of the local clock
 
     from datetime import datetime
@@ -629,26 +526,10 @@ def get_otp_impl(
 
 @secrets.command()
 @click.pass_obj
-@click.argument(
-    "name",
-    type=click.STRING,
-)
-@click.option(
-    "--password",
-    is_flag=True,
-    help="Print password only",
-)
-@click.option(
-    "--format",
-    type=click.Choice(["json", "csv"]),
-    help="Format of the output",
-)
-def get_password(
-    ctx: Context,
-    name: str,
-    password: bool,
-    format: str,
-) -> None:
+@click.argument("name", type=click.STRING)
+@click.option("--password", is_flag=True, help="Print password only")
+@click.option("--format", type=click.Choice(["json", "csv"]), help="Format of the output")
+def get_password(ctx: Context, name: str, password: bool, format: str) -> None:
     """Get Password Safe Entry"""
     with ctx.connect_device() as device:
         app = SecretsApp(device)
@@ -698,14 +579,8 @@ def get_password(
 
 @secrets.command()
 @click.pass_obj
-@click.argument(
-    "name",
-    type=click.STRING,
-)
-@click.argument(
-    "code",
-    type=click.INT,
-)
+@click.argument("name", type=click.STRING)
+@click.argument("code", type=click.INT)
 def verify(ctx: Context, name: str, code: int) -> None:
     """Proceed with the incoming OTP code verification (aka reverse HOTP).
     Use the "register" command to create the credential for this action.
@@ -741,13 +616,9 @@ def ask_for_passphrase_if_needed(app: SecretsApp) -> Optional[str]:
     return passphrase
 
 
-def authenticate_if_needed(
-    app: SecretsApp, passphrase: Optional[str] = None
-) -> Optional[str]:
+def authenticate_if_needed(app: SecretsApp, passphrase: Optional[str] = None) -> Optional[str]:
     try:
-        passphrase = (
-            ask_for_passphrase_if_needed(app) if passphrase is None else passphrase
-        )
+        passphrase = ask_for_passphrase_if_needed(app) if passphrase is None else passphrase
         if passphrase:
             ask_to_touch_if_needed()
             app.verify_pin_raw(passphrase)
@@ -787,9 +658,7 @@ def set_pin(ctx: Context, password: str) -> None:
             app.change_pin_raw(current_password, new_password)
             local_print("Password changed")
         except SecretsAppException as e:
-            local_print(
-                f"Device returns error: {e}. \n" f"The new or current PIN is invalid."
-            )
+            local_print(f"Device returns error: {e}. \nThe new or current PIN is invalid.")
 
 
 @secrets.command()
@@ -807,17 +676,12 @@ def helper_secrets_app_health_check(app: SecretsApp) -> List[str]:
     messages = []
     r = app.select()
     if r.pin_attempt_counter is None:
-        messages.append(
-            "- Application does not have a PIN. Set PIN before the first use."
-        )
+        messages.append("- Application does not have a PIN. Set PIN before the first use.")
     if r.pin_attempt_counter == 0:
         messages.append(
             "- All attempts on the PIN counter are used. Call factory reset to use the PIN feature of the secrets application again."
         )
-    if (
-        app.feature_challenge_response_support()
-        or app.feature_old_application_version()
-    ):
+    if app.feature_challenge_response_support() or app.feature_old_application_version():
         messages.append("- This application version is outdated.")
 
     if messages:

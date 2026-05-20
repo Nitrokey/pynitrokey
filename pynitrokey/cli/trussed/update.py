@@ -44,13 +44,9 @@ class UpdateCli(UpdateUi):
 
     def abort_downgrade(self, current: Version, image: Version) -> Exception:
         self._print_firmware_versions(current, image)
-        return self.abort(
-            "The firmware image is older than the firmware on the device."
-        )
+        return self.abort("The firmware image is older than the firmware on the device.")
 
-    def abort_pynitrokey_version(
-        self, current: Version, required: Version
-    ) -> Exception:
+    def abort_pynitrokey_version(self, current: Version, required: Version) -> Exception:
         return self.abort(
             f"This update requires pynitrokey version {required} (current: {current}). "
             "Please update pynitrokey to install the update."
@@ -60,16 +56,10 @@ class UpdateCli(UpdateUi):
         if self._confirm_continue:
             return
 
-        confirm(
-            f"Do you want to download the firmware version {new}?",
-            default=True,
-            abort=True,
-        )
+        confirm(f"Do you want to download the firmware version {new}?", default=True, abort=True)
 
     def confirm_pynitrokey_version(self, current: Version, required: Version) -> None:
-        local_print(
-            f"This update requires pynitrokey version {required} (current: {current})."
-        )
+        local_print(f"This update requires pynitrokey version {required} (current: {current}).")
         local_print("Using an outdated pynitrokey version is strongly discouraged.")
         if not confirm(
             "Do you want to continue with an outdated pynitrokey version at your own risk?"
@@ -111,9 +101,7 @@ class UpdateCli(UpdateUi):
 
     def request_bootloader_confirmation(self) -> None:
         local_print("")
-        local_print(
-            "Please press the touch button to reboot the device into bootloader mode ..."
-        )
+        local_print("Please press the touch button to reboot the device into bootloader mode ...")
         local_print("")
 
     @contextmanager
@@ -123,9 +111,7 @@ class UpdateCli(UpdateUi):
 
     @contextmanager
     def update_progress_bar(self) -> Iterator[Callable[[int, int], None]]:
-        with ProgressBar(
-            desc="Perform firmware update", unit="B", unit_scale=True
-        ) as bar:
+        with ProgressBar(desc="Perform firmware update", unit="B", unit_scale=True) as bar:
             yield bar.update_sum
 
     @contextmanager
@@ -133,9 +119,7 @@ class UpdateCli(UpdateUi):
         with ProgressBar(desc="Finalize upgrade", unit="%", unit_scale=False) as bar:
             yield bar.update_sum
 
-    def _print_firmware_versions(
-        self, current: Optional[Version], new: Optional[Version]
-    ) -> None:
+    def _print_firmware_versions(self, current: Optional[Version], new: Optional[Version]) -> None:
         if not self._version_printed:
             current_str = str(current) if current else "[unknown]"
             local_print(f"Current firmware version:  {current_str}")

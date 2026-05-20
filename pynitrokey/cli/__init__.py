@@ -35,9 +35,7 @@ def check_root() -> None:
             subcommand = sys.argv[1]
             if subcommand != "nethsm":
                 print()
-                print(
-                    "Please install udev rules and run `nitropy` as regular user (without sudo)."
-                )
+                print("Please install udev rules and run `nitropy` as regular user (without sudo).")
                 print(
                     "We suggest using: https://raw.githubusercontent.com/Nitrokey/libnitrokey/master/data/41-nitrokey.rules"
                 )
@@ -58,14 +56,7 @@ def nitropy() -> None:
     logger.info(f"OS: {platform.uname()}")
     logger.info(f"Python version: {platform.python_version()}")
     logger.info(f"Cli arguments: {filter_sensitive_parameters(sys.argv[1:])}")
-    pymodules = [
-        "pynitrokey",
-        "cryptography",
-        "fido2",
-        "nethsm",
-        "nitrokey",
-        "pyusb",
-    ]
+    pymodules = ["pynitrokey", "cryptography", "fido2", "nethsm", "nitrokey", "pyusb"]
     for x in pymodules:
         try:
             logger.info(f"{x} version: {package_version(x)}")
@@ -73,10 +64,7 @@ def nitropy() -> None:
             logger.warning(f"package {x} not found")
 
     version = package_version("pynitrokey")
-    print(
-        f"Command line tool to interact with Nitrokey devices {version}",
-        file=sys.stderr,
-    )
+    print(f"Command line tool to interact with Nitrokey devices {version}", file=sys.stderr)
 
     check_root()
 

@@ -49,10 +49,6 @@ repository = "https://github.com/Nitrokey/pynitrokey"
 [project.scripts]
 nitropy = "pynitrokey.cli:main"
 
-[tool.isort]
-py_version = "310"
-profile = "black"
-
 [tool.mypy]
 mypy_path = "stubs"
 show_error_codes = true
@@ -89,11 +85,9 @@ python = ">= 3.10, <3.15"
 optional = true
 
 [tool.poetry.group.dev.dependencies]
-black = ">=25, <26"
-flake8 = "*"
 ipython = "*"
-isort = "*"
 mypy = ">=1.4, <1.5"
+ruff = "^0.14"
 types-cffi = ">=1.15, <3"
 types-requests = ">=2.16, <3"
 types-tqdm = ">=4.64, <5"
@@ -118,13 +112,20 @@ markers = [
 ]
 
 [tool.ruff]
-line-length = 120
-exclude = [
-    "venv",
-    "start",
-    "nk3",
-]
-target-version = "py310"
+line-length = 100
+
+[tool.ruff.format]
+skip-magic-trailing-comma = true
+
+[tool.ruff.lint]
+select = ["ANN", "B", "C", "E", "F", "W", "I", "RUF100"]
+ignore = ["ANN401", "B904", "E501"]
+
+[tool.ruff.lint.isort]
+split-on-trailing-comma = false
+
+[tool.ruff.lint.mccabe]
+max-complexity = 30
 
 [tool.uv]
 dev-dependencies = [

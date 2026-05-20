@@ -38,25 +38,19 @@ def start():
 
 
 @click.command()
-@click.option(
-    "--verbose", default=False, is_flag=True, help="Print all available information."
-)
+@click.option("--verbose", default=False, is_flag=True, help="Print all available information.")
 def list(verbose=False):
     """list connected devices"""
     local_print(":: 'Nitrokey Start' keys:")
     for dct in get_devices_strings():
-        local_print(
-            f"{dct['Serial']}: {dct['Vendor']} " f"{dct['Product']} ({dct['Revision']})"
-        )
+        local_print(f"{dct['Serial']}: {dct['Vendor']} {dct['Product']} ({dct['Revision']})")
         if verbose:
             local_print(f"{dct}")
 
 
 @click.command()
 @click.option("--count", default=64, type=int, help="Number of bytes to get.")
-@click.option(
-    "--raw", default=False, is_flag=True, help="Get raw bytes (ASCII by default)."
-)
+@click.option("--raw", default=False, is_flag=True, help="Get raw bytes (ASCII by default).")
 @click.option("--quiet", default=False, is_flag=True, help="Do not show progress bar.")
 def rng(count, raw, quiet):
     """Get random data from device by executing GET CHALLENGE command."""
@@ -90,9 +84,7 @@ def rng(count, raw, quiet):
 @click.command()
 @click.argument("identity")
 @click.option(
-    "--force-restart",
-    is_flag=True,
-    help="Force pcscd and GnuPG services restart once finished",
+    "--force-restart", is_flag=True, help="Force pcscd and GnuPG services restart once finished"
 )
 def set_identity(identity, force_restart):
     """Set given identity (one of: 0, 1, 2)
@@ -141,12 +133,8 @@ def set_identity(identity, force_restart):
 
 
 @click.command()
-@click.option(
-    "--regnual", default=None, callback=validate_regnual, help="path to regnual binary"
-)
-@click.option(
-    "--gnuk", default=None, callback=validate_gnuk, help="path to gnuk binary"
-)
+@click.option("--regnual", default=None, callback=validate_regnual, help="path to regnual binary")
+@click.option("--gnuk", default=None, callback=validate_gnuk, help="path to gnuk binary")
 @click.option(
     "-f",
     "default_password",

@@ -48,15 +48,7 @@ def kdf_calc(pw_string, salt_byte, iterations):
     salt = ffi.new("char []", salt_byte)
     kb = ffi.new("char []", 32)
     r = libgcrypt.gcry_kdf_derive(
-        pw,
-        len(pw_string),
-        GCRY_KDF_ITERSALTED_S2K,
-        GCRY_MD_SHA256,
-        salt,
-        8,
-        iterations,
-        32,
-        kb,
+        pw, len(pw_string), GCRY_KDF_ITERSALTED_S2K, GCRY_MD_SHA256, salt, 8, iterations, 32, kb
     )
     if r != 0:
         raise ValueError("libgcrypt error", r)

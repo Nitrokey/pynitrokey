@@ -72,12 +72,7 @@ def icc_compose(
 
 
 def iso7816_compose(
-    ins: int,
-    p1: int,
-    p2: int,
-    data: bytes = b"",
-    cls: int = 0x00,
-    le: Optional[int] = None,
+    ins: int, p1: int, p2: int, data: bytes = b"", cls: int = 0x00, le: Optional[int] = None
 ) -> bytes:
     data_len = len(data)
     if data_len == 0:
@@ -90,27 +85,18 @@ def iso7816_compose(
             if not le:
                 return pack(">BBBBB", cls, ins, p1, p2, data_len) + data
             else:
-                return (
-                    pack(">BBBBB", cls, ins, p1, p2, data_len) + data + pack(">B", le)
-                )
+                return pack(">BBBBB", cls, ins, p1, p2, data_len) + data + pack(">B", le)
         else:
             if not le:
                 return pack(">BBBBBH", cls, ins, p1, p2, 0, data_len) + data
             else:
-                return (
-                    pack(">BBBBBH", cls, ins, p1, p2, 0, data_len)
-                    + data
-                    + pack(">B", le)
-                )
+                return pack(">BBBBBH", cls, ins, p1, p2, 0, data_len) + data + pack(">B", le)
 
 
 # This class only supports Gnuk (for now)
 class gnuk_token(object):
     def __init__(
-        self,
-        device: usb.Device,
-        configuration: usb.Configuration,
-        interface: usb.Interface,
+        self, device: usb.Device, configuration: usb.Configuration, interface: usb.Interface
     ) -> None:
         """
         __init__(device, configuration, interface) -> None
@@ -225,12 +211,7 @@ class gnuk_token(object):
         if residue != 0:
             self.local_print("# %08x: %d : %d" % (addr, i, residue), verbose)
             self.__devhandle.controlMsg(
-                requestType=0x40,
-                request=1,
-                buffer=data[j * 256 :],
-                value=i,
-                index=0,
-                timeout=10,
+                requestType=0x40, request=1, buffer=data[j * 256 :], value=i, index=0, timeout=10
             )
 
     def execute(self, last_addr):
@@ -358,9 +339,7 @@ class gnuk_token(object):
                     cmd_data0 = iso7816_compose(ins, 0x80 + fileid, 0x00, data[:128])
                     cmd_data1 = None
                 else:
-                    cmd_data0 = iso7816_compose(
-                        ins, 0x80 + fileid, 0x00, data[:128], 0x10
-                    )
+                    cmd_data0 = iso7816_compose(ins, 0x80 + fileid, 0x00, data[:128], 0x10)
                     cmd_data1 = iso7816_compose(ins, 0x80 + fileid, 0x00, data[128:256])
             else:
                 if len(data[256 * count : 256 * count + 128]) < 128:
@@ -634,12 +613,7 @@ class regnual(object):
             if (crc32code ^ r_value) != 0xFFFFFFFF:
                 self.local_print("failure")
             self.__devhandle.controlMsg(
-                requestType=0x40,
-                request=3,
-                buffer=None,
-                value=i,
-                index=0,
-                timeout=10000,
+                requestType=0x40, request=3, buffer=None, value=i, index=0, timeout=10000
             )
             time.sleep(0.010)
             res = self.__devhandle.controlMsg(
@@ -655,12 +629,7 @@ class regnual(object):
         if residue != 0:
             self.local_print("# %08x: %d : %d" % (addr, i, residue), verbose)
             self.__devhandle.controlMsg(
-                requestType=0x40,
-                request=1,
-                buffer=data[j * 256 :],
-                value=0,
-                index=0,
-                timeout=10000,
+                requestType=0x40, request=1, buffer=data[j * 256 :], value=0, index=0, timeout=10000
             )
             crc32code = crc32(data[j * 256 :].ljust(256, b"\xff"))
             res = self.__devhandle.controlMsg(
@@ -670,12 +639,7 @@ class regnual(object):
             if (crc32code ^ r_value) != 0xFFFFFFFF:
                 self.local_print("failure")
             self.__devhandle.controlMsg(
-                requestType=0x40,
-                request=3,
-                buffer=None,
-                value=i,
-                index=0,
-                timeout=10000,
+                requestType=0x40, request=3, buffer=None, value=i, index=0, timeout=10000
             )
             time.sleep(0.010)
             res = self.__devhandle.controlMsg(
@@ -765,13 +729,11 @@ def get_gnuk_device(verbose=True, logger: Optional[logging.Logger] = None):
             if logger:
                 icc.set_logger(logger)
             if logger:
-                logger.debug(
-                    "{} {} {}".format(dev.filename, config.value, intf.interfaceNumber)
-                )
+                logger.debug("{} {} {}".format(dev.filename, config.value, intf.interfaceNumber))
             if verbose:
                 try:
                     d = get_dict_for_device(dev)
-                    print(f'Device: {d["Product"]} {d["Serial"]}')
+                    print(f"Device: {d['Product']} {d['Serial']}")
                 except:
                     print(
                         f'Device: name: "{dev.filename}", c/i: {config.value}/{intf.interfaceNumber}'

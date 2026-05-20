@@ -22,9 +22,7 @@ logger = logging.getLogger("main")
 log = logger.debug
 
 
-def _write_corpus(
-    ins: Instruction, data: bytes, prefix: str = "", path: str = CORPUS_PATH
-):
+def _write_corpus(ins: Instruction, data: bytes, prefix: str = "", path: str = CORPUS_PATH):
     corpus_name = f"{prefix}"
     corpus_path = f"{path}/{corpus_name}"
     if len(data) > 255:
@@ -53,9 +51,9 @@ def pytest_addoption(parser):
 
 @pytest.fixture(scope="session")
 def generate_corpus_args(request: FixtureRequest):
-    return request.config.getoption(
-        "--generate-fuzzing-corpus"
-    ), request.config.getoption("--fuzzing-corpus-path")
+    return request.config.getoption("--generate-fuzzing-corpus"), request.config.getoption(
+        "--fuzzing-corpus-path"
+    )
 
 
 @pytest.fixture(scope="function")
@@ -104,10 +102,7 @@ def secretsAppRaw(corpus_func, dev) -> SecretsApp:
 
 @pytest.fixture(
     scope="function",
-    params=[
-        CredEncryptionType.HardwareBased,
-        CredEncryptionType.PinBased,
-    ],
+    params=[CredEncryptionType.HardwareBased, CredEncryptionType.PinBased],
     ids=lambda x: f"Key{str(x).split('.')[-1]}",
 )
 def secretsApp(request, secretsAppRaw: SecretsApp) -> SecretsApp:

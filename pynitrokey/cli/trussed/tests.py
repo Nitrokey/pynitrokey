@@ -261,17 +261,13 @@ def test_se050(ctx: TestContext, device: TrussedBase) -> TestResult:
 
     que: Queue[Optional[bytes]] = Queue()
 
-    def internal_se050_run(
-        q: Queue[Optional[bytes]],
-    ) -> None:
+    def internal_se050_run(q: Queue[Optional[bytes]]) -> None:
         q.put(device.admin.se050_tests())
 
     t = Thread(target=internal_se050_run, args=[que])
     t.start()
     total = 1200
-    bar = tqdm(
-        desc="Running SE050 test", unit="%", bar_format="{l_bar}{bar}", total=total
-    )
+    bar = tqdm(desc="Running SE050 test", unit="%", bar_format="{l_bar}{bar}", total=total)
     # 2min in increments of 0.1 second
     for i in range(total):
         t.join(0.1)
@@ -281,10 +277,7 @@ def test_se050(ctx: TestContext, device: TrussedBase) -> TestResult:
             break
     else:
         bar.close()
-        return TestResult(
-            TestStatus.FAILURE,
-            "Test timed out after 2min",
-        )
+        return TestResult(TestStatus.FAILURE, "Test timed out after 2min")
 
     bar.close()
     result = que.get()
@@ -292,8 +285,7 @@ def test_se050(ctx: TestContext, device: TrussedBase) -> TestResult:
     # This means  that the device responded with `CommandNotSupported`, so either it is a version that doesn't support this feature or it was disabled at compile time
     if result is None:
         return TestResult(
-            TestStatus.SKIPPED,
-            "Testing SE050 functionality is not supported by the device",
+            TestStatus.SKIPPED, "Testing SE050 functionality is not supported by the device"
         )
 
     if len(result) < 11:
@@ -317,7 +309,7 @@ def test_se050(ctx: TestContext, device: TrussedBase) -> TestResult:
             index = SE050_STEPS[i - 1] if i < max else hex(i)
             return TestResult(
                 TestStatus.FAILURE,
-                f"Failed at {index}, got {result[10+i:].hex()} of {result.hex()}",
+                f"Failed at {index}, got {result[10 + i :].hex()} of {result.hex()}",
             )
     if i != max:
         return TestResult(TestStatus.FAILURE, f"Got to {i}, expected {max}")
@@ -334,17 +326,14 @@ def test_fido2(ctx: TestContext, device: TrussedBase) -> TestResult:
     from fido2.client import DefaultClientDataCollector, Fido2Client
 
     client_data_collector = DefaultClientDataCollector(origin="https://example.com")
-    fido2_client = Fido2Client(
-        device=device.device, client_data_collector=client_data_collector
-    )
+    fido2_client = Fido2Client(device=device.device, client_data_collector=client_data_collector)
     options = fido2_client.info.options
     has_pin = options["clientPin"]
     uv_required = not options.get("makeCredUvNotRqd", False)
 
     if has_pin and uv_required and not ctx.pin:
         return TestResult(
-            TestStatus.FAILURE,
-            "FIDO2 pin is set, but not provided (use the --pin argument)",
+            TestStatus.FAILURE, "FIDO2 pin is set, but not provided (use the --pin argument)"
         )
 
     # Based on https://github.com/Yubico/python-fido2/blob/142587b3e698ca0e253c78d75758fda635cac51a/examples/credential.py
@@ -362,14 +351,10 @@ def test_fido2(ctx: TestContext, device: TrussedBase) -> TestResult:
         UserVerificationRequirement,
     )
 
-    def verify_attestation(
-        attestation_object: AttestationObject, client_data_hash: bytes
-    ) -> None:
+    def verify_attestation(attestation_object: AttestationObject, client_data_hash: bytes) -> None:
         verifier = PackedAttestation()
         assert attestation_object.fmt == verifier.FORMAT
-        verifier.verify(
-            attestation_object.att_stmt, attestation_object.auth_data, client_data_hash
-        )
+        verifier.verify(attestation_object.att_stmt, attestation_object.auth_data, client_data_hash)
 
     class NoInteraction(UserInteraction):
         def __init__(self, pin: Optional[str]) -> None:
@@ -410,10 +395,7 @@ def test_fido2(ctx: TestContext, device: TrussedBase) -> TestResult:
     try:
         make_credential_result = client.make_credential(create_options["publicKey"])
     except PinRequiredError:
-        return TestResult(
-            TestStatus.FAILURE,
-            "PIN activated -- please set the --pin option",
-        )
+        return TestResult(TestStatus.FAILURE, "PIN activated -- please set the --pin option")
     cert = make_credential_result.response.attestation_object.att_stmt["x5c"]
     cert_hash = sha256(cert[0]).digest().hex()
 
@@ -427,28 +409,19 @@ def test_fido2(ctx: TestContext, device: TrussedBase) -> TestResult:
             )
 
     try:
-        auth_data = server.register_complete(
-            state,
-            response=make_credential_result,
-        )
+        auth_data = server.register_complete(state, response=make_credential_result)
     except InvalidSignature:
         return TestResult(TestStatus.FAILURE, "Invalid attestation signature")
     if not auth_data.credential_data:
         return TestResult(TestStatus.FAILURE, "Missing credential data in auth data")
     credentials = [auth_data.credential_data]
 
-    request_options, state = server.authenticate_begin(
-        credentials, user_verification=uv
-    )
+    request_options, state = server.authenticate_begin(credentials, user_verification=uv)
 
     local_print("Please press the touch button on the device ...")
     get_assertion_result = client.get_assertion(request_options["publicKey"])
     get_assertion_response = get_assertion_result.get_response(0)
 
-    server.authenticate_complete(
-        state,
-        credentials,
-        response=get_assertion_response,
-    )
+    server.authenticate_complete(state, credentials, response=get_assertion_response)
 
     return TestResult(TestStatus.SUCCESS)

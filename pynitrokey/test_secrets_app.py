@@ -145,16 +145,7 @@ def test_list_changes(secretsAppResetLogin):
         "002EF43F51AFA97BA2B46418768123C9E1809A5B" * 2,
     ],
 )
-@pytest.mark.parametrize(
-    "start_counter",
-    [
-        0,
-        0xFF + 1,
-        0xFFFF + 1,
-        0xFFFFFF + 1,
-        0xFFFFFFFF - 10,
-    ],
-)
+@pytest.mark.parametrize("start_counter", [0, 0xFF + 1, 0xFFFF + 1, 0xFFFFFF + 1, 0xFFFFFFFF - 10])
 def test_calculated_codes_hotp(secretsAppResetLogin, secret, start_counter):
     """
     Test HOTP codes against another OTP library.
@@ -256,9 +247,7 @@ def test_reverse_hotp_vectors(secretsAppResetLogin):
     codes = [x.split()[-1].encode() for x in test_vectors.splitlines()[2:]]
 
     secretsApp = secretsAppResetLogin
-    secretsApp.register(
-        CREDID, secretb, digits=6, kind=Kind.HotpReverse, algo=Algorithm.Sha1
-    )
+    secretsApp.register(CREDID, secretb, digits=6, kind=Kind.HotpReverse, algo=Algorithm.Sha1)
     for i in range(10):
         c = int(codes[i])
         secretsApp.verify_pin_raw(PIN)
@@ -276,9 +265,7 @@ def test_reverse_hotp_failure(secretsAppRaw):
 
     secretsApp = secretsAppRaw
     secretsApp.reset()
-    secretsApp.register(
-        CREDID, secretb, digits=6, kind=Kind.HotpReverse, algo=Algorithm.Sha1
-    )
+    secretsApp.register(CREDID, secretb, digits=6, kind=Kind.HotpReverse, algo=Algorithm.Sha1)
     # Make sure the obligatory delay has passed in case the previous test has triggered it
     helper_wait_after_failed_hotp_verification_request()
     for i in range(3):
@@ -316,13 +303,9 @@ def helper_wait_after_failed_hotp_verification_request():
         helper_wait(DELAY_AFTER_FAILED_REQUEST_SECONDS)
 
 
+@pytest.mark.parametrize("start_value", [0, 0xFFFF, 0xFFFFFFFF - HOTP_WINDOW_SIZE - 2])
 @pytest.mark.parametrize(
-    "start_value",
-    [0, 0xFFFF, 0xFFFFFFFF - HOTP_WINDOW_SIZE - 2],
-)
-@pytest.mark.parametrize(
-    "offset",
-    [0, 1, HOTP_WINDOW_SIZE - 1, HOTP_WINDOW_SIZE, HOTP_WINDOW_SIZE + 1],
+    "offset", [0, 1, HOTP_WINDOW_SIZE - 1, HOTP_WINDOW_SIZE, HOTP_WINDOW_SIZE + 1]
 )
 def test_reverse_hotp_window(secretsAppResetLogin, offset, start_value):
     """
@@ -367,13 +350,11 @@ def test_reverse_hotp_window(secretsAppResetLogin, offset, start_value):
         assert secretsApp.verify_code(CREDID, code_to_send)
         # the same code should not be accepted again, unless counted got saturated
         is_counter_saturated = (
-            start_value == (0xFFFFFFFF - HOTP_WINDOW_SIZE)
-            and offset == HOTP_WINDOW_SIZE
+            start_value == (0xFFFFFFFF - HOTP_WINDOW_SIZE) and offset == HOTP_WINDOW_SIZE
         )
         if not is_counter_saturated:
             with pytest.raises(
-                SecretsAppException,
-                match="UnspecifiedPersistentExecutionError|VerificationFailed",
+                SecretsAppException, match="UnspecifiedPersistentExecutionError|VerificationFailed"
             ):
                 secretsAppResetLogin.verify_pin_raw(PIN)
                 # send the same code once again - should be rejected
@@ -395,10 +376,7 @@ def test_reverse_hotp_window(secretsAppResetLogin, offset, start_value):
                 helper_wait_after_failed_hotp_verification_request()
 
 
-@pytest.mark.parametrize(
-    "digits",
-    [6, 8],
-)
+@pytest.mark.parametrize("digits", [6, 8])
 @pytest.mark.parametrize(
     "algorithm",
     [
@@ -409,14 +387,9 @@ def test_reverse_hotp_window(secretsAppResetLogin, offset, start_value):
 )
 @pytest.mark.parametrize(
     "secret",
-    [
-        "3132333435363738393031323334353637383930",
-        "002EF43F51AFA97BA2B46418768123C9E1809A5B" * 2,
-    ],
+    ["3132333435363738393031323334353637383930", "002EF43F51AFA97BA2B46418768123C9E1809A5B" * 2],
 )
-def test_calculated_codes_totp_hash_digits(
-    secretsAppResetLogin, secret, algorithm, digits
-):
+def test_calculated_codes_totp_hash_digits(secretsAppResetLogin, secret, algorithm, digits):
     """
     Test TOTP codes against another OTP library, with different hash algorithms and digits count.
     Test vector secret, and a random 40 bytes value.
@@ -435,21 +408,9 @@ def test_calculated_codes_totp_hash_digits(
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize(
-    "long_labels",
-    ["short_labels", "long_labels"],
-)
-@pytest.mark.parametrize(
-    "kind",
-    [Kind.Totp, Kind.Hotp],
-)
-@pytest.mark.parametrize(
-    "count",
-    [
-        30,
-        pytest.param(1000, marks=pytest.mark.slow),
-    ],
-)
+@pytest.mark.parametrize("long_labels", ["short_labels", "long_labels"])
+@pytest.mark.parametrize("kind", [Kind.Totp, Kind.Hotp])
+@pytest.mark.parametrize("count", [30, pytest.param(1000, marks=pytest.mark.slow)])
 def test_load(secretsAppResetLogin, kind: Kind, long_labels: str, count):
     """
     Load tests to see how much OTP credentials we can store,
@@ -489,9 +450,9 @@ def test_load(secretsAppResetLogin, kind: Kind, long_labels: str, count):
             break
         i += 1
 
-    assert (
-        credentials_registered > 30
-    ), "Expecting being able to register at least 30 OTP credentials"
+    assert credentials_registered > 30, (
+        "Expecting being able to register at least 30 OTP credentials"
+    )
 
     secretsApp.verify_pin_raw(PIN)
     l = secretsApp.list()
@@ -537,15 +498,11 @@ def test_remove_all_credentials_by_hand(secretsAppRaw):
     all_registered = sorted([*cred_no_pbek, *cred_pbek])
 
     for c in cred_no_pbek:
-        secretsApp.register(
-            c, SECRET, DIGITS, pin_based_encryption=False, kind=Kind.Hotp
-        )
+        secretsApp.register(c, SECRET, DIGITS, pin_based_encryption=False, kind=Kind.Hotp)
 
     for c in cred_pbek:
         secretsApp.verify_pin_raw(PIN)
-        secretsApp.register(
-            c, SECRET, DIGITS, pin_based_encryption=True, kind=Kind.Hotp
-        )
+        secretsApp.register(c, SECRET, DIGITS, pin_based_encryption=True, kind=Kind.Hotp)
 
     secretsApp.verify_pin_raw(PIN)
     credential_list = secretsApp.list()
@@ -595,12 +552,9 @@ def test_send_rubbish(secretsAppRaw):
         }
     ):
         with pytest.raises(
-            Exception,
-            match="CTAP error|IncorrectDataParameter|InstructionNotSupportedOrInvalid",
+            Exception, match="CTAP error|IncorrectDataParameter|InstructionNotSupportedOrInvalid"
         ):
-            structure = [
-                RawBytes([0x02, 0x02]),
-            ]
+            structure = [RawBytes([0x02, 0x02])]
             secretsApp._send_receive(ins, structure)
     secretsApp.list()
 
@@ -616,9 +570,7 @@ def test_too_long_message(secretsAppResetLogin):
 
     too_long_name = b"a" * 253
     with pytest.raises(SecretsAppException, match="IncorrectDataParameter"):
-        structure = [
-            tlv8.Entry(Tag.CredentialId.value, too_long_name),
-        ]
+        structure = [tlv8.Entry(Tag.CredentialId.value, too_long_name)]
         secretsApp._send_receive(Instruction.Put, structure)
     secretsApp.verify_pin_raw(PIN)
     secretsApp.list()
@@ -637,9 +589,7 @@ def test_too_long_message2(secretsAppRaw):
     too_long_name = b"a" * 256
     additional_space = 100
     max_label_length = len(SECRET) + additional_space
-    secretsApp.register(
-        too_long_name[:-max_label_length], SECRET, DIGITS, kind=Kind.Hotp
-    )
+    secretsApp.register(too_long_name[:-max_label_length], SECRET, DIGITS, kind=Kind.Hotp)
 
     # Find out experimentally the maximum accepted secret length - 126 bytes
     # Use minimal label length
@@ -655,9 +605,7 @@ def test_too_long_message2(secretsAppRaw):
         except Exception:
             break
     assert i >= 40, "Maximum secret length should be at least 320 bits"
-    assert len(list(set(codes))) == len(
-        codes
-    ), "All returned OTP codes should be unique"
+    assert len(list(set(codes))) == len(codes), "All returned OTP codes should be unique"
 
 
 def test_status(secretsApp):
@@ -668,8 +616,7 @@ def test_status(secretsApp):
 
 
 @pytest.mark.skipif(
-    not FEATURE_CHALLENGE_RESPONSE_ENABLED,
-    reason="Challenge-Response feature should be activated",
+    not FEATURE_CHALLENGE_RESPONSE_ENABLED, reason="Challenge-Response feature should be activated"
 )
 def test_set_code(secretsApp):
     """
@@ -693,16 +640,9 @@ def test_set_code(secretsApp):
     assert state.algorithm is not None
 
 
-@pytest.mark.parametrize(
-    "remove_password_with",
-    [
-        Instruction.Reset,
-        Instruction.SetCode,
-    ],
-)
+@pytest.mark.parametrize("remove_password_with", [Instruction.Reset, Instruction.SetCode])
 @pytest.mark.skipif(
-    not FEATURE_CHALLENGE_RESPONSE_ENABLED,
-    reason="Challenge-Response feature should be activated",
+    not FEATURE_CHALLENGE_RESPONSE_ENABLED, reason="Challenge-Response feature should be activated"
 )
 def test_set_code_and_validate(secretsAppRaw, remove_password_with: Instruction):
     """
@@ -752,9 +692,7 @@ def test_set_code_and_validate(secretsAppRaw, remove_password_with: Instruction)
     # Each guarded command has to prepended by the validation call
     # Run "list" command, with validation first
     state = secretsApp.select()
-    response_validate = hmac.HMAC(
-        key=SECRET, msg=state.challenge, digestmod="sha1"
-    ).digest()
+    response_validate = hmac.HMAC(key=SECRET, msg=state.challenge, digestmod="sha1").digest()
     secretsApp.validate_raw(challenge=state.challenge, response=response_validate)
     secretsApp.list()
 
@@ -764,9 +702,7 @@ def test_set_code_and_validate(secretsAppRaw, remove_password_with: Instruction)
 
     # Test running "list" command again
     state = secretsApp.select()
-    response_validate = hmac.HMAC(
-        key=SECRET, msg=state.challenge, digestmod="sha1"
-    ).digest()
+    response_validate = hmac.HMAC(key=SECRET, msg=state.challenge, digestmod="sha1").digest()
     secretsApp.validate_raw(challenge=state.challenge, response=response_validate)
     secretsApp.list()
 
@@ -779,9 +715,7 @@ def test_set_code_and_validate(secretsAppRaw, remove_password_with: Instruction)
             secretsApp.clear_code()
 
         state = secretsApp.select()
-        response_validate = hmac.HMAC(
-            key=SECRET, msg=state.challenge, digestmod="sha1"
-        ).digest()
+        response_validate = hmac.HMAC(key=SECRET, msg=state.challenge, digestmod="sha1").digest()
         secretsApp.validate_raw(challenge=state.challenge, response=response_validate)
         secretsApp.clear_code()
     else:
@@ -800,9 +734,7 @@ def test_revhotp_bruteforce(secretsAppNoLog):
     """
     secretsApp = secretsAppNoLog
     secretsApp.reset()
-    secretsApp.register(
-        CREDID, SECRET, digits=6, kind=Kind.HotpReverse, algo=Algorithm.Sha1
-    )
+    secretsApp.register(CREDID, SECRET, digits=6, kind=Kind.HotpReverse, algo=Algorithm.Sha1)
     start_time = time.time()
     code_start = 1_000_000
 
@@ -813,9 +745,7 @@ def test_revhotp_bruteforce(secretsAppNoLog):
         try:
             secretsApp.verify_code(CREDID, current_code)
             stop_time = time.time()
-            tqdm.write(
-                f"Found code {current_code} after {stop_time - start_time} seconds"
-            )
+            tqdm.write(f"Found code {current_code} after {stop_time - start_time} seconds")
             break
         except KeyboardInterrupt:
             break
@@ -839,9 +769,7 @@ def test_revhotp_delay_on_failure(secretsAppRaw):
     intentionally_wrong_code = 123123
 
     secretsApp.reset()
-    secretsApp.register(
-        CREDID, SECRET, digits=6, kind=Kind.HotpReverse, algo=Algorithm.Sha1
-    )
+    secretsApp.register(CREDID, SECRET, digits=6, kind=Kind.HotpReverse, algo=Algorithm.Sha1)
     start_time = time.time()
     stop_time = start_time + DELAY_AFTER_FAILED_REQUEST_SECONDS
     with pytest.raises(SecretsAppException, match="VerificationFailed"):
@@ -913,9 +841,7 @@ def test_change_pin_data_dont_change(secretsAppResetLogin):
     def helper_test_calculated_codes_totp(secretsApp, secret: str, PIN: str):
         """Test TOTP codes against another OTP library."""
         oath = pytest.importorskip("oath")
-        lib_at = lambda t: oath.totp(
-            secret, format="dec6", period=30, t=t * 30
-        ).encode()
+        lib_at = lambda t: oath.totp(secret, format="dec6", period=30, t=t * 30).encode()
         for i in range(10):
             # Use non-modified verify_pin_raw_always call to always verify PIN, regardless of the fixture type
             secretsApp.verify_pin_raw_always(PIN)
@@ -982,20 +908,13 @@ def test_use_up_pin_counter(secretsAppRaw):
 
     for i, c in enumerate(cred_no_pbek):
         secretsApp.register(
-            c,
-            SECRET,
-            DIGITS,
-            initial_counter_value=i,
-            pin_based_encryption=False,
-            kind=Kind.Hotp,
+            c, SECRET, DIGITS, initial_counter_value=i, pin_based_encryption=False, kind=Kind.Hotp
         )
     assert sorted(secretsApp.list()) == cred_no_pbek
 
     for c in cred_pbek:
         secretsApp.verify_pin_raw(PIN)
-        secretsApp.register(
-            c, SECRET, DIGITS, pin_based_encryption=True, kind=Kind.Totp
-        )
+        secretsApp.register(c, SECRET, DIGITS, pin_based_encryption=True, kind=Kind.Totp)
     assert sorted(secretsApp.list()) == cred_no_pbek
 
     # Use all PIN counter attempts
@@ -1048,17 +967,13 @@ def test_list_pin_no_pin(secretsAppRaw):
     cred_pbek = [f"CredPBEK{i}".encode() for i in range(1, 5)]
 
     for c in cred_no_pbek:
-        secretsApp.register(
-            c, SECRET, DIGITS, pin_based_encryption=False, kind=Kind.Hotp
-        )
+        secretsApp.register(c, SECRET, DIGITS, pin_based_encryption=False, kind=Kind.Hotp)
 
     assert sorted(secretsApp.list()) == cred_no_pbek
 
     for c in cred_pbek:
         secretsApp.verify_pin_raw(PIN)
-        secretsApp.register(
-            c, SECRET, DIGITS, pin_based_encryption=True, kind=Kind.Hotp
-        )
+        secretsApp.register(c, SECRET, DIGITS, pin_based_encryption=True, kind=Kind.Hotp)
 
     # 2. Credential list should show only non-PIN-encrypted credentials, when unauthorized
     assert sorted(secretsApp.list()) == cred_no_pbek
@@ -1087,10 +1002,7 @@ def test_check_commands_access(secretsAppRaw):
     # Not tested with challenge-response enabled
     assert not FEATURE_CHALLENGE_RESPONSE_ENABLED
 
-    for ins in set(Instruction) - {
-        Instruction.CalculateAll,
-        *CHALLENGE_RESPONSE_COMMANDS,
-    }:
+    for ins in set(Instruction) - {Instruction.CalculateAll, *CHALLENGE_RESPONSE_COMMANDS}:
         structure = [RawBytes([0x02] * 10)]
         if ins not in [Instruction.Reset, Instruction.List, Instruction.SendRemaining]:
             # Check if we get parsing error from these
@@ -1098,9 +1010,7 @@ def test_check_commands_access(secretsAppRaw):
                 secretsAppRaw._send_receive(ins, structure)
         elif ins == Instruction.SendRemaining:
             # This one should not be allowed without data awaiting
-            with pytest.raises(
-                SecretsAppException, match="ConditionsOfUseNotSatisfied"
-            ):
+            with pytest.raises(SecretsAppException, match="ConditionsOfUseNotSatisfied"):
                 secretsAppRaw._send_receive(ins, structure)
         else:
             # These commands do not expect arguments, so there is no parsing error
@@ -1113,16 +1023,12 @@ def test_register_pin_encrypted_without_auth(secretsAppRaw):
     """
     secretsAppRaw.reset()
     with pytest.raises(SecretsAppException, match="SecurityStatusNotSatisfied"):
-        secretsAppRaw.register(
-            CREDID, SECRET, DIGITS, pin_based_encryption=True, kind=Kind.Hotp
-        )
+        secretsAppRaw.register(CREDID, SECRET, DIGITS, pin_based_encryption=True, kind=Kind.Hotp)
     assert not secretsAppRaw.list()
 
     secretsAppRaw.set_pin_raw(PIN)
     secretsAppRaw.verify_pin_raw(PIN)
-    secretsAppRaw.register(
-        CREDID, SECRET, DIGITS, pin_based_encryption=True, kind=Kind.Hotp
-    )
+    secretsAppRaw.register(CREDID, SECRET, DIGITS, pin_based_encryption=True, kind=Kind.Hotp)
     secretsAppRaw.verify_pin_raw(PIN)
     assert secretsAppRaw.list()
 
@@ -1133,31 +1039,23 @@ def test_pin_operations_do_not_authenticate(secretsAppRaw):
     """
     secretsAppRaw.reset()
     with pytest.raises(SecretsAppException, match="SecurityStatusNotSatisfied"):
-        secretsAppRaw.register(
-            CREDID, SECRET, DIGITS, pin_based_encryption=True, kind=Kind.Hotp
-        )
+        secretsAppRaw.register(CREDID, SECRET, DIGITS, pin_based_encryption=True, kind=Kind.Hotp)
     assert not secretsAppRaw.list()
 
     secretsAppRaw.set_pin_raw(PIN)
     with pytest.raises(SecretsAppException, match="SecurityStatusNotSatisfied"):
-        secretsAppRaw.register(
-            CREDID, SECRET, DIGITS, pin_based_encryption=True, kind=Kind.Hotp
-        )
+        secretsAppRaw.register(CREDID, SECRET, DIGITS, pin_based_encryption=True, kind=Kind.Hotp)
     assert not secretsAppRaw.list()
 
     secretsAppRaw.change_pin_raw(PIN, PIN2)
     with pytest.raises(SecretsAppException, match="SecurityStatusNotSatisfied"):
-        secretsAppRaw.register(
-            CREDID, SECRET, DIGITS, pin_based_encryption=True, kind=Kind.Hotp
-        )
+        secretsAppRaw.register(CREDID, SECRET, DIGITS, pin_based_encryption=True, kind=Kind.Hotp)
     assert not secretsAppRaw.list()
     secretsAppRaw.verify_pin_raw(PIN2)
     assert not secretsAppRaw.list()
 
     secretsAppRaw.verify_pin_raw(PIN2)
-    secretsAppRaw.register(
-        CREDID, SECRET, DIGITS, pin_based_encryption=True, kind=Kind.Hotp
-    )
+    secretsAppRaw.register(CREDID, SECRET, DIGITS, pin_based_encryption=True, kind=Kind.Hotp)
     secretsAppRaw.verify_pin_raw(PIN2)
     assert secretsAppRaw.list()
 
@@ -1173,9 +1071,7 @@ def test_credential_encryption_does_not_change(secretsAppRaw):
 
     # Register PIN-protected credential
     secretsAppRaw.verify_pin_raw(PIN)
-    secretsAppRaw.register(
-        CREDID, SECRET, DIGITS, pin_based_encryption=True, kind=Kind.Hotp
-    )
+    secretsAppRaw.register(CREDID, SECRET, DIGITS, pin_based_encryption=True, kind=Kind.Hotp)
     assert not secretsAppRaw.list()
     secretsAppRaw.verify_pin_raw(PIN)
     assert secretsAppRaw.list()
@@ -1251,9 +1147,7 @@ def test_send_remaining(secretsApp):
     credential_name_length = 127
     count = 3072 // credential_name_length + 1
     secrets_app.logfn(f"Registering {count} credentials")
-    credentials = [
-        f"Credential{i}".zfill(credential_name_length).encode() for i in range(1, count)
-    ]
+    credentials = [f"Credential{i}".zfill(credential_name_length).encode() for i in range(1, count)]
     for c in credentials:
         secrets_app.verify_pin_raw(PIN)
         secrets_app.register(c, SECRET, DIGITS, kind=Kind.Hotp)
@@ -1262,9 +1156,7 @@ def test_send_remaining(secretsApp):
 
     # Run PIN verification so all Credentials on List command will be visible
     secrets_app.verify_pin_raw(PIN)
-    status_bytes, result = helper_send_receive_ins(
-        secrets_app, Instruction.List, expected_SW=None
-    )
+    status_bytes, result = helper_send_receive_ins(secrets_app, Instruction.List, expected_SW=None)
     # Make sure there are remaining data to receive
     MORE_DATA_STATUS_BYTE = 0x61
     assert status_bytes[0] == MORE_DATA_STATUS_BYTE
@@ -1272,9 +1164,7 @@ def test_send_remaining(secretsApp):
     status_bytes, result = helper_send_receive_ins(
         secrets_app,
         Instruction.Delete,
-        structure=[
-            tlv8.Entry(Tag.CredentialId.value, credentials[-1]),
-        ],
+        structure=[tlv8.Entry(Tag.CredentialId.value, credentials[-1])],
         expected_SW=None,
     )
     assert status_bytes.hex() == "9000"
@@ -1314,9 +1204,7 @@ def test_password_safe(secretsAppResetLogin: SecretsApp, length: int) -> None:
         password=password,
         metadata=metadata,
     )
-    lib_at = lambda t: oath.totp(
-        SECRET.decode(), format="dec6", period=30, t=t * 30
-    ).encode()
+    lib_at = lambda t: oath.totp(SECRET.decode(), format="dec6", period=30, t=t * 30).encode()
     for i in range(10):
         secretsApp.verify_pin_raw(PIN)
         assert secretsApp.calculate(name, i) == lib_at(i)  # type: ignore[no-untyped-call]
@@ -1361,9 +1249,7 @@ def test_password_safe_just_pws_entry(secretsAppResetLogin):
     metadata = b"metadata".center(length, b"=")
 
     secretsAppResetLogin.verify_pin_raw(PIN)
-    secretsAppResetLogin.register(
-        CREDID, login=login, password=password, metadata=metadata
-    )
+    secretsAppResetLogin.register(CREDID, login=login, password=password, metadata=metadata)
 
     # Since OTP details were not specified, calling Calculate on it should fail
     secretsAppResetLogin.verify_pin_raw(PIN)
@@ -1429,9 +1315,7 @@ def test_hmac_low_level(secretsAppRaw):
     # getting serial number works
     YK_API_REQ = 0x01
     YK_P1_CMD_GET_SERIAL = 0x10
-    status, data = helper_send_receive_ins(
-        secretsAppRaw, YK_API_REQ, p1=YK_P1_CMD_GET_SERIAL, le=4
-    )
+    status, data = helper_send_receive_ins(secretsAppRaw, YK_API_REQ, p1=YK_P1_CMD_GET_SERIAL, le=4)
     assert len(data) == 4
 
     # test HMAC calculation calls
@@ -1454,10 +1338,7 @@ def test_hmac_low_level(secretsAppRaw):
     # registration on the special-named slots works
     for i, slot in enumerate([b"HmacSlot2", b"HmacSlot1"]):
         secretsAppRaw.register(
-            slot,
-            secret=i.to_bytes(1, "little") * 20,
-            kind=Kind.Hmac,
-            pin_based_encryption=False,
+            slot, secret=i.to_bytes(1, "little") * 20, kind=Kind.Hmac, pin_based_encryption=False
         )
 
     for slot in [YK_P1_CMD_HMAC_2, YK_P1_CMD_HMAC_1]:
@@ -1473,28 +1354,16 @@ def test_hmac_low_level(secretsAppRaw):
 
         # different input gives different output
         status, data = helper_send_receive_ins(
-            secretsAppRaw,
-            YK_API_REQ,
-            p1=slot,
-            le=20,
-            data_raw=helper_get_padded(b"1" * 63),
+            secretsAppRaw, YK_API_REQ, p1=slot, le=20, data_raw=helper_get_padded(b"1" * 63)
         )
         status, data2 = helper_send_receive_ins(
-            secretsAppRaw,
-            YK_API_REQ,
-            p1=slot,
-            le=20,
-            data_raw=helper_get_padded(b"2" * 63),
+            secretsAppRaw, YK_API_REQ, p1=slot, le=20, data_raw=helper_get_padded(b"2" * 63)
         )
         assert data != data2
 
         # same input gives same output
         status, data3 = helper_send_receive_ins(
-            secretsAppRaw,
-            YK_API_REQ,
-            p1=slot,
-            le=20,
-            data_raw=helper_get_padded(b"2" * 63),
+            secretsAppRaw, YK_API_REQ, p1=slot, le=20, data_raw=helper_get_padded(b"2" * 63)
         )
         assert data3 == data2
 
@@ -1506,11 +1375,7 @@ def test_hmac_low_level(secretsAppRaw):
     for slot_name in [b"HmacSlot2", b"HmacSlot1"]:
         with suppress(SecretsAppException):
             secretsAppRaw.delete(slot_name)
-        secretsAppRaw.register(
-            slot_name,
-            secret=secret,
-            kind=Kind.Hmac,
-        )
+        secretsAppRaw.register(slot_name, secret=secret, kind=Kind.Hmac)
 
     with suppress(SecretsAppException):
         secretsAppRaw.delete(slot_name)
@@ -1518,18 +1383,12 @@ def test_hmac_low_level(secretsAppRaw):
     # Do not allow to register secret with different lengths than expected 20 bytes
     for secret_len in [18, 21, 200]:
         with pytest.raises(SecretsAppException, match="IncorrectDataParameter"):
-            secretsAppRaw.register(
-                b"HmacSlot2",
-                secret=b"x" * secret_len,
-                kind=Kind.Hmac,
-            )
+            secretsAppRaw.register(b"HmacSlot2", secret=b"x" * secret_len, kind=Kind.Hmac)
 
     # ... or with Algorithm different from SHA1
     for algo in [Algorithm.Sha256]:  # Algorithm.Sha512
         with pytest.raises(SecretsAppException, match="IncorrectDataParameter"):
-            secretsAppRaw.register(
-                b"HmacSlot2", secret=b"x" * 20, kind=Kind.Hmac, algo=algo
-            )
+            secretsAppRaw.register(b"HmacSlot2", secret=b"x" * 20, kind=Kind.Hmac, algo=algo)
 
     # Test various challenge lengths against local calculations
 
@@ -1553,11 +1412,7 @@ def test_hmac_low_level(secretsAppRaw):
     slot_name = b"HmacSlot2"
     with suppress(SecretsAppException):
         secretsAppRaw.delete(slot_name)
-    secretsAppRaw.register(
-        slot_name,
-        secret=secret,
-        kind=Kind.Hmac,
-    )
+    secretsAppRaw.register(slot_name, secret=secret, kind=Kind.Hmac)
 
     # The length of "1" is used by KeepassXC for the purposes. "63" is the maximum.
     # "64" should not work, as the last byte is always treated as the padding byte value.
@@ -1565,11 +1420,7 @@ def test_hmac_low_level(secretsAppRaw):
         challenge = b"c" * challenge_len
         challenge_padded = helper_get_padded(challenge)
         status, response_device = helper_send_receive_ins(
-            secretsAppRaw,
-            YK_API_REQ,
-            p1=YK_P1_CMD_HMAC_2,
-            le=20,
-            data_raw=challenge_padded,
+            secretsAppRaw, YK_API_REQ, p1=YK_P1_CMD_HMAC_2, le=20, data_raw=challenge_padded
         )
         response_lib = secretsAppRaw.get_response_for_secret(challenge, secret)
         assert response_lib == response_device
@@ -1610,8 +1461,7 @@ def test_list_with_properties(secretsAppResetLogin, touch, pws):
     assert item.properties.touch_required == touch
     assert item.properties.pws_data_exist == pws
     assert item.properties.secret_encryption == (
-        secretsAppResetLogin._metadata.get("fixture_type")
-        == CredEncryptionType.PinBased
+        secretsAppResetLogin._metadata.get("fixture_type") == CredEncryptionType.PinBased
     )
 
 
@@ -1639,7 +1489,7 @@ def test_light_load(secretsAppRaw):
                 ks = "h" if kind == Kind.Hotp else "t"
                 secretsAppRaw.verify_pin_raw(PIN)
                 secretsAppRaw.register(
-                    f'{pre}otp:{"t" if touch else ""}:{"enc" if encrypted else ""}:{ks}'.encode(),
+                    f"{pre}otp:{'t' if touch else ''}:{'enc' if encrypted else ''}:{ks}".encode(),
                     secretb,
                     digits=6,
                     kind=kind,
@@ -1662,7 +1512,7 @@ def test_light_load(secretsAppRaw):
     # OTP + PWS test
     for pws in [True, False]:
         secretsAppRaw.register(
-            f'{pre}otp:{"pws" if pws else "e"}'.encode(),
+            f"{pre}otp:{'pws' if pws else 'e'}".encode(),
             secretb,
             digits=6,
             kind=Kind.Totp,
@@ -1675,10 +1525,7 @@ def test_light_load(secretsAppRaw):
 
     # PWS only test
     secretsAppRaw.register(
-        f"{pre}pws".encode(),
-        login=b"login",
-        password=b"password",
-        metadata=b"metadata",
+        f"{pre}pws".encode(), login=b"login", password=b"password", metadata=b"metadata"
     )
 
 
@@ -1698,19 +1545,11 @@ def test_register_overwrite_attempt(secretsAppRaw, cred1_encryption, cred2_encry
 
     if cred1_encryption:
         app.verify_pin_raw(PIN)
-    app.register(
-        CREDID, SECRET, DIGITS, pin_based_encryption=cred1_encryption, kind=Kind.Hotp
-    )
+    app.register(CREDID, SECRET, DIGITS, pin_based_encryption=cred1_encryption, kind=Kind.Hotp)
     if cred2_encryption:
         app.verify_pin_raw(PIN)
     with pytest.raises(SecretsAppException, match="OperationBlocked"):
-        app.register(
-            CREDID,
-            SECRET,
-            DIGITS,
-            pin_based_encryption=cred2_encryption,
-            kind=Kind.Hotp,
-        )
+        app.register(CREDID, SECRET, DIGITS, pin_based_encryption=cred2_encryption, kind=Kind.Hotp)
 
 
 def test_rename_credential(secretsAppResetLogin):
@@ -1743,9 +1582,7 @@ def test_rename_credential(secretsAppResetLogin):
 @pytest.mark.parametrize(
     "cred2_encryption", [True, False], ids=lambda x: "cred2" + ("_enc" if x else "")
 )
-def test_rename_credential_to_existing(
-    secretsAppRaw, cred2_encryption, cred1_encryption
-):
+def test_rename_credential_to_existing(secretsAppRaw, cred2_encryption, cred1_encryption):
     """
     Credential should not change its name to an existing one, regardless if the other is PIN-encrypted or not
     """
@@ -1755,17 +1592,13 @@ def test_rename_credential_to_existing(
 
     if cred2_encryption:
         app.verify_pin_raw(PIN)
-    app.register(
-        CREDID2, SECRET, DIGITS, kind=Kind.Hotp, pin_based_encryption=cred2_encryption
-    )
+    app.register(CREDID2, SECRET, DIGITS, kind=Kind.Hotp, pin_based_encryption=cred2_encryption)
     app.verify_pin_raw(PIN)
     assert app.list()[0].decode() == CREDID2
 
     if cred1_encryption:
         app.verify_pin_raw(PIN)
-    app.register(
-        CREDID, SECRET, DIGITS, kind=Kind.Hotp, pin_based_encryption=cred1_encryption
-    )
+    app.register(CREDID, SECRET, DIGITS, kind=Kind.Hotp, pin_based_encryption=cred1_encryption)
     app.verify_pin_raw(PIN)
     # Once set up, there should be 2 credentials
     assert set([CREDID.encode(), CREDID2.encode()]) == set(app.list())
@@ -1807,11 +1640,7 @@ def test_update_credential(secretsAppResetLogin):
     assert not c.metadata
     app.verify_pin_raw(PIN)
     app.update_credential(
-        CREDID,
-        new_name=CREDID2,
-        login=b"login",
-        password=b"password",
-        metadata=b"metadata",
+        CREDID, new_name=CREDID2, login=b"login", password=b"password", metadata=b"metadata"
     )
 
     # Check if PWS fields are there, and the "touch button required" flag is still present
@@ -1832,9 +1661,7 @@ def test_update_credential(secretsAppResetLogin):
 
     # Try to remove the PWS data with empty strings, and rename again
     app.verify_pin_raw(PIN)
-    app.update_credential(
-        CREDID2, new_name=CREDID, login=b"", password=b"", metadata=b""
-    )
+    app.update_credential(CREDID2, new_name=CREDID, login=b"", password=b"", metadata=b"")
     app.verify_pin_raw(PIN)
     c = app.get_credential(CREDID)
     assert c.login is None
@@ -1844,15 +1671,7 @@ def test_update_credential(secretsAppResetLogin):
     # Disallow to register a PWS credential with any 0-length strings field
     app.verify_pin_raw(PIN)
     with pytest.raises(SecretsAppException, match="IncorrectDataParameter"):
-        app.register(
-            CREDID2,
-            SECRET,
-            DIGITS,
-            kind=Kind.Hotp,
-            login=b"",
-            password=b"",
-            metadata=b"",
-        )
+        app.register(CREDID2, SECRET, DIGITS, kind=Kind.Hotp, login=b"", password=b"", metadata=b"")
     for i in ["login", "password", "metadata"]:
         fields = {i: b""}
         with pytest.raises(SecretsAppException, match="IncorrectDataParameter"):

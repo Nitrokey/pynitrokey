@@ -197,15 +197,11 @@ def version(serial: Optional[str]) -> None:
         local_print(f"{major}.{minor}.{patch} {locked}")
 
     except NoSoloFoundError:
-        local_critical(
-            "No Nitrokey found.", "If you are on Linux, are your udev rules up to date?"
-        )
+        local_critical("No Nitrokey found.", "If you are on Linux, are your udev rules up to date?")
 
     # unused ???
-    except (NoSoloFoundError, ApduError):
-        local_critical(
-            "Firmware is out of date (key does not know the NITROKEY_VERSION command)."
-        )
+    except ApduError:
+        local_critical("Firmware is out of date (key does not know the NITROKEY_VERSION command).")
 
 
 @click.command()
@@ -239,7 +235,6 @@ util.add_command(monitor)
 
 
 def add_commands(fido2: click.Group) -> None:
-
     fido2.add_command(list)
     # @fixme: this one exists twice, once here, once in "util program aux"
     fido2.add_command(reboot)

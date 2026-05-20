@@ -8,12 +8,7 @@ import click
 import intelhex as ih
 import nkdfu
 
-from pynitrokey.helpers import (
-    check_pynitrokey_version,
-    local_critical,
-    local_print,
-    prompt,
-)
+from pynitrokey.helpers import check_pynitrokey_version, local_critical, local_print, prompt
 from pynitrokey.libnk import DeviceNotFound, NitrokeyPro, RetCode
 
 print = local_print
@@ -37,10 +32,7 @@ def list():
 
 @click.command()
 @click.option(
-    "-p",
-    "--password",
-    default="12345678",
-    help="update password to be used instead of default",
+    "-p", "--password", default="12345678", help="update password to be used instead of default"
 )
 def enable_update(password):
     """enable firmware update for NK Pro device"""
@@ -97,21 +89,15 @@ def change_firmware_password():
             support_hint=False,
         )
 
-    old_password = prompt(
-        "Old firmware update password", default="12345678", hide_input=True
-    )
-    new_password = prompt(
-        "New firmware update password", hide_input=True, confirmation_prompt=True
-    )
+    old_password = prompt("Old firmware update password", default="12345678", hide_input=True)
+    new_password = prompt("New firmware update password", hide_input=True, confirmation_prompt=True)
     ret = nk.change_firmware_password(old_password, new_password)
     if ret.ok:
         local_print("Successfully updated the firmware password")
     elif ret == RetCode.WRONG_PASSWORD:
         local_critical("Wrong firmware update password", support_hint=False)
     elif ret == RetCode.TooLongStringException:
-        local_critical(
-            "The new firmware update password is too long", support_hint=False
-        )
+        local_critical("The new firmware update password is too long", support_hint=False)
     else:
         local_critical(f"Failed to update the firmware password ({ret.name})")
 
@@ -157,9 +143,7 @@ def update(firmware_path: str):
             break
         else:
             print("No Nitrokey Pro found in the update mode.")
-            print(
-                "If you have Nitrokey Pro connected please run (requires libnitrokey):"
-            )
+            print("If you have Nitrokey Pro connected please run (requires libnitrokey):")
             print("$ nitropy pro enable-update")
             sys.exit(1)
         dfu_device = None

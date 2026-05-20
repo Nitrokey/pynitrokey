@@ -106,9 +106,7 @@ def progress_func(x):
 progress_func.last = 0  # type: ignore
 
 
-def main(
-    wait_e, keyno, passwd, data_regnual, data_upgrade, skip_bootloader, verbosity=0
-):
+def main(wait_e, keyno, passwd, data_regnual, data_upgrade, skip_bootloader, verbosity=0):
     reg = None
 
     # @todo: this is constantly used: how about a consistent/generic solution?
@@ -162,16 +160,9 @@ def main(
         if kdf_data == b"":
             passwd_data = passwd.encode("UTF-8")
         else:
-            (
-                algo,
-                subalgo,
-                iters,
-                salt_user,
-                salt_reset,
-                salt_admin,
-                hash_user,
-                hash_admin,
-            ) = parse_kdf_data(kdf_data)
+            (algo, subalgo, iters, salt_user, salt_reset, salt_admin, hash_user, hash_admin) = (
+                parse_kdf_data(kdf_data)
+            )
 
             salt = salt_admin if salt_admin else salt_user
             passwd_data = kdf_calc(passwd, salt, iters)
@@ -200,10 +191,7 @@ def main(
         )
 
         gnuk.download(
-            mem_info[0],
-            data_regnual,
-            progress_func=progress_func,
-            verbose=verbosity == 2,
+            mem_info[0], data_regnual, progress_func=progress_func, verbose=verbosity == 2
         )
 
         local_print("Executing flash upgrade...")
@@ -214,7 +202,7 @@ def main(
                 gnuk.execute(mem_info[0] + len(data_regnual) - 4)
                 break
             except Exception as e:
-                local_print(f"failed - trying again - retry: {i+1}", e)
+                local_print(f"failed - trying again - retry: {i + 1}", e)
                 if i == conn_retries - 1:
                     raise e
                 continue
@@ -243,7 +231,7 @@ def main(
                         local_print("Device: {dev.filename}")
                     break
                 except Exception as e:
-                    local_print(f"failed - trying again - retry: {i+1}", e)
+                    local_print(f"failed - trying again - retry: {i + 1}", e)
                     # @todo: log exception to file: e
 
         local_print("", "")
@@ -259,9 +247,7 @@ def main(
         local_print("%08x:%08x" % mem_info)
 
     local_print("Downloading the program")
-    reg.download(
-        mem_info[0], data_upgrade, progress_func=progress_func, verbose=verbosity == 2
-    )
+    reg.download(mem_info[0], data_upgrade, progress_func=progress_func, verbose=verbosity == 2)
 
     local_print("Protecting device")
     reg.protect()
@@ -281,14 +267,11 @@ def main(
 def get_latest_release_data():
     try:
         # @todo: move to confconsts.py
-        r = requests.get(
-            "https://api.github.com/repos/Nitrokey/nitrokey-start-firmware/releases"
-        )
+        r = requests.get("https://api.github.com/repos/Nitrokey/nitrokey-start-firmware/releases")
         json = r.json()
         if r.status_code == 403:
             local_critical(
-                f"JSON raw data: {json}",
-                f"No Github API access, status code: {r.status_code}",
+                f"JSON raw data: {json}", f"No Github API access, status code: {r.status_code}"
             )
         latest_tag = json[0]
 
@@ -307,9 +290,7 @@ def validate_binary_file(path: str):
     if not path.endswith(".bin"):
         raise BadParameter(
             'Supplied file "{}" does not have ".bin" extension. '
-            "Make sure you are sending correct file to the device.".format(
-                os.path.basename(path)
-            )
+            "Make sure you are sending correct file to the device.".format(os.path.basename(path))
         )
     return path
 
@@ -318,9 +299,7 @@ def validate_name(path: str, name: str):
     if name not in path:
         raise BadParameter(
             'Supplied file "{}" does not have "{}" in name. '
-            "Make sure you have not swapped the arguments.".format(
-                os.path.basename(path), name
-            )
+            "Make sure you have not swapped the arguments.".format(os.path.basename(path), name)
         )
     return path
 
@@ -344,9 +323,7 @@ def validate_regnual(ctx, param, path: str):
 
 
 def kill_smartcard_services(filter_word=None):
-    local_print(
-        "Could not connect to the device. Attempting to close other smart card services."
-    )
+    local_print("Could not connect to the device. Attempting to close other smart card services.")
 
     commands = [
         ("gpgconf --kill all".split(), True),
@@ -417,11 +394,7 @@ def validate_hash(url: str, hash: bytes):
             hash_expected, hash_name = line.split()
             logger.debug(
                 "{} {}/{} {}".format(  # type: ignore
-                    hash_expected == hash,
-                    hash_name,
-                    name,
-                    hash[-8:],
-                    hash_expected[-8:],
+                    hash_expected == hash, hash_name, name, hash[-8:], hash_expected[-8:]
                 )
             )
             return hash_expected == hash
@@ -479,16 +452,9 @@ def show_kdf_details(passwd):
         print("KDF not set")
         # passwd_data = passwd.encode('UTF-8')
     else:
-        (
-            algo,
-            subalgo,
-            iters,
-            salt_user,
-            salt_reset,
-            salt_admin,
-            hash_user,
-            hash_admin,
-        ) = parse_kdf_data(kdf_data)
+        (algo, subalgo, iters, salt_user, salt_reset, salt_admin, hash_user, hash_admin) = (
+            parse_kdf_data(kdf_data)
+        )
         if salt_admin:
             salt = salt_admin
         else:
@@ -526,7 +492,6 @@ def start_update(
     skip_bootloader,
     green_led,
 ):
-
     # @todo: move to some more generic position...
     local_print("Nitrokey Start firmware update tool")
     # @fixme: especially this, which is to be handle application wide
@@ -560,10 +525,7 @@ def start_update(
         skip_bootloader,
         green_led,
     )
-    logger.debug(
-        "Arguments: "
-        + ", ".join(f"{key}= '{val}'" for key, val in zip(arg_descs, args))
-    )
+    logger.debug("Arguments: " + ", ".join(f"{key}= '{val}'" for key, val in zip(arg_descs, args)))
 
     passwd = None
 
@@ -581,9 +543,7 @@ def start_update(
         try:
             passwd = AskUser.hidden("Admin PIN:")
             if not passwd:
-                if AskUser.strict_yes_no(
-                    f"PIN cannot be empty. Use default: {DEFAULT_PW3} ?"
-                ):
+                if AskUser.strict_yes_no(f"PIN cannot be empty. Use default: {DEFAULT_PW3} ?"):
                     passwd = DEFAULT_PW3
                 else:
                     continue
@@ -598,8 +558,7 @@ def start_update(
     dev_strings = get_devices()
     if len(dev_strings) > 1:
         local_critical(
-            "Only one device should be connected",
-            "Please remove other devices and retry",
+            "Only one device should be connected", "Please remove other devices and retry"
         )
 
     if dev_strings:
@@ -635,13 +594,7 @@ def start_update(
         try:
             # First 4096-byte in data_upgrade is SYS, so, skip it.
             main(
-                wait_e,
-                keyno,
-                passwd,
-                data,
-                data_upgrade[4096:],
-                skip_bootloader,
-                verbosity=verbose,
+                wait_e, keyno, passwd, data, data_upgrade[4096:], skip_bootloader, verbosity=verbose
             )
             update_done = True
             break
@@ -664,8 +617,7 @@ def start_update(
                 # @fixme run factory reset here since data are lost anyway (rly?)
                 if str(e) == ERR_EMPTY_COUNTER:
                     local_critical(
-                        "- device returns: 'Attempt counter empty' "
-                        "- error for Admin PIN",
+                        "- device returns: 'Attempt counter empty' - error for Admin PIN",
                         str_factory_reset,
                         e,
                     )

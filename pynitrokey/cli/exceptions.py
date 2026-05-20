@@ -8,11 +8,7 @@ from pynitrokey.helpers import local_critical
 
 class CliException(Exception):
     def __init__(
-        self,
-        *messages: Any,
-        support_hint: bool = True,
-        ret_code: int = 1,
-        **kwargs: Any,
+        self, *messages: Any, support_hint: bool = True, ret_code: int = 1, **kwargs: Any
     ) -> None:
         super().__init__("\n".join([str(message) for message in messages]))
 
@@ -23,8 +19,5 @@ class CliException(Exception):
 
     def show(self) -> None:
         local_critical(
-            *self.messages,
-            support_hint=self.support_hint,
-            ret_code=self.ret_code,
-            **self.kwargs,
+            *self.messages, support_hint=self.support_hint, ret_code=self.ret_code, **self.kwargs
         )

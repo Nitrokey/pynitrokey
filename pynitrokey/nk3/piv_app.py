@@ -109,20 +109,12 @@ class PivApp:
         else:
             self.logfn = self.log.info
 
-    def send_receive(
-        self,
-        ins: int,
-        p1: int,
-        p2: int,
-        data: bytes = b"",
-    ) -> bytes:
+    def send_receive(self, ins: int, p1: int, p2: int, data: bytes = b"") -> bytes:
         bytes_data = iso7816_compose(ins, p1, p2, data)
         return self._send_receive_inner(bytes_data, log_info=f"{ins}")
 
     def _send_receive_inner(self, data: bytes, log_info: str = "") -> bytes:
-        self.logfn(
-            f"Sending {log_info if log_info else ''} {data.hex() if data else data!r}"
-        )
+        self.logfn(f"Sending {log_info if log_info else ''} {data.hex() if data else data!r}")
 
         try:
             result_list, sw1, sw2 = self.connection.transmit(list(data))
@@ -177,11 +169,8 @@ class PivApp:
         return data_final
 
     def authenticate_admin(self, admin_key: bytes) -> None:
-
         if len(admin_key) == 24:
-            algorithm: Union[TripleDES, algorithms.AES128, algorithms.AES256] = (
-                TripleDES(admin_key)
-            )
+            algorithm: Union[TripleDES, algorithms.AES128, algorithms.AES256] = TripleDES(admin_key)
             # algo = "tdes"
             algo_byte = 0x03
             expected_len = 8
@@ -196,10 +185,7 @@ class PivApp:
             algo_byte = 0x0C
             expected_len = 16
         else:
-            local_critical(
-                "Unsupported key length",
-                support_hint=False,
-            )
+            local_critical("Unsupported key length", support_hint=False)
 
         challenge_body = Tlv.build([(0x7C, Tlv.build([(0x80, b"")]))])
         challenge_response = self.send_receive(0x87, algo_byte, 0x9B, challenge_body)
@@ -208,10 +194,7 @@ class PivApp:
             local_critical("Failed to get response to GENERAL AUTHENTICATE")
             return
 
-        challenge = find_by_id(
-            0x80,
-            Tlv.parse(general_auth_data),
-        )
+        challenge = find_by_id(0x80, Tlv.parse(general_auth_data))
 
         if challenge is None:
             local_critical("Failed to get authentication challenge from the device")
@@ -237,15 +220,10 @@ class PivApp:
             local_critical("Failed to get response to GENERAL AUTHENTICATE")
             return
 
-        decoded_challenge = find_by_id(
-            0x82,
-            Tlv.parse(general_auth_data),
-        )
+        decoded_challenge = find_by_id(0x82, Tlv.parse(general_auth_data))
 
         if decoded_challenge != our_challenge:
-            local_critical(
-                "Failed to authenticate with administrator key", support_hint=False
-            )
+            local_critical("Failed to authenticate with administrator key", support_hint=False)
 
     def set_admin_key(self, new_key: bytes) -> None:
         if len(new_key) == 24:
@@ -258,10 +236,7 @@ class PivApp:
             # algo = "aes256"
             algo_byte = 0x0C
         else:
-            local_critical(
-                "Unsupported key length",
-                support_hint=False,
-            )
+            local_critical("Unsupported key length", support_hint=False)
         data = bytes([algo_byte, 0x9B, len(new_key)]) + new_key
         self.send_receive(0xFF, 0xFF, 0xFE, data)
 
@@ -328,10 +303,7 @@ class PivApp:
             local_critical("Failed to get response to GENERAL AUTHENTICATE")
             return bytes()
 
-        signature = find_by_id(
-            0x82,
-            Tlv.parse(general_auth_data),
-        )
+        signature = find_by_id(0x82, Tlv.parse(general_auth_data))
 
         if signature is None:
             local_critical("Failed to get signature from device")
@@ -344,9 +316,7 @@ class PivApp:
     def init(self) -> bytes:
         # Template for card capabilities with nothing but a random ID
         template_begin = bytearray.fromhex("f015a000000116")
-        template_end = bytearray.fromhex(
-            "f10121f20121f300f40100f50110f600f700fa00fb00fc00fd00fe00"
-        )
+        template_end = bytearray.fromhex("f10121f20121f300f40100f50110f600f700fa00fb00fc00fd00fe00")
         card_id = os.urandom(16)
         cardcaps = template_begin + card_id + template_end
         cardcaps_body = Tlv.build(

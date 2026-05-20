@@ -49,9 +49,7 @@ DECRYPT_MODE_TYPE = make_enum_type(nethsm_sdk.DecryptMode)
 SIGN_MODE_TYPE = make_enum_type(nethsm_sdk.SignMode)
 
 
-def prompt_str(
-    msg: str, default: Optional[str] = None, hide_input: bool = False
-) -> str:
+def prompt_str(msg: str, default: Optional[str] = None, hide_input: bool = False) -> str:
     value = prompt(msg, default=default, hide_input=hide_input)
     assert isinstance(value, str)
     return value
@@ -98,10 +96,7 @@ class Config:
     default=True,
     help="Whether to verify the TLS certificate of the NetHSM",
 )
-@click.option(
-    "--ca-certs",
-    help="Path to the CA certs to use for the TLS verification",
-)
+@click.option("--ca-certs", help="Path to the CA certs to use for the TLS verification")
 @click.option("--debug", is_flag=True, help="Enable debug log messages")
 @click.pass_context
 def nethsm(
@@ -135,8 +130,7 @@ def connect(ctx: Context, require_auth: bool = True) -> Iterator[NetHSM]:
         v = "NETHSM_HOST"
         if v not in os.environ:
             raise CliException(
-                "Missing NetHSM host: set the --host option or the "
-                f"{v} environment variable",
+                f"Missing NetHSM host: set the --host option or the {v} environment variable",
                 support_hint=False,
             )
         host = os.environ[v]
@@ -149,14 +143,11 @@ def connect(ctx: Context, require_auth: bool = True) -> Iterator[NetHSM]:
             username = prompt_str(f"[auth] User name for NetHSM {host}")
         if not password:
             password = prompt_str(
-                f"[auth] Password for user {username} on NetHSM {host}",
-                hide_input=True,
+                f"[auth] Password for user {username} on NetHSM {host}", hide_input=True
             )
         auth = Authentication(username=username, password=password)
 
-    nethsm = NetHSM(
-        host, auth=auth, verify_tls=config.verify_tls, ca_certs=config.ca_certs
-    )
+    nethsm = NetHSM(host, auth=auth, verify_tls=config.verify_tls, ca_certs=config.ca_certs)
     if config.debug:
         loggers = ["nethsm.client", "urllib3"]
         for logger in loggers:
@@ -185,9 +176,7 @@ def unlock(ctx: Context, passphrase: Optional[str]) -> None:
     """Bring a locked NetHSM into operational state."""
     with connect(ctx, require_auth=False) as nethsm:
         if not passphrase:
-            passphrase = prompt_str(
-                f"Unlock passphrase for NetHSM {nethsm.host}", hide_input=True
-            )
+            passphrase = prompt_str(f"Unlock passphrase for NetHSM {nethsm.host}", hide_input=True)
         nethsm.unlock(passphrase)
         print(f"NetHSM {nethsm.host} unlocked")
 
@@ -256,9 +245,7 @@ def provision(
 
 @nethsm.command()
 @click.option(
-    "--details/--no-details",
-    default=True,
-    help="Also query the real name and role of the user",
+    "--details/--no-details", default=True, help="Also query the real name and role of the user"
 )
 @click.pass_context
 def list_users(ctx: Context, details: bool) -> None:
@@ -302,9 +289,7 @@ def get_user(ctx: Context, user_id: str) -> None:
 
 @nethsm.command()
 @click.option("-n", "--real-name", prompt=True, help="The real name of the new user")
-@click.option(
-    "-r", "--role", type=ROLE_TYPE, prompt=True, help="The role of the new user"
-)
+@click.option("-r", "--role", type=ROLE_TYPE, prompt=True, help="The role of the new user")
 @click.option(
     "-p",
     "--passphrase",
@@ -315,11 +300,7 @@ def get_user(ctx: Context, user_id: str) -> None:
 )
 @click.option("-u", "--user-id", help="The user ID of the new user")
 @click.option("-N", "--namespace", help="The namespace of the new user")
-@click.option(
-    "--create-namespace",
-    is_flag=True,
-    help="Create the namespace after adding the user",
-)
+@click.option("--create-namespace", is_flag=True, help="Create the namespace after adding the user")
 @click.pass_context
 def add_user(
     ctx: Context,
@@ -566,22 +547,11 @@ def metrics(ctx: Context) -> None:
 
 
 @nethsm.command()
-@click.option(
-    "--details/--no-details",
-    default=True,
-    help="Also query the key data",
-)
-@click.option(
-    "-f",
-    "--filter",
-    type=str,
-    help="Filter keys by tags for respective user",
-)
+@click.option("--details/--no-details", default=True, help="Also query the key data")
+@click.option("-f", "--filter", type=str, help="Filter keys by tags for respective user")
 @click.option("-p", "--prefix", type=str, help="Only list keys with the given prefix")
 @click.pass_context
-def list_keys(
-    ctx: Context, details: bool, filter: Optional[str], prefix: Optional[str]
-) -> None:
+def list_keys(ctx: Context, details: bool, filter: Optional[str], prefix: Optional[str]) -> None:
     """List all keys on the NetHSM.
 
     This command requires authentication as a user with the Administrator or
@@ -732,13 +702,7 @@ def prompt_mechanisms(type: str) -> list[str]:
 
 
 @nethsm.command()
-@click.option(
-    "-t",
-    "--type",
-    type=TYPE_TYPE,
-    prompt=True,
-    help="The type for the new key",
-)
+@click.option("-t", "--type", type=TYPE_TYPE, prompt=True, help="The type for the new key")
 @click.option(
     "-m",
     "--mechanism",
@@ -747,37 +711,12 @@ def prompt_mechanisms(type: str) -> list[str]:
     multiple=True,
     help="The mechanisms for the new key",
 )
-@click.option(
-    "--tags",
-    type=str,
-    multiple=True,
-    help="The tags for the new key",
-)
-@click.option(
-    "-p",
-    "--prime-p",
-    help="The prime p for RSA keys, base64-encoded",
-)
-@click.option(
-    "-q",
-    "--prime-q",
-    help="The prime q for RSA keys, base64-encoded",
-)
-@click.option(
-    "-e",
-    "--public-exponent",
-    help="The public exponent for RSA keys, base64-encoded",
-)
-@click.option(
-    "-d",
-    "--data",
-    help="The key data for ED25519 or ECDSA_* keys, base64-encoded",
-)
-@click.option(
-    "-k",
-    "--key-id",
-    help="The ID of the new key",
-)
+@click.option("--tags", type=str, multiple=True, help="The tags for the new key")
+@click.option("-p", "--prime-p", help="The prime p for RSA keys, base64-encoded")
+@click.option("-q", "--prime-q", help="The prime q for RSA keys, base64-encoded")
+@click.option("-e", "--public-exponent", help="The public exponent for RSA keys, base64-encoded")
+@click.option("-d", "--data", help="The key data for ED25519 or ECDSA_* keys, base64-encoded")
+@click.option("-k", "--key-id", help="The ID of the new key")
 @click.pass_context
 def add_key(
     ctx: Context,
@@ -820,9 +759,7 @@ def add_key(
         if prime_q:
             raise click.ClickException("-q/--prime-q may only be set for RSA keys")
         if public_exponent:
-            raise click.ClickException(
-                "-e/--public-exponent may only be set for RSA keys"
-            )
+            raise click.ClickException("-e/--public-exponent may only be set for RSA keys")
         if not data:
             data = prompt_str("Key data")
         private_key = nethsm_sdk.GenericPrivateKey(data=base64_input(data))
@@ -847,25 +784,12 @@ def add_key(
     multiple=True,
     help="The mechanisms for the new key",
 )
-@click.option(
-    "--tags",
-    type=str,
-    multiple=True,
-    help="The tags for the new key",
-)
-@click.option(
-    "-k",
-    "--key-id",
-    help="The ID of the new key",
-)
+@click.option("--tags", type=str, multiple=True, help="The tags for the new key")
+@click.option("-k", "--key-id", help="The ID of the new key")
 @click.argument("filename")
 @click.pass_context
 def import_key(
-    ctx: Context,
-    mechanisms: list[str],
-    tags: list[str],
-    key_id: Optional[str],
-    filename: str,
+    ctx: Context, mechanisms: list[str], tags: list[str], key_id: Optional[str], filename: str
 ) -> None:
     """Import a key pair from a PEM file into the NetHSM.
 
@@ -890,12 +814,7 @@ def import_key(
 
 @nethsm.command()
 @click.option(
-    "type",
-    "-t",
-    "--type",
-    type=TYPE_TYPE,
-    prompt=True,
-    help="The type for the generated key",
+    "type", "-t", "--type", type=TYPE_TYPE, prompt=True, help="The type for the generated key"
 )
 @click.option(
     "-m",
@@ -905,18 +824,8 @@ def import_key(
     multiple=True,
     help="The mechanisms for the generated key",
 )
-@click.option(
-    "-l",
-    "--length",
-    type=int,
-    prompt=True,
-    help="The length of the generated key",
-)
-@click.option(
-    "-k",
-    "--key-id",
-    help="The ID of the generated key",
-)
+@click.option("-l", "--length", type=int, prompt=True, help="The length of the generated key")
+@click.option("-k", "--key-id", help="The ID of the generated key")
 @click.pass_context
 def generate_key(
     ctx: Context, type: str, mechanisms: list[str], length: int, key_id: Optional[str]
@@ -946,9 +855,7 @@ def _optional_or(s: Optional[str], default: str) -> str:
 @click.option("--logging", is_flag=True, help="Query the logging configuration")
 @click.option("--network", is_flag=True, help="Query the network configuration")
 @click.option("--time", is_flag=True, help="Query the system time")
-@click.option(
-    "--unattended-boot", is_flag=True, help="Query the unattended boot configuration"
-)
+@click.option("--unattended-boot", is_flag=True, help="Query the unattended boot configuration")
 @click.option("--public-key", is_flag=True, help="Query the public key")
 @click.option("--certificate", is_flag=True, help="Query the certificate")
 @click.pass_context
@@ -970,9 +877,7 @@ def get_config(
     role."""
     with connect(ctx) as nethsm:
         print(f"Configuration for NetHSM {nethsm.host}:")
-        show_all = not any(
-            [logging, network, time, unattended_boot, public_key, certificate]
-        )
+        show_all = not any([logging, network, time, unattended_boot, public_key, certificate])
 
         if show_all or logging:
             logging_config = nethsm.get_config_logging()
@@ -1030,10 +935,7 @@ def get_config(
     help="The current backup passphrase (or an empty string if not set)",
 )
 @click.option(
-    "-f",
-    "--force",
-    is_flag=True,
-    help="Do not ask for confirmation before changing the passphrase",
+    "-f", "--force", is_flag=True, help="Do not ask for confirmation before changing the passphrase"
 )
 @click.pass_context
 def set_backup_passphrase(
@@ -1081,17 +983,10 @@ def set_backup_passphrase(
     help="The new unlock passphrase",
 )
 @click.option(
-    "-p",
-    "--current-passphrase",
-    hide_input=True,
-    prompt=True,
-    help="The current unlock passphrase",
+    "-p", "--current-passphrase", hide_input=True, prompt=True, help="The current unlock passphrase"
 )
 @click.option(
-    "-f",
-    "--force",
-    is_flag=True,
-    help="Do not ask for confirmation before changing the passphrase",
+    "-f", "--force", is_flag=True, help="Do not ask for confirmation before changing the passphrase"
 )
 @click.pass_context
 def set_unlock_passphrase(
@@ -1124,59 +1019,27 @@ def set_unlock_passphrase(
 
 @nethsm.command()
 @click.option(
-    "-a",
-    "--ip-address",
-    help="The IP address of the new logging destination",
-    required=True,
+    "-a", "--ip-address", help="The IP address of the new logging destination", required=True
 )
 @click.option(
-    "-p",
-    "--port",
-    type=int,
-    help="The port of the new logging destination",
-    required=True,
+    "-p", "--port", type=int, help="The port of the new logging destination", required=True
 )
-@click.option(
-    "-l",
-    "--log-level",
-    type=LOG_LEVEL_TYPE,
-    help="The new log level",
-    required=True,
-)
+@click.option("-l", "--log-level", type=LOG_LEVEL_TYPE, help="The new log level", required=True)
 @click.pass_context
-def set_logging_config(
-    ctx: Context, ip_address: str, port: int, log_level: str
-) -> None:
+def set_logging_config(ctx: Context, ip_address: str, port: int, log_level: str) -> None:
     """Set the logging configuration of a NetHSM.
 
     This command requires authentication as a user with the Administrator
     role."""
     with connect(ctx) as nethsm:
-        nethsm.set_logging_config(
-            ip_address, port, nethsm_sdk.LogLevel.from_string(log_level)
-        )
+        nethsm.set_logging_config(ip_address, port, nethsm_sdk.LogLevel.from_string(log_level))
         print(f"Updated the logging configuration for NetHSM {nethsm.host}")
 
 
 @nethsm.command()
-@click.option(
-    "-a",
-    "--ip-address",
-    help="The new IP address",
-    required=True,
-)
-@click.option(
-    "-n",
-    "--netmask",
-    help="The new netmask",
-    required=True,
-)
-@click.option(
-    "-g",
-    "--gateway",
-    help="The new gateway",
-    required=True,
-)
+@click.option("-a", "--ip-address", help="The new IP address", required=True)
+@click.option("-n", "--netmask", help="The new netmask", required=True)
+@click.option("-g", "--gateway", help="The new gateway", required=True)
 @click.option("--ipv6-cidr")
 @click.option("--ipv6-gateway")
 @click.pass_context
@@ -1205,11 +1068,7 @@ def set_network_config(
 
 
 @nethsm.command()
-@click.argument(
-    "time",
-    type=DATETIME_TYPE,
-    required=False,
-)
+@click.argument("time", type=DATETIME_TYPE, required=False)
 @click.pass_context
 def set_time(ctx: Context, time: Optional[datetime.datetime]) -> None:
     """Set the system time of a NetHSM.
@@ -1226,10 +1085,7 @@ def set_time(ctx: Context, time: Optional[datetime.datetime]) -> None:
 
 
 @nethsm.command()
-@click.argument(
-    "status",
-    type=UNATTENDED_BOOT_STATUS_TYPE,
-)
+@click.argument("status", type=UNATTENDED_BOOT_STATUS_TYPE)
 @click.pass_context
 def set_unattended_boot(ctx: Context, status: str) -> None:
     """Set the unattended boot configuration of a NetHSM.
@@ -1249,10 +1105,7 @@ def get_api_or_key_id(api: bool, key_id: Optional[str]) -> tuple[bool, Optional[
 
     if not api and not key_id:
         choice = click.Choice(["api", "key"], case_sensitive=False)
-        method = prompt(
-            "For stored key or for NetHSM TLS interface?",
-            type=choice,
-        )
+        method = prompt("For stored key or for NetHSM TLS interface?", type=choice)
         if method == "api":
             api = True
         elif method == "key":
@@ -1264,15 +1117,11 @@ def get_api_or_key_id(api: bool, key_id: Optional[str]) -> tuple[bool, Optional[
 
 
 @nethsm.command()
-@click.option(
-    "-a", "--api", is_flag=True, help="Set the certificate for the NetHSM TLS interface"
-)
+@click.option("-a", "--api", is_flag=True, help="Set the certificate for the NetHSM TLS interface")
 @click.option("-k", "--key-id", help="The ID of the key to set the certificate for")
 @click.argument("filename")
 @click.pass_context
-def set_certificate(
-    ctx: Context, api: bool, key_id: Optional[str], filename: str
-) -> None:
+def set_certificate(ctx: Context, api: bool, key_id: Optional[str], filename: str) -> None:
     """Set a certificate on the NetHSM.
 
     If the --api option is set, the certificate used for the NetHSM TLS interface
@@ -1286,18 +1135,14 @@ def set_certificate(
         with open(filename, "rb") as f:
             if key_id:
                 nethsm.set_key_certificate(key_id, f)
-                print(
-                    f"Updated the certificate for key {key_id} on NetHSM {nethsm.host}"
-                )
+                print(f"Updated the certificate for key {key_id} on NetHSM {nethsm.host}")
             else:
                 nethsm.set_certificate(f)
                 print(f"Updated the API certificate for NetHSM {nethsm.host}")
 
 
 @nethsm.command()
-@click.option(
-    "-a", "--api", is_flag=True, help="Get the certificate for the NetHSM TLS interface"
-)
+@click.option("-a", "--api", is_flag=True, help="Get the certificate for the NetHSM TLS interface")
 @click.option("-k", "--key-id", help="The ID of the key to get the certificate for")
 @click.pass_context
 def get_certificate(ctx: Context, api: bool, key_id: Optional[str]) -> None:
@@ -1323,12 +1168,7 @@ def get_certificate(ctx: Context, api: bool, key_id: Optional[str]) -> None:
 
 
 @nethsm.command()
-@click.option(
-    "-k",
-    "--key-id",
-    prompt=True,
-    help="The ID of the key to delete the certificate for",
-)
+@click.option("-k", "--key-id", prompt=True, help="The ID of the key to delete the certificate for")
 @click.pass_context
 def delete_certificate(ctx: Context, key_id: str) -> None:
     """Delete a certificate for a stored key from the NetHSM.
@@ -1341,29 +1181,19 @@ def delete_certificate(ctx: Context, key_id: str) -> None:
 
 
 @nethsm.command()
-@click.option(
-    "-a", "--api", is_flag=True, help="Generate a CSR for the NetHSM TLS interface"
-)
+@click.option("-a", "--api", is_flag=True, help="Generate a CSR for the NetHSM TLS interface")
 @click.option("-k", "--key-id", help="The ID of the key to generate the CSR for")
 @click.option("--country", default="", prompt=True, help="The country name")
-@click.option(
-    "--state-or-province", default="", prompt=True, help="The state or province name"
-)
+@click.option("--state-or-province", default="", prompt=True, help="The state or province name")
 @click.option("--locality", default="", prompt=True, help="The locality name")
 @click.option("--organization", default="", prompt=True, help="The organization name")
-@click.option(
-    "--organizational-unit", default="", prompt=True, help="The organization unit name"
-)
+@click.option("--organizational-unit", default="", prompt=True, help="The organization unit name")
 @click.option("--common-name", default="", prompt=True, help="The common name")
 @click.option("--email-address", default="", prompt=True, help="The email address")
 @click.option(
-    "--san",
-    multiple=True,
-    help="The Subject Alternative Name(s) (default: same as common name)",
+    "--san", multiple=True, help="The Subject Alternative Name(s) (default: same as common name)"
 )
-@click.option(
-    "--no-san", is_flag=True, help="Omit the Subject Alternative Name extension"
-)
+@click.option("--no-san", is_flag=True, help="Omit the Subject Alternative Name extension")
 @click.pass_context
 def csr(
     ctx: Context,
@@ -1441,12 +1271,7 @@ def csr(
     prompt=True,
     help="The type for the generated key",
 )
-@click.option(
-    "-l",
-    "--length",
-    type=int,
-    help="The length of the generated key",
-)
+@click.option("-l", "--length", type=int, help="The length of the generated key")
 @click.pass_context
 def generate_tls_key(ctx: Context, type: str, length: Optional[int]) -> None:
     """Generate key pair for NetHSM TLS interface.
@@ -1512,11 +1337,7 @@ def backup(ctx: Context, filename: str) -> None:
 
 @nethsm.command()
 @click.option(
-    "-p",
-    "--backup-passphrase",
-    hide_input=True,
-    prompt=True,
-    help="The backup passphrase",
+    "-p", "--backup-passphrase", hide_input=True, prompt=True, help="The backup passphrase"
 )
 @click.option(
     "-t",
@@ -1524,12 +1345,7 @@ def backup(ctx: Context, filename: str) -> None:
     type=DATETIME_TYPE,
     help="The system time to set (default: the time of this system)",
 )
-@click.option(
-    "-f",
-    "--force",
-    is_flag=True,
-    help="Restore the backup even if validation fails",
-)
+@click.option("-f", "--force", is_flag=True, help="Restore the backup even if validation fails")
 @click.argument("filename")
 @click.pass_context
 def restore(
@@ -1590,17 +1406,13 @@ def validate_backup(backup_passphrase: Optional[str], filename: str) -> None:
     try:
         encrypted = EncryptedBackup.parse(data)
     except ValueError as e:
-        raise CliException(
-            f"Failed to validate backup metadata: {e}", support_hint=False
-        )
+        raise CliException(f"Failed to validate backup metadata: {e}", support_hint=False)
 
     if backup_passphrase:
         try:
             encrypted.decrypt(backup_passphrase)
         except ValueError as e:
-            raise CliException(
-                f"Failed to validate backup content: {e}", support_hint=False
-            )
+            raise CliException(f"Failed to validate backup content: {e}", support_hint=False)
         print("Backup metadata and content are valid.")
     else:
         print("Backup metadata is valid.")
@@ -1608,11 +1420,7 @@ def validate_backup(backup_passphrase: Optional[str], filename: str) -> None:
 
 @nethsm.command()
 @click.option(
-    "-p",
-    "--backup-passphrase",
-    hide_input=True,
-    prompt=True,
-    help="The backup passphrase",
+    "-p", "--backup-passphrase", hide_input=True, prompt=True, help="The backup passphrase"
 )
 @click.argument("filename")
 def export_backup(backup_passphrase: str, filename: str) -> None:
@@ -1687,12 +1495,7 @@ def commit_update(ctx: Context) -> None:
 
 
 @nethsm.command()
-@click.option(
-    "-f",
-    "--force",
-    is_flag=True,
-    help="Force reboot",
-)
+@click.option("-f", "--force", is_flag=True, help="Force reboot")
 @click.pass_context
 def reboot(ctx: Context, force: bool) -> None:
     """Reboot a NetHSM instance.
@@ -1711,12 +1514,7 @@ def reboot(ctx: Context, force: bool) -> None:
 
 
 @nethsm.command()
-@click.option(
-    "-f",
-    "--force",
-    is_flag=True,
-    help="Force shutdown",
-)
+@click.option("-f", "--force", is_flag=True, help="Force shutdown")
 @click.pass_context
 def shutdown(ctx: Context, force: bool) -> None:
     """Shutdown a NetHSM instance.
@@ -1741,12 +1539,7 @@ def shutdown(ctx: Context, force: bool) -> None:
 
 
 @nethsm.command()
-@click.option(
-    "-f",
-    "--force",
-    is_flag=True,
-    help="Force factory reset",
-)
+@click.option("-f", "--force", is_flag=True, help="Force factory reset")
 @click.pass_context
 def factory_reset(ctx: Context, force: bool) -> None:
     """Perform a factory reset for a NetHSM instance.
@@ -1766,25 +1559,9 @@ def factory_reset(ctx: Context, force: bool) -> None:
 
 
 @nethsm.command()
-@click.option(
-    "-k",
-    "--key-id",
-    prompt=True,
-    help="The ID of the key to encrypt the data with",
-)
-@click.option(
-    "-d",
-    "--data",
-    prompt=True,
-    help="The data in Base64 encoding",
-)
-@click.option(
-    "-m",
-    "--mode",
-    type=ENCRYPT_MODE_TYPE,
-    prompt=True,
-    help="The encrypt mode",
-)
+@click.option("-k", "--key-id", prompt=True, help="The ID of the key to encrypt the data with")
+@click.option("-d", "--data", prompt=True, help="The data in Base64 encoding")
+@click.option("-m", "--mode", type=ENCRYPT_MODE_TYPE, prompt=True, help="The encrypt mode")
 @click.option(
     "-iv",
     "--initialization-vector",
@@ -1809,25 +1586,9 @@ def encrypt(ctx: Context, key_id: str, data: str, mode: str, iv: Optional[str]) 
 
 
 @nethsm.command()
-@click.option(
-    "-k",
-    "--key-id",
-    prompt=True,
-    help="The ID of the key to decrypt the data width",
-)
-@click.option(
-    "-d",
-    "--data",
-    prompt=True,
-    help="The encrypted data in Base64 encoding",
-)
-@click.option(
-    "-m",
-    "--mode",
-    type=DECRYPT_MODE_TYPE,
-    prompt=True,
-    help="The decrypt mode",
-)
+@click.option("-k", "--key-id", prompt=True, help="The ID of the key to decrypt the data width")
+@click.option("-d", "--data", prompt=True, help="The encrypted data in Base64 encoding")
+@click.option("-m", "--mode", type=DECRYPT_MODE_TYPE, prompt=True, help="The decrypt mode")
 @click.option(
     "-iv",
     "--initialization-vector",
@@ -1851,44 +1612,21 @@ def decrypt(ctx: Context, key_id: str, data: str, mode: str, iv: Optional[str]) 
 
 
 @nethsm.command()
-@click.option(
-    "-k",
-    "--key-id",
-    prompt=True,
-    help="The ID of the key to sign the data width",
-)
-@click.option(
-    "-d",
-    "--data",
-    prompt=True,
-    help="The data to sign encoded using Base64",
-)
-@click.option(
-    "-m",
-    "--mode",
-    type=SIGN_MODE_TYPE,
-    prompt=True,
-    help="The sign mode",
-)
+@click.option("-k", "--key-id", prompt=True, help="The ID of the key to sign the data width")
+@click.option("-d", "--data", prompt=True, help="The data to sign encoded using Base64")
+@click.option("-m", "--mode", type=SIGN_MODE_TYPE, prompt=True, help="The sign mode")
 @click.pass_context
 def sign(ctx: Context, key_id: str, data: str, mode: str) -> None:
     """Sign data with a secret key on the NetHSM and print the signature.
 
     This command requires authentication as a user with the Operator role."""
     with connect(ctx) as nethsm:
-        signature = nethsm.sign(
-            key_id, base64_input(data), nethsm_sdk.SignMode.from_string(mode)
-        )
+        signature = nethsm.sign(key_id, base64_input(data), nethsm_sdk.SignMode.from_string(mode))
         print(signature.data)
 
 
 @nethsm.command()
-@click.option(
-    "-a",
-    "--admin-passphrase",
-    default="adminadmin",
-    help="The admin passphrase to set.",
-)
+@click.option("-a", "--admin-passphrase", default="adminadmin", help="The admin passphrase to set.")
 @click.option(
     "-o",
     "--operator-passphrase",
@@ -1896,27 +1634,12 @@ def sign(ctx: Context, key_id: str, data: str, mode: str) -> None:
     help="The operator passphrase to set.",
 )
 @click.option(
-    "-u",
-    "--unlock-passphrase",
-    default="unlockunlock",
-    help="The unlock passphrase to set.",
+    "-u", "--unlock-passphrase", default="unlockunlock", help="The unlock passphrase to set."
 )
+@click.option("-k", "--key-generations", default=1000, help="Number of keys to generate.")
+@click.option("-r", "--random-length", default=1024, help="Number of random bytes to generate.")
 @click.option(
-    "-k",
-    "--key-generations",
-    default=1000,
-    help="Number of keys to generate.",
-)
-@click.option(
-    "-r",
-    "--random-length",
-    default=1024,
-    help="Number of random bytes to generate.",
-)
-@click.option(
-    "--skip-factory-reset",
-    is_flag=True,
-    help="Skip the factory reset at the end of the test.",
+    "--skip-factory-reset", is_flag=True, help="Skip the factory reset at the end of the test."
 )
 @click.pass_context
 def test(
@@ -1938,9 +1661,7 @@ def test(
         if state == State.UNPROVISIONED:
             print("Unprovisioned NetHSM found.")
         else:
-            raise CliException(
-                "Provisioned or operational NetHSM found.", support_hint=False
-            )
+            raise CliException("Provisioned or operational NetHSM found.", support_hint=False)
 
         system_time = datetime.datetime.now(datetime.timezone.utc)
         nethsm.provision(unlock_passphrase, admin_passphrase, system_time)
@@ -1976,8 +1697,7 @@ def test(
             print(f"Generated {key_generations} RSA2048 keys.")
         else:
             raise CliException(
-                f"The amount of keys requested and stored does not match.",
-                support_hint=False,
+                f"The amount of keys requested and stored does not match.", support_hint=False
             )
 
     ctx.obj.username = operator_username
@@ -2010,10 +1730,7 @@ def test(
 
 
 @nethsm.command()
-@click.option(
-    "--url",
-    multiple=True,
-)
+@click.option("--url", multiple=True)
 @click.argument("join_data_path", type=Path)
 @click.pass_context
 def add_cluster_member(ctx: Context, url: tuple[str], join_data_path: Path) -> None:
@@ -2040,10 +1757,7 @@ def list_cluster_members(ctx: Context) -> None:
 
 
 @nethsm.command()
-@click.option(
-    "--url",
-    multiple=True,
-)
+@click.option("--url", multiple=True)
 @click.argument("member-id")
 @click.pass_context
 def set_cluster_member_urls(ctx: Context, member_id: str, url: tuple[str]) -> None:

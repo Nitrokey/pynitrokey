@@ -15,12 +15,7 @@ import requests
 import pynitrokey
 from pynitrokey.cli.exceptions import CliException
 from pynitrokey.confconsts import LOG_FN
-from pynitrokey.helpers import (
-    AskUser,
-    check_pynitrokey_version,
-    local_critical,
-    local_print,
-)
+from pynitrokey.helpers import AskUser, check_pynitrokey_version, local_critical, local_print
 
 logger = logging.getLogger()
 
@@ -107,9 +102,7 @@ def update(serial: str, yes: bool, force: bool) -> None:
             download_url = url
             break
     if not download_url:
-        raise CliException(
-            "Failed to determine latest release (url)", "assets:", *map(str, assets)
-        )
+        raise CliException("Failed to determine latest release (url)", "assets:", *map(str, assets))
 
     import os.path
 
@@ -126,14 +119,11 @@ def update(serial: str, yes: bool, force: bool) -> None:
     if f"firmware-{ver[0]}.{ver[1]}.{ver[2]}" in download_url:
         if not force:
             local_critical(
-                "Your firmware is up-to-date!\n"
-                "Use --force flag to run update process anyway.",
+                "Your firmware is up-to-date!\nUse --force flag to run update process anyway.",
                 support_hint=False,
             )
         else:
-            local_print(
-                "Firmware is up-to-date. Continue due to --force switch applied."
-            )
+            local_print("Firmware is up-to-date. Continue due to --force switch applied.")
 
     def download_firmware() -> str:
         # download asset url

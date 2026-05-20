@@ -2,17 +2,21 @@
 # Copyright Nitrokey GmbH
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 
+-include variables.mk
+
 PACKAGE_NAME=pynitrokey
 
-# whitelist of directories for flake8
-FLAKE8_DIRS=\
+FORMAT_DIRS := $(PACKAGE_NAME) stubs
+LINT_DIRS := \
 	pynitrokey/cli/fido2.py \
 	pynitrokey/cli/nk3 \
 	pynitrokey/cli/nkfido2.py \
 	pynitrokey/cli/nkpk.py \
 	pynitrokey/cli/trussed \
-	pynitrokey/fido2
+	pynitrokey/fido2 \
+	stubs
 
+RUFF ?= poetry run ruff
 MYPY ?= poetry run mypy
 
 .PHONY: all
@@ -30,25 +34,20 @@ lock:
 update:
 	poetry update
 
-# code checks
 .PHONY: check-format
 check-format:
-	poetry run black --check $(PACKAGE_NAME)/ stubs
-
-.PHONY: check-import-sorting
-check-import-sorting:
-	poetry run isort --check-only $(PACKAGE_NAME)/ stubs
+	$(RUFF) format --check $(FORMAT_DIRS)
 
 .PHONY: check-style
 check-style:
-	poetry run flake8 $(FLAKE8_DIRS) stubs
+	$(RUFF) check $(LINT_DIRS)
 
 .PHONY: check-typing
 check-typing:
 	$(MYPY) $(PACKAGE_NAME)/
 
 .PHONY: check
-check: check-format check-import-sorting check-style check-typing
+check: check-format check-style check-typing
 
 .PHONY: test
 test:
@@ -57,8 +56,8 @@ test:
 # automatic code fixes
 .PHONY: fix
 fix:
-	poetry run black $(BLACK_FLAGS) $(PACKAGE_NAME)/ stubs
-	poetry run isort $(ISORT_FLAGS) $(PACKAGE_NAME)/ stubs
+	$(RUFF) format $(FORMAT_DIRS)
+	$(RUFF) check --fix $(LINT_DIRS)
 
 .PHONY: clean
 clean:
@@ -98,7 +97,7 @@ secrets-test-report-CI:
 	@echo "Report written to $(REPORT)"
 
 
-CORPUS_PATH=$(shell mktemp -d)
+secrets-test-generate-corpus: CORPUS_PATH=$(shell mktemp -d)
 secrets-test-generate-corpus:
 	./venv/bin/pytest  -v pynitrokey/test_secrets_app.py --durations=0 $(TESTPARAM) --generate-fuzzing-corpus --fuzzing-corpus-path=$(CORPUS_PATH)
 	@echo "Corpus written to $(CORPUS_PATH)"

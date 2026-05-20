@@ -123,10 +123,7 @@ class UsbId:
 
 def is_connected() -> ConnectedDevices:
     devs = {}
-    usb_id = {
-        "update_mode": UsbId(0x03EB, 0x2FF1),
-        "application_mode": UsbId(0x20A0, 0x4109),
-    }
+    usb_id = {"update_mode": UsbId(0x03EB, 0x2FF1), "application_mode": UsbId(0x20A0, 0x4109)}
     with usb1.USBContext() as context:
         for k, v in usb_id.items():
             res = context.getByVendorIDAndProductID(vendor_id=v.vid, product_id=v.pid)
@@ -139,10 +136,7 @@ def is_connected() -> ConnectedDevices:
 @click.command()
 @click.argument("firmware", type=click.Path(exists=True, readable=True))
 @click.option(
-    "--experimental",
-    default=False,
-    is_flag=True,
-    help="Allow to execute experimental features",
+    "--experimental", default=False, is_flag=True, help="Allow to execute experimental features"
 )
 def update(firmware: str, experimental):
     """experimental: run assisted update through dfu-programmer tool"""
@@ -172,9 +166,7 @@ def update(firmware: str, experimental):
     # note: this is just for presentation - actual argument replacement is done in process_runner
     # the string form cannot be used, as it could contain space which would break dfu-programmer's call
     args = {"FIRMWARE": firmware}
-    local_print(
-        f"Commands to be executed: {string.Template(commands).substitute(args)}"
-    )
+    local_print(f"Commands to be executed: {string.Template(commands).substitute(args)}")
     if not confirm("Do you want to perform the firmware update now?"):
         logger.info("Update cancelled by user")
         raise click.Abort()
@@ -192,9 +184,7 @@ def update(firmware: str, experimental):
                 local_print(output)
         except subprocess.CalledProcessError as e:
             linux = "linux" in platform.platform().lower()
-            local_critical(
-                e, "Note: make sure you have the udev rules installed." if linux else ""
-            )
+            local_critical(e, "Note: make sure you have the udev rules installed." if linux else "")
 
     local_print("")
     local_print("Finished!")
@@ -211,9 +201,9 @@ def update(firmware: str, experimental):
 
 def check_for_update_mode() -> None:
     connected = is_connected()
-    assert (
-        connected.application_mode + connected.update_mode > 0
-    ), "No connected Nitrokey Storage devices found"
+    assert connected.application_mode + connected.update_mode > 0, (
+        "No connected Nitrokey Storage devices found"
+    )
     if connected.application_mode and not connected.update_mode:
         # execute bootloader
         storage.commands["enable-update"].callback()  # type: ignore[misc]
@@ -223,9 +213,7 @@ def check_for_update_mode() -> None:
             time.sleep(1)
         time.sleep(1)
     else:
-        local_print(
-            "Nitrokey Storage in update mode found in the USB list (not connected yet)"
-        )
+        local_print("Nitrokey Storage in update mode found in the USB list (not connected yet)")
 
 
 @click.command()
@@ -259,9 +247,7 @@ def enable_update():
     if nks.enable_firmware_update(password) == 0:
         local_print("setting firmware update mode - success!")
     else:
-        local_critical(
-            "Enabling firmware update has failed. Check your firmware password."
-        )
+        local_critical("Enabling firmware update has failed. Check your firmware password.")
 
 
 @click.command()
@@ -274,21 +260,15 @@ def change_firmware_password():
     """
     nk = connect_nkstorage()
 
-    old_password = prompt(
-        "Old firmware update password", default="12345678", hide_input=True
-    )
-    new_password = prompt(
-        "New firmware update password", hide_input=True, confirmation_prompt=True
-    )
+    old_password = prompt("Old firmware update password", default="12345678", hide_input=True)
+    new_password = prompt("New firmware update password", hide_input=True, confirmation_prompt=True)
     ret = nk.change_firmware_password(old_password, new_password)
     if ret.ok:
         local_print("Successfully updated the firmware password")
     elif ret == RetCode.WRONG_PASSWORD:
         local_critical("Wrong firmware update password", support_hint=False)
     elif ret == RetCode.TooLongStringException:
-        local_critical(
-            "The new firmware update password is too long", support_hint=False
-        )
+        local_critical("The new firmware update password is too long", support_hint=False)
     else:
         local_critical(f"Failed to update the firmware password ({ret.name})")
 
@@ -335,9 +315,7 @@ def open_hidden():
         if ret == RetCode.WRONG_PASSWORD:
             raise CliException("Wrong hidden volume passphrase", support_hint=False)
         else:
-            raise CliException(
-                "Unexpected error unlocking the hidden volume: {}".format(str(ret))
-            )
+            raise CliException("Unexpected error unlocking the hidden volume: {}".format(str(ret)))
 
 
 @click.command()
@@ -350,14 +328,8 @@ def close_hidden():
 
 
 @click.command()
-@click.argument(
-    "slot",
-    type=int,
-)
-@click.argument(
-    "begin",
-    type=int,
-)
+@click.argument("slot", type=int)
+@click.argument("begin", type=int)
 @click.argument("end", type=int)
 def create_hidden(slot, begin, end):
     """Create a hidden volume
@@ -374,9 +346,7 @@ def create_hidden(slot, begin, end):
     elif end < 1 or end > 100:
         raise CliException("Error: End must be between 1 and 100", support_hint=False)
     elif begin >= end:
-        raise CliException(
-            "Error: END must be strictly superior than START", support_hint=False
-        )
+        raise CliException("Error: END must be strictly superior than START", support_hint=False)
 
     password = AskUser(
         "Hidden volume passphrase", envvar="NITROPY_HIDDEN_PASSPHRASE", hide_input=True
@@ -471,9 +441,7 @@ def compare(fw1_path: str, fw2_path: str, region: str, max_diff: int):
         diff_count += not data_equal
         non_empty_count += fw1_i not in [0xFF, 0x00]
         if not data_equal:
-            click.echo(
-                f"Binaries differ at {hex(i)} (page {i // 512}): {hex(fw1_i)} {hex(fw2_i)}"
-            )
+            click.echo(f"Binaries differ at {hex(i)} (page {i // 512}): {hex(fw1_i)} {hex(fw2_i)}")
         if diff_count > max_diff:
             raise click.ClickException(f"Maximum diff count reached")
 
@@ -490,32 +458,21 @@ def compare(fw1_path: str, fw2_path: str, region: str, max_diff: int):
 @click.argument("new_firmware_file", type=click.Path(exists=True))
 @click.argument("output", type=click.File("w"))
 @click.option("--overlap", type=click.Choice(["error", "ignore"]), default="error")
-def merge(
-    dumped_firmware: str,
-    new_firmware_file: str,
-    output: click.File,
-    overlap: str,
-):
+def merge(dumped_firmware: str, new_firmware_file: str, output: click.File, overlap: str):
     """Simple tool to merge user data into the new firmware binary"""
     if not output.name.endswith("hex"):
         raise click.ClickException("Provided output path has to end in .hex")
 
     current_firmware_read = IntelHex()
-    current_firmware_read.loadfile(
-        dumped_firmware, format=input_format(dumped_firmware)
-    )
+    current_firmware_read.loadfile(dumped_firmware, format=input_format(dumped_firmware))
 
     if empty_check_user_data(current_firmware_read):
-        raise click.ClickException(
-            "Provided dumped binary image does not contain user data"
-        )
+        raise click.ClickException("Provided dumped binary image does not contain user data")
 
     new_firmware = IntelHex()
     new_firmware.loadfile(new_firmware_file, format=input_format(new_firmware_file))
     new_firmware.merge(
-        current_firmware_read[
-            MemoryConstants.USER_DATA_START : MemoryConstants.USER_DATA_END
-        ],
+        current_firmware_read[MemoryConstants.USER_DATA_START : MemoryConstants.USER_DATA_END],
         overlap=overlap,
     )
     new_firmware.write_hex_file(output)

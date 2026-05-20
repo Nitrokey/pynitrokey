@@ -274,10 +274,7 @@ class BaseLibNitrokey:
         else:
             _hay = "1234567890abcdefghijklmnopqrstuwvxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
         return c_enc(
-            "".join(
-                _hay[randint(0, len(_hay) - 1)]
-                for _ in range(length or cls.max_pass_len)
-            )
+            "".join(_hay[randint(0, len(_hay) - 1)] for _ in range(length or cls.max_pass_len))
         )
 
     @classmethod
@@ -344,16 +341,12 @@ class BaseLibNitrokey:
     @ret_code
     def admin_auth(self, admin_pass):
         self._admin_auth_token = self.gen_random()
-        return self.api.NK_first_authenticate(
-            c_enc(admin_pass), c_enc(self._admin_auth_token)
-        )
+        return self.api.NK_first_authenticate(c_enc(admin_pass), c_enc(self._admin_auth_token))
 
     @ret_code
     def user_auth(self, user_pass):
         self._user_auth_token = self.gen_random()
-        return self.api.NK_user_authenticate(
-            c_enc(user_pass), c_enc(self._user_auth_token)
-        )
+        return self.api.NK_user_authenticate(c_enc(user_pass), c_enc(self._user_auth_token))
 
     @ret_code
     def lock(self):
@@ -404,9 +397,7 @@ class BaseLibNitrokey:
     @property
     def connected(self):
         # using `device_model` to determine, if some device is connected
-        self._connected = (
-            self.device_model > DeviceModel.NONE and len(self.raw_status.strip()) > 0
-        )
+        self._connected = self.device_model > DeviceModel.NONE and len(self.raw_status.strip()) > 0
 
         # clear auth tokens, if not connected
         if not self._connected:
@@ -417,10 +408,7 @@ class BaseLibNitrokey:
 
     @property
     def fw_version(self):
-        return (
-            self.api.NK_get_major_firmware_version(),
-            self.api.NK_get_minor_firmware_version(),
-        )
+        return (self.api.NK_get_major_firmware_version(), self.api.NK_get_minor_firmware_version())
 
     @property
     def serial(self, as_int=False):
@@ -452,9 +440,7 @@ class BaseLibNitrokey:
 
     @property
     def status(self):
-        dct = dict(
-            [line.split(":") for line in self.raw_status.split("\n") if line.strip()]
-        )
+        dct = dict([line.split(":") for line in self.raw_status.split("\n") if line.strip()])
         out = {
             key: val.replace("-", "").replace("\t", "").replace(".", "").strip()
             for key, val in dct.items()
@@ -544,16 +530,12 @@ class NitrokeyStorage(BaseLibNitrokey):
     @ret_code
     def create_hidden_volume(self, slot, start_percent, end_percent, password):
         """Create hidden volume"""
-        return self.api.NK_create_hidden_volume(
-            slot, start_percent, end_percent, c_enc(password)
-        )
+        return self.api.NK_create_hidden_volume(slot, start_percent, end_percent, c_enc(password))
 
     @ret_code
     def change_firmware_password(self, old_password, new_password):
         """Change the firmware update password."""
-        return self.api.NK_change_update_password(
-            c_enc(old_password), c_enc(new_password)
-        )
+        return self.api.NK_change_update_password(c_enc(old_password), c_enc(new_password))
 
 
 class NitrokeyPro(BaseLibNitrokey):
@@ -571,9 +553,7 @@ class NitrokeyPro(BaseLibNitrokey):
     @ret_code
     def change_firmware_password(self, old_password, new_password):
         """Change the firmware update password."""
-        return self.api.NK_change_firmware_password_pro(
-            c_enc(old_password), c_enc(new_password)
-        )
+        return self.api.NK_change_firmware_password_pro(c_enc(old_password), c_enc(new_password))
 
 
 class BaseSlots:
@@ -618,14 +598,7 @@ class HOTPSlots(BaseSlots):
         return self.api.NK_get_hotp_slot_name(slot_idx)
 
     def _write(
-        self,
-        slot_idx,
-        name,
-        secret,
-        hotp_cnt,
-        use_8_digits=False,
-        use_enter=False,
-        token_id=None,
+        self, slot_idx, name, secret, hotp_cnt, use_8_digits=False, use_enter=False, token_id=None
     ):
         """secret is expected without(!) \0 termination"""
 

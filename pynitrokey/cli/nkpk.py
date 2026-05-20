@@ -14,12 +14,7 @@ from . import trussed
 
 class Context(trussed.Context[NKPKBootloader, NKPK]):
     def __init__(self, path: Optional[str]) -> None:
-        super().__init__(
-            path,
-            NKPKBootloader,
-            NKPK,
-            Model.NKPK,
-        )
+        super().__init__(path, NKPKBootloader, NKPK, Model.NKPK)
 
     @property
     def test_cases(self) -> list[TestCase]:

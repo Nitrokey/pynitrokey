@@ -12,16 +12,14 @@ from pynitrokey.fido2.client import NKFido2Client, list_ctaphid_devices
 
 
 def find(
-    solo_serial: Optional[str] = None,
-    retries: int = 5,
-    raw_device: Optional[CtapHidDevice] = None,
+    solo_serial: Optional[str] = None, retries: int = 5, raw_device: Optional[CtapHidDevice] = None
 ) -> NKFido2Client:
     p = NKFido2Client()
 
     # This... is not the right way to do it yet
     p.use_u2f()
 
-    for i in range(retries):
+    for _i in range(retries):
         try:
             p.find_device(dev=raw_device, solo_serial=solo_serial)
             return p
@@ -29,8 +27,7 @@ def find(
             time.sleep(0.2)
 
     print(
-        "Warning: This command only works with the Nitrokey FIDO2, not with "
-        "other FIDO2 devices!",
+        "Warning: This command only works with the Nitrokey FIDO2, not with other FIDO2 devices!",
         file=sys.stderr,
     )
     raise NoSoloFoundError("no Nitrokey FIDO2 found")
