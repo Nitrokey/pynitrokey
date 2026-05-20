@@ -7,14 +7,7 @@
 PACKAGE_NAME=pynitrokey
 
 FORMAT_DIRS := $(PACKAGE_NAME) stubs
-LINT_DIRS := \
-	pynitrokey/cli/fido2.py \
-	pynitrokey/cli/nk3 \
-	pynitrokey/cli/nkfido2.py \
-	pynitrokey/cli/nkpk.py \
-	pynitrokey/cli/trussed \
-	pynitrokey/fido2 \
-	stubs
+LINT_DIRS := $(PACKAGE_NAME) stubs
 
 RUFF ?= poetry run ruff
 MYPY ?= poetry run mypy

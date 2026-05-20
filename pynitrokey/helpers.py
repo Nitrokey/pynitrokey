@@ -14,7 +14,7 @@ from getpass import getpass
 from importlib.metadata import version
 from itertools import chain
 from threading import Event, Timer
-from typing import Any, Callable, List, Optional, Tuple, TypeVar, Union
+from typing import Any, List, Optional, Union
 
 import click
 from nitrokey.updates import Repository
@@ -129,7 +129,7 @@ class Table:
 
     def __str__(self) -> str:
         def format_row(items: Sequence[str]) -> str:
-            row = [item.ljust(width) for (item, width) in zip(items, self._widths)]
+            row = [item.ljust(width) for (item, width) in zip(items, self._widths, strict=True)]
             return "\t".join(row)
 
         lines = []
@@ -346,7 +346,7 @@ class AskUser:
     def __init__(
         self,
         question: str,
-        options: List[str] = [],
+        options: List[str] = [],  # noqa: B006
         strict: bool = False,
         repeat: int = 3,
         adapt_question: bool = True,

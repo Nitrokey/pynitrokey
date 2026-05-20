@@ -25,7 +25,7 @@ def monitor(serial_port: str) -> None:
             break
         except KeyboardInterrupt:
             exit(1)
-        except:
+        except:  # noqa: E722
             sys.stdout.buffer.write(b".")
             sys.stdout.flush()
         time.sleep(0.5)

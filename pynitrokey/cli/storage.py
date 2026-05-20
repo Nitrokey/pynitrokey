@@ -339,7 +339,7 @@ def create_hidden(slot, begin, end):
     END is where the volume ends expressed in percent of total available storage (1-100)\n
     If the hidden volume passphrase is not in the environment variable NITROPY_HIDDEN_PASSPHRASE, it will be prompted from stdin
     """
-    if not slot in [1, 2, 3, 4]:
+    if slot not in [1, 2, 3, 4]:
         raise CliException("Error: Slot must be between 1 and 4", support_hint=False)
     elif begin > 99 or begin < 0:
         raise CliException("Error: Begin must be between 0 and 99", support_hint=False)
@@ -428,7 +428,7 @@ def compare(fw1_path: str, fw2_path: str, region: str, max_diff: int):
         data_start = MemoryConstants.USER_DATA_START
         data_stop = MemoryConstants.USER_DATA_END
     else:
-        raise click.ClickException(f"Wrong type")
+        raise click.ClickException("Wrong type")
 
     def geti(f: IntelHex, i: int) -> int:
         return f[i + offset[f]]
@@ -443,12 +443,12 @@ def compare(fw1_path: str, fw2_path: str, region: str, max_diff: int):
         if not data_equal:
             click.echo(f"Binaries differ at {hex(i)} (page {i // 512}): {hex(fw1_i)} {hex(fw2_i)}")
         if diff_count > max_diff:
-            raise click.ClickException(f"Maximum diff count reached")
+            raise click.ClickException("Maximum diff count reached")
 
     if diff_count > 0:
-        raise click.ClickException(f"Binaries differ")
+        raise click.ClickException("Binaries differ")
     if non_empty_count == 0:
-        raise click.ClickException(f"Binaries contain no data")
+        raise click.ClickException("Binaries contain no data")
     click.echo(f"Non-empty bytes count: {non_empty_count}")
     click.echo("Binary images are identical")
 

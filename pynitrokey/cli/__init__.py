@@ -13,7 +13,6 @@ from importlib.metadata import version as package_version
 
 import click
 
-import pynitrokey
 from pynitrokey.cli.exceptions import CliException
 from pynitrokey.cli.fido2 import fido2
 from pynitrokey.cli.nethsm import nethsm
@@ -22,7 +21,7 @@ from pynitrokey.cli.nkpk import nkpk
 from pynitrokey.cli.pro import pro
 from pynitrokey.cli.start import start
 from pynitrokey.cli.storage import storage
-from pynitrokey.confconsts import LOG_FILE, LOG_FN, LOG_FORMAT
+from pynitrokey.confconsts import LOG_FILE, LOG_FORMAT
 from pynitrokey.helpers import filter_sensitive_parameters, local_critical
 
 logger = logging.getLogger(__name__)
@@ -69,7 +68,7 @@ def nitropy() -> None:
     check_root()
 
 
-from . import nkfido2
+from . import nkfido2  # noqa: E402
 
 nkfido2.add_commands(fido2)
 
@@ -115,7 +114,7 @@ def list() -> None:
 
 @click.command(hidden=True)
 def ls() -> None:
-    warnings.warn("The ls command is deprecated. Please use list instead.")
+    warnings.warn("The ls command is deprecated. Please use list instead.")  # noqa: B028
     _list()
 
 

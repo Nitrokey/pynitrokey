@@ -6,7 +6,6 @@ import contextlib
 import datetime
 import json
 import logging
-import mimetypes
 import os
 import os.path
 import sys
@@ -56,7 +55,7 @@ def prompt_str(msg: str, default: Optional[str] = None, hide_input: bool = False
 
 
 def print_row(values: Iterable[str], widths: Iterable[int]) -> None:
-    row = [value.ljust(width) for (value, width) in zip(values, widths)]
+    row = [value.ljust(width) for (value, width) in zip(values, widths, strict=True)]
     print(*row, sep="\t")
 
 
@@ -1059,7 +1058,7 @@ def set_network_config(
     if ipv6_cidr is not None or ipv6_gateway is not None:
         if ipv6_cidr is None:
             raise CliException(
-                f"--ipv6-cidr must be set if --ipv6-gateway is set", support_hint=False
+                "--ipv6-cidr must be set if --ipv6-gateway is set", support_hint=False
             )
         ipv6 = nethsm_sdk.Ipv6Config(cidr=ipv6_cidr, gateway=ipv6_gateway)
     with connect(ctx) as nethsm:
@@ -1548,7 +1547,7 @@ def factory_reset(ctx: Context, force: bool) -> None:
     role."""
     with connect(ctx) as nethsm:
         print(f"NetHSM {nethsm.host} will be set to factory defaults.")
-        print(f"All data will be lost!")
+        print("All data will be lost!")
         factory_reset = force or click.confirm("Do you want to continue?")
 
         if factory_reset:
@@ -1697,7 +1696,7 @@ def test(
             print(f"Generated {key_generations} RSA2048 keys.")
         else:
             raise CliException(
-                f"The amount of keys requested and stored does not match.", support_hint=False
+                "The amount of keys requested and stored does not match.", support_hint=False
             )
 
     ctx.obj.username = operator_username

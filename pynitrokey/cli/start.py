@@ -2,9 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 
 
-from subprocess import check_output
 from sys import stderr, stdout
-from time import sleep
 
 import click
 from tqdm import tqdm
@@ -17,9 +15,7 @@ from pynitrokey.start.upgrade_by_passwd import (
     DEFAULT_PW3,
     DEFAULT_WAIT_FOR_REENUMERATION,
     IS_LINUX,
-    kill_smartcard_services,
     logger,
-    restart_smartcard_services,
     show_kdf_details,
     start_update,
     validate_gnuk,
@@ -104,7 +100,7 @@ def set_identity(identity, force_restart):
         local_critical("identity must be 0, 1 or 2")
 
     local_print(f"Setting identity to {identity}")
-    for x in range(3):
+    for _x in range(3):
         try:
             gnuk = get_gnuk_device()
             with gnuk.release_on_exit() as gnuk:

@@ -46,7 +46,7 @@ def prepare_for_pkcs1v15_sign(data: bytes, key_size_bytes: int) -> bytes:
 
 
 class StatusError(Exception):
-    def __init__(self, value: int):
+    def __init__(self, value: int) -> None:
         self.value = value
 
     def __str__(self) -> str:
@@ -58,7 +58,7 @@ class PivApp:
     logfn: LogFn
     connection: CardConnection
 
-    def __init__(self, logfn: Optional[LogFn] = None):
+    def __init__(self, logfn: Optional[LogFn] = None) -> None:
         self.log = logging.getLogger("pivapp")
         readers = smartcard.System.readers()
         chosen_connection: Optional[CardConnection] = None

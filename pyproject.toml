@@ -118,11 +118,17 @@ line-length = 100
 skip-magic-trailing-comma = true
 
 [tool.ruff.lint]
+exclude = ["conftest.py", "libnk.py", "pynitrokey/start/*", "test_secrets_app.py"]
 select = ["ANN", "B", "C", "E", "F", "W", "I", "RUF100"]
 ignore = ["ANN401", "B904", "E501"]
 
 [tool.ruff.lint.isort]
 split-on-trailing-comma = false
+
+[tool.ruff.lint.per-file-ignores]
+"pynitrokey/cli/pro.py" = ["ANN001", "ANN201"]
+"pynitrokey/cli/start.py" = ["ANN001", "ANN201"]
+"pynitrokey/cli/storage.py" = ["ANN001", "ANN201"]
 
 [tool.ruff.lint.mccabe]
 max-complexity = 30

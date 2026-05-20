@@ -1,7 +1,7 @@
 # Copyright Nitrokey GmbH
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 
-from typing import Optional, Sequence, Tuple
+from typing import Sequence, Tuple
 
 
 def build_one(tag: int, data: bytes) -> bytes:
