@@ -32,7 +32,7 @@ Use Dockerfile directly instead if in doubt.
 
 ## Linters
 
-We use [flake8](https://flake8.pycqa.org/en/latest/) for style checks, [black](https://github.com/psf/black) for code formatting, [isort](https://github.com/PyCQA/isort) for import sorting and [mypy](https://github.com/python/mypy) for static type analysis.
+We use [ruff](https://docs.astral.sh/ruff/) for style checks and code formatting and [mypy](https://github.com/python/mypy) for static type analysis.
 To run all checks, execute `make check`.
 Before using it for the first time, you have to call `make install` to setup a virtual environment and install the required dependencies.
 
