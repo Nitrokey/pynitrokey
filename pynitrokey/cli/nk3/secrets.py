@@ -742,6 +742,9 @@ def credential_export(ctx: Context, output: str, cleartext: bool) -> None:
                 with open(filename, "w") as f:
                     f.write(resp_str)
 
+            if not fail_list:
+                local_print("All passwords exported successfully!")
+
         try:
             call(app)
 
