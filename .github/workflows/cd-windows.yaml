@@ -47,12 +47,6 @@ jobs:
         run: choco install poetry --source python
       - name: Create virtual environment
         run: poetry sync --all-extras --with pyinstaller
-      - name: Create Windows version info file
-        run: |
-          poetry run create-version-file `
-            --outfile .\ci-scripts\windows\pyinstaller\file_version_info.txt `
-            --version "$(poetry version --short)" `
-            .\ci-scripts\windows\pyinstaller\file_version_info_metadata.yaml
       - name: Build onedir
         run: poetry run pyinstaller -- ci-scripts/pyinstaller.spec -- --mode onedir --platform windows
       - name: Test onedir
