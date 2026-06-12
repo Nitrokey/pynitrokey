@@ -13,6 +13,7 @@ import click
 from nitrokey.nk3.secrets_app import (
     ALGORITHM_TO_KIND,
     STRING_TO_KIND,
+    CXFBackupCombined,
     SecretsApp,
     SecretsAppException,
     SecretsAppExceptionID,
@@ -687,3 +688,126 @@ def helper_secrets_app_health_check(app: SecretsApp) -> List[str]:
     if messages:
         messages.insert(0, "Health check notes:")
     return messages
+
+
+@secrets.command()
+@click.pass_obj
+@click.option(
+    "--output",
+    "output",
+    type=click.Path(),
+    required=True,
+    help="Output file path. Use STDOUT for printing on terminal.",
+)
+@click.option(
+    "--cleartext",
+    "cleartext",
+    is_flag=True,
+    default=False,
+    help="Export without encryption. (Not recommended)",
+)
+def credential_export(ctx: Context, output: str, cleartext: bool) -> None:
+    """Export all passwords for backup"""
+    with ctx.connect_device() as device:
+        app = SecretsApp(device)
+        if app.is_pin_healthy():
+            local_print(
+                "Please provide PIN to export PIN-protected entries (if any), or press ENTER to skip"
+            )
+            try:
+                ask_to_touch_if_needed()
+                repeat_if_pin_needed.cached_PIN = authenticate_if_needed(app)  # type: ignore[attr-defined]
+            except click.Abort:
+                pass
+
+        @repeat_if_pin_needed
+        def call(app: SecretsApp) -> None:
+            encryption = not cleartext
+            pin = repeat_if_pin_needed.cached_PIN  # type: ignore[attr-defined]
+            export_combined = app.export_cxf(encryption=encryption, password=pin)
+            if encryption:
+                local_print(f"Keep the passphrase securely: {export_combined.passphrase}")
+
+            fail_list = export_combined.skipped_credentials
+            resp = export_combined.payload
+
+            if fail_list:
+                local_print("Failed to export the following credentials")
+                for f in fail_list:
+                    local_print(f)
+
+            resp_str = json.dumps(resp, indent=4)
+
+            if output == "STDOUT":
+                local_print(f"Exported credentials \n{resp_str}")
+            else:
+                filename = output if output.endswith(".json") else output + ".json"
+                with open(filename, "w") as f:
+                    f.write(resp_str)
+
+            if not fail_list:
+                local_print("All passwords exported successfully!")
+
+        try:
+            call(app)
+
+        except SecretsAppException as e:
+            local_print(f"Device returns error: {e}. \n")
+
+
+@secrets.command()
+@click.pass_obj
+@click.option(
+    "--input",
+    "input_path",
+    type=click.Path(),
+    required=True,
+    help="Input file path. Use STDIN for reading from terminal.",
+)
+@click.option(
+    "--passphrase",
+    "passphrase",
+    type=click.STRING,
+    required=False,
+    default="",
+    help="Enter passphrase only if trying to import an encrypted export file.",
+)
+def credential_import(ctx: Context, input_path: str, passphrase: str) -> None:
+    """Import exported backup passwords"""
+    with ctx.connect_device() as device:
+        app = SecretsApp(device)
+        if app.is_pin_healthy():
+            local_print(
+                "Please provide PIN to export PIN-protected entries (if any), or press ENTER to skip"
+            )
+            try:
+                ask_to_touch_if_needed()
+                repeat_if_pin_needed.cached_PIN = authenticate_if_needed(app)  # type: ignore[attr-defined]
+            except click.Abort:
+                pass
+
+        @repeat_if_pin_needed
+        def call(app: SecretsApp) -> None:
+            pin = repeat_if_pin_needed.cached_PIN  # type: ignore[attr-defined]
+
+            if input_path == "STDIN":
+                input_content = AskUser(question="Enter the import credential").ask()
+            else:
+                with open(input_path, "r") as f:
+                    input_content = f.read()
+
+            cxf_dict = json.loads(input_content)
+            import_content = CXFBackupCombined(
+                payload=cxf_dict, skipped_credentials=[], passphrase=passphrase
+            )
+
+            app.import_cxf(import_content, pin)
+
+        try:
+            call(app)
+        except FileNotFoundError as e:
+            local_print(f"Import file was not found: {e}")
+        except json.JSONDecodeError as e:
+            local_print(f"Invalid JSON format: {e}")
+        except SecretsAppException as e:
+            local_print(f"Device returns error: {e}. \n")
