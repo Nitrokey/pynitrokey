@@ -13,6 +13,7 @@ import click
 from nitrokey.nk3.secrets_app import (
     ALGORITHM_TO_KIND,
     STRING_TO_KIND,
+    CXFBackupCombined,
     SecretsApp,
     SecretsAppException,
     SecretsAppExceptionID,
@@ -721,12 +722,14 @@ def credential_export(ctx: Context, output: str, cleartext: bool) -> None:
 
         @repeat_if_pin_needed
         def call(app: SecretsApp) -> None:
+            encryption = not cleartext
             pin = repeat_if_pin_needed.cached_PIN  # type: ignore[attr-defined]
-            if cleartext:
-                resp, fail_list = app.get_export_cxf(password=pin, as_dict=True)
-            else:
-                resp, passphrase, fail_list = app.get_export_cxf_encrypted(password=pin)
-                local_print(f"Passphrase (Keep is securely for import): {passphrase}")
+            export_combined = app.export_cxf(encryption=encryption, password=pin)
+            if encryption:
+                local_print(f"Keep the passphrase securely: {export_combined.passphrase}")
+
+            fail_list = export_combined.skipped_credentials
+            resp = export_combined.payload
 
             if fail_list:
                 local_print("Failed to export the following credentials")
@@ -794,13 +797,11 @@ def credential_import(ctx: Context, input_path: str, passphrase: str) -> None:
                     input_content = f.read()
 
             cxf_dict = json.loads(input_content)
+            import_content = CXFBackupCombined(
+                payload=cxf_dict, skipped_credentials=[], passphrase=passphrase
+            )
 
-            if not passphrase:
-                app.bulk_import_cxf(payload=cxf_dict, password=pin)
-            else:
-                app.bulk_import_cxf_encrypted(
-                    encrypted=cxf_dict, passphrase=passphrase, password=pin
-                )
+            app.import_cxf(import_content, pin)
 
         try:
             call(app)
