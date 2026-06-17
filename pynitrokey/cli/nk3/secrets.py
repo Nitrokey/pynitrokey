@@ -14,6 +14,7 @@ from nitrokey.nk3.secrets_app import (
     ALGORITHM_TO_KIND,
     STRING_TO_KIND,
     CXFBackupCombined,
+    CXFRestoreCombined,
     SecretsApp,
     SecretsAppException,
     SecretsAppExceptionID,
@@ -690,6 +691,12 @@ def helper_secrets_app_health_check(app: SecretsApp) -> List[str]:
     return messages
 
 
+def credential_import_export_callback(total: int, status: CXFRestoreCombined) -> None:
+    local_print(
+        f"{len(status.successful_credentials)} successful, {len(status.failed_credentials)} failed, {len(status.skipped_credentials)} skipped so far out of {total} credentials. Please touch the device if it blinks."
+    )
+
+
 @secrets.command()
 @click.pass_obj
 @click.option(
@@ -706,7 +713,8 @@ def helper_secrets_app_health_check(app: SecretsApp) -> List[str]:
     default=False,
     help="Export without encryption. (Not recommended)",
 )
-def credential_export(ctx: Context, output: str, cleartext: bool) -> None:
+@click.option("--progress", "progress", is_flag=True, default=False, help="Show live progress")
+def credential_export(ctx: Context, output: str, cleartext: bool, progress: bool) -> None:
     """Export all passwords for backup"""
     with ctx.connect_device() as device:
         app = SecretsApp(device)
@@ -724,7 +732,8 @@ def credential_export(ctx: Context, output: str, cleartext: bool) -> None:
         def call(app: SecretsApp) -> None:
             encryption = not cleartext
             pin = repeat_if_pin_needed.cached_PIN  # type: ignore[attr-defined]
-            export_combined = app.export_cxf(encryption=encryption, password=pin)
+            callback = credential_import_export_callback if progress else None
+            export_combined = app.export_cxf(encryption=encryption, callback=callback, password=pin)
             if encryption:
                 local_print(f"Keep the passphrase securely: {export_combined.passphrase}")
 
@@ -772,7 +781,8 @@ def credential_export(ctx: Context, output: str, cleartext: bool) -> None:
     default="",
     help="Enter passphrase only if trying to import an encrypted export file.",
 )
-def credential_import(ctx: Context, input_path: str, passphrase: str) -> None:
+@click.option("--progress", "progress", is_flag=True, default=False, help="Show live progress")
+def credential_import(ctx: Context, input_path: str, passphrase: str, progress: bool) -> None:
     """Import exported backup passwords"""
     with ctx.connect_device() as device:
         app = SecretsApp(device)
@@ -793,15 +803,35 @@ def credential_import(ctx: Context, input_path: str, passphrase: str) -> None:
             if input_path == "STDIN":
                 input_content = AskUser(question="Enter the import credential").ask()
             else:
-                with open(input_path, "r") as f:
+                filename = input_path if input_path.endswith(".json") else input_path + ".json"
+                with open(filename, "r") as f:
                     input_content = f.read()
 
             cxf_dict = json.loads(input_content)
+            if "EncryptedCXF" in cxf_dict and not passphrase:
+                passphrase_value = AskUser(
+                    "The backup is encrypted. Please enter the passphrase."
+                ).ask()
+            else:
+                passphrase_value = passphrase
+            callback = credential_import_export_callback if progress else None
             import_content = CXFBackupCombined(
-                payload=cxf_dict, skipped_credentials=[], passphrase=passphrase
+                payload=cxf_dict, skipped_credentials=[], passphrase=passphrase_value
             )
 
-            app.import_cxf(import_content, pin)
+            restore_result = app.import_cxf(import_content, callback=callback, password=pin)
+            if restore_result.successful_credentials:
+                local_print("Succesfully imported credentials:")
+                for cred_label in restore_result.successful_credentials:
+                    local_print(cred_label.decode("utf-8", errors="ignore"))
+            if restore_result.failed_credentials:
+                local_print("Failed to import credentials:")
+                for cred_label in restore_result.failed_credentials:
+                    local_print(cred_label.decode("utf-8", errors="ignore"))
+            if restore_result.skipped_credentials:
+                local_print("Skipped import credentials:")
+                for cred_label in restore_result.successful_credentials:
+                    local_print(cred_label.decode("utf-8", errors="ignore"))
 
         try:
             call(app)
