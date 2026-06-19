@@ -702,9 +702,9 @@ def credential_import_export_callback(total: int, status: CXFRestoreCombined) ->
 @click.option(
     "--output",
     "output",
-    type=click.Path(),
+    type=click.File('w'),
     required=True,
-    help="Output file path. Use STDOUT for printing on terminal.",
+    help="Output file."
 )
 @click.option(
     "--cleartext",
@@ -714,7 +714,7 @@ def credential_import_export_callback(total: int, status: CXFRestoreCombined) ->
     help="Export without encryption. (Not recommended)",
 )
 @click.option("--progress", "progress", is_flag=True, default=False, help="Show live progress")
-def credential_export(ctx: Context, output: str, cleartext: bool, progress: bool) -> None:
+def export_passwords(ctx: Context, output: str, cleartext: bool, progress: bool) -> None:
     """Export all passwords for backup"""
     with ctx.connect_device() as device:
         app = SecretsApp(device)
@@ -747,12 +747,7 @@ def credential_export(ctx: Context, output: str, cleartext: bool, progress: bool
 
             resp_str = json.dumps(resp, indent=4)
 
-            if output == "STDOUT":
-                local_print(f"Exported credentials \n{resp_str}")
-            else:
-                filename = output if output.endswith(".json") else output + ".json"
-                with open(filename, "w") as f:
-                    f.write(resp_str)
+            output.write(resp_str)
 
             if not fail_list:
                 local_print("All passwords exported successfully!")
@@ -761,17 +756,17 @@ def credential_export(ctx: Context, output: str, cleartext: bool, progress: bool
             call(app)
 
         except SecretsAppException as e:
-            local_print(f"Device returns error: {e}. \n")
+            local_critical(f"Device returns error: {e}. \n", support_hint=False)
 
 
 @secrets.command()
 @click.pass_obj
 @click.option(
     "--input",
-    "input_path",
-    type=click.Path(),
+    "input_file",
+    type=click.File('r'),
     required=True,
-    help="Input file path. Use STDIN for reading from terminal.",
+    help="Input file.",
 )
 @click.option(
     "--passphrase",
@@ -782,7 +777,7 @@ def credential_export(ctx: Context, output: str, cleartext: bool, progress: bool
     help="Enter passphrase only if trying to import an encrypted export file.",
 )
 @click.option("--progress", "progress", is_flag=True, default=False, help="Show live progress")
-def credential_import(ctx: Context, input_path: str, passphrase: str, progress: bool) -> None:
+def import_passwords(ctx: Context, input_file: str, passphrase: str, progress: bool) -> None:
     """Import exported backup passwords"""
     with ctx.connect_device() as device:
         app = SecretsApp(device)
@@ -800,12 +795,7 @@ def credential_import(ctx: Context, input_path: str, passphrase: str, progress: 
         def call(app: SecretsApp) -> None:
             pin = repeat_if_pin_needed.cached_PIN  # type: ignore[attr-defined]
 
-            if input_path == "STDIN":
-                input_content = AskUser(question="Enter the import credential").ask()
-            else:
-                filename = input_path if input_path.endswith(".json") else input_path + ".json"
-                with open(filename, "r") as f:
-                    input_content = f.read()
+            input_content = input_file.read()
 
             cxf_dict = json.loads(input_content)
             if "EncryptedCXF" in cxf_dict and not passphrase:
@@ -835,9 +825,7 @@ def credential_import(ctx: Context, input_path: str, passphrase: str, progress: 
 
         try:
             call(app)
-        except FileNotFoundError as e:
-            local_print(f"Import file was not found: {e}")
         except json.JSONDecodeError as e:
-            local_print(f"Invalid JSON format: {e}")
+            local_critical(f"Invalid JSON format: {e}", support_hint=False)
         except SecretsAppException as e:
-            local_print(f"Device returns error: {e}. \n")
+            local_critical(f"Device returns error: {e}. \n", support_hint=False)
