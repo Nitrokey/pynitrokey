@@ -14,6 +14,7 @@ firmware-*.json
 *.sha2
 *.hex
 uv.lock
+variables.mk
 
 *.pyc
 .tags*

@@ -8,7 +8,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "pynitrokey"
-version = "0.12.2"
+version = "0.12.3"
 description = "Python client for Nitrokey devices"
 license = { text = "Apache-2.0 OR MIT" }
 authors = [
@@ -20,7 +20,7 @@ dynamic = ["classifiers"]
 dependencies = [
   "cffi >=1.15, <3",
   "click >=8.2, <9",
-  "cryptography >=43, <49",
+  "cryptography >=43, <50",
   "fido2 >=2, <3",
   "hidapi >=0.14, <0.15",
   # Limit hidapi on Linux to version using the hidraw backend, see
@@ -146,3 +146,6 @@ dev-dependencies = [
     # As these are transitive dependencies, we don’t include them in our dependency list.
     "fire >=0.1.2",
 ]
+exclude-newer = "7 days"
+# Can be used to update packages to a version more recent what exclude-newer allows
+exclude-newer-package = { nitrokey = false }
