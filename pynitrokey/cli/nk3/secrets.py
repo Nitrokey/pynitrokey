@@ -7,7 +7,7 @@ import json
 import sys
 import typing
 from base64 import b32decode
-from typing import Any, Callable, List, Optional
+from typing import IO, Any, Callable, List, Optional
 
 import click
 from nitrokey.nk3.secrets_app import (
@@ -699,13 +699,7 @@ def credential_import_export_callback(total: int, status: CXFRestoreCombined) ->
 
 @secrets.command()
 @click.pass_obj
-@click.option(
-    "--output",
-    "output",
-    type=click.File('w'),
-    required=True,
-    help="Output file."
-)
+@click.option("--output", "output", type=click.File("w"), required=True, help="Output file.")
 @click.option(
     "--cleartext",
     "cleartext",
@@ -714,13 +708,14 @@ def credential_import_export_callback(total: int, status: CXFRestoreCombined) ->
     help="Export without encryption. (Not recommended)",
 )
 @click.option("--progress", "progress", is_flag=True, default=False, help="Show live progress")
-def export_passwords(ctx: Context, output: str, cleartext: bool, progress: bool) -> None:
+def export_passwords(ctx: Context, output: IO[str], cleartext: bool, progress: bool) -> None:
     """Export all passwords for backup"""
     with ctx.connect_device() as device:
         app = SecretsApp(device)
         if app.is_pin_healthy():
             local_print(
-                "Please provide PIN to export PIN-protected entries (if any), or press ENTER to skip"
+                "Please provide PIN to export PIN-protected entries (if any), or press ENTER to skip",
+                file=sys.stderr,
             )
             try:
                 ask_to_touch_if_needed()
@@ -735,22 +730,50 @@ def export_passwords(ctx: Context, output: str, cleartext: bool, progress: bool)
             callback = credential_import_export_callback if progress else None
             export_combined = app.export_cxf(encryption=encryption, callback=callback, password=pin)
             if encryption:
-                local_print(f"Keep the passphrase securely: {export_combined.passphrase}")
+                local_print(
+                    f"Keep the passphrase securely: {export_combined.passphrase} \n",
+                    file=sys.stderr,
+                )
 
-            fail_list = export_combined.skipped_credentials
+            failed_list = export_combined.results.failed_credentials
+            success_list = export_combined.results.successful_credentials
+            skipped_list = export_combined.results.skipped_credentials
+
             resp = export_combined.payload
 
-            if fail_list:
-                local_print("Failed to export the following credentials")
-                for f in fail_list:
-                    local_print(f)
+            if failed_list:
+                local_print(
+                    f"The following credentials could not be exported because they are not passwords: Total {len(failed_list)}",
+                    file=sys.stderr,
+                )
+                for f in failed_list:
+                    local_print(f.decode(errors="ignore"), file=sys.stderr)
+                local_print("\n", file=sys.stderr)
+
+            if skipped_list:
+                local_print(
+                    f"The following credentials are skipped for pin requirement: Total {len(skipped_list)}",
+                    file=sys.stderr,
+                )
+                for f in skipped_list:
+                    local_print(f.decode(errors="ignore"), file=sys.stderr)
+                local_print("\n", file=sys.stderr)
+
+            if success_list:
+                local_print(
+                    f"Successfully exported the following credentials: Total {len(success_list)}",
+                    file=sys.stderr,
+                )
+                for f in success_list:
+                    local_print(f.decode(errors="ignore"), file=sys.stderr)
+                local_print("\n", file=sys.stderr)
 
             resp_str = json.dumps(resp, indent=4)
 
             output.write(resp_str)
 
-            if not fail_list:
-                local_print("All passwords exported successfully!")
+            if success_list and not (failed_list or skipped_list):
+                local_print("All passwords exported successfully!", file=sys.stderr)
 
         try:
             call(app)
@@ -761,13 +784,7 @@ def export_passwords(ctx: Context, output: str, cleartext: bool, progress: bool)
 
 @secrets.command()
 @click.pass_obj
-@click.option(
-    "--input",
-    "input_file",
-    type=click.File('r'),
-    required=True,
-    help="Input file.",
-)
+@click.option("--input", "input_file", type=click.File("r"), required=True, help="Input file.")
 @click.option(
     "--passphrase",
     "passphrase",
@@ -777,7 +794,7 @@ def export_passwords(ctx: Context, output: str, cleartext: bool, progress: bool)
     help="Enter passphrase only if trying to import an encrypted export file.",
 )
 @click.option("--progress", "progress", is_flag=True, default=False, help="Show live progress")
-def import_passwords(ctx: Context, input_file: str, passphrase: str, progress: bool) -> None:
+def import_passwords(ctx: Context, input_file: IO[str], passphrase: str, progress: bool) -> None:
     """Import exported backup passwords"""
     with ctx.connect_device() as device:
         app = SecretsApp(device)
