@@ -735,9 +735,15 @@ def export_passwords(ctx: Context, output: IO[str], cleartext: bool, progress: b
                     file=sys.stderr,
                 )
 
-            failed_list = export_combined.results.failed_credentials
-            success_list = export_combined.results.successful_credentials
-            skipped_list = export_combined.results.skipped_credentials
+            failed_list = (
+                export_combined.results.failed_credentials if export_combined.results else []
+            )
+            success_list = (
+                export_combined.results.successful_credentials if export_combined.results else []
+            )
+            skipped_list = (
+                export_combined.results.skipped_credentials if export_combined.results else []
+            )
 
             resp = export_combined.payload
 
@@ -822,9 +828,7 @@ def import_passwords(ctx: Context, input_file: IO[str], passphrase: str, progres
             else:
                 passphrase_value = passphrase
             callback = credential_import_export_callback if progress else None
-            import_content = CXFBackupCombined(
-                payload=cxf_dict, passphrase=passphrase_value
-            )
+            import_content = CXFBackupCombined(payload=cxf_dict, passphrase=passphrase_value)
 
             restore_result = app.import_cxf(import_content, callback=callback, password=pin)
             if restore_result.successful_credentials:
