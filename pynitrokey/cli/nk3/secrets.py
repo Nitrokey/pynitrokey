@@ -823,7 +823,7 @@ def import_passwords(ctx: Context, input_file: IO[str], passphrase: str, progres
                 passphrase_value = passphrase
             callback = credential_import_export_callback if progress else None
             import_content = CXFBackupCombined(
-                payload=cxf_dict, skipped_credentials=[], passphrase=passphrase_value
+                payload=cxf_dict, passphrase=passphrase_value
             )
 
             restore_result = app.import_cxf(import_content, callback=callback, password=pin)
