@@ -268,8 +268,8 @@ try:
             key_ref,
             Tlv.build(
                 [
-                    (0x01, key.p.to_bytes(256, "big")),
-                    (0x02, key.q.to_bytes(256, "big")),
+                    (0x01, key.p.to_bytes(128, "big")),
+                    (0x02, key.q.to_bytes(128, "big")),
                     (0x03, public_key.e.to_bytes((public_key.e.bit_length() + 7) // 8, "big")),
                 ]
             ),

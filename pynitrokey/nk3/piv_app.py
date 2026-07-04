@@ -259,7 +259,7 @@ class PivApp:
     def change_puk(self, old_puk: str, new_puk: str) -> None:
         old_puk_bytes = old_puk.encode("utf-8")
         new_puk_bytes = new_puk.encode("utf-8")
-        if len(old_puk_bytes) != 8 or len(new_puk) != 8:
+        if len(old_puk_bytes) != 8 or len(new_puk_bytes) != 8:
             local_critical("PUK must be 8 bytes long", support_hint=False)
         body = old_puk_bytes + new_puk_bytes
         self.send_receive(0x24, 0, 0x81, body)
