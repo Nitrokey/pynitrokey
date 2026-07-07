@@ -12,6 +12,7 @@ import click
 from cryptography import x509
 from cryptography.hazmat.primitives.asymmetric import ec
 from nitrokey import trussed
+from nitrokey.checksum import FileEndings
 from nitrokey.trussed import (
     FirmwareContainer,
     Model,
@@ -19,6 +20,7 @@ from nitrokey.trussed import (
     TrussedBase,
     TrussedBootloader,
     TrussedDevice,
+    Variant,
     Version,
     parse_firmware_image,
     updates,
@@ -717,8 +719,14 @@ def update(
 
 @click.command()
 @click.argument("image", type=click.Path(exists=True, dir_okay=False))
+@click.option(
+    "--verify-from-source",
+    default=False,
+    is_flag=True,
+    help="Verify checksum from Nitrokey releases",
+)
 @click.pass_obj
-def validate_update(ctx: Context[Bootloader, Device], image: str) -> None:
+def validate_update(ctx: Context[Bootloader, Device], image: str, verify_from_source: bool) -> None:
     """
     Validates the given firmware image and prints the firmware version and the signer for all
     available variants.
@@ -746,12 +754,38 @@ def validate_update(ctx: Context[Bootloader, Device], image: str) -> None:
         print(f"variant:      {variant.value}")
         print(f"  version:    {metadata.version}")
         print(f"  signed by:  {signed_by}")
+        print(f"  checksum:   {metadata.inner_checksum.hex()}")
+
+        if not metadata.signed_by_nitrokey:
+            raise CliException("Verification failed for {variant.value}")
 
         if container.version != metadata.version:
             raise CliException(
                 f"The firmware image for the {variant} variant and the release "
                 f"{container.version} has an unexpected product version ({metadata.version})."
             )
+
+        if verify_from_source:
+            firmware_repository = updates.get_firmware_repository(ctx.model)
+            release = firmware_repository.get_release_or_latest(metadata.version)
+            update = updates.get_firmware_update(ctx.model, release)
+            update.url = update.url.rsplit("/", 1)[0]
+            device = "nk3am" if variant == Variant.NRF52 else "nk3xn"
+            extension = FileEndings.IHEX if variant == Variant.NRF52 else FileEndings.BIN
+            update.url = (
+                f"{update.url}/firmware-{device}-{variant.value.lower()}-{release}{extension.value}"
+            )
+            bar = DownloadProgressBar(desc=update.tag)
+            checksum = update.checksum(callback=bar.update)
+            if not checksum == metadata.inner_checksum:
+                raise CliException("Does not match checksum")
+            else:
+                print("\n  source:     Check successful")
+
+    if len(container.images) > 0:
+        print("Verification successful")
+    else:
+        raise CliException("No image available in container")
 
 
 @click.command()
