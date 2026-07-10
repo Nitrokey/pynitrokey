@@ -10,7 +10,7 @@ build-backend = "poetry.core.masonry.api"
 name = "pynitrokey"
 version = "0.12.3"
 description = "Python client for Nitrokey devices"
-license = { text = "Apache-2.0 OR MIT" }
+license = "Apache-2.0 OR MIT"
 authors = [
   { name = "Nitrokey", email = "pypi@nitrokey.com" },
 ]
