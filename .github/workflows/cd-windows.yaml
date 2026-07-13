@@ -13,6 +13,7 @@ on:
 
 env:
   PYTHON_VERSION: "3.10"
+  POETRY_SPEC: poetry >=2,<3
 
 jobs:
   version-check:
@@ -44,7 +45,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install poetry
-        run: choco install poetry --source python
+        run: pip install $env:POETRY_SPEC
       - name: Create virtual environment
         run: poetry sync --all-extras --with pyinstaller
       - name: Create Windows version info file
@@ -77,7 +78,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Install poetry
-        run: choco install poetry --source python
+        run: pip install $env:POETRY_SPEC
       - name: Create virtual environment
         run: poetry sync --all-extras --with pyinstaller
       - name: Create Windows version info file
