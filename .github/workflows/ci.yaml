@@ -19,10 +19,16 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
-      - name: Install poetry
-        run: pip install "${POETRY_SPEC}"
+      - name: Install dependencies
+        run: pip install "${POETRY_SPEC}" toml-cli
       - name: Check pyproject syntax
         run: poetry check
+      - name: Check project version format
+        shell: bash
+        run: |
+          PYPROJECT_VERSION=$(toml get --toml-path pyproject.toml project.version)
+          REGEX='^[0-9]+\.[0-9]+\.[0-9]+(rc[1-9]+)?$'
+          if [[ "$PYPROJECT_VERSION" =~ $REGEX ]]; then exit 0; else exit 1; fi
   format-code:
     name: Check code format
     runs-on: ubuntu-latest
