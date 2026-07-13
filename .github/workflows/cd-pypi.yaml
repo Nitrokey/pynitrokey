@@ -15,26 +15,26 @@ env:
   POETRY_SPEC: poetry >=2,<3
 
 jobs:
-  check-package-version:
-    name: Check package version
+  check-version-tag:
+    name: Check version tag
     runs-on: ubuntu-latest
     container: python:3.10-slim
+    if: github.event_name == 'release'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
-      - name: Install poetry
-        run: pip install "${POETRY_SPEC}"
-      - name: Check package version format
+      - name: Install dependencies
+        run: pip install toml-cli
+      - name: Check version tag
         shell: bash
         run: |
-          PACKAGE_VERSION=$(poetry version --short)
-          echo "PACKAGE_VERSION = $PACKAGE_VERSION"
-          if [[ $PACKAGE_VERSION =~ ^[0-9]+.[0-9]+.[0-9]+(-rc\.[1-9])?$ ]]; then exit 0; else exit 1; fi
+          PYPROJECT_VERSION="v$(toml get --toml-path pyproject.toml project.version)"
+          TAG_VERSION="${{ github.event.release.tag_name }}"
+          if [[ $PYPROJECT_VERSION == $TAG_VERSION ]]; then exit 0; else exit 1; fi
   build:
     name: Build
     runs-on: ubuntu-latest
     container: python:3.10-slim
-    needs: check-package-version
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -74,28 +74,10 @@ jobs:
         with:
           repository-url: https://test.pypi.org/legacy/
           skip-existing: true
-  check-tag-version:
-    name: Check tag version
-    runs-on: ubuntu-latest
-    container: python:3.10-slim
-    if: github.event_name == 'release'
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-      - name: Install poetry
-        run: pip install "${POETRY_SPEC}"
-      - name: Check tag version
-        shell: bash
-        run: |
-          VERSION_TAG="${{ github.event.release.tag_name }}"
-          PACKAGE_VERSION="v"$(poetry version --short)
-          echo "VERSION_TAG = $VERSION_TAG"
-          echo "PACKAGE_VERSION = $PACKAGE_VERSION"
-          if [ $VERSION_TAG == $PACKAGE_VERSION ]; then exit 0; else exit 1; fi
   publish-pypi:
     name: Publish to PyPI
     runs-on: ubuntu-latest
-    needs: [build, check-tag-version]
+    needs: [build, check-version-tag]
     if: github.event_name == 'release'
     environment:
       name: pypi
