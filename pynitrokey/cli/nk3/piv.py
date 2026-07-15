@@ -22,7 +22,7 @@ from pynitrokey.tlv import Tlv
 # Pyscard does not have wheels for all targets, leading to installation errors
 # It is therefore made optional
 try:
-    from pynitrokey.nk3.piv_app import PivApp, find_by_id
+    from pynitrokey.nk3.piv_app import PivApp, StatusError, find_by_id
 
     default_admin_key = "010203040506070801020304050607080102030405060708"
     all_key_ids = [
@@ -403,11 +403,14 @@ try:
         device = PivApp()
         try:
             device.factory_reset()
-        except ValueError:
-            local_critical(
-                "Factory reset could not be performed. You first need to lock the PIN with 3 failed attempts",
-                support_hint=False,
-            )
+        except StatusError as e:
+            if e.value == 0x6985:
+                local_critical(
+                    "Factory reset could not be performed. You first need to lock the PIN with 3 failed attempts",
+                    support_hint=False,
+                )
+            else:
+                raise e from e
         local_print("Factory reset successfully")
 
     KEY_TO_CERT_OBJ_ID_MAP = {
