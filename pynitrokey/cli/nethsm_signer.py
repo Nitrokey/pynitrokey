@@ -78,9 +78,16 @@ class NetHSM_Signing(Signing):
 
     def load_key(self, filename: str) -> bool:
         with open(filename, "r") as sk_file:
-            self.sk = sk_file.read()
+            sk = sk_file.read()
 
-        return False  # Not using default key of nrfutil
+        client = self.connect_nethsm()
+        keys_list = client.list_keys(prefix=sk)
+        client.close()
+        if sk in keys_list:
+            self.sk = sk
+            return False  # Not using default key of nrfutil
+
+        raise AssertionError(f"Key {sk} not found in the HSM")
 
     def sign(self, init_packet_data: bytes) -> bytes:
         if self.sk is None:
