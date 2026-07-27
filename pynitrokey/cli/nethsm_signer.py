@@ -9,7 +9,7 @@ from nitrokey.trussed._bootloader.nrf52_upload.dfu.signing import Signing
 from pynitrokey.cli.nethsm import Config
 
 try:
-    from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
+    pass
 except Exception:
     print("Failed to import cryptography, cannot do signing")
 
@@ -95,14 +95,6 @@ class NetHSM_Signing(Signing):
         ).decode()
         client.close()
         return der_signature
-
-    def sign(self, init_packet_data: bytes) -> bytes:
-        der_signature = self.sign_der(init_packet_data)
-        r, s = decode_dss_signature(der_signature)
-
-        signature = r.to_bytes(32, byteorder="big") + s.to_bytes(32, byteorder="big")
-
-        return signature[31::-1] + signature[63:31:-1]
 
     def get_vk_pem(self) -> str:
         """
