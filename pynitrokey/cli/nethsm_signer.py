@@ -82,7 +82,7 @@ class NetHSM_Signing(Signing):
 
         raise AssertionError(f"Key {sk} not found in the HSM")
 
-    def sign(self, init_packet_data: bytes) -> bytes:
+    def sign_der(self, init_packet_data: bytes) -> bytes:
         if self.sk is None:
             raise AssertionError("Can't sign. No key created/loaded")
 
@@ -94,6 +94,10 @@ class NetHSM_Signing(Signing):
             key_id=self.sk, data=data, mode=nethsm_sdk.SignMode.ECDSA
         ).decode()
         client.close()
+        return der_signature
+
+    def sign(self, init_packet_data: bytes) -> bytes:
+        der_signature = self.sign_der(init_packet_data)
         r, s = decode_dss_signature(der_signature)
 
         signature = r.to_bytes(32, byteorder="big") + s.to_bytes(32, byteorder="big")
