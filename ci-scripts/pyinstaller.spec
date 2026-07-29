@@ -40,15 +40,61 @@ pyz = PYZ(a.pure, a.zipped_data)
 
 exe_args = [pyz, a.scripts]
 is_onedir = args.mode == "onedir"
-version = None
+versioninfo = None
 
 if args.mode == "onefile":
     exe_args += [a.binaries, a.zipfiles, a.datas]
 
 if args.platform == "windows":
-    version = "windows/pyinstaller/file_version_info.txt"
+    from importlib.metadata import version
+    from packaging.version import parse
+    from PyInstaller.utils.win32.versioninfo import VSVersionInfo, FixedFileInfo, StringFileInfo, StringTable, StringStruct, VarFileInfo, VarStruct
 
-exe = EXE(*exe_args, name="nitropy", upx=True, exclude_binaries=is_onedir, version=version)
+    try:
+        version = parse(version('pynitrokey'))
+    except importlib.metadata.PackageNotFoundError:
+        raise Exception("Pynitrokey was not found. Make sure it is installed.")
+    except packaging.version.InvalidVersion:
+        raise Exception("Could not parse version from pynitrokey installation.")
+
+    major = version.major
+    minor = version.minor
+    patch = version.micro
+    build = version.pre[1] if version.pre is not None and isinstance(version.pre[1], int) else 0
+    flags = 0x2 if version.pre is not None else 0x0
+
+    versioninfo = VSVersionInfo(
+        ffi=FixedFileInfo(
+            filevers = (major, minor, patch, build),
+            prodvers = (major, minor, patch, build),
+            mask = 0x3f,
+            flags = flags,
+            OS = 0x40004,
+            fileType = 0x1,
+            subtype = 0x0,
+            date = (0,0)
+            ),
+        kids=[
+            StringFileInfo([
+                StringTable(
+                    u'040904B0',
+                    [
+                        StringStruct('CompanyName', 'Nitrokey GmbH'),
+                        StringStruct('FileDescription', 'Commandline application to manage Nitrokey devices'),
+                        StringStruct('FileVersion', f"{str(version)}"),
+                        StringStruct('InternalName', 'Nitropy'),
+                        StringStruct('LegalCopyright', 'Nitrokey GmbH and contributors'),
+                        StringStruct('OriginalFilename', 'nitropy.exe'),
+                        StringStruct('ProductName', 'Nitropy'),
+                        StringStruct('ProductVersion', f"{str(version)}")
+                    ]
+                )
+            ]),
+            VarFileInfo([VarStruct(u'Translation', [1033, 4608])])
+        ]
+    )
+
+exe = EXE(*exe_args, name="nitropy", upx=True, exclude_binaries=is_onedir, version=versioninfo)
 
 if is_onedir:
     coll = COLLECT(
