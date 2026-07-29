@@ -44,7 +44,7 @@ Please make sure that all checks pass for your code before opening a PR.
 ## Signed Commits
 
 If you have an OpenPGP key, please sign all your commits with it.
-We require all commits on the master branch to be signed.
+We require all commits on the `main` branch to be signed.
 If you don't have an OpenPGP key, a developer that reviewed your commits will sign them for you.
 
 ## Supported Python Versions
@@ -90,7 +90,7 @@ It is also possible to use a local path:
 
 ## Installing a Development Version
 
-It is possible to install a development version of `pynitrokey` from the latest `master` branch using `pipx`, for example:
+It is possible to install a development version of `pynitrokey` from the latest `main` branch using `pipx`, for example:
 
 ```
 $ pipx install git+https://github.com/Nitrokey/pynitrokey.git --suffix=-git
@@ -104,7 +104,7 @@ $ which nitropy-git
 $ which nitropy
 ```
 
-It is also possible to upgrade the development version to the latest `master` branch or to remove it:
+It is also possible to upgrade the development version to the latest `main` branch or to remove it:
 
 ```
 $ pipx upgrade pynitrokey-git

@@ -6,7 +6,7 @@ name: Continuous delivery - PyPI
 on:
   pull_request:
   push:
-    branches: [master]
+    branches: [main]
   release:
     types: [published]
   workflow_dispatch:
@@ -55,7 +55,7 @@ jobs:
     name: Publish to TestPyPI
     runs-on: ubuntu-latest
     needs: build
-    if: github.event_name == 'release' || github.ref == 'refs/heads/master'
+    if: github.event_name == 'release' || github.ref == 'refs/heads/main'
     environment:
       name: testpypi
       url: https://test.pypi.org/p/pynitrokey
