@@ -4,32 +4,29 @@ from functools import wraps
 from typing import Any, Callable, Optional
 
 import click
-from nitrokey.trussed._bootloader.nrf52_upload.dfu.nrfutils import (
-    keygen,
-    pkg_gen,
-    pubview,
-    usb_serial,
-)
+from cryptography.hazmat.primitives.asymmetric import ec
+from nitrokey.trussed._bootloader.nrf52_upload.dfu.nrfutils import pkg_gen, pubview, usb_serial
 from nitrokey.trussed._bootloader.nrf52_upload.dfu.signing import Signing
 
 from pynitrokey.cli.exceptions import CliException
 from pynitrokey.cli.nethsm import Config
-from pynitrokey.cli.nethsm_signer import NetHSM_Signing
+from pynitrokey.cli.nethsm_pvtkey import NetHSMKey
 from pynitrokey.helpers import local_critical
 
 logger = logging.getLogger(__name__)
 
 
-def get_signer(
+def get_pvt_key(
     use_nethsm: bool,
     nethsm_host: Optional[str] = None,
     nethsm_username: Optional[str] = None,
     nethsm_password: Optional[str] = None,
     verify_tls: bool = True,
     ca_certs: Optional[str] = None,
-) -> Signing:
+    key_id: str = "",
+) -> ec.EllipticCurvePrivateKey:
     if not use_nethsm:
-        return Signing()
+        return Signing.get_key_from_file(key_id)
 
     config = Config(
         host=nethsm_host,
@@ -39,16 +36,39 @@ def get_signer(
         ca_certs=ca_certs,
         debug=False,
     )
-    return NetHSM_Signing(config)
+    return NetHSMKey(config, key_id)
 
 
 _AnyCallable = Callable[..., Any]
 
+import re
+
+def _extract_key_id(text: str) -> str: # Extract from NetHSM output
+    # Pattern explanation:
+    # ^Key\s+           Starts with "Key" followed by spaces
+    # ([a-fA-F0-9]+)    Captures the hex Key ID (Group 1)
+    # \s+generated on NetHSM\s+ Matches middle label
+    # \S+$              Matches the host URL at the end
+    pattern = r"^Key\s+([a-fA-F0-9]+)\s+generated on NetHSM\s+\S+$"
+    
+    match = re.search(pattern, text.strip())
+    if match:
+        return match.group(1)
+    return text
 
 def with_signer(f: _AnyCallable) -> _AnyCallable:
     """Decorator that adds signer options and injects the signer object."""
 
+    @click.option(
+        "--key", required=True, help="Key file for file from disk, key id for using NetHSM"
+    )
     @click.option("--use-nethsm", is_flag=True, default=False, help="Use NetHSM for signing.")
+    @click.option(
+        "--use-key-file",
+        is_flag=True,
+        default=False,
+        help="Use if --key parameter has a file pointing to NetHSM key id.",
+    )
     @click.option(
         "--nethsm-host",
         default=None,
@@ -62,7 +82,9 @@ def with_signer(f: _AnyCallable) -> _AnyCallable:
     @click.option("--ca-certs", default=None, help="CA Certificates.")
     @wraps(f)
     def wrapper(
+        key: str,
         use_nethsm: bool,
+        use_key_file: bool,
         nethsm_host: Optional[str] = None,
         nethsm_username: Optional[str] = None,
         nethsm_password: Optional[str] = None,
@@ -71,13 +93,17 @@ def with_signer(f: _AnyCallable) -> _AnyCallable:
         *args: Any,
         **kwargs: Any,
     ) -> Any:
-        signer = get_signer(
+        if use_key_file:
+            with open(key, "r") as fl:
+                key = _extract_key_id(fl.read())
+        signer = get_pvt_key(
             use_nethsm=use_nethsm,
             nethsm_host=nethsm_host,
             nethsm_username=nethsm_username,
             nethsm_password=nethsm_password,
             verify_tls=verify_tls,
             ca_certs=ca_certs,
+            key_id=key,
         )
         return f(*args, signer=signer, **kwargs)
 
@@ -94,22 +120,15 @@ def keys() -> None:
     """Key generation and inspection."""
 
 
-@keys.command("generate")
-@click.argument("key_file")
-@with_signer
-def keys_generate(key_file: str, signer: Signing) -> None:
-    """Generate a new signing key and write it to KEY_FILE."""
-    keygen(key_file, signer=signer)
-
-
 @keys.command("display")
 @click.option("--format", "fmt", required=True, type=click.Choice(["code", "pem"]))
-@click.option("--key-file", "priv_file", required=True)
 @click.option("--out-file", "out_file", required=True)
 @with_signer
-def keys_display(fmt: str, priv_file: str, out_file: str, signer: Signing) -> None:
+def keys_display(
+    fmt: str, out_file: str, signer: ec.EllipticCurvePrivateKey
+) -> None:
     """Display/export the public key derived from KEY_FILE in the given format."""
-    pubview(fmt, priv_file, out_file, signer=signer)
+    pubview(fmt, signer, out_file)
 
 
 @nrf.group()
@@ -133,7 +152,6 @@ def pkg() -> None:
 @pkg.command("generate")
 @click.option("--hw-version", required=True, type=int)
 @click.option("--sd-req", required=True)
-@click.option("--key-file", required=True)
 @click.option("--application-version", "app_version", type=int, default=None)
 @click.option("--bootloader-version", type=int, default=None)
 @click.option("--application", "application", default=None)
@@ -150,27 +168,25 @@ def pkg() -> None:
 def pkg_generate(
     hw_version: int,
     sd_req: str,
-    key_file: str,
     app_version: Optional[int],
     bootloader_version: Optional[int],
     application: Optional[str],
     bootloader: Optional[str],
     ecdsa_validation: bool,
     out_path: str,
-    signer: Signing,
+    signer: ec.EllipticCurvePrivateKey,
 ) -> None:
     """Generate an application and/or bootloader DFU package."""
     pkg_gen(
         hw_version=hw_version,
         sd_req=sd_req,
-        key_file=key_file,
+        key_file=signer,
         out_path=out_path,
         app_version=app_version,
         bootloader_version=bootloader_version,
         application=application,
         bootloader=bootloader,
         ecdsa_validation=ecdsa_validation,
-        signer=signer,
     )
 
 
