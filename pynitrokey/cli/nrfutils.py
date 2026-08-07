@@ -215,7 +215,7 @@ def lpc55_generate(
     lpc55_sign_sb2(cert_path, binary_path, commands, sbkek, rkth, out_path, signer)
 
 
-def cmd_main(func: Callable[None, None]) -> None:
+def cmd_main(func: Callable[[], None]) -> None:
     development = os.environ.get("NKDEV")
     try:
         func()
