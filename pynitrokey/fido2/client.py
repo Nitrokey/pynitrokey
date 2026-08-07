@@ -13,7 +13,8 @@ from typing import Optional, Tuple, Union
 from fido2.ctap import CtapError
 from fido2.ctap1 import Ctap1
 from fido2.ctap2.base import Ctap2
-from fido2.hid import CTAPHID, CtapHidDevice, open_device
+from fido2.hid import CTAPHID, CtapHidDevice, list_descriptors, open_connection, open_device
+from fido2.hid.base import HidDescriptor
 from intelhex import IntelHex
 
 import pynitrokey.exceptions
@@ -21,18 +22,25 @@ from pynitrokey import helpers
 from pynitrokey.fido2.commands import SoloBootloader, SoloExtension
 from pynitrokey.helpers import local_critical
 
+VIDPID = [
+    (0x0483, 0xA2CA),  #
+    (0x20A0, 0x42B3),  # ...
+    (0x20A0, 0x42B1),  # NK FIDO2
+]
+
+
+def list_ctaphid_descriptors() -> list[HidDescriptor]:
+    return [
+        desc
+        for desc in list_descriptors()  # type: ignore[no-untyped-call]
+        if (desc.vid, desc.pid) in VIDPID
+    ]
+
 
 def list_ctaphid_devices() -> list[CtapHidDevice]:
-    hid_devices = list(CtapHidDevice.list_devices())
     return [
-        d
-        for d in hid_devices
-        if (d.descriptor.vid, d.descriptor.pid)
-        in [
-            (0x0483, 0xA2CA),  #
-            (0x20A0, 0x42B3),  # ...
-            (0x20A0, 0x42B1),  # NK FIDO2
-        ]
+        CtapHidDevice(desc, open_connection(desc))  # type: ignore[no-untyped-call]
+        for desc in list_ctaphid_descriptors()
     ]
 
 
@@ -69,8 +77,11 @@ class NKFido2Client:
                     solo_serial = solo_serial.split("=")[1]
                     found_dev = open_device(solo_serial)
                 else:
-                    devices = list_ctaphid_devices()
-                    devices = [d for d in devices if d.descriptor.serial_number == solo_serial]
+                    devices = [
+                        CtapHidDevice(desc, open_connection(desc))  # type: ignore[no-untyped-call]
+                        for desc in list_ctaphid_descriptors()
+                        if desc.serial_number == solo_serial
+                    ]
             else:
                 devices = list_ctaphid_devices()
             if len(devices) > 1:
