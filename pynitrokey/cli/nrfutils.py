@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 from functools import wraps
 from typing import Any, Callable, Optional
 
@@ -9,6 +10,7 @@ from nitrokey.trussed._bootloader.nrf52_upload.dfu.nrfutils import pkg_gen, pubv
 from nitrokey.trussed._bootloader.nrf52_upload.dfu.signing import Signing
 
 from pynitrokey.cli.exceptions import CliException
+from pynitrokey.cli.lpcutils import lpc55_sign_sb2
 from pynitrokey.cli.nethsm import Config
 from pynitrokey.cli.nethsm_pvtkey import NetHSMKey
 from pynitrokey.helpers import local_critical
@@ -41,20 +43,19 @@ def get_pvt_key(
 
 _AnyCallable = Callable[..., Any]
 
-import re
 
-def _extract_key_id(text: str) -> str: # Extract from NetHSM output
+def _extract_key_id(text: str) -> str:  # Extract from NetHSM output
     # Pattern explanation:
     # ^Key\s+           Starts with "Key" followed by spaces
     # ([a-fA-F0-9]+)    Captures the hex Key ID (Group 1)
     # \s+generated on NetHSM\s+ Matches middle label
     # \S+$              Matches the host URL at the end
     pattern = r"^Key\s+([a-fA-F0-9]+)\s+generated on NetHSM\s+\S+$"
-    
     match = re.search(pattern, text.strip())
     if match:
         return match.group(1)
     return text
+
 
 def with_signer(f: _AnyCallable) -> _AnyCallable:
     """Decorator that adds signer options and injects the signer object."""
@@ -124,9 +125,7 @@ def keys() -> None:
 @click.option("--format", "fmt", required=True, type=click.Choice(["code", "pem"]))
 @click.option("--out-file", "out_file", required=True)
 @with_signer
-def keys_display(
-    fmt: str, out_file: str, signer: ec.EllipticCurvePrivateKey
-) -> None:
+def keys_display(fmt: str, out_file: str, signer: ec.EllipticCurvePrivateKey) -> None:
     """Display/export the public key derived from KEY_FILE in the given format."""
     pubview(fmt, signer, out_file)
 
@@ -190,10 +189,36 @@ def pkg_generate(
     )
 
 
-def main() -> None:
+@click.group()
+def lpc55() -> None:
+    """Generate LPC55 Package."""
+
+
+@lpc55.command("generate")
+@click.option("--cert-path", required=True, type=str)
+@click.option("--binary-path", required=True, type=str)
+@click.option("--commands", required=True, type=str, help="Path to BD file.")
+@click.option("--sbkek", required=True, type=str, help="Path to sbkek file.")
+@click.option("--rkth", required=True, type=str, help="Path to rkth output file.")
+@click.argument("out_path")
+@with_signer
+def lpc55_generate(
+    cert_path: str,
+    binary_path: str,
+    commands: str,
+    sbkek: str,
+    rkth: str,
+    out_path: str,
+    signer: ec.EllipticCurvePrivateKey,
+) -> None:
+    """Generate a signed SB2 file from unsigned BIN file for LPC55"""
+    lpc55_sign_sb2(cert_path, binary_path, commands, sbkek, rkth, out_path, signer)
+
+
+def cmd_main(func: Callable[None, None]) -> None:
     development = os.environ.get("NKDEV")
     try:
-        nrf()
+        func()
     except CliException as e:
         if development:
             raise
@@ -203,3 +228,9 @@ def main() -> None:
             raise
         logger.warning("An unhandled exception occurred", exc_info=True)
         local_critical("An unhandled exception occurred", e)
+
+def nrf_main() -> None:
+    cmd_main(nrf)
+
+def lpc_main() -> None:
+    cmd_main(lpc55)
