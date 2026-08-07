@@ -101,7 +101,7 @@ optional = true
 
 [tool.poetry.group.pyinstaller.dependencies]
 pyinstaller = "^6.11.1"
-pyinstaller-versionfile = { version = "==3.0.0", markers = "sys_platform=='win32'" }
+packaging = { version = "^26.2", markers = "sys_platform=='win32'" }
 
 [tool.pytest.ini_options]
 log_cli = false

@@ -6,7 +6,7 @@ name: Continuous delivery - Windows
 on:
   pull_request:
   push:
-    branches: [master]
+    branches: [main]
   release:
     types: [published]
   workflow_dispatch:
@@ -16,24 +16,24 @@ env:
   POETRY_SPEC: poetry >=2,<3
 
 jobs:
-  version-check:
-    name: Check versioning
+  check-version-tag:
+    name: Check version tag
     runs-on: windows-latest
     if: github.event_name == 'release'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
-      - name: Install poetry
-        run: choco install poetry --source python
-      - name: Check version tag format
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install dependencies
+        run: pip install toml-cli
+      - name: Check version tag
         run: |
-          $VERSION_TAG="${{ github.event.release.tag_name }}"
-          if ($VERSION_TAG -match "^v[0-9]+.[0-9]+.[0-9]+(-(rc|post)\.[1-9])?$") {exit 0} else {exit 1}
-      - name: Check if version tag and package version are equal
-        run: |
-          $VERSION_TAG="${{ github.event.release.tag_name }}"
-          $VERSION_FILE=poetry version --short
-          if ($VERSION_TAG.Substring(1) -eq $VERSION_FILE) {exit 0} else {exit 1}
+          $PYPROJECT_VERSION="v$(toml get --toml-path pyproject.toml project.version)"
+          $TAG_VERSION="${{ github.event.release.tag_name }}"
+          if ($PYPROJECT_VERSION -eq $TAG_VERSION) {exit 0} else {exit 1}
   build-onedir:
     name: Build onedir
     runs-on: windows-latest
@@ -48,12 +48,6 @@ jobs:
         run: pip install $env:POETRY_SPEC
       - name: Create virtual environment
         run: poetry sync --all-extras --with pyinstaller
-      - name: Create Windows version info file
-        run: |
-          poetry run create-version-file `
-            --outfile .\ci-scripts\windows\pyinstaller\file_version_info.txt `
-            --version "$(poetry version --short)" `
-            .\ci-scripts\windows\pyinstaller\file_version_info_metadata.yaml
       - name: Build onedir
         run: poetry run pyinstaller -- ci-scripts/pyinstaller.spec -- --mode onedir --platform windows
       - name: Test onedir
@@ -81,12 +75,6 @@ jobs:
         run: pip install $env:POETRY_SPEC
       - name: Create virtual environment
         run: poetry sync --all-extras --with pyinstaller
-      - name: Create Windows version info file
-        run: |
-          poetry run create-version-file `
-            --outfile .\ci-scripts\windows\pyinstaller\file_version_info.txt `
-            --version "$(poetry version --short)" `
-            .\ci-scripts\windows\pyinstaller\file_version_info_metadata.yaml
       - name: Build onefile
         run: poetry run pyinstaller -- ci-scripts/pyinstaller.spec -- --mode onefile --platform windows
       - name: Test onefile
@@ -151,7 +139,7 @@ jobs:
   publish-binary:
     name: Publish binary
     runs-on: windows-latest
-    needs: [build-onefile, version-check]
+    needs: [build-onefile, check-version-tag]
     if: github.event_name == 'release'
     permissions:
       contents: write
@@ -177,7 +165,7 @@ jobs:
   publish-msi-installer:
     name: Publish MSI installer
     runs-on: windows-latest
-    needs: [build-msi-installer, version-check]
+    needs: [build-msi-installer, check-version-tag]
     if: github.event_name == 'release'
     permissions:
       contents: write
