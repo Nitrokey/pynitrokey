@@ -13,6 +13,7 @@ import click
 from nitrokey.nk3.secrets_app import (
     ALGORITHM_TO_KIND,
     STRING_TO_KIND,
+    ListItem,
     SecretsApp,
     SecretsAppException,
     SecretsAppExceptionID,
@@ -402,10 +403,36 @@ def ask_to_touch_if_needed() -> None:
     local_print("Please touch the device if it blinks", file=sys.stderr)
 
 
+def format_label(label: bytes, hexa: bool = False) -> str:
+    """
+    Format a credential label for the output.  Labels are arbitrary byte strings, so those that are
+    not valid UTF-8 are printed as hex with a 0x prefix instead of failing to decode.  A name that
+    is literally spelled "0x..." is indistinguishable from that, so use --hexa, which prints every
+    name as hex, if the exact bytes matter.
+    """
+    if not hexa:
+        try:
+            return label.decode()
+        except UnicodeDecodeError:
+            pass
+    return f"0x{label.hex()}"
+
+
+def format_credential(credential: ListItem, hexa: bool = False) -> str:
+    kind = ListItem.get_type_name(credential.kind)
+    algorithm = ListItem.get_type_name(credential.algorithm)
+    return f"{format_label(credential.label, hexa)}\t{kind}/{algorithm}\t{credential.properties}"
+
+
 @secrets.command()
 @click.pass_obj
 @click.option(
-    "--hexa", "hexa", type=click.BOOL, help="Use hex representation", default=False, is_flag=True
+    "--hexa",
+    "hexa",
+    type=click.BOOL,
+    help="Print the credential names as hex",
+    default=False,
+    is_flag=True,
 )
 def list(ctx: Context, hexa: bool) -> None:
     """List registered OTP credentials."""
@@ -423,7 +450,7 @@ def list(ctx: Context, hexa: bool) -> None:
 
         credentials_list = sorted(app.list_with_properties(), key=lambda x: x.label)
         for i, credential in enumerate(credentials_list):
-            local_print(f"{i + 1:02}. {credential}")
+            local_print(f"{i + 1:02}. {format_credential(credential, hexa)}")
         if len(credentials_list) == 0:
             local_print("No credentials found")
 
