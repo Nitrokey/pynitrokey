@@ -229,8 +229,10 @@ def cmd_main(func: Callable[None, None]) -> None:
         logger.warning("An unhandled exception occurred", exc_info=True)
         local_critical("An unhandled exception occurred", e)
 
+
 def nrf_main() -> None:
     cmd_main(nrf)
+
 
 def lpc_main() -> None:
     cmd_main(lpc55)
