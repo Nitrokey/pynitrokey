@@ -7,12 +7,13 @@ import json
 import sys
 import typing
 from base64 import b32decode
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, Iterable, List, Optional, Sequence, Tuple
 
 import click
 from nitrokey.nk3.secrets_app import (
     ALGORITHM_TO_KIND,
     STRING_TO_KIND,
+    Kind,
     ListItem,
     SecretsApp,
     SecretsAppException,
@@ -403,6 +404,19 @@ def ask_to_touch_if_needed() -> None:
     local_print("Please touch the device if it blinks", file=sys.stderr)
 
 
+KIND_TO_STRING = {kind: name for name, kind in STRING_TO_KIND.items()}
+KIND_TO_STRING[Kind.NotSet] = "PWS"
+
+LIST_KINDS = [KIND_TO_STRING[kind] for kind in [*STRING_TO_KIND.values(), Kind.NotSet]]
+
+LIST_SORT_KEYS = ["label", "kind"]
+
+
+def credential_label(credential: ListItem) -> str:
+    """Best-effort decoding of the credential label, used for sorting and matching."""
+    return credential.label.decode("utf-8", errors="replace")
+
+
 def format_label(label: bytes, hexa: bool = False) -> str:
     """
     Format a credential label for the output.  Labels are arbitrary byte strings, so those that are
@@ -424,6 +438,62 @@ def format_credential(credential: ListItem, hexa: bool = False) -> str:
     return f"{format_label(credential.label, hexa)}\t{kind}/{algorithm}\t{credential.properties}"
 
 
+def credential_kind(credential: ListItem) -> str:
+    return KIND_TO_STRING.get(credential.kind, ListItem.get_type_name(credential.kind).upper())
+
+
+def filter_credentials(
+    credentials: Iterable[ListItem],
+    pattern: Optional[str] = None,
+    kinds: Sequence[str] = (),
+    touch_button: Optional[bool] = None,
+    pin_protected: Optional[bool] = None,
+    pws: Optional[bool] = None,
+) -> List[ListItem]:
+    """
+    Filter the given credentials.  All given criteria have to match (logical AND), while multiple
+    values for a single criterion match if any of them does (logical OR).  Criteria set to None (or
+    to an empty sequence) are ignored.
+    """
+    selected_kinds = {kind.upper() for kind in kinds}
+
+    def matches(credential: ListItem) -> bool:
+        if pattern is not None and pattern.lower() not in credential_label(credential).lower():
+            return False
+        if selected_kinds and credential_kind(credential) not in selected_kinds:
+            return False
+        if touch_button is not None and credential.properties.touch_required != touch_button:
+            return False
+        if pin_protected is not None and credential.properties.secret_encryption != pin_protected:
+            return False
+        if pws is not None and credential.properties.pws_data_exist != pws:
+            return False
+        return True
+
+    return [credential for credential in credentials if matches(credential)]
+
+
+def sort_credentials(
+    credentials: Iterable[ListItem], key: str = "label", reverse: bool = False
+) -> List[ListItem]:
+    """
+    Sort the given credentials by label or by kind.  Labels are compared case-insensitively, with
+    the raw label as a tie breaker.  Sorting by kind falls back to the label for equal kinds.
+    """
+
+    def by_label(credential: ListItem) -> Tuple[str, bytes]:
+        return (credential_label(credential).lower(), credential.label)
+
+    def by_kind(credential: ListItem) -> Tuple[str, str, bytes]:
+        return (credential_kind(credential), *by_label(credential))
+
+    if key == "label":
+        return sorted(credentials, key=by_label, reverse=reverse)
+    elif key == "kind":
+        return sorted(credentials, key=by_kind, reverse=reverse)
+    raise ValueError(f"Unsupported sort key: {key}")
+
+
 @secrets.command()
 @click.pass_obj
 @click.option(
@@ -434,8 +504,63 @@ def format_credential(credential: ListItem, hexa: bool = False) -> str:
     default=False,
     is_flag=True,
 )
-def list(ctx: Context, hexa: bool) -> None:
-    """List registered OTP credentials."""
+@click.option(
+    "--pattern",
+    "pattern",
+    type=click.STRING,
+    help="Only show credentials containing this text in their name (case insensitive)",
+    default=None,
+)
+@click.option(
+    "--kind",
+    "kinds",
+    type=click.Choice(choices=LIST_KINDS, case_sensitive=False),
+    help="Only show credentials of this kind. Can be given multiple times.",
+    multiple=True,
+)
+@click.option(
+    "--touch-button/--no-touch-button",
+    "touch_button",
+    help="Only show credentials that do (not) require a touch button press",
+    default=None,
+)
+@click.option(
+    "--pin-protected/--no-pin-protected",
+    "pin_protected",
+    help="Only show credentials that are (not) encrypted with the PIN",
+    default=None,
+)
+@click.option(
+    "--pws/--no-pws",
+    "pws",
+    help="Only show credentials that do (not) have Password Safe data",
+    default=None,
+)
+@click.option(
+    "--sort",
+    "sort_by",
+    type=click.Choice(choices=LIST_SORT_KEYS, case_sensitive=False),
+    help="Sort the credentials by this property",
+    default="label",
+    show_default=True,
+)
+@click.option("--reverse", "reverse", help="Reverse the sort order", default=False, is_flag=True)
+def list(
+    ctx: Context,
+    hexa: bool,
+    pattern: Optional[str],
+    kinds: Sequence[str],
+    touch_button: Optional[bool],
+    pin_protected: Optional[bool],
+    pws: Optional[bool],
+    sort_by: str,
+    reverse: bool,
+) -> None:
+    """List registered OTP credentials.
+
+    Without any options all credentials are listed, sorted by name. The credentials can be
+    restricted to a subset with the filtering options, which are combined with a logical AND.
+    """
     with ctx.connect_device() as device:
         app = SecretsApp(device)
         if app.is_pin_healthy():
@@ -448,11 +573,28 @@ def list(ctx: Context, hexa: bool) -> None:
             except click.Abort:
                 pass
 
-        credentials_list = sorted(app.list_with_properties(), key=lambda x: x.label)
+        all_credentials = app.list_with_properties()
+        credentials_list = sort_credentials(
+            filter_credentials(
+                all_credentials,
+                pattern=pattern,
+                kinds=kinds,
+                touch_button=touch_button,
+                pin_protected=pin_protected,
+                pws=pws,
+            ),
+            key=sort_by.lower(),
+            reverse=reverse,
+        )
         for i, credential in enumerate(credentials_list):
             local_print(f"{i + 1:02}. {format_credential(credential, hexa)}")
         if len(credentials_list) == 0:
-            local_print("No credentials found")
+            if all_credentials:
+                local_print(
+                    f"No credentials matching the filter found (out of {len(all_credentials)})"
+                )
+            else:
+                local_print("No credentials found")
 
 
 @secrets.command()
