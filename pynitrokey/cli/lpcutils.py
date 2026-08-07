@@ -81,7 +81,6 @@ chainCertificate0File0: "{cert_path}/nk-firmware-ee1-cert.der"
     new_provider = EcSignatureProvider(signer)
     mbi_cls.signature_provider = new_provider  # type: ignore
     mbi_data = mbi_cls.export_image()
-    print(mbi_data.draw())
     _clean_tempfile(cert_block_file)
     _clean_tempfile(dummy_priv_file)
 

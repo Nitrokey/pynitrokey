@@ -42,6 +42,7 @@ dependencies = [
 
 [project.optional-dependencies]
 pcsc = ["pyscard >=2, <3"]
+spsdk = ["spsdk >=3, <4"]
 
 [project.urls]
 repository = "https://github.com/Nitrokey/pynitrokey"
