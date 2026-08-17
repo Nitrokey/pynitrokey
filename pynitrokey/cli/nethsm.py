@@ -670,7 +670,6 @@ def prompt_mechanisms(type: str) -> list[str]:
         "finish the list of mechanisms."
     )
 
-    mechanism_type = click.Choice(available_mechanisms, case_sensitive=False)
     mechanisms: list[str] = []
     cont = True
     while cont:
@@ -681,7 +680,7 @@ def prompt_mechanisms(type: str) -> list[str]:
             default = ""
         mechanism = prompt(
             prompt_text,
-            type=mechanism_type,
+            type=click.Choice(available_mechanisms, case_sensitive=False),
             default=default,
             show_choices=False,
             show_default=False,
