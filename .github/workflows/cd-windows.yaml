@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 env:
-  PYTHON_VERSION: "3.10"
+  PYTHON_VERSION: "3.11"
   POETRY_SPEC: poetry >=2,<3
 
 jobs:

@@ -326,7 +326,9 @@ def test_fido2(ctx: TestContext, device: TrussedBase) -> TestResult:
     from fido2.client import DefaultClientDataCollector, Fido2Client
 
     client_data_collector = DefaultClientDataCollector(origin="https://example.com")
-    fido2_client = Fido2Client(device=device.device, client_data_collector=client_data_collector)
+    dev = device.connection.ctaphid_device()
+    assert dev is not None
+    fido2_client = Fido2Client(device=dev, client_data_collector=client_data_collector)
     options = fido2_client.info.options
     has_pin = options["clientPin"]
     uv_required = not options.get("makeCredUvNotRqd", False)
@@ -372,8 +374,10 @@ def test_fido2(ctx: TestContext, device: TrussedBase) -> TestResult:
         def request_uv(self, permissions: Any, rd_id: Any) -> bool:
             return True
 
+    dev = device.connection.ctaphid_device()
+    assert dev is not None
     client = Fido2Client(
-        device=device.device,
+        device=dev,
         client_data_collector=client_data_collector,
         user_interaction=NoInteraction(ctx.pin),
     )
