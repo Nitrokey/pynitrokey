@@ -53,7 +53,7 @@ Tip: alternative `gpg-connect-agent reloadagent /bye` is not sufficient.
 
 ## Compatibility
 
-`nitropy` requires Python 3.10 or later.
+`nitropy` requires Python 3.11 or later.
 
 ## Development
 

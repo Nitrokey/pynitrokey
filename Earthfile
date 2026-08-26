@@ -7,7 +7,7 @@ WORKDIR /workdir
 
 build:
     ENV FLIT_ROOT_INSTALL=1
-    RUN apt update && apt install python3 python3-dev make python3-pip python3.10-venv libpcsclite-dev swig  -qy
+    RUN apt update && apt install python3 python3-dev make python3-pip python3.11-venv libpcsclite-dev swig  -qy
     RUN apt install libusb-1.0-0-dev  -qy
     RUN python3 -m pip install -U pip
     RUN python3 -m pip install -U flit
