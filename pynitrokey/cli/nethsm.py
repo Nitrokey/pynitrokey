@@ -552,21 +552,24 @@ def metrics(ctx: Context) -> None:
 @click.option("--details/--no-details", default=True, help="Also query the key data")
 @click.option("-f", "--filter", type=str, help="Filter keys by tags for respective user")
 @click.option("-p", "--prefix", type=str, help="Only list keys with the given prefix")
+@click.option("-s", "--label", type=str, help="Filter keys by label")
 @click.pass_context
-def list_keys(ctx: Context, details: bool, filter: Optional[str], prefix: Optional[str]) -> None:
+def list_keys(
+    ctx: Context, details: bool, filter: Optional[str], prefix: Optional[str], label: Optional[str]
+) -> None:
     """List all keys on the NetHSM.
 
     This command requires authentication as a user with the Administrator or
     Operator role."""
     with connect(ctx) as nethsm:
-        key_ids = nethsm.list_keys(filter, prefix=prefix)
+        key_ids = nethsm.list_keys(filter, prefix=prefix, label=label)
 
         print(f"Keys on NetHSM {nethsm.host}:")
         print()
 
         headers = ["Key ID"]
         if details:
-            headers += ["Type", "Mechanisms", "Operations", "Tags"]
+            headers += ["Type", "Mechanisms", "Operations", "Tags", "Label"]
             data = []
             for key_id in key_ids:
                 key = nethsm.get_key(key_id=key_id)
@@ -577,6 +580,7 @@ def list_keys(ctx: Context, details: bool, filter: Optional[str], prefix: Option
                         ", ".join([m.value for m in key.mechanisms]),
                         key.operations,
                         ", ".join(key.tags) if key.tags is not None else "",
+                        key.label,
                     ]
                 )
         else:
@@ -607,6 +611,9 @@ def get_key(ctx: Context, key_id: str, public_key: bool) -> None:
             if key.tags:
                 tags = ", ".join(key.tags)
                 print(f"Tags:            {tags}")
+
+            if key.label:
+                print(f"Label:           {key.label}")
 
             if isinstance(key.public_key, nethsm_sdk.RsaPublicKey):
                 print(f"Modulus:         {key.public_key.modulus}")
@@ -678,7 +685,7 @@ def prompt_mechanisms(type: str) -> list[str]:
         if mechanisms:
             prompt_text += " (or empty string to continue)"
             default = ""
-        mechanism = prompt(
+        mechanism_str = prompt(
             prompt_text,
             type=click.Choice(available_mechanisms, case_sensitive=False),
             default=default,
@@ -689,10 +696,9 @@ def prompt_mechanisms(type: str) -> list[str]:
         if "" not in available_mechanisms:
             available_mechanisms.append("")
 
-        assert isinstance(mechanism, str)
-        if mechanism:
-            mechanisms.append(mechanism)
-            available_mechanisms.remove(mechanism)
+        if mechanism_str:
+            mechanisms.append(mechanism_str)
+            available_mechanisms.remove(mechanism_str)
         else:
             cont = False
 
@@ -787,10 +793,16 @@ def add_key(
 )
 @click.option("--tags", type=str, multiple=True, help="The tags for the new key")
 @click.option("-k", "--key-id", help="The ID of the new key")
+@click.option("-s", "--label", help="The label of the new key")
 @click.argument("filename")
 @click.pass_context
 def import_key(
-    ctx: Context, mechanisms: list[str], tags: list[str], key_id: Optional[str], filename: str
+    ctx: Context,
+    mechanisms: list[str],
+    tags: list[str],
+    key_id: Optional[str],
+    label: Optional[str],
+    filename: str,
 ) -> None:
     """Import a key pair from a PEM file into the NetHSM.
 
@@ -809,6 +821,7 @@ def import_key(
             mechanisms=[nethsm_sdk.KeyMechanism.from_string(m) for m in mechanisms],
             tags=tags,
             private_key=private_key,
+            label=label,
         )
         print(f"Key {key_id} added to NetHSM {nethsm.host}")
 
@@ -825,6 +838,7 @@ def import_key(
 @click.option("--tags", type=str, multiple=True, help="The tags for the new key")
 @click.option("-k", "--key-id", help="The ID of the new key")
 @click.option("-p", "--password", help="Password for the PKCS#12 archive")
+@click.option("-s", "--label", help="The label of the new key")
 @click.argument("filename", type=click.File("rb"))
 @click.pass_context
 def import_pkcs12(
@@ -833,6 +847,7 @@ def import_pkcs12(
     tags: list[str],
     key_id: Optional[str],
     password: Optional[str],
+    label: Optional[str],
     filename: BinaryIO,
 ) -> None:
     """Import a PKCS#12 archive from a file into the NetHSM.
@@ -878,6 +893,7 @@ def import_pkcs12(
             mechanisms=[nethsm_sdk.KeyMechanism.from_string(m) for m in mechanisms],
             tags=tags,
             private_key=private_key_pem,
+            label=label,
         )
         nethsm.set_key_certificate(key_id, certificate_pem)
         print(f"Key and certificate {key_id} added to NetHSM {nethsm.host}")
@@ -897,9 +913,15 @@ def import_pkcs12(
 )
 @click.option("-l", "--length", type=int, prompt=True, help="The length of the generated key")
 @click.option("-k", "--key-id", help="The ID of the generated key")
+@click.option("-s", "--label", help="Label of the key")
 @click.pass_context
 def generate_key(
-    ctx: Context, type: str, mechanisms: list[str], length: int, key_id: Optional[str]
+    ctx: Context,
+    type: str,
+    mechanisms: list[str],
+    length: int,
+    key_id: Optional[str],
+    label: Optional[str],
 ) -> None:
     """Generate a key pair on the NetHSM.
 
@@ -912,6 +934,7 @@ def generate_key(
             [nethsm_sdk.KeyMechanism.from_string(m) for m in mechanisms],
             length,
             key_id,
+            label,
         )
         print(f"Key {key_id} generated on NetHSM {nethsm.host}")
 
@@ -926,6 +949,7 @@ def _optional_or(s: Optional[str], default: str) -> str:
 @click.option("--logging", is_flag=True, help="Query the logging configuration")
 @click.option("--network", is_flag=True, help="Query the network configuration")
 @click.option("--time", is_flag=True, help="Query the system time")
+@click.option("--ntp", is_flag=True, help="Query the NTP configuration")
 @click.option("--unattended-boot", is_flag=True, help="Query the unattended boot configuration")
 @click.option("--public-key", is_flag=True, help="Query the public key")
 @click.option("--certificate", is_flag=True, help="Query the certificate")
@@ -935,6 +959,7 @@ def get_config(
     logging: bool,
     network: bool,
     time: bool,
+    ntp: bool,
     unattended_boot: bool,
     public_key: bool,
     certificate: bool,
@@ -948,7 +973,7 @@ def get_config(
     role."""
     with connect(ctx) as nethsm:
         print(f"Configuration for NetHSM {nethsm.host}:")
-        show_all = not any([logging, network, time, unattended_boot, public_key, certificate])
+        show_all = not any([logging, network, time, ntp, unattended_boot, public_key, certificate])
 
         if show_all or logging:
             logging_config = nethsm.get_config_logging()
@@ -973,6 +998,14 @@ def get_config(
         if show_all or time:
             time_config = nethsm.get_config_time()
             print("  Time:           ", time_config)
+
+        if show_all or ntp:
+            ntp_config = nethsm.get_config_ntp()
+            print("  NTP:")
+            ntp_ip = _optional_or(ntp_config.ntp_ip, "not configured")
+            print("    NTP Server IP:", ntp_ip)
+            nts_name = _optional_or(ntp_config.nts_name, "not configured")
+            print("    NTS Name:     ", nts_name)
 
         if show_all or unattended_boot:
             unattended_boot_config = nethsm.get_config_unattended_boot()
@@ -1153,6 +1186,48 @@ def set_time(ctx: Context, time: Optional[datetime.datetime]) -> None:
     with connect(ctx) as nethsm:
         nethsm.set_time(time)
         print(f"Updated the system time for NetHSM {nethsm.host}")
+
+
+@nethsm.command()
+@click.option("-a", "--ntp-ip", help="IP Address of NTP Server")
+@click.option("-s", "--nts-name", help="Name of NTP Server")
+@click.pass_context
+def set_ntp_config(ctx: Context, ntp_ip: Optional[str], nts_name: Optional[str]) -> None:
+    """Set the NTP configuration of a NetHSM.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+
+    with connect(ctx) as nethsm:
+        nethsm.set_ntp_config(ntp_ip=ntp_ip, nts_name=nts_name)
+        print(f"Updated the NTP configuration for NetHSM {nethsm.host}")
+
+
+@nethsm.command()
+@click.argument("key-id", type=str, required=True)
+@click.argument("label", type=str, required=True)
+@click.pass_context
+def set_key_label(ctx: Context, key_id: str, label: str) -> None:
+    """Set the label of a key.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    with connect(ctx) as nethsm:
+        nethsm.set_key_label(key_id, label)
+        print(f"Updated label for key {key_id} on NetHSM {nethsm.host}")
+
+
+@nethsm.command()
+@click.argument("key-id", type=str, required=True)
+@click.pass_context
+def delete_key_label(ctx: Context, key_id: str) -> None:
+    """Delete the label of a key.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    with connect(ctx) as nethsm:
+        nethsm.set_key_label(key_id, None)
+        print(f"Updated label for key {key_id} on NetHSM {nethsm.host}")
 
 
 @nethsm.command()
@@ -1808,7 +1883,7 @@ def add_cluster_member(ctx: Context, url: tuple[str], join_data_path: Path) -> N
     with connect(ctx) as nethsm:
         join_data = nethsm.add_cluster_member(list(url))
 
-    s = json.dumps(join_data.to_dict())
+    s = json.dumps(join_data.to_cluster_join_data().to_dict())
     join_data_path.write_text(s)
     print("Wrote join data to {join_data_path}")
 

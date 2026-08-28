@@ -39,7 +39,7 @@ jobs:
       - name: Install required packages
         run: |
           apt update
-          apt install -y gcc libpcsclite-dev make swig git
+          apt install -y gcc libpcsclite-dev make swig
       - name: Install poetry
         run: pip install "${POETRY_SPEC}"
       - name: Create virtual environment
@@ -140,7 +140,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
       - name: Install required packages
-        run: apt update && apt install -y make libpcsclite-dev swig gcc libffi-dev
+        run: apt update && apt install -y make libpcsclite-dev swig gcc libffi-dev git
       - name: Install uv
         run: pip install uv
       - name: Prepare poetry.lock
