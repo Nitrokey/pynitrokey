@@ -20,7 +20,7 @@ from click import Context
 from cryptography.hazmat.primitives.asymmetric import ec, ed25519, rsa
 from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption, PrivateFormat
 from cryptography.hazmat.primitives.serialization.pkcs12 import load_key_and_certificates
-from nethsm import Authentication, Base64, ClusterJoinData, NetHSM, State
+from nethsm import Authentication, Base64, ClusterJoinData, ClusterMember, NetHSM, State
 from nethsm.backup import EncryptedBackup
 
 from pynitrokey.cli.exceptions import CliException
@@ -1875,6 +1875,16 @@ def test(
             nethsm.factory_reset()
 
 
+def print_cluster_members(cluster_members: list[ClusterMember]) -> None:
+    n = len(cluster_members)
+    print(f"{n} cluster members:")
+    for m in cluster_members:
+        print(f"- id: {m.id}")
+        print(f"  name: {m.name}")
+        print(f"  peer URLs: {m.urls}")
+        print(f"  learner: {m.learner}")
+
+
 @nethsm.command()
 @click.option("--url", multiple=True)
 @click.argument("join_data_path", type=Path)
@@ -1882,6 +1892,8 @@ def test(
 def add_cluster_member(ctx: Context, url: tuple[str], join_data_path: Path) -> None:
     with connect(ctx) as nethsm:
         join_data = nethsm.add_cluster_member(list(url))
+
+    print_cluster_members(join_data.members)
 
     s = json.dumps(join_data.to_cluster_join_data().to_dict())
     join_data_path.write_text(s)
@@ -1894,12 +1906,7 @@ def list_cluster_members(ctx: Context) -> None:
     with connect(ctx) as nethsm:
         cluster_members = nethsm.list_cluster_members()
 
-    n = len(cluster_members)
-    print(f"{n} cluster members:")
-    for m in cluster_members:
-        print(f"- id: {m.id}")
-        print(f"  name: {m.name}")
-        print(f"  peer URLs: {m.urls}")
+    print_cluster_members(cluster_members)
 
 
 @nethsm.command()
@@ -1930,6 +1937,53 @@ def join_cluster(ctx: Context, backup_passphrase: str, join_data_path: Path) -> 
     join_data = ClusterJoinData.from_dict(data)
     with connect(ctx) as nethsm:
         nethsm.join_cluster(data=join_data, backup_passphrase=backup_passphrase)
+
+
+@nethsm.command()
+@click.pass_context
+def get_cluster_diagnostics(ctx: Context, no_auth: bool) -> None:
+    with connect(ctx) as nethsm:
+        diagnostics = nethsm.get_cluster_diagnostics()
+
+    state = diagnostics.state
+    snapshot = diagnostics.snapshot
+
+    print("Cluster diagnostics:")
+    print("  State:")
+    print(f"    running:    {state.running}")
+    if state.exited is not None:
+        print(f"    exited:     {state.exited}")
+    if state.signaled is not None:
+        print(f"    signaled:   {state.signaled}")
+    if state.stopped is not None:
+        print(f"    stopped:    {state.stopped}")
+    if snapshot is not None:
+        print("  Snapshot:")
+        print(f"    hash:       {snapshot.hash}")
+        print(f"    revision:   {snapshot.revision}")
+        print(f"    total key:  {snapshot.total_key}")
+        print(f"    total size: {snapshot.total_size}")
+        if snapshot.version is not None:
+            print(f"    version:    {snapshot.version}")
+    if diagnostics.logs:
+        print("  Log items:")
+        for item in diagnostics.logs:
+            print(f"    - [{item.level}] {item.msg}")
+
+
+@nethsm.command()
+@click.pass_context
+def force_new_cluster(ctx: Context) -> None:
+    with connect(ctx) as nethsm:
+        nethsm.force_new_cluster()
+
+
+@nethsm.command()
+@click.argument("member-id")
+@click.pass_context
+def promote_cluster_member(ctx: Context, member_id: str) -> None:
+    with connect(ctx) as nethsm:
+        nethsm.promote_cluster_member(member_id)
 
 
 @nethsm.command()
