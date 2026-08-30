@@ -8,7 +8,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "pynitrokey"
-version = "0.12.3"
+version = "0.13.0rc1"
 description = "Python client for Nitrokey devices"
 license = "Apache-2.0 OR MIT"
 authors = [
