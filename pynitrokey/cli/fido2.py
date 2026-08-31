@@ -40,7 +40,7 @@ from fido2.webauthn import (
 from pynitrokey.cli.exceptions import CliException
 from pynitrokey.exceptions import NonUniqueDeviceError, NoSoloFoundError
 from pynitrokey.fido2.entra import Entra
-from pynitrokey.fido2.preregister import PreRegister
+from pynitrokey.fido2.provision_credential import ProvisionCredential
 from pynitrokey.helpers import AskUser, local_critical, local_print, require_windows_admin
 
 # https://pocoo-click.readthedocs.io/en/latest/commands/#nested-handling-and-contexts
@@ -605,7 +605,9 @@ def wink(serial: Optional[str]) -> None:
     _device(serial).wink()
 
 
-prereg_services: dict[str, Callable[[], PreRegister]] = {Entra.get_service_name().lower(): Entra}
+provcred_services: dict[str, Callable[[], ProvisionCredential]] = {
+    Entra.get_service_name().lower(): Entra
+}
 
 
 @click.command()
@@ -614,22 +616,22 @@ prereg_services: dict[str, Callable[[], PreRegister]] = {Entra.get_service_name(
     "--serial",
     help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
 )
-@click.argument("service", type=click.Choice(list(prereg_services.keys()), case_sensitive=False))
+@click.argument("service", type=click.Choice(list(provcred_services.keys()), case_sensitive=False))
 @click.argument("user")
 @click.option("--config", "-c", type=click.File("r"), required=True, help="JSON config file")
 @click.option("--create-user", is_flag=True, default=False, help="Create user if it does not exist")
-def preregister(
+def provision_credential(
     serial: Optional[str], service: str, user: str, config: TextIO, create_user: bool
 ) -> None:
     """Pre-register Nitrokey for services."""
     config_dict = json.load(config)
-    prereg_service = prereg_services[service.lower()]
-    service_ob = prereg_service()
+    provcred_service = provcred_services[service.lower()]
+    service_ob = provcred_service()
     service_ob.set_config(config_dict)
     host = service_ob.get_rp_id()
     device = _device(serial)
     client = _fido2(device, host)
-    result = service_ob.preregister(create_user, user, client)
+    result = service_ob.provision(create_user, user, client)
     local_print(result)
 
 
@@ -643,4 +645,4 @@ fido2.add_command(reset)
 fido2.add_command(set_pin)
 fido2.add_command(verify)
 fido2.add_command(wink)
-fido2.add_command(preregister)
+fido2.add_command(provision_credential)

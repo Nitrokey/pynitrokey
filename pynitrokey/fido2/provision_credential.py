@@ -6,7 +6,7 @@ from nitrokey.nk3 import NK3
 from nitrokey.nkpk import NKPK
 
 
-class PreRegister(ABC):
+class ProvisionCredential(ABC):
     """
     Inherit from this class for other providers
     """
@@ -55,7 +55,7 @@ class PreRegister(ABC):
     def get_service_name(cls) -> str:
         return cls.service_name
 
-    def preregister(self, create: bool, user: str, client: Fido2Client) -> str:
+    def provision(self, create: bool, user: str, client: Fido2Client) -> str:
         if create:
             if self.create_user(user):
                 print(f"User {user} created on {self.get_service_name()}")

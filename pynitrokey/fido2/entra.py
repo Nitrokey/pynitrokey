@@ -11,10 +11,10 @@ from fido2.client import Fido2Client
 from fido2.utils import websafe_decode, websafe_encode
 from fido2.webauthn import PublicKeyCredentialCreationOptions
 
-from .preregister import PreRegister
+from .provision_credential import ProvisionCredential
 
 
-class Entra(PreRegister):
+class Entra(ProvisionCredential):
     service_name = "Entra"
     rp_id = "login.microsoft.com"
 
