@@ -618,10 +618,10 @@ prereg_services: dict[str, Callable[[], PreRegister]] = {Entra.get_service_name(
 @click.argument("user")
 @click.option("--config", "-c", type=click.File("r"), required=True, help="JSON config file")
 @click.option("--create-user", is_flag=True, default=False, help="Create user if it does not exist")
-def preregister(
+def provision_credential(
     serial: Optional[str], service: str, user: str, config: TextIO, create_user: bool
 ) -> None:
-    """Pre-register Nitrokey for services."""
+    """Provision FIDO2 credential for services."""
     config_dict = json.load(config)
     prereg_service = prereg_services[service.lower()]
     service_ob = prereg_service()
@@ -643,4 +643,4 @@ fido2.add_command(reset)
 fido2.add_command(set_pin)
 fido2.add_command(verify)
 fido2.add_command(wink)
-fido2.add_command(preregister)
+fido2.add_command(provision_credential)
