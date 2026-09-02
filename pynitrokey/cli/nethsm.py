@@ -1897,7 +1897,7 @@ def add_cluster_member(ctx: Context, url: tuple[str], join_data_path: Path) -> N
 
     s = json.dumps(join_data.to_cluster_join_data().to_dict())
     join_data_path.write_text(s)
-    print("Wrote join data to {join_data_path}")
+    print(f"Wrote join data to {join_data_path}")
 
 
 @nethsm.command()
