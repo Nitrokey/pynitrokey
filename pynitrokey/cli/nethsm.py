@@ -1941,7 +1941,7 @@ def join_cluster(ctx: Context, backup_passphrase: str, join_data_path: Path) -> 
 
 @nethsm.command()
 @click.pass_context
-def get_cluster_diagnostics(ctx: Context, no_auth: bool) -> None:
+def get_cluster_diagnostics(ctx: Context) -> None:
     with connect(ctx) as nethsm:
         diagnostics = nethsm.get_cluster_diagnostics()
 
