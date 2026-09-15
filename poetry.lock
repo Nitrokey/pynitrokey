@@ -997,26 +997,29 @@ urllib3 = ">=2,<3"
 
 [[package]]
 name = "nitrokey"
-version = "0.4.2"
+version = "0.5.0rc3"
 description = "Nitrokey Python SDK"
 optional = false
-python-versions = "<4,>=3.10"
+python-versions = "<4,>=3.11"
 groups = ["main"]
 files = [
-    {file = "nitrokey-0.4.2-py3-none-any.whl", hash = "sha256:1846944d8283e2632d2f0084283f36cabee7a2cfcad1926babfbf6d84614c954"},
-    {file = "nitrokey-0.4.2.tar.gz", hash = "sha256:67207980d65ce47c68859ca973fd7df0f3c1c6a1bd511b1c41f5d8016cecee7f"},
+    {file = "nitrokey-0.5.0rc3-py3-none-any.whl", hash = "sha256:1b4825e470aca49378fabbc3289e37ede826deb9390ad594690ba77378c9bbcc"},
+    {file = "nitrokey-0.5.0rc3.tar.gz", hash = "sha256:8285054e89fe0462a7c6e1fa0ce12158be5924d1e23579d5310faa930a730084"},
 ]
 
 [package.dependencies]
 crcmod = ">=1.7,<2"
 cryptography = ">=41"
-fido2 = ">=1.1.2,<3"
+fido2 = ">=2,<3"
 hidapi = ">=0.14,<0.15"
 protobuf = ">=5.26,<7"
 pyserial = ">=3.5,<4"
 requests = ">=2.16,<3"
 semver = ">=3,<4"
 tlv8 = ">=0.10,<0.11"
+
+[package.extras]
+ccid = ["pyscard (>=2,<3)"]
 
 [[package]]
 name = "nkdfu"
@@ -1664,4 +1667,4 @@ pcsc = ["pyscard"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">= 3.11, <3.15"
-content-hash = "0d51bfc9d18dcacc405646560d04a893ce315d8429b0b7e3f267b372f3b486f0"
+content-hash = "883491c62a75ae47acd7c5940bd0da0f646f56e0023dd6f79c3175de53b1e846"

@@ -322,11 +322,15 @@ def test_fido2(ctx: TestContext, device: TrussedBase) -> TestResult:
     if not isinstance(device, TrussedDevice):
         return TestResult(TestStatus.SKIPPED)
 
+    ctaphid_device = device.ctaphid_device()
+    if ctaphid_device is None:
+        return TestResult(TestStatus.SKIPPED)
+
     # drop out early, if pin is needed, but not provided
     from fido2.client import DefaultClientDataCollector, Fido2Client
 
     client_data_collector = DefaultClientDataCollector(origin="https://example.com")
-    fido2_client = Fido2Client(device=device.device, client_data_collector=client_data_collector)
+    fido2_client = Fido2Client(device=ctaphid_device, client_data_collector=client_data_collector)
     options = fido2_client.info.options
     has_pin = options["clientPin"]
     uv_required = not options.get("makeCredUvNotRqd", False)
@@ -373,7 +377,7 @@ def test_fido2(ctx: TestContext, device: TrussedBase) -> TestResult:
             return True
 
     client = Fido2Client(
-        device=device.device,
+        device=ctaphid_device,
         client_data_collector=client_data_collector,
         user_interaction=NoInteraction(ctx.pin),
     )
