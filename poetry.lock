@@ -997,14 +997,14 @@ urllib3 = ">=2,<3"
 
 [[package]]
 name = "nitrokey"
-version = "0.5.0rc3"
+version = "0.5.0rc4"
 description = "Nitrokey Python SDK"
 optional = false
 python-versions = "<4,>=3.11"
 groups = ["main"]
 files = [
-    {file = "nitrokey-0.5.0rc3-py3-none-any.whl", hash = "sha256:1b4825e470aca49378fabbc3289e37ede826deb9390ad594690ba77378c9bbcc"},
-    {file = "nitrokey-0.5.0rc3.tar.gz", hash = "sha256:8285054e89fe0462a7c6e1fa0ce12158be5924d1e23579d5310faa930a730084"},
+    {file = "nitrokey-0.5.0rc4-py3-none-any.whl", hash = "sha256:c9bc7134397cf1cfdbf98349c8bd472940a5e5fb399014f84a174e9ee96df07b"},
+    {file = "nitrokey-0.5.0rc4.tar.gz", hash = "sha256:bf5bb1e11fd405f1a6177b37a6da4587763061e29e8ddea862ccfab9c6545a0a"},
 ]
 
 [package.dependencies]
@@ -1667,4 +1667,4 @@ pcsc = ["pyscard"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">= 3.11, <3.15"
-content-hash = "883491c62a75ae47acd7c5940bd0da0f646f56e0023dd6f79c3175de53b1e846"
+content-hash = "ae8c91009ca3289fabc62e5cdb29489857e2406a1255c3bc710f1204742820c4"

@@ -569,8 +569,12 @@ def status(ctx: Context[Bootloader, Device]) -> None:
             local_print(f"Free blocks (int):  {status.ifs_blocks}")
         if status.efs_blocks is not None:
             local_print(f"Free blocks (ext):  {status.efs_blocks}")
+        if status.model is not None:
+            local_print(f"Model:              {status.model.name}")
         if status.variant is not None:
             local_print(f"Variant:            {status.variant.name}")
+        if status.revision is not None:
+            local_print(f"Revision:           {status.revision}")
 
 
 @click.command()
