@@ -10,6 +10,8 @@ from nitrokey.trussed import Model
 from pynitrokey.cli import trussed
 from pynitrokey.cli.trussed.test import TestCase
 
+from .storage import storage
+
 
 class Context(trussed.Context[NK3Bootloader, NK3]):
     def __init__(self, path: Optional[str]) -> None:
@@ -41,6 +43,7 @@ def nk3(ctx: click.Context, path: Optional[str]) -> None:
 
 # shared Trussed commands
 trussed.add_commands(nk3)
+nk3.add_command(storage)
 
 
 def _list() -> None:
