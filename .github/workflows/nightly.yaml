@@ -33,3 +33,5 @@ jobs:
         run: pip install pynitrokey
       - name: Run nitropy --help
         run: nitropy --help
+        env:
+            PYTHONWARNINGS: error

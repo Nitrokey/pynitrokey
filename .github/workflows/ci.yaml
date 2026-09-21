@@ -100,6 +100,8 @@ jobs:
         run: make install
       - name: Run tests
         run: make test
+        env:
+            PYTHONWARNINGS: error
   run:
     name: Run nitropy --help
     runs-on: ubuntu-latest
@@ -127,6 +129,8 @@ jobs:
         run: python3 -m venv venv && venv/bin/pip install .[pcsc]
       - name: Run nitropy --help
         run: venv/bin/nitropy --help
+        env:
+            PYTHONWARNINGS: error
   test-uv-resolution:
     name: Test different resolution strategies with uv
     runs-on: ubuntu-latest
@@ -155,3 +159,5 @@ jobs:
         run: make check-typing MYPY="uv run --locked mypy"
       - name: Run nitropy --help
         run: uv run --locked nitropy --help
+        env:
+            PYTHONWARNINGS: error
