@@ -1,6 +1,6 @@
 import json
-import random
 import re
+import secrets
 import string
 import time
 from datetime import datetime, timedelta
@@ -27,7 +27,7 @@ class Entra(ProvisionCredential):
 
     def _generate_password(self, length: int = 16) -> str:
         characters = string.ascii_letters + string.digits + string.punctuation
-        password = "".join(random.choice(characters) for _ in range(length))
+        password = "".join(secrets.choice(characters) for _ in range(length))
         return password
 
     def _get_endpoint(self, graph_version: str = "v1.0") -> str:
