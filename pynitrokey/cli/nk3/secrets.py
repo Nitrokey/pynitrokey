@@ -304,6 +304,40 @@ def add_otp_impl(
 
 @secrets.command
 @click.pass_obj
+@click.argument("uri", type=click.STRING)
+@click.option(
+    "--touch-button",
+    "touch_button",
+    type=click.BOOL,
+    help="This credential requires button press before use",
+    is_flag=True,
+)
+@click.option(
+    "--protect-with-pin",
+    "pin_protection",
+    type=click.BOOL,
+    help="This credential should be additionally encrypted with a PIN, which will be required before each use",
+    is_flag=True,
+)
+def add_otp_uri(ctx: Context, uri: str, touch_button: bool, pin_protection: bool) -> None:
+    """Register OTP credential with URI."""
+
+    with ctx.connect_device() as device:
+        app = SecretsApp(device)
+        ask_to_touch_if_needed()
+
+        @repeat_if_pin_needed
+        def call(app: SecretsApp) -> None:
+            app.register_uri(
+                uri, touch_button_required=touch_button, pin_based_encryption=pin_protection
+            )
+
+        call(app)
+        local_print("Done")
+
+
+@secrets.command
+@click.pass_obj
 @click.argument("name", type=click.STRING)
 @click.option(
     "--touch-button",
