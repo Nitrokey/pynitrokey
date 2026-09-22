@@ -11,6 +11,7 @@ LINT_DIRS := $(PACKAGE_NAME) stubs
 
 RUFF ?= poetry run ruff
 MYPY ?= poetry run mypy
+PYTEST ?= poetry run pytest
 
 .PHONY: all
 all: install
@@ -42,9 +43,12 @@ check-typing:
 .PHONY: check
 check: check-format check-style check-typing
 
+# Tests that do not require a device. The tests requiring a device are run with
+# the secrets-test* targets below.
 .PHONY: test
 test:
 	$(PYTHON3_VENV) -m doctest pynitrokey/helpers.py
+	$(PYTEST) pynitrokey/test_cli_secrets.py
 
 # automatic code fixes
 .PHONY: fix
