@@ -64,7 +64,8 @@ def repeat_if_pin_needed(func) -> Callable:  # type: ignore[no-untyped-def, type
             elif e.to_id() == SecretsAppExceptionID.NotFound:
                 if repeat_if_pin_needed.cached_PIN is None:  # type: ignore[attr-defined]
                     local_print(
-                        "Credential not found. Please provide PIN below to search in the PIN-protected database."
+                        "Credential not found. Please provide PIN below to search in the PIN-protected database.",
+                        file=sys.stderr,
                     )
             else:
                 raise
