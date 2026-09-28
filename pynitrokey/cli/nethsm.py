@@ -165,7 +165,7 @@ def connect(ctx: Context, require_auth: bool = True) -> Iterator[NetHSM]:
             )
         else:
             raise click.ClickException(
-                f"Cound not connect to the NetHSM: {e.reason}\nIs the NetHSM running and reachable?"
+                f"Could not connect to the NetHSM: {e.reason}\nIs the NetHSM running and reachable?"
             )
     finally:
         nethsm.close()
