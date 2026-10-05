@@ -14,7 +14,7 @@ import logging
 import time
 from contextlib import suppress
 from datetime import timedelta
-from os import environ, wait
+from os import environ
 from sys import stderr
 from typing import Any, Callable, List, Optional, Tuple
 

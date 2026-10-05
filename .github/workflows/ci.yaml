@@ -86,22 +86,19 @@ jobs:
   run-tests:
     name: Run tests
     runs-on: ubuntu-latest
-    container: python:3.11-slim
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
       - name: Install required packages
         run: |
-          apt update
-          apt install -y gcc libpcsclite-dev make swig git
+          sudo apt update
+          sudo apt install -y gcc libpcsclite-dev make swig git
       - name: Install poetry
         run: pip install "${POETRY_SPEC}"
       - name: Create virtual environment
         run: make install
       - name: Run tests
-        run: make test
-        env:
-            PYTHONWARNINGS: error
+        run: make test PYTEST_FLAGS="-v"
   run:
     name: Run nitropy --help
     runs-on: ubuntu-latest

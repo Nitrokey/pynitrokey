@@ -6,9 +6,11 @@
 
 PACKAGE_NAME=pynitrokey
 
-FORMAT_DIRS := $(PACKAGE_NAME) stubs
-LINT_DIRS := $(PACKAGE_NAME) stubs
+FORMAT_DIRS := $(PACKAGE_NAME) stubs tests
+LINT_DIRS := $(PACKAGE_NAME) stubs tests
 
+PYTHON ?= poetry run python
+PYTEST ?= poetry run pytest
 RUFF ?= poetry run ruff
 MYPY ?= poetry run mypy
 
@@ -37,14 +39,15 @@ check-style:
 
 .PHONY: check-typing
 check-typing:
-	$(MYPY) $(PACKAGE_NAME)/
+	$(MYPY) $(LINT_DIRS)
 
 .PHONY: check
 check: check-format check-style check-typing
 
 .PHONY: test
 test:
-	$(PYTHON3_VENV) -m doctest pynitrokey/helpers.py
+	$(PYTHON) -m doctest pynitrokey/helpers.py
+	$(PYTEST) tests $(PYTEST_FLAGS)
 
 # automatic code fixes
 .PHONY: fix
