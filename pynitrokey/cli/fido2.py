@@ -660,36 +660,31 @@ def build_bulk_provision_credential(
 
     output_file: str
 ) -> None:
-    try:
-        enrollment_states: list[StatefulProvisionCredential] = []
+    enrollment_states: list[StatefulProvisionCredential] = []
 
-        outp = Path(output_file)
-        
-        if not outp.exists():
-            l = outp.open("w")
-            l.close()
-        elif outp.is_file():
-            if outp.stat().st_size:
-                to_app = pd.read_csv(output_file, keep_default_na=False)
-                for index, row in to_app.iterrows():
-                    nm = str(row["service_name"])
-                    es = stateful_credential_factory[nm.lower()]()
-                    es.inject_state(row)
-                    enrollment_states.append(es)
-        else:
-            AssertionError("Paths to directories and other non-files are unsupported")
+    outp = Path(output_file)
+    
+    if not outp.exists():
+        l = outp.open("w")
+        l.close()
+    elif outp.is_file():
+        if outp.stat().st_size:
+            to_app = pd.read_csv(output_file, keep_default_na=False)
+            for index, row in to_app.iterrows():
+                nm = str(row["service_name"])
+                es = stateful_credential_factory[nm.lower()]()
+                es.inject_state(row)
+                enrollment_states.append(es)
+    else:
+        AssertionError("Paths to directories and other non-files are unsupported")
 
-        ess = stateful_credential_factory[service.lower()]()
-        ess.begin_new(user, create_user)
+    ess = stateful_credential_factory[service.lower()]()
+    ess.begin_new(user, create_user)
 
-        enrollment_states.append(ess)
+    enrollment_states.append(ess)
 
-        df_out = pd.DataFrame([x.enrollment_data.serialize() for x in enrollment_states])
-        df_out.to_csv(output_file, index=False)
-
-
-    except Exception:
-        print(traceback.format_exc())
+    df_out = pd.DataFrame([x.enrollment_data.serialize() for x in enrollment_states])
+    df_out.to_csv(output_file, index=False)
 
 @click.command()
 @click.option("-s", "--serial", required=False, help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.")
@@ -712,55 +707,49 @@ def stepped_provision_credential(
 
     fast: bool
 ) -> None:
-    try:
-        conf: dict[str, Any] = None
-        if(config is not None):
-            conf = json.load(config)
+    conf: dict[str, Any] = None
+    if(config is not None):
+        conf = json.load(config)
 
-        if output_file is None:
-            output_file = bulk_registration
-        out_path = Path(output_file)
+    if output_file is None:
+        output_file = bulk_registration
+    out_path = Path(output_file)
 
-        op_path = Path(bulk_registration)
-        if (not op_path.exists()) or (op_path.stat().st_size <= 0):
-            AssertionError("Path provided must point to valid and populated enrollment state file")
+    op_path = Path(bulk_registration)
+    if (not op_path.exists()) or (op_path.stat().st_size <= 0):
+        AssertionError("Path provided must point to valid and populated enrollment state file")
 
-        enrollment_states: list[EntraStateEncodedCredential] = []
+    enrollment_states: list[EntraStateEncodedCredential] = []
 
-        bulk_in = pd.read_csv(bulk_registration, keep_default_na=False)
-        for bi_index, bi_row in bulk_in.iterrows():
-            nm = str(bi_row["service_name"])
-            es = stateful_credential_factory[nm.lower()]()
-            es.inject_state(bi_row)
-            enrollment_states.append(es)
-
-
-        for state in enrollment_states:
-            client: Fido2Client = None
-            try:
-                host = state.get_rp_id()
-                device = _device(serial)
-                client = _fido2(device, host)
-            except NoSoloFoundError:
-                client = None
+    bulk_in = pd.read_csv(bulk_registration, keep_default_na=False)
+    for bi_index, bi_row in bulk_in.iterrows():
+        nm = str(bi_row["service_name"])
+        es = stateful_credential_factory[nm.lower()]()
+        es.inject_state(bi_row)
+        enrollment_states.append(es)
 
 
-            if state.move_next(client, conf):
-                print(f"state advanced to {state.enrollment_data.enrollment_state} successfully!")
-            else:
-                print(f"could not advance state! reverting to {state.enrollment_data.enrollment_state}")
-
-            if not fast:
-                input("Press Enter to continue...")
-
-
-        df_out = pd.DataFrame([x.enrollment_data.serialize() for x in enrollment_states])
-        df_out.to_csv(output_file, index=False)
+    for state in enrollment_states:
+        client: Fido2Client = None
+        try:
+            host = state.get_rp_id()
+            device = _device(serial)
+            client = _fido2(device, host)
+        except NoSoloFoundError:
+            client = None
 
 
+        if state.move_next(client, conf):
+            print(f"state advanced to {state.enrollment_data.enrollment_state} successfully!")
+        else:
+            print(f"could not advance state! reverting to {state.enrollment_data.enrollment_state}")
 
-    except Exception:
-        print(traceback.format_exc())
+        if not fast:
+            input("Press Enter to continue...")
+
+
+    df_out = pd.DataFrame([x.enrollment_data.serialize() for x in enrollment_states])
+    df_out.to_csv(output_file, index=False)
 
 
 fido2.add_command(challenge_response)
