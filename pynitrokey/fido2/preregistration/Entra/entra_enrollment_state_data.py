@@ -10,7 +10,7 @@ class EntraEnrollmentStateData:
     enrollment_state: EntraEnrollmentState
 
     # stateful data needed to BEGIN enrollment
-    username_or_email: str | None # check username and/or email?
+    username_or_email: str | None  # check username and/or email?
     create_user_if_not_exist: bool
 
     def __init__(self) -> None:

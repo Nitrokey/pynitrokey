@@ -87,9 +87,7 @@ class EntraStateEncodedCredential(StatefulProvisionCredential):
             )
             self.enrollment_data.user_entra_id = entra_id
 
-            self.enrollment_data.fido_challenge = self.entra_conf.get_creation_options(
-                entra_id
-            )
+            self.enrollment_data.fido_challenge = self.entra_conf.get_creation_options(entra_id)
 
             return EntraEnrollmentState.ENTRA_SETUP
         else:
@@ -97,7 +95,7 @@ class EntraStateEncodedCredential(StatefulProvisionCredential):
                 "State [BEGIN] requires access to Entra serivces to continue! Please ensure an entra_config.json is provided, and try again"
             )
 
-    def generate_credentials_on_key(self, client: Fido2Client  | None) -> EntraEnrollmentState:
+    def generate_credentials_on_key(self, client: Fido2Client | None) -> EntraEnrollmentState:
         if client is None:
             raise AssertionError()
 
@@ -118,7 +116,11 @@ class EntraStateEncodedCredential(StatefulProvisionCredential):
 
     def save_credenitals_to_entra(self, config: Any) -> EntraEnrollmentState:
         if self.ensure_has_entra_config(config):
-            if self.enrollment_data.fido_response is None or self.enrollment_data.user_entra_id is None or self.enrollment_data.nitrokey_device_name is None:
+            if (
+                self.enrollment_data.fido_response is None
+                or self.enrollment_data.user_entra_id is None
+                or self.enrollment_data.nitrokey_device_name is None
+            ):
                 raise AssertionError()
 
             self.enrollment_data.fido_credential_id = self.entra_conf.save_creds(
@@ -161,13 +163,13 @@ class EntraStateEncodedCredential(StatefulProvisionCredential):
         }
 
     def enroll_device(self, user: str, client: Fido2Client) -> str:
-        #entraEnrollment = self.begin_enroll_entra(user)
+        # entraEnrollment = self.begin_enroll_entra(user)
 
-        #nitroResponse = self.continue_enroll_nitrokey(client, entraEnrollment)
+        # nitroResponse = self.continue_enroll_nitrokey(client, entraEnrollment)
 
-        #cred_id = self.entra_conf.save_creds(
+        # cred_id = self.entra_conf.save_creds(
         #    nitroResponse.response, nitroResponse.user_id, nitroResponse.device_name
-        #)
+        # )
 
         do = True
         while do:
