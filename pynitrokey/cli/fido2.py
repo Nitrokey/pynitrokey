@@ -46,8 +46,9 @@ from pynitrokey.fido2.provision_credential import ProvisionCredential
 from pynitrokey.helpers import AskUser, local_critical, local_print, require_windows_admin
 
 # https://pocoo-click.readthedocs.io/en/latest/commands/#nested-handling-and-contexts
-import pandas as pd
-import traceback
+#import pandas as pd
+import csv
+#import traceback
 
 from pynitrokey.fido2.preregistration.stateful_provision_credential import StatefulProvisionCredential
 from pynitrokey.fido2.preregistration.Entra.entra_state_encode_credential import EntraStateEncodedCredential
@@ -669,12 +670,13 @@ def build_bulk_provision_credential(
         l.close()
     elif outp.is_file():
         if outp.stat().st_size:
-            to_app = pd.read_csv(output_file, keep_default_na=False)
-            for index, row in to_app.iterrows():
-                nm = str(row["service_name"])
-                es = stateful_credential_factory[nm.lower()]()
-                es.inject_state(row)
-                enrollment_states.append(es)
+            with open(outp, "r") as csvfile:
+                reader = csv.DictReader(csvfile)
+                for row in reader:
+                    nm = str(row["service_name"])
+                    es = stateful_credential_factory[nm.lower()]()
+                    es.inject_state(row)
+                    enrollment_states.append(es)
     else:
         AssertionError("Paths to directories and other non-files are unsupported")
 
@@ -683,8 +685,16 @@ def build_bulk_provision_credential(
 
     enrollment_states.append(ess)
 
-    df_out = pd.DataFrame([x.enrollment_data.serialize() for x in enrollment_states])
-    df_out.to_csv(output_file, index=False)
+    with open(outp, 'w') as csvOut:
+        headers: list[str] = []
+        for state in enrollment_states:
+            headers = state.provide_data_field_names(headers)
+
+        writer = csv.DictWriter(csvOut, headers)
+        writer.writeheader()
+
+        for state in enrollment_states:
+            writer.writerow(state.extract_state())
 
 @click.command()
 @click.option("-s", "--serial", required=False, help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.")
@@ -721,12 +731,13 @@ def stepped_provision_credential(
 
     enrollment_states: list[EntraStateEncodedCredential] = []
 
-    bulk_in = pd.read_csv(bulk_registration, keep_default_na=False)
-    for bi_index, bi_row in bulk_in.iterrows():
-        nm = str(bi_row["service_name"])
-        es = stateful_credential_factory[nm.lower()]()
-        es.inject_state(bi_row)
-        enrollment_states.append(es)
+    with open(bulk_registration, "r") as csvfile:
+        reader = csv.DictReader(csvfile)
+        for bi_row in reader:
+            nm = str(bi_row["service_name"])
+            es = stateful_credential_factory[nm.lower()]()
+            es.inject_state(bi_row)
+            enrollment_states.append(es)
 
 
     for state in enrollment_states:
@@ -748,8 +759,16 @@ def stepped_provision_credential(
             input("Press Enter to continue...")
 
 
-    df_out = pd.DataFrame([x.enrollment_data.serialize() for x in enrollment_states])
-    df_out.to_csv(output_file, index=False)
+    with open(output_file, 'w') as csvOut:
+        headers: list[str] = []
+        for state in enrollment_states:
+            headers = state.provide_data_field_names(headers)
+
+        writer = csv.DictWriter(csvOut, headers)
+        writer.writeheader()
+
+        for state in enrollment_states:
+            writer.writerow(state.extract_state())
 
 
 fido2.add_command(challenge_response)

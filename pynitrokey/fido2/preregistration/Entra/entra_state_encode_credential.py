@@ -34,6 +34,9 @@ class EntraStateEncodedCredential(StatefulProvisionCredential):
 
     def inject_state(self, raw: dict[str, str]):
         self.enrollment_data = EntraEnrollmentStateData.deserialize(raw)
+
+    def provide_data_field_names(self, running: list[str]) -> list[str]:
+        return EntraEnrollmentStateData.provide_data_field_names(running)
         
 
     def move_next(self, client: Fido2Client, config: Any) -> bool:

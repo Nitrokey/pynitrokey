@@ -48,3 +48,8 @@ class StatefulProvisionCredential(ProvisionCredential):
     def inject_state(self, raw: dict[str, str]):
         """load external, serialized state into this provisioner"""
         pass
+
+    @abstractmethod
+    def provide_data_field_names(self, running: list[str]) -> list[str]:
+        """load external, serialized state into this provisioner"""
+        pass

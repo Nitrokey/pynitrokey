@@ -51,6 +51,36 @@ class EntraEnrollmentStateData:
 
         return slf
 
+    
+    def provide_data_field_names(running: list[str]) -> list[str]:
+        if running is None:
+            running = []
+
+        if "service_name" not in running:
+            running.append("service_name")
+        if "enrollment_state" not in running:
+            running.append("enrollment_state")
+        if "username_or_email" not in running:
+            running.append("username_or_email")
+        if "create_user_if_not_exist" not in running:
+            running.append("create_user_if_not_exist")
+
+        if "nitrokey_device_name" not in running:
+            running.append("nitrokey_device_name")
+
+        if "user_entra_id" not in running:
+            running.append("user_entra_id")
+        if "fido_challenge_encoded" not in running:
+            running.append("fido_challenge_encoded")
+
+        if "fido_response_encoded" not in running:
+            running.append("fido_response_encoded")
+
+        if "fido_credential_id" not in running:
+            running.append("fido_credential_id")
+
+        return running
+
     #stateful data populated by running BEGIN; needed to step past ENTRA_SETUP
     user_entra_id: str
     fido_challenge: Any ###pickle on save
