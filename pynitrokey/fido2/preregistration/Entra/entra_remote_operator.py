@@ -1,6 +1,4 @@
-import codecs
 import json
-import pickle
 import re
 import secrets
 import string
@@ -9,8 +7,8 @@ from datetime import datetime, timedelta
 from typing import Any
 
 import requests
-from fido2.utils import websafe_decode, websafe_encode
-from fido2.webauthn import PublicKeyCredentialCreationOptions
+from fido2.utils import websafe_decode
+
 
 class EntraRemoteOperator:
     tenant: str
@@ -23,7 +21,7 @@ class EntraRemoteOperator:
 
     user_id: str
 
-    def __init__(self, raw: Any):
+    def __init__(self, raw: Any) -> None:
         EntraRemoteOperator.validate_config(raw)
 
         self.tenant = raw["tenant"]
@@ -47,7 +45,6 @@ class EntraRemoteOperator:
         graph_endpoint = f"https://graph.microsoft.com/{graph_version}"
         return graph_endpoint
 
-    
     def _set_http_headers(self) -> dict[str, str]:
         return {
             "Accept": "application/json",
@@ -55,30 +52,24 @@ class EntraRemoteOperator:
             "Content-Type": "application/json",
             "Accept-Encoding": "gzip, deflate, br",
         }
-    
 
     def _generate_password(self, length: int = 16) -> str:
         characters = string.ascii_letters + string.digits + string.punctuation
         password = "".join(secrets.choice(characters) for _ in range(length))
         return password
 
-    
     def _get_endpoint(self, graph_version: str = "v1.0") -> str:
         graph_endpoint = f"https://graph.microsoft.com/{graph_version}"
         return graph_endpoint
 
-    
     def get_token(self) -> str:
         if self.token and datetime.now() < self.token_validity:
             return self.token
         return self._get_access_token_for_microsoft_graph()
 
-    
     def _get_access_token_for_microsoft_graph(self) -> str:
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
-        token_endpoint = (
-            "https://login.microsoftonline.com/" + self.tenant + "/oauth2/v2.0/token"
-        )
+        token_endpoint = "https://login.microsoftonline.com/" + self.tenant + "/oauth2/v2.0/token"
 
         body = {
             "grant_type": "client_credentials",
@@ -95,9 +86,8 @@ class EntraRemoteOperator:
         self.token_validity = datetime.now() + timedelta(seconds=expiry)
         return str(decoded_response.get("access_token", ""))
 
-    
     def get_user_id(self, user: str, create_if_missing: bool) -> str:
-        if getattr(self, 'user_id', None) is not None:
+        if getattr(self, "user_id", None) is not None:
             return self.user_id
 
         email = self._get_username(user)
@@ -115,7 +105,9 @@ class EntraRemoteOperator:
             backoff_wait = 1
             backoff_count = 10
             while (backoff_count > 0) and (check_get_user is None):
-                print(f"User {user} created, but not yet accessible... waiting {backoff_wait} seconds before trying again")
+                print(
+                    f"User {user} created, but not yet accessible... waiting {backoff_wait} seconds before trying again"
+                )
                 time.sleep(backoff_wait)
                 check_get_user = self.try_get_user_by_id(usrid)
                 backoff_wait *= 2
@@ -123,9 +115,11 @@ class EntraRemoteOperator:
 
             if (backoff_count <= 0) and (check_get_user is None):
                 print(f"user creation for user {user} failed! please try again later")
-                assert False
+                raise AssertionError(
+                    f"user creation for user {user} failed! please try again later"
+                )
 
-        self.user_id = str(usrid)       
+        self.user_id = str(usrid)
         return self.user_id
 
     def try_get_user_by_id(self, user_id: str) -> Any:
@@ -138,7 +132,6 @@ class EntraRemoteOperator:
         else:
             return None
 
-    
     def _get_username(self, name: str) -> str:
         assert name.count("@") < 1 or (name.count("@") == 1 and name.endswith(f"@{self.domain}")), (
             "Invalid name"
@@ -147,7 +140,6 @@ class EntraRemoteOperator:
         temp = re.sub(r"[^a-zA-Z0-9]", "", temp)
         return f"{temp}@{self.domain}"
 
-    
     def create_user(self, user: str) -> str:
         endpoint = f"{self._get_endpoint()}/users"
         email = self._get_username(user)
@@ -171,16 +163,16 @@ class EntraRemoteOperator:
             return r
         else:
             print(decoded_response)
-            assert False
+            raise AssertionError()
 
     def get_creation_options(self, user: str) -> dict[str, Any]:
         endpoint_base = self._get_endpoint("beta")
         endpoint = f"{endpoint_base}/users/{user}/authentication/fido2Methods/creationOptions"
         resp = requests.get(endpoint, headers=self._set_http_headers())
         decoded_response = json.loads(resp.content)
-        if not "publicKey" in decoded_response:
+        if "publicKey" not in decoded_response:
             print(decoded_response)
-            assert False
+            raise AssertionError()
 
         pubkey: dict[str, Any] = decoded_response.get("publicKey")
         pubkey["challenge"] = websafe_decode(pubkey["challenge"])

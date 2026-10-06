@@ -3,7 +3,6 @@ from typing import Any
 
 from fido2.client import Fido2Client
 
-
 from pynitrokey.fido2.provision_credential import ProvisionCredential
 
 

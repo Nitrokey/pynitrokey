@@ -2,14 +2,16 @@
 # Copyright Nitrokey GmbH
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 
+# https://pocoo-click.readthedocs.io/en/latest/commands/#nested-handling-and-contexts
+# import pandas as pd
+import csv
 import hashlib
 import json
-import os
-from pathlib import Path
 import secrets
 import time
 from dataclasses import fields
 from getpass import getpass
+from pathlib import Path
 from typing import Any, Callable, Optional, TextIO
 
 import click
@@ -42,16 +44,17 @@ from fido2.webauthn import (
 from pynitrokey.cli.exceptions import CliException
 from pynitrokey.exceptions import NonUniqueDeviceError, NoSoloFoundError
 from pynitrokey.fido2.entra import Entra
+from pynitrokey.fido2.preregistration.Entra.entra_state_encode_credential import (
+    EntraStateEncodedCredential,
+)
+
+# import traceback
+from pynitrokey.fido2.preregistration.stateful_provision_credential import (
+    StatefulProvisionCredential,
+)
 from pynitrokey.fido2.provision_credential import ProvisionCredential
 from pynitrokey.helpers import AskUser, local_critical, local_print, require_windows_admin
 
-# https://pocoo-click.readthedocs.io/en/latest/commands/#nested-handling-and-contexts
-#import pandas as pd
-import csv
-#import traceback
-
-from pynitrokey.fido2.preregistration.stateful_provision_credential import StatefulProvisionCredential
-from pynitrokey.fido2.preregistration.Entra.entra_state_encode_credential import EntraStateEncodedCredential
 
 class CliInteraction(UserInteraction):
     def __init__(self, pin: Optional[str]) -> None:
@@ -614,7 +617,7 @@ def wink(serial: Optional[str]) -> None:
 
 provcred_services: dict[str, Callable[[], ProvisionCredential]] = {
     Entra.get_service_name().lower(): Entra,
-    "EntraStateful": EntraStateEncodedCredential
+    "EntraStateful": EntraStateEncodedCredential,
 }
 
 
@@ -644,30 +647,39 @@ def provision_credential(
 
 
 stateful_credential_factory: dict[str, Callable[[], StatefulProvisionCredential]] = {
-    EntraStateEncodedCredential.get_service_name().lower():  EntraStateEncodedCredential
+    EntraStateEncodedCredential.get_service_name().lower(): EntraStateEncodedCredential
 }
 
+
 @click.command()
-@click.option("-r", "--service", required=True, type=click.Choice(list(provcred_services.keys()), case_sensitive=False))
+@click.option(
+    "-r",
+    "--service",
+    required=True,
+    type=click.Choice(list(provcred_services.keys()), case_sensitive=False),
+)
 @click.option("-u", "--user", required=True, help="Start new registration for this single user")
-@click.option("-n", "--create-user", is_flag=True, default=False, help="Create user(s) if they do not exist")
-
-#initial filemode a+ in order to create file if not exist without truncating file if does exist like w would (while r would throw exception)
-@click.option("-o", "--output-file", required=True, type=click.Path(file_okay=True,dir_okay=False,writable=True,resolve_path=True), help="Output registration state(s) to file")
+@click.option(
+    "-n", "--create-user", is_flag=True, default=False, help="Create user(s) if they do not exist"
+)
+# initial filemode a+ in order to create file if not exist without truncating file if does exist like w would (while r would throw exception)
+@click.option(
+    "-o",
+    "--output-file",
+    required=True,
+    type=click.Path(file_okay=True, dir_okay=False, writable=True, resolve_path=True),
+    help="Output registration state(s) to file",
+)
 def build_bulk_provision_credential(
-    service: str, 
-    user: str, 
-    create_user: bool,
-
-    output_file: str
+    service: str, user: str, create_user: bool, output_file: str
 ) -> None:
     enrollment_states: list[StatefulProvisionCredential] = []
 
     outp = Path(output_file)
-    
+
     if not outp.exists():
-        l = outp.open("w")
-        l.close()
+        emp_t = outp.open("w")
+        emp_t.close()
     elif outp.is_file():
         if outp.stat().st_size:
             with open(outp, "r") as csvfile:
@@ -685,7 +697,7 @@ def build_bulk_provision_credential(
 
     enrollment_states.append(ess)
 
-    with open(outp, 'w') as csvOut:
+    with open(outp, "w") as csvOut:
         headers: list[str] = []
         for state in enrollment_states:
             headers = state.provide_data_field_names(headers)
@@ -696,29 +708,50 @@ def build_bulk_provision_credential(
         for state in enrollment_states:
             writer.writerow(state.extract_state())
 
+
 @click.command()
-@click.option("-s", "--serial", required=False, help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.")
-
-@click.argument("bulk-registration", required=True, type=click.Path(file_okay=True,dir_okay=False,writable=True,resolve_path=True))
-
-@click.option("-o", "--output-file", required=False, type=click.Path(file_okay=True,dir_okay=False,writable=True,resolve_path=True), help="Redirect output registration state(s) to different file")
-
-@click.option("-c", "--config", required=False, type=click.File("r"), help="JSON config file for remote service")
-
-@click.option("-f", "--fast", required=False, is_flag=True, default=False, help="Process all enrollments one step without pausing for user")
+@click.option(
+    "-s",
+    "--serial",
+    required=False,
+    help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
+)
+@click.argument(
+    "bulk-registration",
+    required=True,
+    type=click.Path(file_okay=True, dir_okay=False, writable=True, resolve_path=True),
+)
+@click.option(
+    "-o",
+    "--output-file",
+    required=False,
+    type=click.Path(file_okay=True, dir_okay=False, writable=True, resolve_path=True),
+    help="Redirect output registration state(s) to different file",
+)
+@click.option(
+    "-c",
+    "--config",
+    required=False,
+    type=click.File("r"),
+    help="JSON config file for remote service",
+)
+@click.option(
+    "-f",
+    "--fast",
+    required=False,
+    is_flag=True,
+    default=False,
+    help="Process all enrollments one step without pausing for user",
+)
 def stepped_provision_credential(
-    serial: Optional[str], 
-
-    bulk_registration: str, 
-
-    output_file: Optional[str], 
-
-    config: Optional[TextIO], 
-
-    fast: bool
+    serial: Optional[str],
+    bulk_registration: str,
+    output_file: Optional[str],
+    config: Optional[TextIO],
+    fast: bool,
 ) -> None:
     conf: dict[str, Any] = None
-    if(config is not None):
+    if config is not None:
         conf = json.load(config)
 
     if output_file is None:
@@ -739,7 +772,6 @@ def stepped_provision_credential(
             es.inject_state(bi_row)
             enrollment_states.append(es)
 
-
     for state in enrollment_states:
         client: Fido2Client = None
         try:
@@ -749,7 +781,6 @@ def stepped_provision_credential(
         except NoSoloFoundError:
             client = None
 
-
         if state.move_next(client, conf):
             print(f"state advanced to {state.enrollment_data.enrollment_state} successfully!")
         else:
@@ -758,8 +789,7 @@ def stepped_provision_credential(
         if not fast:
             input("Press Enter to continue...")
 
-
-    with open(output_file, 'w') as csvOut:
+    with open(out_path, "w") as csvOut:
         headers: list[str] = []
         for state in enrollment_states:
             headers = state.provide_data_field_names(headers)
@@ -784,4 +814,3 @@ fido2.add_command(wink)
 fido2.add_command(provision_credential)
 fido2.add_command(stepped_provision_credential)
 fido2.add_command(build_bulk_provision_credential)
-
