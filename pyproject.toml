@@ -22,15 +22,11 @@ dependencies = [
   "click >=8.2, <9",
   "cryptography >=43, <53",
   "fido2 >=2, <3",
-  "hidapi >=0.14, <0.15",
-  # Limit hidapi on Linux to version using the hidraw backend, see
-  # https://github.com/Nitrokey/pynitrokey/issues/601 and
-  # https://github.com/Nitrokey/pynitrokey/issues/707
-  "hidapi ==0.14.0.post2 ; sys_platform == 'linux'",
+  "hidapi >=0.14, <0.16",
   "intelhex >=2.3, <3",
   "libusb1 >=3, <4",
   "nethsm >=3, <4",
-  "nitrokey >=0.5, <0.6",
+  "nitrokey @ git+https://github.com/Nitrokey/nitrokey-sdk-py.git@hidapi",
   "nkdfu >=0.2, <0.3",
   "pyusb >=1.2, <2",
   "pyserial >=3.5, <4",
