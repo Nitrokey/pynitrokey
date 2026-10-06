@@ -1,19 +1,9 @@
-import codecs
-import json
-import pickle
-import re
-import secrets
-import string
-import time
 from datetime import datetime, timedelta
 from typing import Any
 
-#import requests
 from fido2.client import Fido2Client
-from fido2.utils import websafe_decode, websafe_encode
+from fido2.utils import websafe_encode
 from fido2.webauthn import PublicKeyCredentialCreationOptions
-
-#from collections import namedtuple
 
 from pynitrokey.fido2.preregistration.Entra.entra_enrollment_state import EntraEnrollmentState
 from pynitrokey.fido2.preregistration.Entra.entra_enrollment_state_data import EntraEnrollmentStateData
@@ -32,7 +22,7 @@ class EntraStateEncodedCredential(StatefulProvisionCredential):
     def extract_state(self) -> dict[str, str]:
         return self.enrollment_data.serialize()
 
-    def inject_state(self, raw: dict[str, str]):
+    def inject_state(self, raw: dict[str, str]) -> None:
         self.enrollment_data = EntraEnrollmentStateData.deserialize(raw)
 
     def provide_data_field_names(self, running: list[str]) -> list[str]:
@@ -55,7 +45,6 @@ class EntraStateEncodedCredential(StatefulProvisionCredential):
 
             case EntraEnrollmentState.COMPLETE:
                 return False
-                #raise ValueError('Registration enrollment for this user\'s key is complete!')
             
             case _:
                 raise ValueError('Invalid state reached! Cannot proceed with registration enrollment')

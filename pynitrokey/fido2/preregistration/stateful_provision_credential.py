@@ -1,9 +1,7 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import Any
 
 from fido2.client import Fido2Client
-from nitrokey.nk3 import NK3
-from nitrokey.nkpk import NKPK
 
 
 from pynitrokey.fido2.provision_credential import ProvisionCredential
@@ -45,7 +43,7 @@ class StatefulProvisionCredential(ProvisionCredential):
         pass
 
     @abstractmethod
-    def inject_state(self, raw: dict[str, str]):
+    def inject_state(self, raw: dict[str, str]) -> None:
         """load external, serialized state into this provisioner"""
         pass
 

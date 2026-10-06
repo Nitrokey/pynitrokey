@@ -9,11 +9,8 @@ from datetime import datetime, timedelta
 from typing import Any
 
 import requests
-from fido2.client import Fido2Client
 from fido2.utils import websafe_decode, websafe_encode
 from fido2.webauthn import PublicKeyCredentialCreationOptions
-
-from collections import namedtuple
 
 class EntraRemoteOperator:
     tenant: str
