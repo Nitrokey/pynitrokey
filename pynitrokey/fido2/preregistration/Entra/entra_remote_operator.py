@@ -31,6 +31,7 @@ class EntraRemoteOperator:
 
         self._reset_token()
 
+    @staticmethod
     def validate_config(config: dict[str, Any]) -> None:
         assert "tenant" in config, "Tenant not found"
         assert "client" in config, "Client ID not found"
@@ -64,7 +65,7 @@ class EntraRemoteOperator:
 
     def get_token(self) -> str:
         if self.token and datetime.now() < self.token_validity:
-            return self.token
+            return str(self.token)
         return self._get_access_token_for_microsoft_graph()
 
     def _get_access_token_for_microsoft_graph(self) -> str:

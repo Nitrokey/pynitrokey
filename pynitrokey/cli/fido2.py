@@ -750,7 +750,7 @@ def stepped_provision_credential(
     config: Optional[TextIO],
     fast: bool,
 ) -> None:
-    conf: dict[str, Any] = None
+    conf: dict[str, Any] = {}
     if config is not None:
         conf = json.load(config)
 
@@ -762,7 +762,7 @@ def stepped_provision_credential(
     if (not op_path.exists()) or (op_path.stat().st_size <= 0):
         AssertionError("Path provided must point to valid and populated enrollment state file")
 
-    enrollment_states: list[EntraStateEncodedCredential] = []
+    enrollment_states: list[StatefulProvisionCredential] = []
 
     with open(bulk_registration, "r") as csvfile:
         reader = csv.DictReader(csvfile)
@@ -773,7 +773,7 @@ def stepped_provision_credential(
             enrollment_states.append(es)
 
     for state in enrollment_states:
-        client: Fido2Client = None
+        client: Fido2Client | None
         try:
             host = state.get_rp_id()
             device = _device(serial)
@@ -782,9 +782,9 @@ def stepped_provision_credential(
             client = None
 
         if state.move_next(client, conf):
-            print(f"state advanced to {state.enrollment_data.enrollment_state} successfully!")
+            print(f"state advanced to {state.get_current_enrollment_state()} successfully!")
         else:
-            print(f"could not advance state! reverting to {state.enrollment_data.enrollment_state}")
+            print(f"could not advance state! reverting to {state.get_current_enrollment_state()}")
 
         if not fast:
             input("Press Enter to continue...")

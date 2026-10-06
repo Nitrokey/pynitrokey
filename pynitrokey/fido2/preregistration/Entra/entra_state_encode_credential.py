@@ -23,16 +23,19 @@ class EntraStateEncodedCredential(StatefulProvisionCredential):
 
     entra_conf_path: str
 
-    def extract_state(self) -> dict[str, str]:
+    def extract_state(self) -> dict[str, str | Any]:
         return self.enrollment_data.serialize()
 
-    def inject_state(self, raw: dict[str, str]) -> None:
+    def inject_state(self, raw: dict[str, str | Any]) -> None:
         self.enrollment_data = EntraEnrollmentStateData.deserialize(raw)
 
     def provide_data_field_names(self, running: list[str]) -> list[str]:
         return EntraEnrollmentStateData.provide_data_field_names(running)
 
-    def move_next(self, client: Fido2Client, config: Any) -> bool:
+    def get_current_enrollment_state(self) -> str:
+        return str(self.enrollment_data.enrollment_state)
+
+    def move_next(self, client: Fido2Client | None, config: Any | None) -> bool:
         match self.enrollment_data.enrollment_state:
             case EntraEnrollmentState.BEGIN:
                 self.enrollment_data.enrollment_state = self.begin_enroll_entra(config)
@@ -75,13 +78,17 @@ class EntraStateEncodedCredential(StatefulProvisionCredential):
 
     def begin_enroll_entra(self, config: Any) -> EntraEnrollmentState:
         if self.ensure_has_entra_config(config):
-            self.enrollment_data.user_entra_id = self.entra_conf.get_user_id(
-                self.enrollment_data.username_or_email,
+            if self.enrollment_data.username_or_email is None:
+                raise AssertionError()
+
+            entra_id = self.entra_conf.get_user_id(
+                str(self.enrollment_data.username_or_email),
                 self.enrollment_data.create_user_if_not_exist,
             )
+            self.enrollment_data.user_entra_id = entra_id
 
             self.enrollment_data.fido_challenge = self.entra_conf.get_creation_options(
-                self.enrollment_data.user_entra_id
+                entra_id
             )
 
             return EntraEnrollmentState.ENTRA_SETUP
@@ -90,11 +97,17 @@ class EntraStateEncodedCredential(StatefulProvisionCredential):
                 "State [BEGIN] requires access to Entra serivces to continue! Please ensure an entra_config.json is provided, and try again"
             )
 
-    def generate_credentials_on_key(self, client: Fido2Client) -> EntraEnrollmentState:
+    def generate_credentials_on_key(self, client: Fido2Client  | None) -> EntraEnrollmentState:
+        if client is None:
+            raise AssertionError()
+
         if self.ensure_has_entra_nitrokey_hardware(client):
             self.enrollment_data.nitrokey_device_name = self.get_device_name(client)
+
+            if self.enrollment_data.fido_response is None:
+                raise AssertionError()
             self.enrollment_data.fido_response = self.make_creds(
-                self.enrollment_data.fido_challenge, client
+                self.enrollment_data.fido_challenge or {}, client
             )
 
             return EntraEnrollmentState.CREDS_ON_KEY
@@ -105,10 +118,13 @@ class EntraStateEncodedCredential(StatefulProvisionCredential):
 
     def save_credenitals_to_entra(self, config: Any) -> EntraEnrollmentState:
         if self.ensure_has_entra_config(config):
+            if self.enrollment_data.fido_response is None or self.enrollment_data.user_entra_id is None or self.enrollment_data.nitrokey_device_name is None:
+                raise AssertionError()
+
             self.enrollment_data.fido_credential_id = self.entra_conf.save_creds(
-                self.enrollment_data.fido_response,
-                self.enrollment_data.user_entra_id,
-                self.enrollment_data.nitrokey_device_name,
+                self.enrollment_data.fido_response or {},
+                self.enrollment_data.user_entra_id or "",
+                self.enrollment_data.nitrokey_device_name or "",
             )
 
             return EntraEnrollmentState.COMPLETE
@@ -124,7 +140,7 @@ class EntraStateEncodedCredential(StatefulProvisionCredential):
         self.enrollment_data = EntraEnrollmentStateData.begin_new(user, create_user)
 
     def create_user(self, user: str) -> bool:
-        return self.entra_conf.create_user(user)
+        return self.entra_conf.create_user(user) is not None
 
     def make_creds(self, pubkey: dict[str, Any], client: Fido2Client) -> dict[str, Any]:
         result = client.make_credential(PublicKeyCredentialCreationOptions.from_dict(pubkey))
@@ -145,12 +161,16 @@ class EntraStateEncodedCredential(StatefulProvisionCredential):
         }
 
     def enroll_device(self, user: str, client: Fido2Client) -> str:
-        entraEnrollment = self.begin_enroll_entra(user)
+        #entraEnrollment = self.begin_enroll_entra(user)
 
-        nitroResponse = self.continue_enroll_nitrokey(client, entraEnrollment)
+        #nitroResponse = self.continue_enroll_nitrokey(client, entraEnrollment)
 
-        cred_id = self.save_creds(
-            nitroResponse.response, nitroResponse.user_id, nitroResponse.device_name
-        )
+        #cred_id = self.entra_conf.save_creds(
+        #    nitroResponse.response, nitroResponse.user_id, nitroResponse.device_name
+        #)
 
-        return f"Entra credential for {user} pre-registered on {nitroResponse.device_name} with Credential ID {cred_id}."
+        do = True
+        while do:
+            do = self.move_next(client, self.config)
+
+        return f"Entra credential for {user} pre-registered on {self.enrollment_data.nitrokey_device_name} with Credential ID {self.enrollment_data.fido_credential_id}."

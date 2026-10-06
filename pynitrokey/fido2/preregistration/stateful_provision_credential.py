@@ -37,6 +37,21 @@ class StatefulProvisionCredential(ProvisionCredential):
         pass
 
     @abstractmethod
+    def move_next(self, client: Fido2Client | None, config: Any | None) -> bool:
+        """try to move to the next state for this credential. returns True on success"""
+        pass
+
+    @abstractmethod
+    def get_current_enrollment_state(self) -> str:
+        """provide the current state flag for debug and logging purposes"""
+        pass
+
+    @abstractmethod
+    def begin_new(self, user: str, create_user: bool) -> None:
+        """initialize this state with provided starting data"""
+        pass
+
+    @abstractmethod
     def extract_state(self) -> dict[str, str]:
         """extract serialized state from this provisioner"""
         pass

@@ -10,12 +10,13 @@ class EntraEnrollmentStateData:
     enrollment_state: EntraEnrollmentState
 
     # stateful data needed to BEGIN enrollment
-    username_or_email: str  # check username and/or email?
+    username_or_email: str | None # check username and/or email?
     create_user_if_not_exist: bool
 
     def __init__(self) -> None:
         self.enrollment_state = EntraEnrollmentState.BEGIN
 
+    @staticmethod
     def begin_new(user: str, create_user: bool) -> Any:
         slf = EntraEnrollmentStateData()
 
@@ -25,7 +26,8 @@ class EntraEnrollmentStateData:
 
         return slf
 
-    def deserialize(kv: dict[str, str]) -> Any:
+    @staticmethod
+    def deserialize(kv: dict[str, str | None]) -> Any:
         slf = EntraEnrollmentStateData()
 
         if kv["service_name"] != "Entra":
@@ -33,9 +35,11 @@ class EntraEnrollmentStateData:
                 f"State provided is for service {kv['service_name']}, and cannot be deserialized for service Entra"
             )
 
-        slf.enrollment_state = EntraEnrollmentState[kv["enrollment_state"]]
+        if kv["enrollment_state"] is None:
+            raise AssertionError()
+        slf.enrollment_state = EntraEnrollmentState[str(kv["enrollment_state"])]
         slf.username_or_email = kv["username_or_email"]
-        slf.create_user_if_not_exist = kv["create_user_if_not_exist"]
+        slf.create_user_if_not_exist = bool(kv["create_user_if_not_exist"])
 
         slf.user_entra_id = kv["user_entra_id"]
         if kv["fido_challenge_encoded"] is not None and kv["fido_challenge_encoded"] != "":
@@ -58,6 +62,7 @@ class EntraEnrollmentStateData:
 
         return slf
 
+    @staticmethod
     def provide_data_field_names(running: list[str]) -> list[str]:
         if running is None:
             running = []
@@ -88,18 +93,18 @@ class EntraEnrollmentStateData:
         return running
 
     # stateful data populated by running BEGIN; needed to step past ENTRA_SETUP
-    user_entra_id: str
-    fido_challenge: Any  ###pickle on save
+    user_entra_id: str | None
+    fido_challenge: Any | None  ###pickle on save
 
     # stateful data populated by running ENTRA_SETUP; needed to step past CREDS_ON_KEY
-    nitrokey_device_name: str
-    fido_response: Any  ###pickle on save
+    nitrokey_device_name: str | None
+    fido_response: Any | None  ###pickle on save
 
     # stateful data populated by running CREDS_ON_KEY; once fullfilled, enrollment is COMPLETE
-    fido_credential_id: str
+    fido_credential_id: str | None
 
-    def serialize(self) -> dict[str, str]:
-        ret = {}
+    def serialize(self) -> dict[str, str | None]:
+        ret: dict[str, str | None] = {}
 
         ret["service_name"] = self.service_name
 
