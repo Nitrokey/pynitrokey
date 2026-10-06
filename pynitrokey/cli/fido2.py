@@ -4,6 +4,8 @@
 
 import hashlib
 import json
+import os
+from pathlib import Path
 import secrets
 import time
 from dataclasses import fields
@@ -44,7 +46,11 @@ from pynitrokey.fido2.provision_credential import ProvisionCredential
 from pynitrokey.helpers import AskUser, local_critical, local_print, require_windows_admin
 
 # https://pocoo-click.readthedocs.io/en/latest/commands/#nested-handling-and-contexts
+import pandas as pd
+import traceback
 
+from pynitrokey.fido2.preregistration.stateful_provision_credential import StatefulProvisionCredential
+from pynitrokey.fido2.preregistration.Entra.entra_state_encode_credential import EntraStateEncodedCredential
 
 class CliInteraction(UserInteraction):
     def __init__(self, pin: Optional[str]) -> None:
@@ -606,7 +612,8 @@ def wink(serial: Optional[str]) -> None:
 
 
 provcred_services: dict[str, Callable[[], ProvisionCredential]] = {
-    Entra.get_service_name().lower(): Entra
+    Entra.get_service_name().lower(): Entra,
+    "EntraStateful": EntraStateEncodedCredential
 }
 
 
@@ -635,6 +642,127 @@ def provision_credential(
     local_print(result)
 
 
+stateful_credential_factory: dict[str, Callable[[], StatefulProvisionCredential]] = {
+    EntraStateEncodedCredential.get_service_name().lower():  EntraStateEncodedCredential
+}
+
+@click.command()
+@click.option("-r", "--service", required=True, type=click.Choice(list(provcred_services.keys()), case_sensitive=False))
+@click.option("-u", "--user", required=True, help="Start new registration for this single user")
+@click.option("-n", "--create-user", is_flag=True, default=False, help="Create user(s) if they do not exist")
+
+#initial filemode a+ in order to create file if not exist without truncating file if does exist like w would (while r would throw exception)
+@click.option("-o", "--output-file", required=True, type=click.Path(file_okay=True,dir_okay=False,writable=True,resolve_path=True), help="Output registration state(s) to file")
+def build_bulk_provision_credential(
+    service: str, 
+    user: str, 
+    create_user: bool,
+
+    output_file: str
+) -> None:
+    try:
+        enrollment_states: list[StatefulProvisionCredential] = []
+
+        outp = Path(output_file)
+        
+        if not outp.exists():
+            l = outp.open("w")
+            l.close()
+        elif outp.is_file():
+            if outp.stat().st_size:
+                to_app = pd.read_csv(output_file, keep_default_na=False)
+                for index, row in to_app.iterrows():
+                    nm = str(row["service_name"])
+                    es = stateful_credential_factory[nm.lower()]()
+                    es.inject_state(row)
+                    enrollment_states.append(es)
+        else:
+            AssertionError("Paths to directories and other non-files are unsupported")
+
+        ess = stateful_credential_factory[service.lower()]()
+        ess.begin_new(user, create_user)
+
+        enrollment_states.append(ess)
+
+        df_out = pd.DataFrame([x.enrollment_data.serialize() for x in enrollment_states])
+        df_out.to_csv(output_file, index=False)
+
+
+    except Exception:
+        print(traceback.format_exc())
+
+@click.command()
+@click.option("-s", "--serial", required=False, help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.")
+
+@click.argument("bulk-registration", required=True, type=click.Path(file_okay=True,dir_okay=False,writable=True,resolve_path=True))
+
+@click.option("-o", "--output-file", required=False, type=click.Path(file_okay=True,dir_okay=False,writable=True,resolve_path=True), help="Redirect output registration state(s) to different file")
+
+@click.option("-c", "--config", required=False, type=click.File("r"), help="JSON config file for remote service")
+
+@click.option("-f", "--fast", required=False, is_flag=True, default=False, help="Process all enrollments one step without pausing for user")
+def stepped_provision_credential(
+    serial: Optional[str], 
+
+    bulk_registration: str, 
+
+    output_file: Optional[str], 
+
+    config: Optional[TextIO], 
+
+    fast: bool
+) -> None:
+    try:
+        conf: dict[str, Any] = None
+        if(config is not None):
+            conf = json.load(config)
+
+        if output_file is None:
+            output_file = bulk_registration
+        out_path = Path(output_file)
+
+        op_path = Path(bulk_registration)
+        if (not op_path.exists()) or (op_path.stat().st_size <= 0):
+            AssertionError("Path provided must point to valid and populated enrollment state file")
+
+        enrollment_states: list[EntraStateEncodedCredential] = []
+
+        bulk_in = pd.read_csv(bulk_registration, keep_default_na=False)
+        for bi_index, bi_row in bulk_in.iterrows():
+            nm = str(bi_row["service_name"])
+            es = stateful_credential_factory[nm.lower()]()
+            es.inject_state(bi_row)
+            enrollment_states.append(es)
+
+
+        for state in enrollment_states:
+            client: Fido2Client = None
+            try:
+                host = state.get_rp_id()
+                device = _device(serial)
+                client = _fido2(device, host)
+            except NoSoloFoundError:
+                client = None
+
+
+            if state.move_next(client, conf):
+                print(f"state advanced to {state.enrollment_data.enrollment_state} successfully!")
+            else:
+                print(f"could not advance state! reverting to {state.enrollment_data.enrollment_state}")
+
+            if not fast:
+                input("Press Enter to continue...")
+
+
+        df_out = pd.DataFrame([x.enrollment_data.serialize() for x in enrollment_states])
+        df_out.to_csv(output_file, index=False)
+
+
+
+    except Exception:
+        print(traceback.format_exc())
+
+
 fido2.add_command(challenge_response)
 fido2.add_command(change_pin)
 fido2.add_command(delete_credential)
@@ -646,3 +774,6 @@ fido2.add_command(set_pin)
 fido2.add_command(verify)
 fido2.add_command(wink)
 fido2.add_command(provision_credential)
+fido2.add_command(stepped_provision_credential)
+fido2.add_command(build_bulk_provision_credential)
+
