@@ -97,8 +97,22 @@ class Config:
     show_envvar=True,
     help="Set the hostname and port of the NetHSM API",
 )
-@click.option("-u", "--username", "username", help="The NetHSM user name")
-@click.option("-p", "--password", "password", help="The NetHSM password")
+@click.option(
+    "-u",
+    "--username",
+    "username",
+    envvar="NETHSM_USERNAME",
+    show_envvar=True,
+    help="The NetHSM username",
+)
+@click.option(
+    "-p",
+    "--password",
+    "password",
+    envvar="NETHSM_PASSWORD",
+    show_envvar=True,
+    help="The NetHSM password",
+)
 @click.option(
     "--verify-tls/--no-verify-tls",
     default=True,
@@ -145,7 +159,7 @@ def connect(ctx: Context, require_auth: bool = True) -> Iterator[NetHSM]:
         username = config.username
         password = config.password
         if not username:
-            username = prompt_str(f"[auth] User name for NetHSM {host}")
+            username = prompt_str(f"[auth] Username for NetHSM {host}")
         if not password:
             password = prompt_str(
                 f"[auth] Password for user {username} on NetHSM {host}", hide_input=True
