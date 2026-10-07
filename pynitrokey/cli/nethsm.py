@@ -145,11 +145,19 @@ def connect(ctx: Context, require_auth: bool = True) -> Iterator[NetHSM]:
         username = config.username
         password = config.password
         if not username:
-            username = prompt_str(f"[auth] User name for NetHSM {host}")
+            v = "NETHSM_USERNAME"
+            if v in os.environ:
+                username = os.environ[v]
+            else:
+                username = prompt_str(f"[auth] User name for NetHSM {host}")
         if not password:
-            password = prompt_str(
-                f"[auth] Password for user {username} on NetHSM {host}", hide_input=True
-            )
+            v = "NETHSM_PASSWORD"
+            if v in os.environ:
+                password = os.environ[v]
+            else:
+                password = prompt_str(
+                    f"[auth] Password for user {username} on NetHSM {host}", hide_input=True
+                )
         auth = Authentication(username=username, password=password)
 
     nethsm = NetHSM(host, auth=auth, verify_tls=config.verify_tls, ca_certs=config.ca_certs)
