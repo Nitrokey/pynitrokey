@@ -90,7 +90,13 @@ class Config:
 
 
 @click.group()
-@click.option("-h", "--host", "host", help="Set the host of the NetHSM API")
+@click.option(
+    "-h",
+    "--host",
+    envvar="NETHSM_HOST",
+    show_envvar=True,
+    help="Set the hostname and port of the NetHSM API",
+)
 @click.option("-u", "--username", "username", help="The NetHSM user name")
 @click.option("-p", "--password", "password", help="The NetHSM password")
 @click.option(
@@ -129,13 +135,10 @@ def connect(ctx: Context, require_auth: bool = True) -> Iterator[NetHSM]:
 
     host = config.host
     if host is None:
-        v = "NETHSM_HOST"
-        if v not in os.environ:
-            raise CliException(
-                f"Missing NetHSM host: set the --host option or the {v} environment variable",
-                support_hint=False,
-            )
-        host = os.environ[v]
+        raise CliException(
+            'Missing NetHSM host: set the --host option or the "NETHSM_HOST" environment variable.',
+            support_hint=False,
+        )
 
     auth = None
     if require_auth:
