@@ -183,9 +183,18 @@ def connect(ctx: Context, require_auth: bool = True) -> Iterator[NetHSM]:
 
 
 @nethsm.command()
-@click.argument("passphrase", required=False)
+@click.option(
+    "-p",
+    "--passphrase",
+    prompt=True,
+    envvar="NETHSM_UNLOCK_PASSPHRASE",
+    show_envvar=True,
+    hide_input=True,
+    required=True,
+    help="Passphrase for unlocking the NetHSM.",
+)
 @click.pass_context
-def unlock(ctx: Context, passphrase: Optional[str]) -> None:
+def unlock(ctx: Context, passphrase: str) -> None:
     """Bring a locked NetHSM into operational state."""
     with connect(ctx, require_auth=False) as nethsm:
         if not passphrase:
