@@ -90,7 +90,13 @@ class Config:
 
 
 @click.group()
-@click.option("-h", "--host", "host", help="Set the host of the NetHSM API")
+@click.option(
+    "-h",
+    "--host",
+    envvar="NETHSM_HOST",
+    show_envvar=True,
+    help="Set the hostname and port of the NetHSM API",
+)
 @click.option("-u", "--username", "username", help="The NetHSM user name")
 @click.option("-p", "--password", "password", help="The NetHSM password")
 @click.option(
@@ -129,24 +135,29 @@ def connect(ctx: Context, require_auth: bool = True) -> Iterator[NetHSM]:
 
     host = config.host
     if host is None:
-        v = "NETHSM_HOST"
-        if v not in os.environ:
-            raise CliException(
-                f"Missing NetHSM host: set the --host option or the {v} environment variable",
-                support_hint=False,
-            )
-        host = os.environ[v]
+        raise CliException(
+            'Missing NetHSM host: set the --host option or the "NETHSM_HOST" environment variable.',
+            support_hint=False,
+        )
 
     auth = None
     if require_auth:
         username = config.username
         password = config.password
         if not username:
-            username = prompt_str(f"[auth] User name for NetHSM {host}")
+            v = "NETHSM_USERNAME"
+            if v in os.environ:
+                username = os.environ[v]
+            else:
+                username = prompt_str(f"[auth] User name for NetHSM {host}")
         if not password:
-            password = prompt_str(
-                f"[auth] Password for user {username} on NetHSM {host}", hide_input=True
-            )
+            v = "NETHSM_PASSWORD"
+            if v in os.environ:
+                password = os.environ[v]
+            else:
+                password = prompt_str(
+                    f"[auth] Password for user {username} on NetHSM {host}", hide_input=True
+                )
         auth = Authentication(username=username, password=password)
 
     nethsm = NetHSM(host, auth=auth, verify_tls=config.verify_tls, ca_certs=config.ca_certs)
@@ -172,9 +183,18 @@ def connect(ctx: Context, require_auth: bool = True) -> Iterator[NetHSM]:
 
 
 @nethsm.command()
-@click.argument("passphrase", required=False)
+@click.option(
+    "-p",
+    "--passphrase",
+    prompt=True,
+    envvar="NETHSM_UNLOCK_PASSPHRASE",
+    show_envvar=True,
+    hide_input=True,
+    required=True,
+    help="Passphrase for unlocking the NetHSM.",
+)
 @click.pass_context
-def unlock(ctx: Context, passphrase: Optional[str]) -> None:
+def unlock(ctx: Context, passphrase: str) -> None:
     """Bring a locked NetHSM into operational state."""
     with connect(ctx, require_auth=False) as nethsm:
         if not passphrase:
