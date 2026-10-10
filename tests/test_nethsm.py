@@ -1,5 +1,6 @@
 import base64
 import io
+import re
 import shlex
 from contextlib import redirect_stdout
 
@@ -59,7 +60,7 @@ def test_nethsm_state(nethsm: NetHSM) -> None:
     cmd = "state"
     ctx = get_context(nethsm)
     result = run_command(ctx, cmd)
-    assert "Operational" in result
+    assert f"NetHSM {nethsm.host} is Operational\n" == result
 
 
 def test_nethsm_random(nethsm: NetHSM) -> None:
@@ -85,7 +86,14 @@ def test_nethsm_sysinfo(nethsm: NetHSM) -> None:
     cmd = "system-info"
     ctx = get_context(nethsm)
     result = run_command(ctx, cmd)
-    assert "Host" in result
+    pattern = f"""\
+Host:             {nethsm.host}
+Firmware version: N/A
+Software version: \\d+\\.\\d+
+Hardware version: N/A
+Build tag:        [a-zA-Z0-9.\\-]+
+"""
+    assert re.compile(pattern).fullmatch(result) is not None, result
 
 
 def test_nethsm_getconfig(nethsm: NetHSM) -> None:
@@ -105,24 +113,24 @@ def test_nethsm_keygen(nethsm: NetHSM) -> None:
     cmd = "generate-key -t ec_p256 -m ECDSA_Signature -l 512 -k testkeyecdsa -s testkeylabel"
     ctx = get_context(nethsm)
     result = run_command(ctx, cmd)
-    assert "Key testkeyecdsa generated on NetHSM" in result
+    assert f"Key testkeyecdsa generated on NetHSM {nethsm.host}\n" == result
 
 
 def test_nethsm_delete_key(nethsm: NetHSM) -> None:
     cmd = "generate-key -t ec_p256 -m ECDSA_Signature -l 512 -k testkeydel -s testkeylabeldel"
     ctx = get_context(nethsm)
     result = run_command(ctx, cmd)
-    assert "Key testkeydel generated on NetHSM" in result
+    assert f"Key testkeydel generated on NetHSM {nethsm.host}\n" == result
     cmd = "delete-key testkeydel"
     result = run_command(ctx, cmd)
-    assert "Key testkeydel deleted on NetHSM" in result
+    assert f"Key testkeydel deleted on NetHSM {nethsm.host}\n" == result
 
 
 def test_nethsm_move_key(nethsm: NetHSM) -> None:
     cmd = "generate-key -t ec_p256 -m ECDSA_Signature -l 512 -k testkeymoveold -s testkeylabelmove"
     ctx = get_context(nethsm)
     result = run_command(ctx, cmd)
-    assert "Key testkeymoveold generated on NetHSM" in result
+    assert f"Key testkeymoveold generated on NetHSM {nethsm.host}\n" == result
     cmd = "move-key testkeymoveold testkeymovenew"
     result = run_command(ctx, cmd)
-    assert "Key testkeymoveold moved to testkeymovenew on NetHSM" in result
+    assert f"Key testkeymoveold moved to testkeymovenew on NetHSM {nethsm.host}\n" == result
