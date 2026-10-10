@@ -2,7 +2,7 @@ import base64
 import io
 import re
 import shlex
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 
 from click import Command, Context
 from conftest import UserData
@@ -44,15 +44,22 @@ def authenticate_ctx(ctx: Context, user: UserData) -> Context:
 
 def run_command(ctx: Context, command: str) -> str:
     stdout = io.StringIO()
+    stderr = io.StringIO()
     args = shlex.split(command)
     cmd_name, cmd, rest = nethsmgrp.resolve_command(ctx, args)
     assert cmd
     with redirect_stdout(stdout):
-        with cmd.make_context(cmd_name, rest, parent=ctx) as sub_ctx:
-            cmd.invoke(sub_ctx)
+        with redirect_stderr(stderr):
+            with cmd.make_context(cmd_name, rest, parent=ctx) as sub_ctx:
+                cmd.invoke(sub_ctx)
+
     output = stdout.getvalue()
+    error = stderr.getvalue()
     # This is visible when running pytest with -s. Otherwise it is ignored.
-    print(f"Output: {output}")
+    print(f"stdout: {output}")
+    print(f"stderr: {error}")
+    assert error == ""
+
     return output
 
 
