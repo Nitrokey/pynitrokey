@@ -1,7 +1,5 @@
 import base64
 import io
-
-# import re
 import shlex
 from contextlib import redirect_stdout
 
@@ -70,12 +68,7 @@ def test_nethsm_random(nethsm: NetHSM) -> None:
     add_user(nethsm, operator_user)
     operator_ctx = authenticate_ctx(ctx, operator_user)
     result = run_command(operator_ctx, cmd)
-    # m = re.search(r"Base64\(data='([A-Za-z0-9+/]*={0,2})'\)", result)
-    # b64 = m.group(1) if m else None
-    # This test will fail till the nethsm-sdk-py PR 166 to add string representation for B64 is merged.
-    b64 = result
-    assert isinstance(b64, str)
-    raw_random = base64.b64decode(b64)
+    raw_random = base64.b64decode(result)
     assert len(raw_random) == 5
 
 

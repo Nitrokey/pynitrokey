@@ -533,7 +533,7 @@ def random(ctx: Context, length: int) -> None:
 
     This command requires authentication as a user with the Operator role."""
     with connect(ctx) as nethsm:
-        print(nethsm.get_random_data(length))
+        print(nethsm.get_random_data(length).data)
 
 
 @nethsm.command()
