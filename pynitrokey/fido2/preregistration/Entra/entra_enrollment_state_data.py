@@ -1,9 +1,9 @@
-import codecs
-import pickle
 from typing import Any
 
 from pynitrokey.fido2.preregistration.Entra.entra_enrollment_state import EntraEnrollmentState
-from pynitrokey.fido2.preregistration.Entra.entra_fido_creation_options import EntraFidoCreationOptions
+from pynitrokey.fido2.preregistration.Entra.entra_fido_creation_options import (
+    EntraFidoCreationOptions,
+)
 from pynitrokey.fido2.preregistration.serializable_fido_response import SerializableFidoResponse
 
 
@@ -75,12 +75,12 @@ class EntraEnrollmentStateData:
             running.append("user_entra_id")
 
         EntraFidoCreationOptions.provide_data_field_names(running)
-#        if "fido_challenge_encoded" not in running:
-#            running.append("fido_challenge_encoded")
+        #        if "fido_challenge_encoded" not in running:
+        #            running.append("fido_challenge_encoded")
 
         SerializableFidoResponse.provide_data_field_names(running)
-#        if "fido_response_encoded" not in running:
-#            running.append("fido_response_encoded")
+        #        if "fido_response_encoded" not in running:
+        #            running.append("fido_response_encoded")
 
         if "fido_credential_id" not in running:
             running.append("fido_credential_id")
@@ -93,13 +93,12 @@ class EntraEnrollmentStateData:
 
     def get_fido_challenge(self) -> Any:
         return self.fido_challenge
-    
+
     def set_fido_challenge(self, challenge: Any) -> None:
         if self.fido_challenge is None:
             self.fido_challenge = EntraFidoCreationOptions()
         self.fido_challenge.fillRaw(challenge)
-        return    
-    
+        return
 
     # stateful data populated by running ENTRA_SETUP; needed to step past CREDS_ON_KEY
     nitrokey_device_name: str | None

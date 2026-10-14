@@ -4,15 +4,15 @@ from fido2.client import Fido2Client
 from fido2.utils import websafe_encode
 from fido2.webauthn import PublicKeyCredentialCreationOptions
 
-from pynitrokey.fido2.preregistration.serializable_fido_response import SerializableFidoResponse
-
-from pynitrokey.fido2.preregistration.Entra.entra_fido_creation_options import EntraFidoCreationOptions
-
 from pynitrokey.fido2.preregistration.Entra.entra_enrollment_state import EntraEnrollmentState
 from pynitrokey.fido2.preregistration.Entra.entra_enrollment_state_data import (
     EntraEnrollmentStateData,
 )
+from pynitrokey.fido2.preregistration.Entra.entra_fido_creation_options import (
+    EntraFidoCreationOptions,
+)
 from pynitrokey.fido2.preregistration.Entra.entra_remote_operator import EntraRemoteOperator
+from pynitrokey.fido2.preregistration.serializable_fido_response import SerializableFidoResponse
 from pynitrokey.fido2.preregistration.stateful_provision_credential import (
     StatefulProvisionCredential,
 )
@@ -107,7 +107,7 @@ class EntraStateEncodedCredential(StatefulProvisionCredential):
             self.enrollment_data.nitrokey_device_name = self.get_device_name(client)
 
             if self.enrollment_data.fido_challenge is None:
-                raise AssertionError('no challenge')
+                raise AssertionError("no challenge")
             self.enrollment_data.fido_response = self.make_creds(
                 self.enrollment_data.get_fido_challenge() or {}, client
             )
@@ -148,15 +148,17 @@ class EntraStateEncodedCredential(StatefulProvisionCredential):
     def create_user(self, user: str) -> bool:
         return self.entra_conf.create_user(user) is not None
 
-    def make_creds(self, pubkey: EntraFidoCreationOptions | dict[str, Any], client: Fido2Client) -> SerializableFidoResponse:
+    def make_creds(
+        self, pubkey: EntraFidoCreationOptions | dict[str, Any], client: Fido2Client
+    ) -> SerializableFidoResponse:
         credOpt: PublicKeyCredentialCreationOptions
         if pubkey is None:
-            raise AssertionError('no challenge')
+            raise AssertionError("no challenge")
         elif isinstance(pubkey, EntraFidoCreationOptions):
             credOpt = pubkey.renderPublicKeyCredentialCreationOptions()
         else:
             credOpt = PublicKeyCredentialCreationOptions.from_dict(pubkey)
-        
+
         result = client.make_credential(credOpt)
 
         attestation_obj = result.response.attestation_object

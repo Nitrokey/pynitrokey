@@ -1,28 +1,31 @@
-from typing import Any
-from typing import NamedTuple
+from typing import Any, NamedTuple
+
 
 class Response(NamedTuple):
-    clientDataJson: str
-    attestationObject: str
-    
+    clientDataJson: str | None
+    attestationObject: str | None
+
+
 class SerializableFidoResponse:
     def __init__(self) -> None:
         return
 
     @staticmethod
-    def buildFromRaw(self, raw: Any) -> Any:
-        slf = SerializableFidoResponse()     
+    def buildFromRaw(raw: Any) -> Any:
+        slf = SerializableFidoResponse()
         slf.fillRaw(raw)
         return slf
-    
+
     @staticmethod
     def deserialize(kv: dict[str, str | None]) -> Any:
         slf = SerializableFidoResponse()
-        
-        slf.id = kv.get('fido_response_id')
-        
-        slf.response = Response(kv.get('fido_response_client_data'), kv.get('fido_response_attestation_object'))
-        
+
+        slf.id = kv.get("fido_response_id")
+
+        slf.response = Response(
+            kv.get("fido_response_client_data"), kv.get("fido_response_attestation_object")
+        )
+
         return slf
 
     @staticmethod
@@ -41,32 +44,34 @@ class SerializableFidoResponse:
         return running
 
     # fields and tuples reverse engineered from raw dict return after calling the appropriate function to create credentials on NitroKey3
-    id: str
+    id: str | None
     response: Response
 
     def fillRaw(self, raw: Any) -> None:
-        if 'id' in raw:
-            rwid = raw['id']
+        if "id" in raw:
+            rwid = raw["id"]
             if isinstance(rwid, str):
                 self.id = str(rwid)
-        
-        if 'response' in raw:
-            resp = raw['response']
-            if isinstance(resp, dict) and 'clientDataJson' in resp and 'attestationObject' in resp:
-                clientDataJson = resp['clientDataJson']
-                attestationObject = resp['attestationObject']
+
+        if "response" in raw:
+            resp = raw["response"]
+            if isinstance(resp, dict) and "clientDataJson" in resp and "attestationObject" in resp:
+                clientDataJson = resp["clientDataJson"]
+                attestationObject = resp["attestationObject"]
                 self.response = Response(clientDataJson, attestationObject)
 
         return
 
     def renderRaw(self) -> dict[str, Any]:
-        ret = {}
+        ret: dict[str, Any] = {}
 
-        ret['id'] = self.id
+        ret["id"] = self.id
 
-        ret['response'] = {}
-        ret['response']['clientDataJson'] = self.response.clientDataJson
-        ret['response']['attestationObject'] = self.response.attestationObject
+        retresp: dict[str, Any] = {}
+        retresp["clientDataJson"] = self.response.clientDataJson
+        retresp["attestationObject"] = self.response.attestationObject
+
+        ret["response"] = retresp
 
         return ret
 
@@ -75,7 +80,7 @@ class SerializableFidoResponse:
 
         ret["fido_response_id"] = self.id
 
-        if hasattr(self, 'response') and self.response is not None:
+        if hasattr(self, "response") and self.response is not None:
             ret["fido_response_client_data"] = self.response.clientDataJson
             ret["fido_response_attestation_object"] = self.response.attestationObject
 
