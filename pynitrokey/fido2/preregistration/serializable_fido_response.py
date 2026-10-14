@@ -1,0 +1,82 @@
+from typing import Any
+from typing import NamedTuple
+
+class Response(NamedTuple):
+    clientDataJson: str
+    attestationObject: str
+    
+class SerializableFidoResponse:
+    def __init__(self) -> None:
+        return
+
+    @staticmethod
+    def buildFromRaw(self, raw: Any) -> Any:
+        slf = SerializableFidoResponse()     
+        slf.fillRaw(raw)
+        return slf
+    
+    @staticmethod
+    def deserialize(kv: dict[str, str | None]) -> Any:
+        slf = SerializableFidoResponse()
+        
+        slf.id = kv.get('fido_response_id')
+        
+        slf.response = Response(kv.get('fido_response_client_data'), kv.get('fido_response_attestation_object'))
+        
+        return slf
+
+    @staticmethod
+    def provide_data_field_names(running: list[str]) -> list[str]:
+        if running is None:
+            running = []
+
+        if "fido_response_id" not in running:
+            running.append("fido_response_id")
+
+        if "fido_response_client_data" not in running:
+            running.append("fido_response_client_data")
+        if "fido_response_attestation_object" not in running:
+            running.append("fido_response_attestation_object")
+
+        return running
+
+    # fields and tuples reverse engineered from raw dict return after calling the appropriate function to create credentials on NitroKey3
+    id: str
+    response: Response
+
+    def fillRaw(self, raw: Any) -> None:
+        if 'id' in raw:
+            rwid = raw['id']
+            if isinstance(rwid, str):
+                self.id = str(rwid)
+        
+        if 'response' in raw:
+            resp = raw['response']
+            if isinstance(resp, dict) and 'clientDataJson' in resp and 'attestationObject' in resp:
+                clientDataJson = resp['clientDataJson']
+                attestationObject = resp['attestationObject']
+                self.response = Response(clientDataJson, attestationObject)
+
+        return
+
+    def renderRaw(self) -> dict[str, Any]:
+        ret = {}
+
+        ret['id'] = self.id
+
+        ret['response'] = {}
+        ret['response']['clientDataJson'] = self.response.clientDataJson
+        ret['response']['attestationObject'] = self.response.attestationObject
+
+        return ret
+
+    def serialize(self) -> dict[str, str | None]:
+        ret: dict[str, str | None] = {}
+
+        ret["fido_response_id"] = self.id
+
+        if hasattr(self, 'response') and self.response is not None:
+            ret["fido_response_client_data"] = self.response.clientDataJson
+            ret["fido_response_attestation_object"] = self.response.attestationObject
+
+        return ret

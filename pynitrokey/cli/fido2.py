@@ -55,6 +55,8 @@ from pynitrokey.fido2.preregistration.stateful_provision_credential import (
 from pynitrokey.fido2.provision_credential import ProvisionCredential
 from pynitrokey.helpers import AskUser, local_critical, local_print, require_windows_admin
 
+import traceback
+
 
 class CliInteraction(UserInteraction):
     def __init__(self, pin: Optional[str]) -> None:
@@ -706,7 +708,8 @@ def build_bulk_provision_credential(
         writer.writeheader()
 
         for state in enrollment_states:
-            writer.writerow(state.extract_state())
+            rw = state.extract_state()
+            writer.writerow(rw)
 
 
 @click.command()

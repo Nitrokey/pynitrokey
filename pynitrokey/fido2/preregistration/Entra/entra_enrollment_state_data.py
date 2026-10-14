@@ -3,6 +3,8 @@ import pickle
 from typing import Any
 
 from pynitrokey.fido2.preregistration.Entra.entra_enrollment_state import EntraEnrollmentState
+from pynitrokey.fido2.preregistration.Entra.entra_fido_creation_options import EntraFidoCreationOptions
+from pynitrokey.fido2.preregistration.serializable_fido_response import SerializableFidoResponse
 
 
 class EntraEnrollmentStateData:
@@ -30,35 +32,25 @@ class EntraEnrollmentStateData:
     def deserialize(kv: dict[str, str | None]) -> Any:
         slf = EntraEnrollmentStateData()
 
-        if kv["service_name"] != "Entra":
+        if "service_name" in kv and kv["service_name"] != "Entra":
             AssertionError(
                 f"State provided is for service {kv['service_name']}, and cannot be deserialized for service Entra"
             )
 
-        if kv["enrollment_state"] is None:
+        if "enrollment_state" not in kv or kv["enrollment_state"] is None:
             raise AssertionError()
-        slf.enrollment_state = EntraEnrollmentState[str(kv["enrollment_state"])]
-        slf.username_or_email = kv["username_or_email"]
-        slf.create_user_if_not_exist = bool(kv["create_user_if_not_exist"])
+        slf.enrollment_state = EntraEnrollmentState[str(kv.get("enrollment_state"))]
+        slf.username_or_email = kv.get("username_or_email")
+        slf.create_user_if_not_exist = bool(kv.get("create_user_if_not_exist"))
 
-        slf.user_entra_id = kv["user_entra_id"]
-        if kv["fido_challenge_encoded"] is not None and kv["fido_challenge_encoded"] != "":
-            slf.fido_challenge = pickle.loads(
-                codecs.decode(kv["fido_challenge_encoded"].encode(), "base64")
-            )
-        else:
-            slf.fido_challenge = None
+        slf.fido_challenge = EntraFidoCreationOptions.deserialize(kv)
 
-        slf.nitrokey_device_name = kv["nitrokey_device_name"]
+        slf.nitrokey_device_name = kv.get("nitrokey_device_name")
 
-        if kv["fido_response_encoded"] is not None and kv["fido_response_encoded"] != "":
-            slf.fido_response = pickle.loads(
-                codecs.decode(kv["fido_response_encoded"].encode(), "base64")
-            )
-        else:
-            slf.fido_response = None
+        slf.user_entra_id = kv.get("user_entra_id")
+        slf.fido_response = SerializableFidoResponse.deserialize(kv)
 
-        slf.fido_credential_id = kv["fido_credential_id"]
+        slf.fido_credential_id = kv.get("fido_credential_id")
 
         return slf
 
@@ -81,11 +73,14 @@ class EntraEnrollmentStateData:
 
         if "user_entra_id" not in running:
             running.append("user_entra_id")
-        if "fido_challenge_encoded" not in running:
-            running.append("fido_challenge_encoded")
 
-        if "fido_response_encoded" not in running:
-            running.append("fido_response_encoded")
+        EntraFidoCreationOptions.provide_data_field_names(running)
+#        if "fido_challenge_encoded" not in running:
+#            running.append("fido_challenge_encoded")
+
+        SerializableFidoResponse.provide_data_field_names(running)
+#        if "fido_response_encoded" not in running:
+#            running.append("fido_response_encoded")
 
         if "fido_credential_id" not in running:
             running.append("fido_credential_id")
@@ -94,11 +89,21 @@ class EntraEnrollmentStateData:
 
     # stateful data populated by running BEGIN; needed to step past ENTRA_SETUP
     user_entra_id: str | None
-    fido_challenge: Any | None  ###pickle on save
+    fido_challenge: EntraFidoCreationOptions | None
+
+    def get_fido_challenge(self) -> Any:
+        return self.fido_challenge
+    
+    def set_fido_challenge(self, challenge: Any) -> None:
+        if self.fido_challenge is None:
+            self.fido_challenge = EntraFidoCreationOptions()
+        self.fido_challenge.fillRaw(challenge)
+        return    
+    
 
     # stateful data populated by running ENTRA_SETUP; needed to step past CREDS_ON_KEY
     nitrokey_device_name: str | None
-    fido_response: Any | None  ###pickle on save
+    fido_response: SerializableFidoResponse | None  ###pickle on save
 
     # stateful data populated by running CREDS_ON_KEY; once fullfilled, enrollment is COMPLETE
     fido_credential_id: str | None
@@ -114,17 +119,18 @@ class EntraEnrollmentStateData:
         ret["nitrokey_device_name"] = getattr(self, "nitrokey_device_name", None)
 
         ret["user_entra_id"] = getattr(self, "user_entra_id", None)
-        pk = getattr(self, "fido_challenge", None)
-        if pk is not None:
-            ret["fido_challenge_encoded"] = codecs.encode(pickle.dumps(pk), "base64").decode()
-        else:
-            ret["fido_challenge_encoded"] = None
+
+        chlg = getattr(self, "fido_challenge", None)
+        if chlg is not None and isinstance(chlg, EntraFidoCreationOptions):
+            kv = chlg.serialize()
+            for key, value in kv.items():
+                ret[key] = value
 
         respnc = getattr(self, "fido_response", None)
-        if respnc is not None:
-            ret["fido_response_encoded"] = codecs.encode(pickle.dumps(respnc), "base64").decode()
-        else:
-            ret["fido_response_encoded"] = None
+        if respnc is not None and isinstance(respnc, SerializableFidoResponse):
+            kv = respnc.serialize()
+            for key, value in kv.items():
+                ret[key] = value
 
         ret["fido_credential_id"] = getattr(self, "fido_credential_id", None)
 
