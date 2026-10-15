@@ -33,13 +33,14 @@ class SerializableFidoResponse:
         if running is None:
             running = []
 
-        if "fido_response_id" not in running:
-            running.append("fido_response_id")
-
-        if "fido_response_client_data" not in running:
-            running.append("fido_response_client_data")
-        if "fido_response_attestation_object" not in running:
-            running.append("fido_response_attestation_object")
+        fields = [
+            "fido_response_id",
+            "fido_response_client_data",
+            "fido_response_attestation_object",
+        ]
+        for field in fields:
+            if field not in running:
+                running.append(field)
 
         return running
 

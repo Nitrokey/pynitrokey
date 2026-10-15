@@ -46,17 +46,30 @@ class EntraFidoCreationOptions:
     def deserialize(kv: dict[str, str | None]) -> Any:
         slf = EntraFidoCreationOptions()
 
-        if "fido_challenge" in kv and kv["fido_challenge"] is not None:
+        if "fido_challenge" in kv and kv["fido_challenge"]:
             slf.challenge = websafe_decode(kv["fido_challenge"])
 
-        if "entra_fido_timeout" in kv and kv["entra_fido_timeout"] is not None:
+        if "entra_fido_timeout" in kv and kv["entra_fido_timeout"]:
             slf.timeout = int(kv["entra_fido_timeout"])
-        if "entra_fido_attestation" in kv and kv["entra_fido_attestation"] is not None:
+        if "entra_fido_attestation" in kv and kv["entra_fido_attestation"]:
             slf.attestation = kv["entra_fido_attestation"]
 
-        slf.rp = RP(kv["entra_fido_rp_id"], kv["entra_fido_rp_name"])
+        if (
+            "entra_fido_rp_id" in kv
+            and kv["entra_fido_rp_id"]
+            and "entra_fido_rp_name" in kv
+            and kv["entra_fido_rp_name"]
+        ):
+            slf.rp = RP(kv["entra_fido_rp_id"], kv["entra_fido_rp_name"])
 
-        if "entra_fido_user_id" in kv and kv["entra_fido_user_id"] is not None:
+        if (
+            "entra_fido_user_id" in kv
+            and kv["entra_fido_user_id"]
+            and "entra_fido_user_display_name" in kv
+            and kv["entra_fido_user_display_name"]
+            and "entra_fido_user_name" in kv
+            and kv["entra_fido_user_name"]
+        ):
             slf.user = User(
                 websafe_decode(kv["entra_fido_user_id"]),
                 kv["entra_fido_user_display_name"],
@@ -65,15 +78,19 @@ class EntraFidoCreationOptions:
 
         if (
             "entra_fido_public_key_credential_parameters" in kv
-            and kv["entra_fido_public_key_credential_parameters"] is not None
+            and kv["entra_fido_public_key_credential_parameters"]
         ):
             slf.pubKeyCredParams = EntraFidoCreationOptions.parseLinearPubKeyCredParams(
                 kv["entra_fido_public_key_credential_parameters"]
             )
 
         if (
-            "entra_fido_require_resident_key" in kv
-            and kv["entra_fido_require_resident_key"] is not None
+            "entra_fido_authenticator_attachement" in kv
+            and kv["entra_fido_authenticator_attachement"]
+            and "entra_fido_require_resident_key" in kv
+            and kv["entra_fido_require_resident_key"]
+            and "entra_fido_user_verification" in kv
+            and kv["entra_fido_user_verification"]
         ):
             slf.authenticatorSelection = AuthenticatorSelection(
                 kv["entra_fido_authenticator_attachement"],
@@ -83,9 +100,11 @@ class EntraFidoCreationOptions:
 
         if (
             "entra_fido_hmac_create_secret" in kv
-            and kv["entra_fido_hmac_create_secret"] is not None
+            and kv["entra_fido_hmac_create_secret"]
             and "entra_fido_enforce_credential_protection_policy" in kv
-            and kv["entra_fido_enforce_credential_protection_policy"] is not None
+            and kv["entra_fido_enforce_credential_protection_policy"]
+            and "entra_fido_credential_protection_policy" in kv
+            and kv["entra_fido_credential_protection_policy"]
         ):
             slf.extensions = Extensions(
                 bool(kv["entra_fido_hmac_create_secret"]),
@@ -100,43 +119,26 @@ class EntraFidoCreationOptions:
         if running is None:
             running = []
 
-        if "fido_challenge" not in running:
-            running.append("fido_challenge")
-
-        if "entra_fido_timeout" not in running:
-            running.append("entra_fido_timeout")
-        if "entra_fido_attestation" not in running:
-            running.append("entra_fido_attestation")
-
-        if "entra_fido_rp_id" not in running:
-            running.append("entra_fido_rp_id")
-        if "entra_fido_rp_name" not in running:
-            running.append("entra_fido_rp_name")
-
-        if "entra_fido_user_id" not in running:
-            running.append("entra_fido_user_id")
-        if "entra_fido_user_display_name" not in running:
-            running.append("entra_fido_user_display_name")
-        if "entra_fido_user_name" not in running:
-            running.append("entra_fido_user_name")
-
-        # todo: clever way to serialize list of PubKeyCredParam
-        if "entra_fido_public_key_credential_parameters" not in running:
-            running.append("entra_fido_public_key_credential_parameters")
-
-        if "entra_fido_authenticator_attachement" not in running:
-            running.append("entra_fido_authenticator_attachement")
-        if "entra_fido_require_resident_key" not in running:
-            running.append("entra_fido_require_resident_key")
-        if "entra_fido_user_verification" not in running:
-            running.append("entra_fido_user_verification")
-
-        if "entra_fido_hmac_create_secret" not in running:
-            running.append("entra_fido_hmac_create_secret")
-        if "entra_fido_enforce_credential_protection_policy" not in running:
-            running.append("entra_fido_enforce_credential_protection_policy")
-        if "entra_fido_credential_protection_policy" not in running:
-            running.append("entra_fido_credential_protection_policy")
+        fields = [
+            "fido_challenge",
+            "entra_fido_timeout",
+            "entra_fido_attestation",
+            "entra_fido_rp_id",
+            "entra_fido_rp_name",
+            "entra_fido_user_id",
+            "entra_fido_user_display_name",
+            "entra_fido_user_name",
+            "entra_fido_public_key_credential_parameters",
+            "entra_fido_authenticator_attachement",
+            "entra_fido_require_resident_key",
+            "entra_fido_user_verification",
+            "entra_fido_hmac_create_secret",
+            "entra_fido_enforce_credential_protection_policy",
+            "entra_fido_credential_protection_policy",
+        ]
+        for field in fields:
+            if field not in running:
+                running.append(field)
 
         return running
 

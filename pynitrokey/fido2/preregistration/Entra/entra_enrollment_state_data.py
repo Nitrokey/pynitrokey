@@ -33,7 +33,7 @@ class EntraEnrollmentStateData:
         slf = EntraEnrollmentStateData()
 
         if "service_name" in kv and kv["service_name"] != "Entra":
-            AssertionError(
+            raise AssertionError(
                 f"State provided is for service {kv['service_name']}, and cannot be deserialized for service Entra"
             )
 
@@ -59,31 +59,22 @@ class EntraEnrollmentStateData:
         if running is None:
             running = []
 
-        if "service_name" not in running:
-            running.append("service_name")
-        if "enrollment_state" not in running:
-            running.append("enrollment_state")
-        if "username_or_email" not in running:
-            running.append("username_or_email")
-        if "create_user_if_not_exist" not in running:
-            running.append("create_user_if_not_exist")
-
-        if "nitrokey_device_name" not in running:
-            running.append("nitrokey_device_name")
-
-        if "user_entra_id" not in running:
-            running.append("user_entra_id")
+        fields = [
+            "service_name",
+            "enrollment_state",
+            "username_or_email",
+            "create_user_if_not_exist",
+            "nitrokey_device_name",
+            "user_entra_id",
+            "fido_credential_id",
+        ]
+        for field in fields:
+            if field not in running:
+                running.append(field)
 
         EntraFidoCreationOptions.provide_data_field_names(running)
-        #        if "fido_challenge_encoded" not in running:
-        #            running.append("fido_challenge_encoded")
 
         SerializableFidoResponse.provide_data_field_names(running)
-        #        if "fido_response_encoded" not in running:
-        #            running.append("fido_response_encoded")
-
-        if "fido_credential_id" not in running:
-            running.append("fido_credential_id")
 
         return running
 

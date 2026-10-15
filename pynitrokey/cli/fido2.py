@@ -9,6 +9,8 @@ import hashlib
 import json
 import secrets
 import time
+
+# import traceback
 from dataclasses import fields
 from getpass import getpass
 from pathlib import Path
@@ -47,8 +49,6 @@ from pynitrokey.fido2.entra import Entra
 from pynitrokey.fido2.preregistration.Entra.entra_state_encode_credential import (
     EntraStateEncodedCredential,
 )
-
-# import traceback
 from pynitrokey.fido2.preregistration.stateful_provision_credential import (
     StatefulProvisionCredential,
 )
@@ -690,7 +690,7 @@ def build_bulk_provision_credential(
                     es.inject_state(row)
                     enrollment_states.append(es)
     else:
-        AssertionError("Paths to directories and other non-files are unsupported")
+        raise AssertionError("Paths to directories and other non-files are unsupported")
 
     ess = stateful_credential_factory[service.lower()]()
     ess.begin_new(user, create_user)
@@ -761,7 +761,9 @@ def stepped_provision_credential(
 
     op_path = Path(bulk_registration)
     if (not op_path.exists()) or (op_path.stat().st_size <= 0):
-        AssertionError("Path provided must point to valid and populated enrollment state file")
+        raise AssertionError(
+            "Path provided must point to valid and populated enrollment state file"
+        )
 
     enrollment_states: list[StatefulProvisionCredential] = []
 
