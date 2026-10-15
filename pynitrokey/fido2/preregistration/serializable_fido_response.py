@@ -1,4 +1,4 @@
-from typing import Any, NamedTuple, TypeVar
+from typing import Any, NamedTuple
 
 
 class Response(NamedTuple):
@@ -6,21 +6,18 @@ class Response(NamedTuple):
     attestationObject: str | None
 
 
-T = TypeVar("T", bound="SerializableFidoResponse")
-
-
 class SerializableFidoResponse:
     def __init__(self) -> None:
         return
 
     @staticmethod
-    def buildFromRaw(raw: Any) -> T:
+    def buildFromRaw(raw: Any) -> "SerializableFidoResponse":
         slf = SerializableFidoResponse()
         slf.fillRaw(raw)
         return slf
 
     @staticmethod
-    def deserialize(kv: dict[str, str | None]) -> T:
+    def deserialize(kv: dict[str, str | None]) -> "SerializableFidoResponse":
         slf = SerializableFidoResponse()
 
         slf.id = kv.get("fido_response_id")

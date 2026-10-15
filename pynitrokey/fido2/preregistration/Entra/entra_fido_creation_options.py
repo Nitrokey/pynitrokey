@@ -1,4 +1,4 @@
-from typing import Any, NamedTuple, TypeVar
+from typing import Any, NamedTuple
 
 from fido2.utils import websafe_decode, websafe_encode
 from fido2.webauthn import PublicKeyCredentialCreationOptions
@@ -32,21 +32,18 @@ class Extensions(NamedTuple):
     credentialProtectionPolicy: str | None
 
 
-T = TypeVar("T", bound="EntraFidoCreationOptions")
-
-
 class EntraFidoCreationOptions:
     def __init__(self) -> None:
         return
 
     @staticmethod
-    def buildFromRaw(raw: Any) -> T:
+    def buildFromRaw(raw: Any) -> "EntraFidoCreationOptions":
         slf = EntraFidoCreationOptions()
         slf.fillRaw(raw)
         return slf
 
     @staticmethod
-    def deserialize(kv: dict[str, str | None]) -> T:
+    def deserialize(kv: dict[str, str | None]) -> "EntraFidoCreationOptions":
         slf = EntraFidoCreationOptions()
 
         if "fido_challenge" in kv and kv["fido_challenge"]:
