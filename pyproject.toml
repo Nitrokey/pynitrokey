@@ -48,6 +48,7 @@ repository = "https://github.com/Nitrokey/pynitrokey"
 
 [project.scripts]
 nitropy = "pynitrokey.cli:main"
+nitropy-nrf = "pynitrokey.cli.nrfutils:main"
 
 [tool.mypy]
 mypy_path = "stubs"
