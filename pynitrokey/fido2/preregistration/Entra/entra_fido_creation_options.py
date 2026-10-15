@@ -1,8 +1,8 @@
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, TypeVar
 
 from fido2.utils import websafe_decode, websafe_encode
 from fido2.webauthn import PublicKeyCredentialCreationOptions
-from typing import TypeVar
+
 
 class RP(NamedTuple):
     id: str | None
@@ -32,7 +32,8 @@ class Extensions(NamedTuple):
     credentialProtectionPolicy: str | None
 
 
-T = TypeVar('T', bound='EntraFidoCreationOptions')
+T = TypeVar("T", bound="EntraFidoCreationOptions")
+
 
 class EntraFidoCreationOptions:
     def __init__(self) -> None:

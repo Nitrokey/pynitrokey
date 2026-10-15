@@ -1,13 +1,13 @@
-from typing import Any
+from typing import Any, TypeVar
 
 from pynitrokey.fido2.preregistration.Entra.entra_enrollment_state import EntraEnrollmentState
 from pynitrokey.fido2.preregistration.Entra.entra_fido_creation_options import (
     EntraFidoCreationOptions,
 )
 from pynitrokey.fido2.preregistration.serializable_fido_response import SerializableFidoResponse
-from typing import TypeVar
 
-T = TypeVar('T', bound='EntraEnrollmentStateData')
+T = TypeVar("T", bound="EntraEnrollmentStateData")
+
 
 class EntraEnrollmentStateData:
     service_name = "Entra"

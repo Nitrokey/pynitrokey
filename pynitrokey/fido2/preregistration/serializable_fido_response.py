@@ -1,10 +1,13 @@
 from typing import Any, NamedTuple, TypeVar
 
+
 class Response(NamedTuple):
     clientDataJson: str | None
     attestationObject: str | None
 
-T = TypeVar('T', bound='SerializableFidoResponse')
+
+T = TypeVar("T", bound="SerializableFidoResponse")
+
 
 class SerializableFidoResponse:
     def __init__(self) -> None:
