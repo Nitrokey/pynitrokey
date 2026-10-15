@@ -1,23 +1,23 @@
-from typing import Any, NamedTuple
-
+from typing import Any, NamedTuple, TypeVar
 
 class Response(NamedTuple):
     clientDataJson: str | None
     attestationObject: str | None
 
+T = TypeVar('T', bound='SerializableFidoResponse')
 
 class SerializableFidoResponse:
     def __init__(self) -> None:
         return
 
     @staticmethod
-    def buildFromRaw(raw: Any) -> Any:
+    def buildFromRaw(raw: Any) -> T:
         slf = SerializableFidoResponse()
         slf.fillRaw(raw)
         return slf
 
     @staticmethod
-    def deserialize(kv: dict[str, str | None]) -> Any:
+    def deserialize(kv: dict[str, str | None]) -> T:
         slf = SerializableFidoResponse()
 
         slf.id = kv.get("fido_response_id")

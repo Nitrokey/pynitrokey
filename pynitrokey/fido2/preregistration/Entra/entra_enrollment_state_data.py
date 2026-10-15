@@ -5,7 +5,9 @@ from pynitrokey.fido2.preregistration.Entra.entra_fido_creation_options import (
     EntraFidoCreationOptions,
 )
 from pynitrokey.fido2.preregistration.serializable_fido_response import SerializableFidoResponse
+from typing import TypeVar
 
+T = TypeVar('T', bound='EntraEnrollmentStateData')
 
 class EntraEnrollmentStateData:
     service_name = "Entra"
@@ -19,7 +21,7 @@ class EntraEnrollmentStateData:
         self.enrollment_state = EntraEnrollmentState.BEGIN
 
     @staticmethod
-    def begin_new(user: str, create_user: bool) -> Any:
+    def begin_new(user: str, create_user: bool) -> T:
         slf = EntraEnrollmentStateData()
 
         slf.username_or_email = user
@@ -29,7 +31,7 @@ class EntraEnrollmentStateData:
         return slf
 
     @staticmethod
-    def deserialize(kv: dict[str, str | None]) -> Any:
+    def deserialize(kv: dict[str, str | None]) -> T:
         slf = EntraEnrollmentStateData()
 
         if "service_name" in kv and kv["service_name"] != "Entra":
