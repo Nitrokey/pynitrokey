@@ -1,3 +1,4 @@
 [solver]
 min-release-age = 7
-min-release-age-exclude = ["nitrokey"]
+# certify: 2026.10.19 for https://github.com/certifi/python-certifi/security/advisories/GHSA-6q48-6c7w-9gw2
+min-release-age-exclude = ["certifi", "nitrokey"]
