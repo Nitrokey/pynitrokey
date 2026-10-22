@@ -42,12 +42,15 @@ dependencies = [
 
 [project.optional-dependencies]
 pcsc = ["pyscard >=2, <3"]
+spsdk = ["spsdk >=3, <4"]
 
 [project.urls]
 repository = "https://github.com/Nitrokey/pynitrokey"
 
 [project.scripts]
 nitropy = "pynitrokey.cli:main"
+nitropy-nrf = "pynitrokey.cli.nrfutils:nrf_main"
+nitropy-lpc = "pynitrokey.cli.nrfutils:lpc_main"
 
 [tool.mypy]
 mypy_path = "stubs"
