@@ -1,11 +1,20 @@
 import base64
+import datetime
 import io
+import ipaddress
 import re
+import secrets
 import shlex
 from contextlib import redirect_stderr, redirect_stdout
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from click import Command, Context
 from conftest import UserData
+from cryptography import x509
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.x509.oid import NameOID
 from nethsm import NetHSM, Role
 from utilities import add_user
 
@@ -21,6 +30,109 @@ metrics_user = UserData(
 backup_user = UserData(
     user_id="backup", real_name="backup", role=Role.BACKUP, passphrase="backupbackup"
 )
+
+
+class CA:
+    """
+    CA implementation based on the cryptography documentation:
+    https://cryptography.io/en/latest/x509/tutorial/#creating-a-ca-hierarchy
+    """
+
+    def __init__(self) -> None:
+        self.ca_key = ec.generate_private_key(ec.SECP256R1())
+        self.int_key = ec.generate_private_key(ec.SECP256R1())
+        self.ca_id = secrets.token_hex(8)
+
+        now = datetime.datetime.now(datetime.timezone.utc)
+        key_usage = x509.KeyUsage(
+            digital_signature=True,
+            content_commitment=False,
+            key_encipherment=False,
+            data_encipherment=False,
+            key_agreement=False,
+            key_cert_sign=True,
+            crl_sign=True,
+            encipher_only=False,
+            decipher_only=False,
+        )
+
+        name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, f"NetHSM Test CA {self.ca_id}")])
+        builder = x509.CertificateBuilder()
+        builder = builder.subject_name(name)
+        builder = builder.public_key(self.ca_key.public_key())
+        builder = builder.issuer_name(name)
+        builder = builder.serial_number(x509.random_serial_number())
+        builder = builder.not_valid_before(now)
+        builder = builder.not_valid_after(now + datetime.timedelta(days=1))
+        builder = builder.add_extension(
+            x509.BasicConstraints(ca=True, path_length=None), critical=True
+        )
+        builder = builder.add_extension(key_usage, critical=True)
+        builder = builder.add_extension(
+            x509.SubjectKeyIdentifier.from_public_key(self.ca_key.public_key()), critical=False
+        )
+        self.ca_cert = builder.sign(self.ca_key, hashes.SHA256())
+
+    def sign(self, csr: x509.CertificateSigningRequest) -> bytes:
+        issuer_cert = self.ca_cert
+        issuer_key = self.ca_key
+
+        now = datetime.datetime.now(datetime.timezone.utc)
+        ip = x509.IPAddress(ipaddress.IPv4Address("127.0.0.1"))
+
+        builder = x509.CertificateBuilder()
+        builder = builder.subject_name(csr.subject)
+        builder = builder.issuer_name(issuer_cert.subject)
+        builder = builder.public_key(csr.public_key())
+        builder = builder.serial_number(x509.random_serial_number())
+        builder = builder.not_valid_before(now)
+        builder = builder.not_valid_after(now + datetime.timedelta(days=1))
+        builder = builder.add_extension(x509.SubjectAlternativeName([ip]), critical=False)
+        builder = builder.add_extension(
+            x509.BasicConstraints(ca=False, path_length=None), critical=True
+        )
+        builder = builder.add_extension(
+            x509.KeyUsage(
+                digital_signature=True,
+                content_commitment=False,
+                key_encipherment=True,
+                data_encipherment=False,
+                key_agreement=False,
+                key_cert_sign=False,
+                crl_sign=True,
+                encipher_only=False,
+                decipher_only=False,
+            ),
+            critical=True,
+        )
+        builder = builder.add_extension(
+            x509.ExtendedKeyUsage(
+                [x509.oid.ExtendedKeyUsageOID.CLIENT_AUTH, x509.oid.ExtendedKeyUsageOID.SERVER_AUTH]
+            ),
+            critical=False,
+        )
+        builder = builder.add_extension(
+            x509.SubjectKeyIdentifier.from_public_key(csr.public_key()), critical=False
+        )
+        builder = builder.add_extension(
+            x509.AuthorityKeyIdentifier.from_issuer_subject_key_identifier(
+                issuer_cert.extensions.get_extension_for_class(x509.SubjectKeyIdentifier).value
+            ),
+            critical=False,
+        )
+        cert = builder.sign(issuer_key, hashes.SHA256())
+
+        # sanity check
+        store = x509.verification.Store([self.ca_cert])
+        verifier = x509.verification.PolicyBuilder().store(store).build_server_verifier(ip)
+        verifier.verify(cert, intermediates=[])
+
+        cert_bytes = cert.public_bytes(serialization.Encoding.PEM)
+        return cert_bytes
+
+    @property
+    def ca_cert_pem(self) -> bytes:
+        return self.ca_cert.public_bytes(serialization.Encoding.PEM)
 
 
 def get_context(nethsm: NetHSM) -> Context:
@@ -141,3 +253,41 @@ def test_nethsm_move_key(nethsm: NetHSM) -> None:
     cmd = "move-key testkeymoveold testkeymovenew"
     result = run_command(ctx, cmd)
     assert f"Key testkeymoveold moved to testkeymovenew on NetHSM {nethsm.host}\n" == result
+
+
+def test_nethsm_cluster_ca_cert(nethsm: NetHSM) -> None:
+    ctx = get_context(nethsm)
+
+    cmd = "generate-cluster-key --type rsa --length 4096"
+    result = run_command(ctx, cmd)
+    assert f"Key for cluster peer traffic generated on NetHSM {nethsm.host}\n" == result
+
+    cmd = "get-cluster-public-key"
+    result = run_command(ctx, cmd)
+    public_key = serialization.load_pem_public_key(result.encode())
+
+    cmd = (
+        "csr --cluster --country DE --state-or-province Brandenburg --locality Teltow --organization Nitrokey "
+        "--organizational-unit Test --common-name 'NetHSM cluster test' --email-address test@example.com"
+    )
+    result = run_command(ctx, cmd)
+    csr = x509.load_pem_x509_csr(result.encode())
+    assert csr.public_key() == public_key
+
+    ca = CA()
+    cert = ca.sign(csr)
+
+    with TemporaryDirectory() as d:
+        path = Path(d)
+        cert_path = path / "cert.pem"
+        cert_path.write_bytes(cert)
+        ca_path = path / "ca.pem"
+        ca_path.write_bytes(ca.ca_cert_pem)
+
+        cmd = f"set-certificate --cluster {cert_path}"
+        result = run_command(ctx, cmd)
+        assert f"Updated the cluster certificate for NetHSM {nethsm.host}\n" == result
+
+        cmd = f"set-cluster-ca-certificate {ca_path}"
+        result = run_command(ctx, cmd)
+        assert f"Updated the cluster CA certificate for NetHSM {nethsm.host}\n" == result

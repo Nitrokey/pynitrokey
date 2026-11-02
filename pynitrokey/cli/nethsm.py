@@ -1260,65 +1260,88 @@ def set_unattended_boot(ctx: Context, status: str) -> None:
         print(f"Updated the unattended boot configuration for NetHSM {nethsm.host}")
 
 
-def get_api_or_key_id(api: bool, key_id: Optional[str]) -> tuple[bool, Optional[str]]:
+def get_api_or_cluster_or_key_id(
+    api: bool, cluster: bool, key_id: Optional[str]
+) -> tuple[bool, bool, Optional[str]]:
     """Helper method for operations that can be executed either for the API
-    certificate or for the certificate stored for a key."""
+    certificate, the cluster certificate or for the certificate stored for a key."""
     if api and key_id:
         raise click.ClickException("--api and --key-id are mutually exclusive")
+    if cluster and key_id:
+        raise click.ClickException("--cluster and --key-id are mutually exclusive")
+    if api and cluster:
+        raise click.ClickException("--api and --cluster are mutually exclusive")
 
-    if not api and not key_id:
-        choice = click.Choice(["api", "key"], case_sensitive=False)
-        method = prompt("For stored key or for NetHSM TLS interface?", type=choice)
+    if not api and not key_id and not cluster:
+        choice = click.Choice(["api", "cluster", "key"], case_sensitive=False)
+        method = prompt(
+            "For stored key, for NetHSM TLS interface or for cluster peer traffic?", type=choice
+        )
         if method == "api":
             api = True
+        elif method == "cluster":
+            cluster = True
         elif method == "key":
             key_id = prompt("Key ID")
         else:
             raise ValueError("Unexpected method")
 
-    return (api, key_id)
+    return (api, cluster, key_id)
 
 
 @nethsm.command()
 @click.option("-a", "--api", is_flag=True, help="Set the certificate for the NetHSM TLS interface")
+@click.option(
+    "-c", "--cluster", is_flag=True, help="Set the certificate for the cluster peer traffic"
+)
 @click.option("-k", "--key-id", help="The ID of the key to set the certificate for")
 @click.argument("filename")
 @click.pass_context
-def set_certificate(ctx: Context, api: bool, key_id: Optional[str], filename: str) -> None:
+def set_certificate(
+    ctx: Context, api: bool, cluster: bool, key_id: Optional[str], filename: str
+) -> None:
     """Set a certificate on the NetHSM.
 
     If the --api option is set, the certificate used for the NetHSM TLS interface
-    is set.  If the --key-id option is set, the certificate for a key stored on
-    the NetHSM is set.
+    is set.  If the --cluster option is set, the certificate used for the cluster
+    peer traffic is set. If the --key-id option is set, the certificate for a key
+    stored on the NetHSM is set.
 
     This command requires authentication as a user with the Administrator
     role."""
-    api, key_id = get_api_or_key_id(api, key_id)
+    api, cluster, key_id = get_api_or_cluster_or_key_id(api, cluster, key_id)
     with connect(ctx) as nethsm:
         with open(filename, "rb") as f:
             if key_id:
                 nethsm.set_key_certificate(key_id, f)
                 print(f"Updated the certificate for key {key_id} on NetHSM {nethsm.host}")
-            else:
+            elif api:
                 nethsm.set_certificate(f)
                 print(f"Updated the API certificate for NetHSM {nethsm.host}")
+            elif cluster:
+                nethsm.set_cluster_certificate(f)
+                print(f"Updated the cluster certificate for NetHSM {nethsm.host}")
 
 
 @nethsm.command()
 @click.option("-a", "--api", is_flag=True, help="Get the certificate for the NetHSM TLS interface")
+@click.option(
+    "-c", "--cluster", is_flag=True, help="Get the certificate for the cluster peer traffic"
+)
 @click.option("-k", "--key-id", help="The ID of the key to get the certificate for")
 @click.pass_context
-def get_certificate(ctx: Context, api: bool, key_id: Optional[str]) -> None:
+def get_certificate(ctx: Context, api: bool, cluster: bool, key_id: Optional[str]) -> None:
     """Get a certificate from the NetHSM.
 
     If the --api option is set, the certificate used for the NetHSM TLS interface
-    is queried.  If the --key-id option is set, the certificate for a key stored on
-    the NetHSM is queried.
+    is queried.  If the --cluster option is set, the certificate used for the
+    cluster peer traffic is queried. If the --key-id option is set, the
+    certificate for a key stored on the NetHSM is queried.
 
     This command requires authentication as a user with the Administrator role.
     The certificate for a key can also be queried by a user with the Operator
     role."""
-    api, key_id = get_api_or_key_id(api, key_id)
+    api, cluster, key_id = get_api_or_cluster_or_key_id(api, cluster, key_id)
     with connect(ctx) as nethsm:
         if key_id:
             cert = nethsm.get_key_certificate(key_id)
@@ -1326,8 +1349,10 @@ def get_certificate(ctx: Context, api: bool, key_id: Optional[str]) -> None:
                 print(cert.decode())
             except UnicodeError:
                 print(cert)
-        else:
+        elif api:
             print(nethsm.get_certificate())
+        elif cluster:
+            print(nethsm.get_cluster_certificate())
 
 
 @nethsm.command()
@@ -1345,6 +1370,7 @@ def delete_certificate(ctx: Context, key_id: str) -> None:
 
 @nethsm.command()
 @click.option("-a", "--api", is_flag=True, help="Generate a CSR for the NetHSM TLS interface")
+@click.option("-c", "--cluster", is_flag=True, help="Generate a CSR for the cluster peer traffic")
 @click.option("-k", "--key-id", help="The ID of the key to generate the CSR for")
 @click.option("--country", default="", prompt=True, help="The country name")
 @click.option("--state-or-province", default="", prompt=True, help="The state or province name")
@@ -1361,6 +1387,7 @@ def delete_certificate(ctx: Context, key_id: str) -> None:
 def csr(
     ctx: Context,
     api: bool,
+    cluster: bool,
     key_id: Optional[str],
     country: str,
     state_or_province: str,
@@ -1375,8 +1402,9 @@ def csr(
     """Generate a certificate signing request.
 
     If the --api option is set, the CSR is generated for the NetHSM, for
-    example to replace the self-signed initial certificate.  If the --key-id
-    option is set, the CSR is generated for a key stored on the NetHSM.
+    example to replace the self-signed initial certificate.  If the --cluster
+    option is set, the CSR is generated for the cluster peer traffic. If the
+    --key-id option is set, the CSR is generated for a key stored on the NetHSM.
 
     By default, the certificate contains a Subject Alternative Name (SAN)
     extension with the common name. If the --no-san option is set, the
@@ -1397,7 +1425,7 @@ def csr(
     if no_san:
         subject_alt_names = []
 
-    api, key_id = get_api_or_key_id(api, key_id)
+    api, cluster, key_id = get_api_or_cluster_or_key_id(api, cluster, key_id)
     with connect(ctx) as nethsm:
         if key_id:
             csr = nethsm.key_csr(
@@ -1411,8 +1439,19 @@ def csr(
                 email_address=email_address,
                 subject_alt_names=subject_alt_names,
             )
-        else:
+        elif api:
             csr = nethsm.csr(
+                country=country,
+                state_or_province=state_or_province,
+                locality=locality,
+                organization=organization,
+                organizational_unit=organizational_unit,
+                common_name=common_name,
+                email_address=email_address,
+                subject_alt_names=subject_alt_names,
+            )
+        elif cluster:
+            csr = nethsm.cluster_csr(
                 country=country,
                 state_or_province=state_or_province,
                 locality=locality,
@@ -2011,9 +2050,46 @@ def get_cluster_ca_certificate(ctx: Context) -> None:
 
 
 @nethsm.command()
+@click.pass_context
+def get_cluster_public_key(ctx: Context) -> None:
+    with connect(ctx) as nethsm:
+        print(nethsm.get_cluster_public_key())
+
+
+@nethsm.command()
+@click.option(
+    "type",
+    "-t",
+    "--type",
+    type=TYPE_TLS_KEY_TYPE,
+    prompt=True,
+    help="The type for the generated key",
+)
+@click.option("-l", "--length", type=int, help="The length of the generated key")
+@click.pass_context
+def generate_cluster_key(ctx: Context, type: str, length: Optional[int]) -> None:
+    """Generate key pair for the cluster peer traffic.
+
+    This command requires authentication as a user with the Administrator
+    role."""
+    key_type = nethsm_sdk.TlsKeyType.from_string(type)
+    if key_type == nethsm_sdk.TlsKeyType.RSA:
+        if not length:
+            length = click.prompt("Length", type=int)
+    else:
+        if length:
+            raise click.ClickException("-l/--length may only be set for RSA keys")
+
+    with connect(ctx) as nethsm:
+        nethsm.generate_cluster_key(key_type, length)
+        print(f"Key for cluster peer traffic generated on NetHSM {nethsm.host}")
+
+
+@nethsm.command()
 @click.argument("filename")
 @click.pass_context
 def set_cluster_ca_certificate(ctx: Context, filename: str) -> None:
     with connect(ctx) as nethsm:
         with open(filename, "rb") as f:
             nethsm.set_cluster_ca_certificate(f)
+        print(f"Updated the cluster CA certificate for NetHSM {nethsm.host}")

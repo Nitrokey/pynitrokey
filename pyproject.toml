@@ -29,7 +29,7 @@ dependencies = [
   "hidapi ==0.14.0.post2 ; sys_platform == 'linux'",
   "intelhex >=2.3, <3",
   "libusb1 >=3, <4",
-  "nethsm >=3, <4",
+  "nethsm ==3.1.0rc1",
   "nitrokey >=0.5, <0.6",
   "nkdfu >=0.2, <0.3",
   "pyusb >=1.2, <2",
