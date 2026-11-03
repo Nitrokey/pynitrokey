@@ -19,6 +19,10 @@ logger = logging.getLogger(__name__)
 AID_ADMIN = [0xA0, 0x00, 0x00, 0x08, 0x47, 0x00, 0x00, 0x00, 0x01]
 AID_PROVISIONER = [0xA0, 0x00, 0x00, 0x08, 0x47, 0x01, 0x00, 0x00, 0x01]
 
+test_certs = [
+    "c7d87cac86b69059bbff5c43872a20892267518614dfc9822c7ee55ad89f0022"
+]  # Kept as a list so that we can add more test certs in future if needed
+
 
 @test_case("uuid", "UUID query")
 def test_uuid_query(ctx: TestContext, device: TrussedBase) -> TestResult:
@@ -400,8 +404,15 @@ def test_fido2(ctx: TestContext, device: TrussedBase) -> TestResult:
         make_credential_result = client.make_credential(create_options["publicKey"])
     except PinRequiredError:
         return TestResult(TestStatus.FAILURE, "PIN activated -- please set the --pin option")
+    try:
+        auth_data = server.register_complete(state, response=make_credential_result)
+    except InvalidSignature:
+        return TestResult(TestStatus.FAILURE, "Invalid attestation signature")
     cert = make_credential_result.response.attestation_object.att_stmt["x5c"]
     cert_hash = sha256(cert[0]).digest().hex()
+
+    if cert_hash in test_certs:
+        return TestResult(TestStatus.FAILURE, "Nitrokey Hacker Device being used")
 
     firmware_version = ctx.firmware_version or device.admin.version()
     if firmware_version:
@@ -412,10 +423,6 @@ def test_fido2(ctx: TestContext, device: TrussedBase) -> TestResult:
                 f"Unexpected FIDO2 cert hash for version {firmware_version}: {cert_hash}",
             )
 
-    try:
-        auth_data = server.register_complete(state, response=make_credential_result)
-    except InvalidSignature:
-        return TestResult(TestStatus.FAILURE, "Invalid attestation signature")
     if not auth_data.credential_data:
         return TestResult(TestStatus.FAILURE, "Missing credential data in auth data")
     credentials = [auth_data.credential_data]
