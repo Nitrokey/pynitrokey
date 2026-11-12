@@ -15,6 +15,18 @@ env:
   POETRY_SOLVER_MIN_RELEASE_AGE: 0
 
 jobs:
+  verify-lockfile:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - run: gh extension install github/gh-actions-lock --pin v0.4.1
+      - run: gh actions-lock --verify
   check-pyproject:
     name: Check pyproject syntax
     runs-on: ubuntu-latest
