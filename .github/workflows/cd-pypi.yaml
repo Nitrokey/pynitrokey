@@ -18,7 +18,6 @@ jobs:
   check-version-tag:
     name: Check version tag
     runs-on: ubuntu-latest
-    container: python:3.11-slim
     if: github.event_name == 'release'
     steps:
       - name: Checkout repository
@@ -34,14 +33,14 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    container: python:3.11-slim
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
       - name: Install required packages
         run: |
-          apt update
-          apt install -y binutils gcc libpcsclite-dev libusb-1.0-0 make swig
+          sudo apt-get update
+          sudo apt-get install -y binutils gcc libpcsclite-dev libusb-1.0-0 make swig
+      - uses: actions/setup-python@v7
       - name: Install poetry
         run: pip install "${POETRY_SPEC}"
       - name: Build
