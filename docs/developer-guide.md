@@ -55,6 +55,8 @@ The minimum required Python version is selected to be compatible with the latest
 If there has not been a point release for the latest Ubuntu LTS release yet, we also support the second-latest Ubuntu LTS release.
 Raising the required Python version requires adapting the CI to this new minimum too.
 
+If you want to bump the minimum Python version, update `requires-python` in `pyproject.toml`, `.python-version` and the version matrices in the CI workflows.
+
 ## Commit Hooks
 
 For local quick checks of the formatting you can use [pre-commit](https://pre-commit.com/).

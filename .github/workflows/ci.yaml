@@ -30,10 +30,10 @@ jobs:
   check-pyproject:
     name: Check pyproject syntax
     runs-on: ubuntu-latest
-    container: python:3.11-slim
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
       - name: Install dependencies
         run: pip install "${POETRY_SPEC}" toml-cli
       - name: Check pyproject syntax
@@ -47,14 +47,14 @@ jobs:
   format-code:
     name: Check code format
     runs-on: ubuntu-latest
-    container: python:3.11-slim
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
       - name: Install required packages
         run: |
-          apt update
-          apt install -y gcc libpcsclite-dev make swig
+          sudo apt-get update
+          sudo apt-get install -y gcc libpcsclite-dev make swig
+      - uses: actions/setup-python@v7
       - name: Install poetry
         run: pip install "${POETRY_SPEC}"
       - name: Create virtual environment
@@ -64,14 +64,14 @@ jobs:
   lint-style:
     name: Check code style
     runs-on: ubuntu-latest
-    container: python:3.11-slim
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
       - name: Install required packages
         run: |
-          apt update
-          apt install -y gcc libpcsclite-dev make swig git
+          sudo apt-get update
+          sudo apt-get install -y gcc libpcsclite-dev make swig git
+      - uses: actions/setup-python@v7
       - name: Install poetry
         run: pip install "${POETRY_SPEC}"
       - name: Create virtual environment
@@ -81,14 +81,14 @@ jobs:
   lint-typing:
     name: Check static typing
     runs-on: ubuntu-latest
-    container: python:3.11-slim
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
       - name: Install required packages
         run: |
-          apt update
-          apt install -y gcc libpcsclite-dev make swig git
+          sudo apt-get update
+          sudo apt-get install -y gcc libpcsclite-dev make swig git
+      - uses: actions/setup-python@v7
       - name: Install poetry
         run: pip install "${POETRY_SPEC}"
       - name: Create virtual environment
@@ -103,8 +103,9 @@ jobs:
         uses: actions/checkout@v7
       - name: Install required packages
         run: |
-          sudo apt update
-          sudo apt install -y gcc libpcsclite-dev make swig git
+          sudo apt-get update
+          sudo apt-get install -y gcc libpcsclite-dev make swig git
+      - uses: actions/setup-python@v7
       - name: Install poetry
         run: pip install "${POETRY_SPEC}"
       - name: Create virtual environment
@@ -126,14 +127,14 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install required packages
         run: |
-          sudo apt update
-          sudo apt install -y gcc libpcsclite-dev swig
+          sudo apt-get update
+          sudo apt-get install -y gcc libpcsclite-dev swig
       # For Python 3.13, we need additional build dependencies, see:
       # https://github.com/Nitrokey/pynitrokey/issues/610
       - name: Install more required packages
         run: |
-          sudo apt update
-          sudo apt install -y libudev-dev libpython3-dev
+          sudo apt-get update
+          sudo apt-get install -y libudev-dev libpython3-dev
       - name: Install pynitrokey
         run: python3 -m venv venv && venv/bin/pip install .[pcsc]
       - name: Run nitropy --help
@@ -143,7 +144,6 @@ jobs:
   test-uv-resolution:
     name: Test different resolution strategies with uv
     runs-on: ubuntu-latest
-    container: python:3.11-slim
     strategy:
       matrix:
         resolution:
@@ -156,7 +156,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
       - name: Install required packages
-        run: apt update && apt install -y make libpcsclite-dev swig gcc libffi-dev git
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y make libpcsclite-dev swig gcc libffi-dev git
+      - uses: actions/setup-python@v7
       - name: Install uv
         run: pip install uv
       - name: Prepare poetry.lock

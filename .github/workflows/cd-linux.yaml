@@ -18,11 +18,11 @@ jobs:
   check-version-tag:
     name: Check version tag
     runs-on: ubuntu-latest
-    container: python:3.11-slim
     if: github.event_name == 'release'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
       - name: Install dependencies
         run: pip install toml-cli
       - name: Check version tag
@@ -34,14 +34,14 @@ jobs:
   build-onefile:
     name: Build onefile
     runs-on: ubuntu-latest
-    container: python:3.11-slim
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
       - name: Install required packages
         run: |
-          apt update
-          apt install -y binutils gcc git libpcsclite-dev libusb-1.0-0 make swig
+          sudo apt-get update
+          sudo apt-get install -y binutils gcc git libpcsclite-dev libusb-1.0-0 make swig
+      - uses: actions/setup-python@v7
       - name: Install poetry
         run: pip install "${POETRY_SPEC}"
       - name: Create virtual environment
@@ -62,7 +62,6 @@ jobs:
   publish-binary:
     name: Publish binary
     runs-on: ubuntu-latest
-    container: python:3.11-slim
     needs: [build-onefile, check-version-tag]
     if: github.event_name == 'release'
     permissions:

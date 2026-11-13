@@ -12,7 +12,6 @@ on:
   workflow_dispatch:
 
 env:
-  PYTHON_VERSION: "3.11"
   POETRY_SPEC: poetry >=2,<3
 
 jobs:
@@ -23,10 +22,7 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
-      - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v7
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: actions/setup-python@v7
       - name: Install dependencies
         run: pip install toml-cli
       - name: Check version tag
@@ -40,10 +36,7 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
-      - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v7
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: actions/setup-python@v7
       - name: Install poetry
         run: pip install $env:POETRY_SPEC
       - name: Create virtual environment
@@ -67,10 +60,7 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
-      - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v7
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: actions/setup-python@v7
       - name: Install poetry
         run: pip install $env:POETRY_SPEC
       - name: Create virtual environment
