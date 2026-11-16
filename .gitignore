@@ -8,6 +8,10 @@
 
 dist/
 build/
+bin/
+install/
+lib/
+lib64/
 venv/
 venv-ci/
 firmware-*.json
@@ -21,3 +25,7 @@ variables.mk
 .idea/
 *.log
 tmp/
+
+lib64
+
+pyvenv.cfg
