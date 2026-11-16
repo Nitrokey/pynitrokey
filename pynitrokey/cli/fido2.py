@@ -18,9 +18,10 @@ from fido2.client import DefaultClientDataCollector, Fido2Client, UserInteractio
 from fido2.cose import ES256, EdDSA
 from fido2.ctap import CtapError
 from fido2.ctap2.base import Ctap2, Info
+from fido2.ctap2.config import Config
 from fido2.ctap2.credman import CredentialManagement
 from fido2.ctap2.extensions import HMACGetSecretInput, HMACGetSecretOutput, HmacSecretExtension
-from fido2.ctap2.pin import ClientPin
+from fido2.ctap2.pin import ClientPin, PinProtocol
 from fido2.hid import CtapHidDevice, open_device
 from fido2.webauthn import (
     Aaguid,
@@ -93,18 +94,18 @@ def _ctap2(device: CtapHidDevice) -> Ctap2:
         raise CliException("Device does not support CTAP2", support_hint=False)
 
 
-def _credential_management(device: CtapHidDevice, pin: str) -> CredentialManagement:
-    ctap2 = _ctap2(device)
+def _get_pin_token(
+    ctap2: Ctap2, pin: str | None, permissions: ClientPin.PERMISSION
+) -> tuple[PinProtocol, bytes]:
+    if pin is None:
+        pin = AskUser.hidden("Please provide pin: ")
 
     client_pin = ClientPin(ctap2)
-
     try:
-        client_token = client_pin.get_pin_token(
-            pin, permissions=ClientPin.PERMISSION.CREDENTIAL_MGMT
-        )
+        client_token = client_pin.get_pin_token(pin, permissions=permissions)
     except CtapError as error:
         if error.code == CtapError.ERR.PIN_NOT_SET:
-            local_critical("Please set a pin in order to manage credentials", support_hint=False)
+            local_critical("Please set a pin to use this feature", support_hint=False)
         if error.code == CtapError.ERR.PIN_AUTH_BLOCKED:
             local_critical(
                 "Pin authentication has been blocked, try reinserting the key or setting a pin if none is set",
@@ -119,8 +120,21 @@ def _credential_management(device: CtapHidDevice, pin: str) -> CredentialManagem
         if error.code == CtapError.ERR.PIN_INVALID:
             local_critical("Wrong pin, please retry", support_hint=False)
         raise
+    return client_pin.protocol, client_token
 
-    return CredentialManagement(ctap2, client_pin.protocol, client_token)
+
+def _config(ctap2: Ctap2, pin: str | None) -> Config:
+    pin_protocol = None
+    pin_token = None
+    if ctap2.info.options.get("clientPin", False):
+        pin_protocol, pin_token = _get_pin_token(ctap2, pin, ClientPin.PERMISSION.AUTHENTICATOR_CFG)
+    return Config(ctap2, pin_protocol, pin_token)
+
+
+def _credential_management(device: CtapHidDevice, pin: str | None) -> CredentialManagement:
+    ctap2 = _ctap2(device)
+    pin_protocol, pin_token = _get_pin_token(ctap2, pin, ClientPin.PERMISSION.CREDENTIAL_MGMT)
+    return CredentialManagement(ctap2, pin_protocol, pin_token)
 
 
 def _fido2(
@@ -268,12 +282,8 @@ def get_info(serial: Optional[str]) -> None:
     help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
 )
 @click.option("--pin", help="provide PIN instead of asking the user", default=None)
-def list_credentials(serial: str, pin: str) -> None:
+def list_credentials(serial: str, pin: str | None) -> None:
     """List all credentials saved on the key as well as the amount of remaining slots."""
-
-    # Makes sure pin exists
-    if not pin:
-        pin = AskUser.hidden("Please provide pin: ")
 
     device = _device(serial)
     cred_manager = _credential_management(device, pin)
@@ -327,14 +337,11 @@ def list_credentials(serial: str, pin: str) -> None:
 )
 @click.option("--pin", help="provide PIN instead of asking the user", default=None)
 @click.option("-cid", "--cred-id", help="Credential id of the Credential to be deleted")
-def delete_credential(serial: str, pin: str, cred_id: str) -> None:
+def delete_credential(serial: str, pin: str | None, cred_id: str) -> None:
     """Delete a specific credential from the key"""
 
     if not cred_id:
         cred_id = AskUser.hidden("Please provide credential-id")
-
-    if not pin:
-        pin = AskUser.hidden("Please provide pin: ")
 
     device = _device(serial)
     cred_manager = _credential_management(device, pin)
@@ -522,6 +529,65 @@ def set_pin(serial: Optional[str]) -> None:
     "--serial",
     help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
 )
+@click.option(
+    "--force-change-pin", is_flag=True, help="Require a PIN change before the PIN can be used"
+)
+@click.option("--min-pin-length", type=int, help="Set the minimum PIN length")
+@click.option(
+    "--rp-id", "rp_ids", multiple=True, help="Set the RP IDs that can query the minimum PIN length"
+)
+@click.option("--pin", help="provide PIN instead of asking the user", default=None)
+def set_pin_config(
+    serial: str | None,
+    force_change_pin: bool,
+    min_pin_length: int | None,
+    rp_ids: tuple[str],
+    pin: str | None,
+) -> None:
+    """Set the pin-related configuration of the device."""
+
+    rp_ids_list = None
+    if len(rp_ids) > 0:
+        rp_ids_list = list(rp_ids)
+
+    if not force_change_pin and min_pin_length is None and rp_ids_list is None:
+        raise CliException(
+            "At least one of these options must be set: --force-change-pin, --min-pin-length, --rp-id",
+            support_hint=False,
+        )
+
+    device = _device(serial)
+    ctap2 = _ctap2(device)
+    if not ctap2.info.options.get("setMinPINLength", False):
+        raise CliException(
+            "Device does not support the setMinPINLength command", support_hint=False
+        )
+    old_min_pin_length = ctap2.info.min_pin_length
+
+    config = _config(ctap2, pin)
+    try:
+        config.set_min_pin_length(
+            min_pin_length=min_pin_length, rp_ids=rp_ids_list, force_change_pin=force_change_pin
+        )
+    except CtapError as error:
+        if error.code == CtapError.ERR.PIN_POLICY_VIOLATION:
+            if min_pin_length is not None and min_pin_length < old_min_pin_length:
+                raise CliException(
+                    "The minimum PIN length can only be increased "
+                    f"(current value: {old_min_pin_length})",
+                    support_hint=False,
+                ) from error
+        raise
+
+    local_print("PIN configuration was updated successfully")
+
+
+@click.command()
+@click.option(
+    "-s",
+    "--serial",
+    help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
+)
 @click.option("--pin", help="PIN for device access", default=None)
 def verify(serial: Optional[str], pin: Optional[str]) -> None:
     """Verify if connected Nitrokey FIDO2 device is genuine."""
@@ -643,6 +709,7 @@ fido2.add_command(list_credentials)
 fido2.add_command(make_credential)
 fido2.add_command(reset)
 fido2.add_command(set_pin)
+fido2.add_command(set_pin_config)
 fido2.add_command(verify)
 fido2.add_command(wink)
 fido2.add_command(provision_credential)
