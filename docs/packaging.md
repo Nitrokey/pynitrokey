@@ -24,3 +24,14 @@ Unfortunately, man pages for `nitropy` are currently not available and cannot be
 
 To limit the need to install pyscard, it is made optional.
 If you make it an optional dependency of your package, please patch `pynitrokey/cli/nk3/pcsc_absent.py` to indicate users how they can install it.
+
+## udev rules
+
+Users need the appropriate permissions to be able to communicate with Nitrokey devices.
+The easiest way to configure these permissions is through the udev rules provided in the [`nitrokey-udev-rules` repository](https://github.com/Nitrokey/nitrokey-udev-rules).
+We recommend to provide these rules in a separate package and make the `pynitrokey` package depend on it.
+
+> [!NOTE]
+> `libnitrokey` also includes udev rules.
+> These rules are no longer updated and don’t include the latest changes provided by `nitrokey-udev-rules`.
+> We recommend to use `nitrokey-udev-rules` instead.
