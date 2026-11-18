@@ -236,6 +236,10 @@ def _simple_secret(
     return output.output1
 
 
+def _format_bool(value: bool) -> str:
+    return str(value).lower()
+
+
 @click.group()
 def fido2() -> None:
     """Interact with Nitrokey FIDO2 devices, see subcommands."""
@@ -588,6 +592,24 @@ def set_pin_config(
     "--serial",
     help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
 )
+def get_pin_config(serial: str | None) -> None:
+    """Get the pin-related configuration of the device."""
+
+    device = _device(serial)
+    ctap2 = _ctap2(device)
+    info = ctap2.info
+
+    print(f"minimum PIN length:  {info.min_pin_length}")
+    print(f"maximum PIN length:  {info.max_pin_length}")
+    print(f"force PIN change:    {_format_bool(info.force_pin_change)}")
+
+
+@click.command()
+@click.option(
+    "-s",
+    "--serial",
+    help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
+)
 @click.option("--pin", help="PIN for device access", default=None)
 def verify(serial: Optional[str], pin: Optional[str]) -> None:
     """Verify if connected Nitrokey FIDO2 device is genuine."""
@@ -708,6 +730,7 @@ fido2.add_command(get_info)
 fido2.add_command(list_credentials)
 fido2.add_command(make_credential)
 fido2.add_command(reset)
+fido2.add_command(get_pin_config)
 fido2.add_command(set_pin)
 fido2.add_command(set_pin_config)
 fido2.add_command(verify)
