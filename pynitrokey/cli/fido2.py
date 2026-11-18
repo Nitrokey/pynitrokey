@@ -610,6 +610,35 @@ def get_pin_config(serial: str | None) -> None:
     "--serial",
     help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
 )
+@click.option("--pin", help="provide PIN instead of asking the user", default=None)
+@click.argument("always-uv", type=bool)
+def set_always_uv(serial: str | None, always_uv: bool, pin: str | None) -> None:
+    """Set the alwaysUv flag of the device (possible values: true or false)."""
+
+    device = _device(serial)
+    ctap2 = _ctap2(device)
+
+    old_always_uv = ctap2.info.options.get("alwaysUv", None)
+    if old_always_uv is None:
+        raise CliException("Device does not support the alwaysUv feature", support_hint=False)
+    assert isinstance(old_always_uv, bool)
+
+    if old_always_uv == always_uv:
+        local_print(f"alwaysUv flag is already set to {_format_bool(always_uv)}")
+        return
+
+    config = _config(ctap2, pin)
+    config.toggle_always_uv()
+
+    local_print("alwaysUv flag was updated successfully")
+
+
+@click.command()
+@click.option(
+    "-s",
+    "--serial",
+    help="Serial number of Nitrokey to use. Prefix with 'device=' to provide device file, e.g. 'device=/dev/hidraw5'.",
+)
 @click.option("--pin", help="PIN for device access", default=None)
 def verify(serial: Optional[str], pin: Optional[str]) -> None:
     """Verify if connected Nitrokey FIDO2 device is genuine."""
@@ -731,6 +760,7 @@ fido2.add_command(list_credentials)
 fido2.add_command(make_credential)
 fido2.add_command(reset)
 fido2.add_command(get_pin_config)
+fido2.add_command(set_always_uv)
 fido2.add_command(set_pin)
 fido2.add_command(set_pin_config)
 fido2.add_command(verify)
