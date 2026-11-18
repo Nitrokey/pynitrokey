@@ -246,7 +246,7 @@ def fido2() -> None:
     require_windows_admin()
 
 
-@click.command()
+@fido2.command()
 @click.option(
     "-s",
     "--serial",
@@ -279,7 +279,7 @@ def get_info(serial: Optional[str]) -> None:
             print(f"{field.name}: {value}")
 
 
-@click.command()
+@fido2.command()
 @click.option(
     "-s",
     "--serial",
@@ -333,7 +333,7 @@ def list_credentials(serial: str, pin: str | None) -> None:
     local_print(f"There is an estimated amount of {remaining_cred_space} credential slots left")
 
 
-@click.command()
+@fido2.command()
 @click.option(
     "-s",
     "--serial",
@@ -365,7 +365,7 @@ def delete_credential(serial: str, pin: str | None, cred_id: str) -> None:
 REQUIREMENT_CHOICE = click.Choice(["discouraged", "preferred", "required"])
 
 
-@click.command()
+@fido2.command()
 @click.option("--host", help="Relying party's host", default="nitrokeys.dev", show_default=True)
 @click.option("--user", help="User ID", default="they", show_default=True)
 @click.option(
@@ -404,7 +404,7 @@ def make_credential(host: str, user: str, resident_key: str, user_verification: 
     print(credential.credential_id.hex())
 
 
-@click.command()
+@fido2.command()
 @click.option(
     "-s",
     "--serial",
@@ -433,7 +433,7 @@ def challenge_response(
     print(output.hex())
 
 
-@click.command()
+@fido2.command()
 @click.option(
     "-s",
     "--serial",
@@ -462,7 +462,7 @@ def reset(serial: Optional[str], yes: bool) -> None:
 
 
 # @fixme: lacking functionality? remove? implement?
-@click.command()
+@fido2.command()
 @click.option(
     "-s",
     "--serial",
@@ -490,7 +490,7 @@ def change_pin(serial: Optional[str]) -> None:
         local_critical("failed changing to new pin!", "did you set one already? or is it wrong?", e)
 
 
-@click.command()
+@fido2.command()
 @click.option(
     "-s",
     "--serial",
@@ -527,7 +527,7 @@ def set_pin(serial: Optional[str]) -> None:
         )
 
 
-@click.command()
+@fido2.command()
 @click.option(
     "-s",
     "--serial",
@@ -586,7 +586,7 @@ def set_pin_config(
     local_print("PIN configuration was updated successfully")
 
 
-@click.command()
+@fido2.command()
 @click.option(
     "-s",
     "--serial",
@@ -604,7 +604,7 @@ def get_pin_config(serial: str | None) -> None:
     print(f"force PIN change:    {_format_bool(info.force_pin_change)}")
 
 
-@click.command()
+@fido2.command()
 @click.option(
     "-s",
     "--serial",
@@ -633,7 +633,7 @@ def set_always_uv(serial: str | None, always_uv: bool, pin: str | None) -> None:
     local_print("alwaysUv flag was updated successfully")
 
 
-@click.command()
+@fido2.command()
 @click.option(
     "-s",
     "--serial",
@@ -652,7 +652,7 @@ def get_always_uv(serial: str | None) -> None:
     local_print(_format_bool(always_uv))
 
 
-@click.command()
+@fido2.command()
 @click.option(
     "-s",
     "--serial",
@@ -729,7 +729,7 @@ def verify(serial: Optional[str], pin: Optional[str]) -> None:
         local_print(f"unknown fingerprint! {cert}")
 
 
-@click.command()
+@fido2.command()
 @click.option(
     "-s",
     "--serial",
@@ -746,7 +746,7 @@ provcred_services: dict[str, Callable[[], ProvisionCredential]] = {
 }
 
 
-@click.command()
+@fido2.command()
 @click.option(
     "-s",
     "--serial",
@@ -769,20 +769,3 @@ def provision_credential(
     client = _fido2(device, host)
     result = service_ob.provision(create_user, user, client)
     local_print(result)
-
-
-fido2.add_command(challenge_response)
-fido2.add_command(change_pin)
-fido2.add_command(delete_credential)
-fido2.add_command(get_info)
-fido2.add_command(list_credentials)
-fido2.add_command(make_credential)
-fido2.add_command(reset)
-fido2.add_command(get_always_uv)
-fido2.add_command(get_pin_config)
-fido2.add_command(set_always_uv)
-fido2.add_command(set_pin)
-fido2.add_command(set_pin_config)
-fido2.add_command(verify)
-fido2.add_command(wink)
-fido2.add_command(provision_credential)
