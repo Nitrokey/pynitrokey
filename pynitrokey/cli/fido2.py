@@ -232,7 +232,9 @@ def _format_bool(value: bool) -> str:
     return str(value).lower()
 
 
-def _handle_errors(err: Exception, pin_policy_min_length: Optional[int] = None) -> None:
+def _handle_errors(
+    err: Exception, pin_policy_min_length: Optional[int] = None, changing_pin: bool = False
+) -> None:
     if isinstance(err, CtapError):
         ctaperror: CtapError = err
     elif isinstance(err, Fido2ClientError):
@@ -288,6 +290,8 @@ def _handle_errors(err: Exception, pin_policy_min_length: Optional[int] = None) 
                 f"(current value: {pin_policy_min_length})",
                 e,
             )
+        elif changing_pin:
+            raise CliException("Pin too short", e)
         else:
             raise CliException("Change pin to continue", e)
 
@@ -542,7 +546,7 @@ def change_pin(serial: Optional[str]) -> None:
         local_print("done - please use new pin to verify key")
 
     except Exception as e:
-        _handle_errors(e)
+        _handle_errors(e, changing_pin=True)
         # local_critical("failed changing to new pin!", "did you set one already? or is it wrong?", e)
 
 
@@ -575,7 +579,7 @@ def set_pin(serial: Optional[str]) -> None:
         local_print("done - please use new pin to verify key")
 
     except Exception as e:
-        _handle_errors(e)
+        _handle_errors(e, changing_pin=True)
         # local_critical(
         #    "failed setting new pin, maybe it's already set?",
         #    "to change an already set pin, please use:",
