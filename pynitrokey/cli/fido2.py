@@ -240,7 +240,7 @@ def _handle_errors(
     elif isinstance(err, Fido2ClientError):
         ctaperror = err.cause
     else:
-        raise CliException("Unknown Error", err)
+        raise CliException("Unknown Error", err) from err
 
     code = ctaperror.code
     # cause = CtapError.ERR(code).name
@@ -248,7 +248,9 @@ def _handle_errors(
 
     # error 0x31
     if CtapError.ERR.PIN_INVALID == code:
-        raise CliException("your key has a different PIN. Please try to remember it :)", e)
+        raise CliException(
+            "your key has a different PIN. Please try to remember it :)", e, support_hint=False
+        )
 
     # error 0x34 (power cycle helps)
     if CtapError.ERR.PIN_AUTH_BLOCKED == code:
@@ -258,6 +260,7 @@ def _handle_errors(
             "please be careful, after too many incorrect attempts, ",
             "   the key will fully block.",
             e,
+            support_hint=False,
         )
 
     # error 0x32 (only reset helps)
@@ -267,6 +270,7 @@ def _handle_errors(
             "to use it again, you need to fully reset it.",
             "you can do this using: `nitropy fido2 reset`",
             e,
+            support_hint=False,
         )
 
     # error 0x01
@@ -275,13 +279,14 @@ def _handle_errors(
             "error getting credential, is your key in bootloader mode?",
             "try: `nitropy fido2 util program aux leave-bootloader`",
             e,
+            support_hint=False,
         )
 
     if CtapError.ERR.PIN_NOT_SET == code:
-        raise CliException("Please set a pin to use this feature", e)
+        raise CliException("Please set a pin to use this feature", e, support_hint=False)
 
     if CtapError.ERR.PUAT_REQUIRED == code:
-        raise CliException("Pin is required for this operation", e)
+        raise CliException("Pin is required for this operation", e, support_hint=False)
 
     if CtapError.ERR.PIN_POLICY_VIOLATION == code:
         if pin_policy_min_length is not None:
@@ -289,14 +294,15 @@ def _handle_errors(
                 "The minimum PIN length can only be increased "
                 f"(current value: {pin_policy_min_length})",
                 e,
+                support_hint=False,
             )
         elif changing_pin:
-            raise CliException("Pin too short", e)
+            raise CliException("Pin too short", e, support_hint=False)
         else:
-            raise CliException("Change pin to continue", e)
+            raise CliException("Change pin to continue", e, support_hint=False)
 
     if CtapError.ERR.ACTION_TIMEOUT == code:
-        raise CliException("Operation timed out. Please try again", e)
+        raise CliException("Operation timed out. Please try again", e, support_hint=False)
 
 
 @click.group()
