@@ -104,21 +104,7 @@ def _get_pin_token(
     try:
         client_token = client_pin.get_pin_token(pin, permissions=permissions)
     except CtapError as error:
-        if error.code == CtapError.ERR.PIN_NOT_SET:
-            local_critical("Please set a pin to use this feature", support_hint=False)
-        if error.code == CtapError.ERR.PIN_AUTH_BLOCKED:
-            local_critical(
-                "Pin authentication has been blocked, try reinserting the key or setting a pin if none is set",
-                support_hint=False,
-            )
-        if error.code == CtapError.ERR.PIN_BLOCKED:
-            local_critical(
-                "Your device has been blocked after too many failed unlock attempts, to fix this it "
-                "will have to be reset. (If no pin is set, plugging it in again might fix this warning)",
-                support_hint=False,
-            )
-        if error.code == CtapError.ERR.PIN_INVALID:
-            local_critical("Wrong pin, please retry", support_hint=False)
+        _handle_errors(error)
         raise
     return client_pin.protocol, client_token
 
@@ -187,7 +173,10 @@ def _make_credential(
         ),
     )
 
-    registration_response = client.make_credential(options)
+    try:
+        registration_response = client.make_credential(options)
+    except Fido2ClientError as e:
+        _handle_errors(e)
 
     attestation_response = registration_response.response
     att_obj = attestation_response.attestation_object
@@ -220,14 +209,17 @@ def _simple_secret(
     challenge = secrets.token_bytes(32)
     salt = hashlib.sha256(secret_input.encode()).digest()
 
-    assertion = client.get_assertion(
-        PublicKeyCredentialRequestOptions(
-            challenge=challenge,
-            rp_id=host,
-            allow_credentials=allow_list,
-            extensions={"hmacGetSecret": HMACGetSecretInput(salt1=salt)},
-        )
-    ).get_response(0)
+    try:
+        assertion = client.get_assertion(
+            PublicKeyCredentialRequestOptions(
+                challenge=challenge,
+                rp_id=host,
+                allow_credentials=allow_list,
+                extensions={"hmacGetSecret": HMACGetSecretInput(salt1=salt)},
+            )
+        ).get_response(0)
+    except Fido2ClientError as e:
+        _handle_errors(e)
 
     assert "hmacGetSecret" in assertion.client_extension_results
     # from_dict would be more suitable but does not have type annotations
@@ -238,6 +230,79 @@ def _simple_secret(
 
 def _format_bool(value: bool) -> str:
     return str(value).lower()
+
+
+def _handle_errors(
+    err: Exception, pin_policy_min_length: Optional[int] = None, changing_pin: bool = False
+) -> None:
+    if isinstance(err, CtapError):
+        ctaperror: CtapError = err
+    elif isinstance(err, Fido2ClientError):
+        ctaperror = err.cause
+    else:
+        raise CliException("Unknown Error", err) from err
+
+    code = ctaperror.code
+    # cause = CtapError.ERR(code).name
+    e = err
+
+    # error 0x31
+    if CtapError.ERR.PIN_INVALID == code:
+        raise CliException(
+            "your key has a different PIN. Please try to remember it :)", e, support_hint=False
+        )
+
+    # error 0x34 (power cycle helps)
+    if CtapError.ERR.PIN_AUTH_BLOCKED == code:
+        raise CliException(
+            "your key's PIN auth is blocked due to too many incorrect attempts.",
+            "please plug it out and in again, then again!",
+            "please be careful, after too many incorrect attempts, ",
+            "   the key will fully block.",
+            e,
+            support_hint=False,
+        )
+
+    # error 0x32 (only reset helps)
+    if CtapError.ERR.PIN_BLOCKED == code:
+        raise CliException(
+            "your key's PIN is blocked. ",
+            "to use it again, you need to fully reset it.",
+            "you can do this using: `nitropy fido2 reset`",
+            e,
+            support_hint=False,
+        )
+
+    # error 0x01
+    if CtapError.ERR.INVALID_COMMAND == code:
+        raise CliException(
+            "error getting credential, is your key in bootloader mode?",
+            "try: `nitropy fido2 util program aux leave-bootloader`",
+            e,
+            support_hint=False,
+        )
+
+    if CtapError.ERR.PIN_NOT_SET == code:
+        raise CliException("Please set a pin to use this feature", e, support_hint=False)
+
+    if CtapError.ERR.PUAT_REQUIRED == code:
+        raise CliException("Pin is required for this operation", e, support_hint=False)
+
+    if CtapError.ERR.PIN_POLICY_VIOLATION == code:
+        if pin_policy_min_length is not None:
+            raise CliException(
+                "The minimum PIN length can only be increased "
+                f"(current value: {pin_policy_min_length})",
+                e,
+                support_hint=False,
+            )
+        elif changing_pin:
+            raise CliException("Pin too short", e, support_hint=False)
+        else:
+            raise CliException("Change pin to continue", e, support_hint=False)
+
+    if CtapError.ERR.ACTION_TIMEOUT == code:
+        raise CliException("Operation timed out. Please try again", e, support_hint=False)
 
 
 @click.group()
@@ -487,7 +552,8 @@ def change_pin(serial: Optional[str]) -> None:
         local_print("done - please use new pin to verify key")
 
     except Exception as e:
-        local_critical("failed changing to new pin!", "did you set one already? or is it wrong?", e)
+        _handle_errors(e, changing_pin=True)
+        # local_critical("failed changing to new pin!", "did you set one already? or is it wrong?", e)
 
 
 @fido2.command()
@@ -519,12 +585,13 @@ def set_pin(serial: Optional[str]) -> None:
         local_print("done - please use new pin to verify key")
 
     except Exception as e:
-        local_critical(
-            "failed setting new pin, maybe it's already set?",
-            "to change an already set pin, please use:",
-            "$ nitropy fido2 change-pin",
-            e,
-        )
+        _handle_errors(e, changing_pin=True)
+        # local_critical(
+        #    "failed setting new pin, maybe it's already set?",
+        #    "to change an already set pin, please use:",
+        #    "$ nitropy fido2 change-pin",
+        #    e,
+        # )
 
 
 @fido2.command()
@@ -574,13 +641,7 @@ def set_pin_config(
             min_pin_length=min_pin_length, rp_ids=rp_ids_list, force_change_pin=force_change_pin
         )
     except CtapError as error:
-        if error.code == CtapError.ERR.PIN_POLICY_VIOLATION:
-            if min_pin_length is not None and min_pin_length < old_min_pin_length:
-                raise CliException(
-                    "The minimum PIN length can only be increased "
-                    f"(current value: {old_min_pin_length})",
-                    support_hint=False,
-                ) from error
+        _handle_errors(error, old_min_pin_length)
         raise
 
     local_print("PIN configuration was updated successfully")
@@ -670,40 +731,7 @@ def verify(serial: Optional[str], pin: Optional[str]) -> None:
         attestation_object = _make_credential(client=client, host=host, user_id="they")
 
     except Fido2ClientError as e:
-        cause = str(e.cause)
-        # error 0x31
-        if "PIN_INVALID" in cause:
-            raise CliException("your key has a different PIN. Please try to remember it :)", e)
-
-        # error 0x34 (power cycle helps)
-        if "PIN_AUTH_BLOCKED" in cause:
-            raise CliException(
-                "your key's PIN auth is blocked due to too many incorrect attempts.",
-                "please plug it out and in again, then again!",
-                "please be careful, after too many incorrect attempts, ",
-                "   the key will fully block.",
-                e,
-            )
-
-        # error 0x32 (only reset helps)
-        if "PIN_BLOCKED" in cause:
-            raise CliException(
-                "your key's PIN is blocked. ",
-                "to use it again, you need to fully reset it.",
-                "you can do this using: `nitropy fido2 reset`",
-                e,
-            )
-
-        # error 0x01
-        if "INVALID_COMMAND" in cause:
-            raise CliException(
-                "error getting credential, is your key in bootloader mode?",
-                "try: `nitropy fido2 util program aux leave-bootloader`",
-                e,
-            )
-
-        raise CliException("unexpected Fido2Client (CTAP) error", e)
-
+        _handle_errors(e)
     except Exception as e:
         raise CliException("unexpected error", e)
 
@@ -767,5 +795,8 @@ def provision_credential(
     host = service_ob.get_rp_id()
     device = _device(serial)
     client = _fido2(device, host)
-    result = service_ob.provision(create_user, user, client)
+    try:
+        result = service_ob.provision(create_user, user, client)
+    except Fido2ClientError as e:
+        _handle_errors(e)
     local_print(result)
