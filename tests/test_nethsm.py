@@ -79,6 +79,12 @@ class CA:
 
         now = datetime.datetime.now(datetime.timezone.utc)
         ip = x509.IPAddress(ipaddress.IPv4Address("127.0.0.1"))
+        try:
+            san = csr.extensions.get_extension_for_class(x509.SubjectAlternativeName)
+            addrs = san.value.get_values_for_type(x509.IPAddress)
+        except x509.ExtensionNotFound:
+            addrs = []
+        ip = x509.IPAddress(addrs[0] if addrs else ipaddress.IPv4Address("127.0.0.1"))
 
         builder = x509.CertificateBuilder()
         builder = builder.subject_name(csr.subject)
@@ -284,10 +290,10 @@ def test_nethsm_cluster_ca_cert(nethsm: NetHSM) -> None:
         ca_path = path / "ca.pem"
         ca_path.write_bytes(ca.ca_cert_pem)
 
-        cmd = f"set-certificate --cluster {cert_path}"
+        cmd = f"set-certificate --cluster \"{cert_path}\""
         result = run_command(ctx, cmd)
         assert f"Updated the cluster certificate for NetHSM {nethsm.host}\n" == result
 
-        cmd = f"set-cluster-ca-certificate {ca_path}"
+        cmd = f"set-cluster-ca-certificate \"{ca_path}\""
         result = run_command(ctx, cmd)
         assert f"Updated the cluster CA certificate for NetHSM {nethsm.host}\n" == result
