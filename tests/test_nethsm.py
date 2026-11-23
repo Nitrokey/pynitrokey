@@ -290,10 +290,10 @@ def test_nethsm_cluster_ca_cert(nethsm: NetHSM) -> None:
         ca_path = path / "ca.pem"
         ca_path.write_bytes(ca.ca_cert_pem)
 
-        cmd = f"set-certificate --cluster \"{cert_path}\""
+        cmd = f'set-certificate --cluster "{cert_path}"'
         result = run_command(ctx, cmd)
         assert f"Updated the cluster certificate for NetHSM {nethsm.host}\n" == result
 
-        cmd = f"set-cluster-ca-certificate \"{ca_path}\""
+        cmd = f'set-cluster-ca-certificate "{ca_path}"'
         result = run_command(ctx, cmd)
         assert f"Updated the cluster CA certificate for NetHSM {nethsm.host}\n" == result
