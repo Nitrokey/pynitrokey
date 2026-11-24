@@ -8,7 +8,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "pynitrokey"
-version = "0.14.1"
+version = "0.15.0"
 description = "Python client for Nitrokey devices"
 license = "Apache-2.0 OR MIT"
 authors = [
@@ -29,7 +29,7 @@ dependencies = [
   "hidapi ==0.14.0.post2 ; sys_platform == 'linux'",
   "intelhex >=2.3, <3",
   "libusb1 >=3, <4",
-  "nethsm ==3.1.0rc1",
+  "nethsm >=3.1, <4",
   "nitrokey >=0.5, <0.6",
   "nkdfu >=0.2, <0.3",
   "pyusb >=1.2, <2",
@@ -88,7 +88,7 @@ optional = true
 docker = ">=7.1, <8"
 ipython = "*"
 mypy = ">=1.4, <1.5"
-ruff = "^0.14"
+ruff = "^0.17"
 types-cffi = ">=1.15, <3"
 types-requests = ">=2.16, <3"
 types-tqdm = ">=4.64, <5"

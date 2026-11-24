@@ -78,7 +78,7 @@ class CA:
         issuer_key = self.ca_key
 
         now = datetime.datetime.now(datetime.timezone.utc)
-        ip = x509.IPAddress(ipaddress.IPv4Address("127.0.0.1"))
+        ip = None
 
         builder = x509.CertificateBuilder()
         builder = builder.subject_name(csr.subject)
@@ -87,7 +87,23 @@ class CA:
         builder = builder.serial_number(x509.random_serial_number())
         builder = builder.not_valid_before(now)
         builder = builder.not_valid_after(now + datetime.timedelta(days=1))
-        builder = builder.add_extension(x509.SubjectAlternativeName([ip]), critical=False)
+
+        for extension in csr.extensions:
+            value = extension.value
+            if isinstance(value, x509.SubjectAlternativeName):
+                ips = [name for name in value if isinstance(name, x509.IPAddress)]
+                if len(ips) == 0:
+                    ip = x509.IPAddress(ipaddress.IPv4Address("127.0.0.1"))
+                    names = list(value) + [ip]
+                    value = x509.SubjectAlternativeName(names)
+                else:
+                    ip = ips[0]
+            builder = builder.add_extension(value, critical=extension.critical)
+
+        if ip is None:
+            ip = x509.IPAddress(ipaddress.IPv4Address("127.0.0.1"))
+            builder = builder.add_extension(x509.SubjectAlternativeName([ip]), critical=False)
+
         builder = builder.add_extension(
             x509.BasicConstraints(ca=False, path_length=None), critical=True
         )
@@ -284,10 +300,10 @@ def test_nethsm_cluster_ca_cert(nethsm: NetHSM) -> None:
         ca_path = path / "ca.pem"
         ca_path.write_bytes(ca.ca_cert_pem)
 
-        cmd = f"set-certificate --cluster {cert_path}"
+        cmd = f'set-certificate --cluster "{cert_path}"'
         result = run_command(ctx, cmd)
         assert f"Updated the cluster certificate for NetHSM {nethsm.host}\n" == result
 
-        cmd = f"set-cluster-ca-certificate {ca_path}"
+        cmd = f'set-cluster-ca-certificate "{ca_path}"'
         result = run_command(ctx, cmd)
         assert f"Updated the cluster CA certificate for NetHSM {nethsm.host}\n" == result
