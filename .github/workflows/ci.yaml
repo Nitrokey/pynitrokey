@@ -97,7 +97,10 @@ jobs:
         run: make check-typing
   run-tests:
     name: Run tests
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: ["ubuntu", "windows"]
+    runs-on: ${{ matrix.os }}-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -105,13 +108,16 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc libpcsclite-dev make swig git
+        if: ${{ matrix.os == "ubuntu" }}
       - uses: actions/setup-python@v7
       - name: Install poetry
         run: pip install "${POETRY_SPEC}"
       - name: Create virtual environment
-        run: make install
+        run: poetry sync --all-extras --with dev
       - name: Run tests
-        run: make test PYTEST_FLAGS="-v"
+        run: |
+            poetry run python -m doctest pynitrokey/helpers.py
+            poetry run pytest -v
   run:
     name: Run nitropy --help
     runs-on: ubuntu-latest
