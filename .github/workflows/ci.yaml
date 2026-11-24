@@ -111,7 +111,7 @@ jobs:
         if: ${{ matrix.os == 'ubuntu' }}
       - uses: actions/setup-python@v7
       - name: Install poetry
-        run: pip install "${POETRY_SPEC}"
+        run: pip install "${{ env.POETRY_SPEC }}"
       - name: Create virtual environment
         run: poetry sync --all-extras --with dev
       - name: Run tests
