@@ -321,7 +321,7 @@ def test_se050(ctx: TestContext, device: TrussedBase) -> TestResult:
     return TestResult(TestStatus.SUCCESS, success_message)
 
 
-@test_case("fido2", "FIDO2")
+@test_case("fido2", "FIDO2 functionality and device authenticity. Refer https://docs.nitrokey.com/nitrokeys/features/fido2/authenticity for details about authenticity.")
 def test_fido2(ctx: TestContext, device: TrussedBase) -> TestResult:
     if not isinstance(device, TrussedDevice):
         return TestResult(TestStatus.SKIPPED)
