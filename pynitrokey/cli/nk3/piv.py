@@ -16,7 +16,7 @@ from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
 from cryptography.hazmat.primitives.serialization import Encoding, pkcs12
 
 from pynitrokey.cli.nk3 import nk3
-from pynitrokey.helpers import check_experimental_flag, local_critical, local_print
+from pynitrokey.helpers import AskUser, check_experimental_flag, local_critical, local_print
 from pynitrokey.tlv import Tlv
 
 # Pyscard does not have wheels for all targets, leading to installation errors
@@ -528,9 +528,7 @@ try:
         type=click.STRING,
         help="Subject alternative name (UPN) for the certificate signing request.",
     )
-    @click.option(
-        "--pin", type=click.STRING, prompt="Enter the PIN", hide_input=True, help="Current PIN."
-    )
+    @click.option("--pin", type=click.STRING, help="Current PIN.")
     @click.option(
         "--path",
         type=click.Path(allow_dash=True),
@@ -543,7 +541,7 @@ try:
         algo: str,
         subject_name: Optional[x509.Name],
         subject_alt_name_upn: Optional[str],
-        pin: str,
+        pin: Optional[str],
         path: str,
     ) -> None:
         try:
@@ -555,6 +553,8 @@ try:
 
         device = PivApp()
         device.authenticate_admin(admin_key_bytes)
+        if not pin:
+            pin = AskUser.hidden("Please enter pin: ")
         device.login(pin)
 
         algo = algo.lower()
