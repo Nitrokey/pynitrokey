@@ -94,34 +94,57 @@ jobs:
       - name: Create virtual environment
         run: make install
       - name: Check code static typing
-        run: make check-typing
-  run-tests:
-    name: Run tests
-    strategy:
-      matrix:
-        os: ["ubuntu", "windows"]
-    runs-on: ${{ matrix.os }}-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-      - name: Install required packages
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc libpcsclite-dev make swig git
-        if: ${{ matrix.os == 'ubuntu' }}
-      - uses: actions/setup-python@v7
-      - name: Install poetry
-        run: pip install "${{ env.POETRY_SPEC }}"
-      - name: Check docker
-        run: |
-            docker version --format '{{.Server.Os}}'
-            docker pull nitrokey/nethsm:testing
-      - name: Create virtual environment
-        run: poetry sync --all-extras --with dev
-      - name: Run tests
-        run: |
-            poetry run python -m doctest pynitrokey/helpers.py
-            poetry run pytest -v
+        run: make check-typingrun-tests:
+  name: Run tests
+  strategy:
+    matrix:
+      os: ["ubuntu", "windows"]
+  runs-on: ${{ matrix.os }}-latest
+  defaults:
+    run:
+      shell: ${{ matrix.os == 'windows' && 'wsl-bash {0}' || 'bash' }}
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v7
+    - name: Set up WSL
+      if: ${{ matrix.os == 'windows' }}
+      uses: Vampire/setup-wsl@v6
+      with:
+        distribution: Ubuntu-24.04
+        use-cache: true
+        additional-packages: gcc libpcsclite-dev make swig git python3-pip python3-venv docker.io
+    - name: Install required packages
+      if: ${{ matrix.os == 'ubuntu' }}
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc libpcsclite-dev make swig git
+    - uses: actions/setup-python@v7
+      if: ${{ matrix.os == 'ubuntu' }}
+    - name: Start docker (WSL)
+      if: ${{ matrix.os == 'windows' }}
+      run: |
+        sudo service docker start
+        sudo chmod 666 /var/run/docker.sock
+    - name: Install poetry
+      run: |
+        if [ "${{ matrix.os }}" = "windows" ]; then
+          pip install --break-system-packages "${{ env.POETRY_SPEC }}"
+        else
+          pip install "${{ env.POETRY_SPEC }}"
+        fi
+    - name: Check docker
+      run: |
+        docker version --format '{{.Server.Os}}'
+        docker pull nitrokey/nethsm:testing
+    - name: Create virtual environment
+      run: |
+        export PATH="$HOME/.local/bin:$PATH"
+        poetry sync --all-extras --with dev
+    - name: Run tests
+      run: |
+        export PATH="$HOME/.local/bin:$PATH"
+        poetry run python -m doctest pynitrokey/helpers.py
+        poetry run pytest -v
   run:
     name: Run nitropy --help
     runs-on: ubuntu-latest
