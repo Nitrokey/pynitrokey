@@ -108,7 +108,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc libpcsclite-dev make swig git
-        if: ${{ matrix.os == "ubuntu" }}
+        if: ${{ matrix.os == 'ubuntu' }}
       - uses: actions/setup-python@v7
       - name: Install poetry
         run: pip install "${POETRY_SPEC}"
